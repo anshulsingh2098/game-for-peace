@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Game for Peace: new engine preview</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1018; font: 13px/1.4 system-ui, "Segoe UI", sans-serif; color: #eef2f8; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  #view:active { cursor: grabbing; }
+  .panel { position: fixed; background: rgba(8, 12, 20, .62); border: 1px solid rgba(255, 255, 255, .12); border-radius: 10px; padding: 10px 12px; backdrop-filter: blur(6px); }
+  #info { left: 12px; top: 12px; max-width: min(340px, calc(100vw - 24px)); box-sizing: border-box; }
+  #info h1 { font-size: 14px; margin: 0 0 2px; font-weight: 600; }
+  #info p { margin: 0 0 8px; color: #b9c3d3; }
+  #seedForm { display: flex; gap: 6px; flex-wrap: wrap; }
+  #seed { flex: 1 1 110px; min-width: 0; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); border-radius: 6px; color: inherit; padding: 6px 8px; font: inherit; }
+  button { background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; color: inherit; padding: 6px 10px; font: inherit; cursor: pointer; }
+  button:hover { background: rgba(255, 255, 255, .2); }
+  #stats { left: 12px; bottom: 12px; margin: 0; font: 11px/1.4 ui-monospace, Consolas, monospace; color: #d8ffe0; pointer-events: none; white-space: pre; max-width: calc(100vw - 48px); overflow: hidden; }
+  .keys { color: #8f9bb0; font-size: 12px; margin-top: 8px; }
+  body.bare .panel { display: none; }
+  @media (max-width: 600px) { .keys { display: none; } #stats { font-size: 10px; } }
+</style>
+</head>
+<body>
+<canvas id="view" aria-label="Generated terrain"></canvas>
+<section class="panel" id="info">
+  <h1>New engine preview</h1>
+  <p>Generated terrain only. Roads, scenery and driving come next.</p>
+  <form id="seedForm">
+    <input id="seed" aria-label="World seed" autocomplete="off" spellcheck="false" maxlength="40">
+    <button type="submit">Go</button>
+    <button type="button" id="newSeed">New world</button>
+  </form>
+  <div class="keys">Drag to look · W A S D fly · Space / Q up and down · Shift fast · wheel speed · R new world · G wireframe · H hide panels</div>
+</section>
+<pre class="panel" id="stats"></pre>
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
