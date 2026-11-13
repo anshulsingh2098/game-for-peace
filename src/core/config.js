@@ -6,8 +6,8 @@ export const DEFAULT_CONFIG = {
     seaLevel: 0,
     seabed: -38,                 // depth far out at sea
     lowland: 12,                 // height of flat inland ground
-    continent: { scale: 5200, rise: 70 },                       // very large shapes: where land and sea are, and how far the interior rises
-    coast: { lo: -0.16, hi: 0.03 },                             // continent noise range over which seabed becomes land
+    continent: { scale: 7000, rise: 70 },                       // very large shapes: where land and sea are, and how far the interior rises
+    coast: { lo: -0.40, hi: -0.20 },                             // continent noise range over which seabed becomes land
     warp: { scale: 1500, amp: 190 },                            // bends everything so coasts and valleys are not blobby
     hills: { scale: 820, amp: 46, octaves: 5, lacunarity: 2.05, gain: 0.5 },
     mountains: { maskScale: 4200, start: 0.02, full: 0.42, scale: 4500, amp: 470, octaves: 5, gain: 0.4, sharp: 1.7 },   // gain below 0.5 keeps fine ridges from turning into cliffs
@@ -18,19 +18,28 @@ export const DEFAULT_CONFIG = {
     rock: [0.50, 0.47, 0.43], sand: [0.80, 0.71, 0.50], seabed: [0.26, 0.33, 0.30], snow: [1.5, 1.55, 1.68],
     treeline: 210, snowline: 340
   },
+  road: {
+    step: 20, minRadius: 75,                                    // routing step and the tightest bend allowed
+    look: 12, scout: 15, spread: 0.9, swing: 2.0,               // short-range steps looked ahead; long-range scouting distance (x 100 m); half-width of the steering cone; how far (radians) an arm may ever swing from its first bearing
+    maxGrade: 0.08, hardGrade: 0.13, lastGrade: 0.2, maxCut: 14, smooth: 3, clearance: 2.5, maxAlt: 190,   // grade the router aims to stay under, grade never exceeded, height averaging (nodes each side), height kept above the sea, altitude the router avoids
+    flat: 9, blend: 46, sink: 0.3,                              // grading: level out to 'flat' metres from the centre line, natural again by 'blend'
+    wTurn: 8, wJerk: 14, wWander: 5, wBearing: 12, wGrade: 90, wSteep: 4000, wWater: 80, wHigh: 3, wCross: 5    // router cost weights
+  },
+  scatter: { trees: 0.0075, rocks: 0.0005, bushes: 0.0012, tufts: 0.009, clearRoad: 10 },      // scenery per square metre, and the strip kept clear beside the road
   view: {
     tile: 128,                                                  // tile edge
     rings: [{ r: 1, res: 64 }, { r: 3, res: 32 }, { r: 8, res: 16 }],   // level-of-detail rings: tiles out to r (in tiles) use res cells per edge
     far: { tile: 512, r: 9, res: 8, sink: 10 },                 // coarse horizon tiles beyond the rings, so distant mountains are visible
+    scenery: { near: 1, far: 4, density: 1 },                   // tiles out to 'near' get grass and bushes; out to 'far' get trees and rocks
     budgetMs: 4,                                                // tile building time allowed per frame
     rebase: 1024                                                // re-centre the render origin when the player is this far from it
   }
 };
 
 export const VIEW_PRESETS = {
-  low:  { rings: [{ r: 1, res: 32 }, { r: 2, res: 16 }, { r: 4, res: 8 }], far: { tile: 512, r: 5, res: 8, sink: 12 } },
-  med:  { rings: [{ r: 1, res: 64 }, { r: 3, res: 32 }, { r: 8, res: 16 }], far: { tile: 512, r: 9, res: 8, sink: 10 } },
-  high: { rings: [{ r: 2, res: 64 }, { r: 5, res: 32 }, { r: 12, res: 16 }], far: { tile: 512, r: 14, res: 16, sink: 8 } }
+  low:  { rings: [{ r: 1, res: 32 }, { r: 2, res: 16 }, { r: 4, res: 8 }], far: { tile: 512, r: 5, res: 8, sink: 12 }, scenery: { near: 1, far: 2, density: 0.5 } },
+  med:  { rings: [{ r: 1, res: 64 }, { r: 3, res: 32 }, { r: 8, res: 16 }], far: { tile: 512, r: 9, res: 8, sink: 10 }, scenery: { near: 1, far: 4, density: 1 } },
+  high: { rings: [{ r: 2, res: 64 }, { r: 5, res: 32 }, { r: 12, res: 16 }], far: { tile: 512, r: 14, res: 16, sink: 8 }, scenery: { near: 2, far: 6, density: 1 } }
 };
 
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);

@@ -6,6 +6,7 @@ import { createNoise } from '../src/core/noise.js';
 import { makeConfig, encodeConfig, decodeConfig, DEFAULT_CONFIG } from '../src/core/config.js';
 import { createTerrain } from '../src/world/terrain.js';
 import { fillTile, tileIndex, vertexCount, skirtDepth } from '../src/world/tiledata.js';
+import { Road } from '../src/world/router.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -70,5 +71,34 @@ test('tiles: neighbours meet exactly and the mesh is well formed', () => {
     assert.ok(Math.abs(ia.minY - (Math.min(...Array.from({ length: row * row }, (_, k) => A.pos[k * 3 + 1])) - skirtDepth(S, res))) < 1e-3);
     const again = mk(); fillTile(t, 0, 0, S, res, again.pos, again.nor, again.col, again.uv); assert.deepEqual(again.pos, A.pos);
   }
+});
+const world = seed => { const cfg = makeConfig({ seed }), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-4000, 4000); t.attachRoad(r); return { cfg, t, r }; };
+test('road: same seed gives the same road, in both directions', () => {
+  const a = world('peace').r, b = world('peace').r; assert.ok(a.sMax >= 4000 && a.sMin <= -4000);
+  for (let s = -3900; s <= 3900; s += 130) { const p = a.at(s, {}), q = b.at(s, {}); assert.equal(p.x, q.x); assert.equal(p.y, q.y); assert.equal(p.z, q.z); }
+  const far = world('peace').r; far.ensure(-9000, 9000); const p = a.at(3333, {}), q = far.at(3333, {}); assert.equal(p.x, q.x); assert.equal(p.y, q.y);      // building further never changes what exists
+});
+test('road: grade, bend radius and clearance stay within limits; it never crosses itself', () => {
+  for (const seed of ['peace', 'coast', 'kilo', 'mesa', 'bay']) {
+    const { cfg, r } = world(seed), R = cfg.road; let maxG = 0, minR = Infinity, low = Infinity, prev = null; const pts = [];
+    for (let s = r.sMin + 40; s < r.sMax - 40; s += 5) {
+      const p = r.at(s, {}); maxG = Math.max(maxG, Math.abs(p.slope)); low = Math.min(low, p.y);
+      if (prev !== null) { const k = Math.abs(Math.atan2(Math.sin(p.th - prev), Math.cos(p.th - prev))) / 5; if (k > 0) minR = Math.min(minR, 1 / k); } prev = p.th;
+      if (Math.round(s) % 20 === 0) pts.push(p);
+    }
+    assert.ok(maxG < R.lastGrade * 1.25, seed + ' grade ' + (maxG * 100).toFixed(1) + '%'); assert.ok(minR > R.minRadius * 0.5, seed + ' radius ' + minR.toFixed(0)); assert.ok(low >= cfg.terrain.seaLevel + R.clearance - 0.6, seed + ' lowest ' + low.toFixed(2));
+    for (let i = 0; i < pts.length; i++) for (let j = i + 12; j < pts.length; j++) assert.ok(Math.hypot(pts[i].x - pts[j].x, pts[i].z - pts[j].z) > 25, seed + ' road meets itself');
+  }
+});
+test('road: the land is graded to it and untouched far away', () => {
+  const { cfg, t, r } = world('peace'), R = cfg.road; let worst = 0;
+  for (let s = -3500; s <= 3500; s += 37) {
+    const p = r.at(s, {}), nx = -p.tz, nz = p.tx;
+    for (const d of [0, 2, -3.5]) worst = Math.max(worst, Math.abs(t.height(p.x + nx * d, p.z + nz * d) - (p.y - R.sink)));          // under the carriageway: just below the surface
+    for (const d of [70, -90]) assert.equal(t.height(p.x + nx * d, p.z + nz * d) === t.base(p.x + nx * d, p.z + nz * d) || r.nearest(p.x + nx * d, p.z + nz * d), true);
+    assert.ok(r.nearest(p.x + nx * 20, p.z + nz * 20)); assert.ok(Math.abs(r.hit.d - 20) < 1.5, 'distance ' + r.hit.d.toFixed(2)); assert.ok(Math.abs(r.hit.s - s) < 12, 'road distance off by ' + (r.hit.s - s).toFixed(1));
+  }
+  assert.ok(worst < 0.35, 'bed is off by ' + worst.toFixed(2) + ' m');
+  assert.equal(t.height(1e6, 1e6), t.base(1e6, 1e6));
 });
 console.log(`\n${passed} checks passed`);

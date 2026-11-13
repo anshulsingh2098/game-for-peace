@@ -17,6 +17,7 @@
   #seed { flex: 1 1 110px; min-width: 0; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); border-radius: 6px; color: inherit; padding: 6px 8px; font: inherit; }
   button { background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; color: inherit; padding: 6px 10px; font: inherit; cursor: pointer; }
   button:hover { background: rgba(255, 255, 255, .2); }
+  button.on { background: #3d7dff; border-color: #7aa6ff; }
   #stats { left: 12px; bottom: 12px; margin: 0; font: 11px/1.4 ui-monospace, Consolas, monospace; color: #d8ffe0; pointer-events: none; white-space: pre; max-width: calc(100vw - 48px); overflow: hidden; }
   .keys { color: #8f9bb0; font-size: 12px; margin-top: 8px; }
   body.bare .panel { display: none; }
@@ -28,13 +29,14 @@
 <canvas id="view" aria-label="Generated terrain"></canvas>
 <section class="panel" id="info">
   <h1>New engine preview</h1>
-  <p>Generated terrain only. Roads, scenery and driving come next.</p>
+  <p>Generated land with a routed road and scenery. Driving comes next.</p>
   <form id="seedForm">
     <input id="seed" aria-label="World seed" autocomplete="off" spellcheck="false" maxlength="40">
     <button type="submit">Go</button>
     <button type="button" id="newSeed">New world</button>
+    <button type="button" id="ride" title="Ride along the road (T)">Ride the road</button>
   </form>
-  <div class="keys">Drag to look · W A S D fly · Space / Q up and down · Shift fast · wheel speed · R new world · G wireframe · H hide panels</div>
+  <div class="keys">Drag to look · W A S D fly · Space / Q up and down · Shift fast · wheel speed · T ride the road · R new world · G wireframe · H hide panels</div>
 </section>
 <pre class="panel" id="stats"></pre>
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>

@@ -66,13 +66,19 @@ export class TileGrid {
   }
   /* put every tile back in place after the origin moved (also used by a grid that shares another grid's origin) */
   reposition() { const S = this.size, o = this.origin; for (const t of this.tiles.values()) t.mesh.position.set(t.tx * S - o.x, -this.sink, t.tz * S - o.z); }
+  /* rebuild the tiles touching a world-space box (the road was extended through ground that was already built) */
+  invalidate(box) {
+    const S = this.size, pad = 50; let hit = false;
+    for (const t of this.tiles.values()) if (t.tx * S < box.maxX + pad && (t.tx + 1) * S > box.minX - pad && t.tz * S < box.maxZ + pad && (t.tz + 1) * S > box.minZ - pad) { t.lod = -1; hit = true; }
+    if (hit) this.dirty = true;
+  }
   /* throw every tile away and start again (new seed, new settings) */
   reset(terrain, view) {
     for (const t of this.tiles.values()) this.release(t.mesh); this.tiles.clear(); this.queue.length = 0;
     if (terrain) this.terrain = terrain; if (view) { this.view = view; this.inner = view.inner ?? -1; this.sink = view.sink || 0; } this.dirty = true;
   }
   stats() {
-    const lod = this.view.rings.map(() => 0); for (const t of this.tiles.values()) lod[t.lod]++;
+    const lod = this.view.rings.map(() => 0); for (const t of this.tiles.values()) if (t.lod >= 0) lod[t.lod]++;
     let pooled = 0; for (const f of this.pool.values()) pooled += f.length;
     return { tiles: this.tiles.size, lod, queue: this.queue.length, pooled, built: this.built };
   }
