@@ -1,0 +1,84 @@
+{
+  "stations": [
+    {
+      "name": "Game for Peace Radio",
+      "tracks": [
+        {
+          "title": "Ami Tomake Bhalobashi (lofi)",
+          "artist": "MC Headshot · lofi wizard",
+          "file": "music/Ami_Tomake_Bhalobashi_Lyrics_MC_Headshot_Hustle_2.0_lofi_by_lofi_wizard.mp3"
+        },
+        {
+          "title": "Amul Dudh Phonk",
+          "artist": "",
+          "file": "music/Amul_Dudh_Phonk.mp3"
+        },
+        {
+          "title": "Heat Waves",
+          "artist": "Glass Animals",
+          "file": "music/AudioTranscriberAI_Glass_Animals_-_Heat_Waves.mp3"
+        },
+        {
+          "title": "Take Me Home, Country Roads",
+          "artist": "John Denver",
+          "file": "music/AudioTranscriberAI_John_Denver_-_Take_Me_Home_Country_Roads_Lyrics_.mp3"
+        },
+        {
+          "title": "Intentions ft. Quavo",
+          "artist": "Justin Bieber",
+          "file": "music/AudioTranscriberAI_Justin_Bieber_-_Intentions_Lyrics_ft._Quavo.mp3"
+        },
+        {
+          "title": "The Nights",
+          "artist": "Avicii",
+          "file": "music/Avicii_-_The_Nights.mp3"
+        },
+        {
+          "title": "We Don't Talk Anymore (slowed + reverb)",
+          "artist": "Charlie Puth ft. Selena Gomez",
+          "file": "music/charlie_puth_ft._selena_gomez_-_we_don_t_talk_anymore_slowed_reverb_.mp3"
+        },
+        {
+          "title": "Perfect",
+          "artist": "Ed Sheeran",
+          "file": "music/Ed_Sheeran_-_Perfect.mp3"
+        },
+        {
+          "title": "Ransom",
+          "artist": "Lil Tecca",
+          "file": "music/Lil_Tecca_-_Ransom_Official_Music_Video_.mp3"
+        },
+        {
+          "title": "Long Way from Home",
+          "artist": "MC SQUARE, Radhika Bhide, Wicked Sunny, The Local Kid",
+          "file": "music/Long_Way_from_Home_MC_SQUARE_Radhika_Bhide_Wicked_Sunny_The_Local_Kid_EP.mp3"
+        },
+        {
+          "title": "7 Years",
+          "artist": "Lukas Graham",
+          "file": "music/Lukas_Graham_-_7_Years.mp3"
+        },
+        {
+          "title": "Night Changes",
+          "artist": "One Direction",
+          "file": "music/One_Direction_-_Night_Changes_Lyrics_1_.mp3"
+        },
+        {
+          "title": "Sunflower ft. Swae Lee",
+          "artist": "Post Malone",
+          "file": "music/Post_Malone_-_Sunflower_Lyrics_ft._Swae_Lee.mp3"
+        },
+        {
+          "title": "Closer ft. Halsey",
+          "artist": "The Chainsmokers",
+          "file": "music/The_Chainsmokers_-_Closer_Lyrics_ft._Halsey.mp3"
+        },
+        {
+          "title": "Blue",
+          "artist": "Yung Kai",
+          "file": "music/yung_kai_-_blue_Lyrics_.mp3"
+        }
+      ]
+    }
+  ]
+}

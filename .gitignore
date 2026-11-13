@@ -1,0 +1,24 @@
+# Radio songs (large, and not ours to redistribute). playlist.json stays tracked.
+*.mp3
+*.m4a
+*.wav
+
+# Hand-made backups from before git; history replaces these
+dev/*_before_*
+dev/*_backup*
+
+# Build outputs: regenerate with `python build_standalone.py`
+game_standalone.html
+game_artifact.html
+dev/viewer.html
+
+# Cloudflare local cache (holds account info)
+.wrangler/
+
+# Local tooling / OS noise
+.claude/
+__pycache__/
+*.pyc
+*.blend1
+Thumbs.db
+Desktop.ini
