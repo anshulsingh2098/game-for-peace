@@ -598,7 +598,7 @@ export class Game {
     if (lists.railpost && lists.railpost.length) fill(this.props.railpost, this.lam, lists.railpost.map(a => [...a, 0.5]), false);
     if (lists.post.length) fill(this.props.post, this.lam, lists.post.map(a => [...a, 0.5]), false);
     this.scene.add(g);
-    return { g, dispose: () => { this.scene.remove(g); g.traverse(o => { if (o.isMesh && !this.sharedGeo.has(o.geometry)) o.geometry.dispose(); if (o.isInstancedMesh) o.dispose(); }); } };
+    return { g, dispose: () => { this.scene.remove(g); g.traverse(o => { if ((o.isMesh || o.isLine) && !this.sharedGeo.has(o.geometry)) o.geometry.dispose(); if (o.isInstancedMesh) o.dispose(); }); } };
   }
   updateChunks(force) {
     const c = Math.floor(this.s / CH), lo = Math.max(0, c - 2), hi = c + this.q.ahead;
@@ -630,15 +630,17 @@ export class Game {
     this.addGlows(id); this.lightsNow = false; this.lightEmit(); this.applyWorld(0);
     this.wheels = []; this.model.traverse(o => { if (/^Wheel_/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, front: /^Wheel_F/.test(o.name), spin: 0 }); } });
     this.s = 100; this.x = 0; this.psi = 0; this.v = 0; this.steerIn = 0; this.dist = 0; this.cd = 0; this.buffT = 0; this.camHead = 0; this.camInit = false; this.roll = 0;
-    this.updateChunks(true); this.place(0); this.running = true; this.paused = false; this.last = performance.now(); requestAnimationFrame(this._loop);
+    this.updateChunks(true); this.place(0); this.running = true; this.paused = false; this.last = performance.now(); this.kick();
   }
-  stop() { this.running = false; if (this.model) this.setView('third'); for (const v of this.chunks.values()) v.dispose(); this.chunks.clear(); }
-  pause() { this.running = false; this.paused = true; }
-  resume() { if (!this.world || this.running) return; this.running = true; this.paused = false; this.last = performance.now(); requestAnimationFrame(this._loop); }
+  /* exactly one frame callback may be pending: a stale one left over from before a pause would otherwise run as a second loop */
+  kick() { cancelAnimationFrame(this._raf); this._raf = requestAnimationFrame(this._loop); }
+  stop() { this.running = false; cancelAnimationFrame(this._raf); if (this.model) this.setView('third'); for (const v of this.chunks.values()) v.dispose(); this.chunks.clear(); }
+  pause() { this.running = false; this.paused = true; cancelAnimationFrame(this._raf); }
+  resume() { if (!this.world || this.running) return; this.running = true; this.paused = false; this.last = performance.now(); this.kick(); }
   useBuff() { if (!this.running || this.cd > 0) return false; this.cd = this.buff[3]; this.buffT = this.id === 'car' ? 4 : 5; return true; }
 
   frame(t) {
-    if (!this.running) return; requestAnimationFrame(this._loop);
+    if (!this.running) return; this._raf = requestAnimationFrame(this._loop);
     const raw = (t - this.last) / 1000; this.fpsA = this.fpsA * 0.93 + raw * 0.07; this.adaptT += raw;
     if (this.adaptT > 2.5 && !document.hidden) { this.adaptT = 0; const fps = 1 / this.fpsA; if (fps < 38 && this.prScale > 0.6) { this.prScale = Math.max(0.6, this.prScale - 0.15); this.applyPR(); } else if (fps > 57 && this.prScale < 1) { this.prScale = Math.min(1, this.prScale + 0.1); this.applyPR(); } }
     const dt = Math.min(0.05, (t - this.last) / 1000); this.last = t; this.skyMat.uniforms.time.value = t / 1000; WIND.t.value = t / 1000; WIND.a.value = 1 + this.wcur.rain * 1.4 + this.wcur.snow * 0.3; this.update(dt); this.renderer.render(this.scene, this.camera);

@@ -36,7 +36,7 @@ export class Sound {
   applyVolumes() { if (!this.ctx) return; const t = this.ctx.currentTime; this.musicBus.gain.setTargetAtTime(this.music, t, 0.05); this.sfxBus.gain.setTargetAtTime(this.sfx, t, 0.05); }
   setEngineOn(on) {
     this.engineOn = on; if (on || !this.ctx) return; const t = this.ctx.currentTime;
-    for (const g of [this.wind.g, this.rainN.g, this.hum.g, this.gravel.g, this.voice && this.voice.out]) if (g) g.gain.setTargetAtTime(0, t, 0.1);
+    for (const g of [this.wind.g, this.rainN.g, this.hum.g, this.gravel.g, this.voice && this.voice.out, this.voice && this.voice.gtw]) if (g) g.gain.setTargetAtTime(0, t, 0.1);
   }
   get eng() { return this.voice ? this.voice.out : { gain: { value: 0 } }; }
 
