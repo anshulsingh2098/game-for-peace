@@ -7,6 +7,8 @@ import { makeConfig, encodeConfig, decodeConfig, DEFAULT_CONFIG } from '../src/c
 import { createTerrain } from '../src/world/terrain.js';
 import { fillTile, tileIndex, vertexCount, skirtDepth } from '../src/world/tiledata.js';
 import { Road } from '../src/world/router.js';
+import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
+import { VEHICLES } from '../src/vehicle/defs.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -100,5 +102,37 @@ test('road: the land is graded to it and untouched far away', () => {
   }
   assert.ok(worst < 0.35, 'bed is off by ' + worst.toFixed(2) + ' m');
   assert.equal(t.height(1e6, 1e6), t.base(1e6, 1e6));
+});
+const flat = (over = {}) => ({ height: () => 0, surface: () => 'asphalt', near: () => [], seaLevel: -100, ...over });
+const drive = (ph, secs, input) => { for (let t = 0; t < secs; t += 1 / 60) { ph.step(1 / 60, typeof input === 'function' ? input(ph) : input); assert.ok(Number.isFinite(ph.x + ph.z + ph.u + ph.v + ph.r + ph.yaw), 'physics blew up'); } };
+const GO = { steer: 0, throttle: 1, brake: 0 }, COAST = { steer: 0, throttle: 0, brake: 0 }, STOP = { steer: 0, throttle: 0, brake: 1 };
+test('driving: each vehicle accelerates straight to about its top speed, coasts down and brakes', () => {
+  for (const V of VEHICLES) {
+    const p = vehicleParams(V.body, V.stats), ph = new VehiclePhysics(p, flat()); drive(ph, 90, GO);
+    assert.ok(ph.u > p.top * 0.82 && ph.u <= p.top * 1.08, V.id + ' top speed ' + (ph.u * 3.6).toFixed(0) + ' km/h of ' + V.stats.Top);
+    assert.ok(Math.abs(ph.z) < 0.5 && Math.abs(ph.yaw) < 0.01, V.id + ' wandered off a straight line');
+    const x0 = ph.x; drive(ph, 30, q => ({ steer: 0, throttle: 0, brake: q.u > 0.5 ? 1 : 0 })); assert.ok(ph.u <= 0.6, V.id + ' did not stop'); assert.ok(ph.x - x0 < p.top * p.top / (2 * p.brake) * 1.6, V.id + ' braking distance ' + (ph.x - x0).toFixed(0) + ' m');
+    drive(ph, 20, GO); drive(ph, 120, COAST); assert.equal(ph.u, 0, V.id + ' never rolled to a stop');
+  }
+});
+test('driving: steering follows the wheels at low speed and is limited by grip at high speed', () => {
+  const V = VEHICLES[0], p = vehicleParams(V.body, V.stats), ph = new VehiclePhysics(p, flat());
+  drive(ph, 30, q => ({ steer: 1, throttle: q.u < 2.5 ? 0.3 : 0, brake: 0 }));                       // slow circle, full lock
+  const R = ph.u / ph.r, want = p.L / Math.tan(ph.delta); assert.ok(ph.r > 0 && Math.abs(R - want) / want < 0.15, 'low-speed radius ' + R.toFixed(1) + ' m, expected ' + want.toFixed(1));
+  const fast = new VehiclePhysics(p, flat()); drive(fast, 12, GO); let worst = 0, slide = 0;
+  drive(fast, 6, q => { worst = Math.max(worst, Math.abs(q.ay)); slide = Math.max(slide, Math.abs(q.v / q.u)); return { steer: 1, throttle: 0.5, brake: 0 }; });
+  assert.ok(worst < p.mu * 9.81 * 1.15, 'cornered at ' + (worst / 9.81).toFixed(2) + ' g with grip ' + p.mu.toFixed(2)); assert.ok(worst > p.mu * 9.81 * 0.5, 'barely turned'); assert.ok(slide < 0.6, 'spun out');
+  const ice = new VehiclePhysics(p, flat({ surface: () => 'snow' })); drive(ice, 12, GO); let w2 = 0; drive(ice, 6, q => { w2 = Math.max(w2, Math.abs(q.ay)); return { steer: 1, throttle: 0, brake: 0 }; });
+  assert.ok(w2 < worst * 0.6, 'snow should corner much worse than asphalt: ' + (w2 / worst).toFixed(2));
+});
+test('driving: slopes, reverse, water and obstacles behave', () => {
+  const V = VEHICLES[0], p = vehicleParams(V.body, V.stats);
+  const hill = new VehiclePhysics(p, flat({ height: x => 0.15 * x })); drive(hill, 5, COAST); assert.ok(Math.abs(hill.x) < 0.01, 'rolled away while parked on a hill'); assert.ok(hill.pitch > 0.1, 'did not pitch up the slope');
+  const cliff = new VehiclePhysics(p, flat({ height: x => 1.5 * x, surface: () => 'grass' })); drive(cliff, 8, GO); assert.ok(cliff.x < 3, 'drove up a 56 degree slope');
+  const back = new VehiclePhysics(p, flat()); drive(back, 6, STOP); assert.ok(back.u < -3 && back.u >= -p.revTop * 1.1 && back.x < -5, 'reverse: ' + back.u.toFixed(1) + ' m/s');
+  const sea = new VehiclePhysics(p, flat({ seaLevel: 2 })); drive(sea, 10, GO); assert.ok(sea.u < 0.5 && sea.stuck > 5, 'kept driving under 2 m of water');
+  const tree = { x: 60, z: 0.2, r: 0.4 }, hit = new VehiclePhysics(p, flat({ near: () => [[tree]] })); let bang = 0; drive(hit, 8, q => { bang = Math.max(bang, q.impact); return GO; });
+  assert.ok(bang > 5, 'no impact felt'); for (const off of p.circles) assert.ok(Math.hypot(hit.x + Math.cos(hit.yaw) * off - tree.x, hit.z + Math.sin(hit.yaw) * off - tree.z) >= p.radius + tree.r - 0.05, 'ended inside the tree');
+  assert.ok(Object.keys(SURFACES).every(k => SURFACES[k].grip > 0 && SURFACES[k].grip <= 1));
 });
 console.log(`\n${passed} checks passed`);

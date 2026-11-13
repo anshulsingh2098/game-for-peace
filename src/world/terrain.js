@@ -3,7 +3,8 @@
    so they always agree. World coordinates are metres; y is up.
      base(x, z)    the natural land, before any road
      height(x, z)  the land as it is driven on: natural, with the road cut or filled in once a road is attached
-     forest(x, z)  0..1, how wooded a place is (scenery and ground colour both use it) */
+     forest(x, z)  0..1, how wooded a place is (scenery and ground colour both use it)
+     surface(x, z) what the wheels are on there: asphalt, gravel, grass, sand, rock or snow */
 import { createNoise } from '../core/noise.js';
 import { alea } from '../core/rng.js';
 
@@ -32,6 +33,12 @@ export function createTerrain(config) {
   }
   function height(x, z) { const h = base(x, z); return road ? road.grade(x, z, h) : h; }
   function forest(x, z) { return sstep(-0.18, 0.32, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
+
+  /* what the wheels are on at a point: a key of SURFACES in vehicle/physics.js */
+  function surface(x, z) {
+    if (road && road.nearest(x, z)) { const d = road.hit.d; if (d < 4.05) return 'asphalt'; if (d < 5.7) return 'gravel'; }
+    const up = base(x, z) - sea; return up < 3.2 ? 'sand' : up > P.snowline + 10 ? 'snow' : up > P.treeline + 60 ? 'rock' : 'grass';
+  }
 
   /* ground colour at a point. `ny` is the y of the unit surface normal (1 = flat, 0 = vertical). Writes r, g, b into out.
      `nearRoad` false skips the roadside verge (used for the distant, coarse tiles). */
@@ -73,7 +80,7 @@ export function createTerrain(config) {
     return { x: 0, z: 0, y: Math.max(sea, base(0, 0)) };
   }
 
-  const terrain = { base, height, colour, forest, findSpawn, seaLevel: sea, config,
+  const terrain = { base, height, surface, colour, forest, findSpawn, seaLevel: sea, config,
     attachRoad(r) { road = r; }, get road() { return road; },
     /* the same land without the road, for the coarse horizon tiles */
     far: { height: base, colour: (x, z, h, ny, out) => colour(x, z, h, ny, out, false) } };

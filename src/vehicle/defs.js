@@ -1,0 +1,19 @@
+/* The vehicles: garage data (carried over from the current game) plus the body measurements the new physics needs.
+   Model space: front is +Z, up is +Y, so +X is the vehicle's left. Distances in metres. */
+export const VEHICLES = [
+  { id: 'car', file: 'assets/car_01_gt.glb', name: 'Dusk GT', tag: 'Fast', color: '#6f9bff',
+    desc: 'Low, wide and quick. Stretch it out on the long straights.',
+    stats: { Speed: 92, Accel: 86, Handling: 72, Grip: 64, Top: 240 },
+    body: { mass: 1350, front: 1.62, rear: 1.34, track: 1.64, wheelR: 0.35, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 7, aero: 0.25, lean: 0.06, radius: 0.95, circles: [1.5, 0, -1.4] },
+    cam: { back: 7.5, up: 3.0, look: 2.5 }, eye: [-0.32, 1.22, 0.14], shadow: [3.4, 6] },
+  { id: 'truck', file: 'assets/truck_01.glb', name: 'Freight Hauler', tag: 'Heavy', color: '#ff9a3d',
+    desc: 'A big rig. Steady, planted and calm.',
+    stats: { Speed: 34, Accel: 28, Handling: 30, Grip: 84, Top: 110 },
+    body: { mass: 14000, front: 4.6, rear: 0.9, track: 2.1, wheelR: 0.55, steerMax: 0.36, brake: 6, revAccel: 1.6, revTop: 4.5, aero: 3, lean: 0.03, radius: 1.35, circles: [5, 2.6, 0.2, -2.2, -4.6, -6.6] },
+    cam: { back: 17, up: 6.5, look: 4 }, eye: [-0.5, 2.85, 3.3], shadow: [3.4, 15] },
+  { id: 'bike', file: 'assets/bike_01.glb', name: 'Volt Bike', tag: 'Agile', color: '#b6f03c',
+    desc: 'Sharp and light. Leans into every curve.',
+    stats: { Speed: 82, Accel: 90, Handling: 96, Grip: 46, Top: 200 },
+    body: { mass: 260, front: 0.72, rear: 0.68, track: 0.5, wheelR: 0.34, steerMax: 0.60, brake: 9, revAccel: 1.8, revTop: 4, aero: 0.12, lean: 1, radius: 0.5, circles: [0.5, -0.5] },
+    cam: { back: 5.0, up: 2.2, look: 2.0 }, eye: [0, 1.60, 0.20], shadow: [2.2, 3.2] }
+];

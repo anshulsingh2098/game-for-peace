@@ -1,0 +1,80 @@
+/* The vehicle you see: loads the model, turns its wheels, places it from the physics state, builds the
+   driver-view cockpit and runs the chase and driver cameras. Model space: front +Z, up +Y, left +X. */
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const loader = new GLTFLoader(), cache = new Map();
+export function loadModel(def) {
+  if (!cache.has(def.id)) cache.set(def.id, new Promise((ok, no) => loader.load(def.file, g => ok(g.scene), undefined, no)));
+  return cache.get(def.id);
+}
+function blobShadow() {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 4, 64, 64, 64);
+  g.addColorStop(0, 'rgba(0,0,0,.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -12 }));
+  m.renderOrder = 2; return m;
+}
+
+export class VehicleView {
+  constructor(scene) { this.scene = scene; this.root = new THREE.Group(); this.root.rotation.order = 'YXZ'; this.shadow = blobShadow(); scene.add(this.root, this.shadow); this.view = 'third'; this.camYaw = null; this.eye = new THREE.Vector3(); }
+  /* swap in a vehicle's model (already loaded with loadModel) */
+  setModel(def, model) {
+    if (this.model) this.root.remove(this.model);
+    this.def = def; this.model = model.clone(true); this.root.add(this.model);
+    this.wheels = []; this.riders = []; this.cockpit = null; this.wheel = null;
+    this.model.traverse(o => {
+      if (/^Wheel_/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, front: /^Wheel_F/.test(o.name) }); }
+      if (/^Rider/.test(o.name)) this.riders.push(o);
+      if (o.isMesh) [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; });
+    });
+    this.buildCockpit(def.id); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
+  }
+  /* dashboard and steering wheel for the driver view (the models have no interior) */
+  buildCockpit(id) {
+    if (id === 'bike') return;
+    const g = new THREE.Group(), dark = new THREE.MeshLambertMaterial({ color: 0x15151b }), mid = new THREE.MeshLambertMaterial({ color: 0x30303a }), glow = new THREE.MeshBasicMaterial({ color: 0x6fd0ff });
+    const box = (w, h, d, x, y, z, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || dark); m.position.set(x, y, z); g.add(m); return m; };
+    let pos, R, tilt;
+    if (id === 'car') { box(1.5, 0.07, 0.42, 0, 0.955, 0.66); box(0.46, 0.08, 0.2, -0.32, 1.0, 0.64, mid); box(0.28, 0.01, 0.05, -0.32, 1.045, 0.58, glow); box(0.3, 0.05, 0.1, 0.2, 0.99, 0.60, mid); box(0.08, 0.22, 0.08, -0.32, 0.86, 0.54, mid); pos = [-0.32, 0.98, 0.50]; R = 0.13; tilt = 0.6; }
+    else { box(2.0, 0.24, 0.8, 0, 2.30, 3.95); box(0.8, 0.12, 0.26, -0.5, 2.43, 3.85, mid); box(0.5, 0.012, 0.05, -0.5, 2.5, 3.75, glow); box(0.2, 0.5, 0.15, -0.5, 2.1, 3.65, mid); pos = [-0.5, 2.36, 3.62]; R = 0.24; tilt = 0.3; }
+    const sw = new THREE.Group(); sw.position.set(...pos); sw.rotation.x = tilt; const inner = new THREE.Group(); sw.add(inner);
+    inner.add(new THREE.Mesh(new THREE.TorusGeometry(R, R * 0.14, 8, 28), mid));
+    for (const [w, h] of [[R * 1.9, R * 0.16], [R * 0.16, R * 0.95]]) { const sp = new THREE.Mesh(new THREE.BoxGeometry(w, h, R * 0.1), mid); if (h > w) sp.position.y = -R * 0.47; inner.add(sp); }
+    inner.add(new THREE.Mesh(new THREE.CylinderGeometry(R * 0.3, R * 0.3, R * 0.2, 12).rotateX(Math.PI / 2), dark));
+    g.add(sw); this.model.add(g); this.cockpit = g; this.wheel = inner;
+  }
+  /* 'third' = chase camera, 'first' = driver's eyes */
+  setView(v) {
+    this.view = v; const fp = v === 'first'; if (!this.model) return;
+    this.model.traverse(o => {                                  // the models' glass is opaque, so from inside the cabin and glass are hidden
+      if (o.name === 'Cab' || o.name === 'Cabin') o.visible = !fp;
+      if (o.isMesh) [].concat(o.material).forEach(m => { if (m.name === 'Glass') { m.colorWrite = !fp; m.depthWrite = !fp; } });
+    });
+    if (this.cockpit) this.cockpit.visible = fp; for (const o of this.riders) o.visible = !fp;
+  }
+  /* place the model from the physics state. `origin` is the floating render origin. */
+  update(ph, origin) {
+    const r = this.root; r.position.set(ph.x - origin.x, ph.y, ph.z - origin.z); r.rotation.set(-ph.pitch, Math.PI / 2 - ph.yaw, ph.roll + ph.lean);
+    for (const w of this.wheels) { w.o.rotation.x = ph.spin; w.o.rotation.y = w.front ? -ph.delta * 0.9 : 0; }
+    if (this.wheel) this.wheel.rotation.z = -ph.steer * 1.3;
+    this.shadow.position.set(r.position.x, ph.y + 0.05, r.position.z); this.shadow.rotation.y = Math.PI / 2 - ph.yaw; this.shadow.visible = ph.wet < 0.3;
+  }
+  /* aim the camera. floor(x, z) is the lowest height the camera may sit at. */
+  aim(camera, ph, origin, dt, floor) {
+    const d = this.def, speed = Math.abs(ph.u);
+    if (this.view === 'first') {
+      this.root.updateMatrixWorld(true); this.eye.set(...d.eye); this.root.localToWorld(this.eye); camera.position.copy(this.eye);
+      camera.rotation.order = 'YXZ'; camera.rotation.set(ph.pitch * 0.9 - 0.03, -Math.PI / 2 - ph.yaw, -(ph.roll + ph.lean) * 0.5);
+      camera.fov = 70 + Math.min(14, speed * 0.18);
+    } else {
+      const want = ph.yaw + Math.atan2(ph.v, Math.max(Math.abs(ph.u), 4)) * 0.4;       // follow where the car is going, a little, when it slides
+      if (this.camYaw === null) this.camYaw = want;
+      this.camYaw += Math.atan2(Math.sin(want - this.camYaw), Math.cos(want - this.camYaw)) * Math.min(1, dt * 3.2);
+      const cx = Math.cos(this.camYaw), cz = Math.sin(this.camYaw), wx = ph.x - cx * d.cam.back, wz = ph.z - cz * d.cam.back;
+      const y = Math.max(ph.y + d.cam.up, floor(wx, wz) + 1.2);
+      camera.position.set(wx - origin.x, y, wz - origin.z); camera.lookAt(ph.x + cx * d.cam.look - origin.x, ph.y + d.cam.up * 0.45, ph.z + cz * d.cam.look - origin.z);
+      camera.fov = 56 + Math.min(14, speed * 0.16);
+    }
+    camera.updateProjectionMatrix();
+  }
+}

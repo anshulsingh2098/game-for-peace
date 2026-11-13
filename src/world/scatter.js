@@ -79,6 +79,12 @@ export class Scatter {
   reposition() { const Sz = this.size; for (const t of this.tiles.values()) t.g.position.set(t.tx * Sz - this.origin.x, 0, t.tz * Sz - this.origin.z); }
   /* collision circles of the tile containing a world point (trees and rocks) */
   colliders(x, z) { const t = this.tiles.get(Math.floor(x / this.size) + ',' + Math.floor(z / this.size)); return t ? t.hits : []; }
+  /* collision circle lists of every tile within r of a world point */
+  near(x, z, r) {
+    const S = this.size, out = this._near || (this._near = []); out.length = 0;
+    for (let tz = Math.floor((z - r) / S); tz <= Math.floor((z + r) / S); tz++) for (let tx = Math.floor((x - r) / S); tx <= Math.floor((x + r) / S); tx++) { const t = this.tiles.get(tx + ',' + tz); if (t && t.hits.length) out.push(t.hits); }
+    return out;
+  }
   dispose() { for (const t of this.tiles.values()) this.drop(t); this.tiles.clear(); this.group.parent && this.group.parent.remove(this.group); }
   stats() { return { tiles: this.tiles.size, things: this.count, queue: this.queue.length }; }
 }

@@ -1,6 +1,7 @@
-/* Entry point of the new engine (next.html). Phase 2: generated terrain with a routed road, scenery and water.
-   Address options: ?seed=word  ?q=low|med|high  ?c=<share code>
-   Keys: T ride along the road, R new world, G wireframe, H hide panels; flying keys are listed in debug/flycam.js. */
+/* Entry point of the new engine (next.html). Phase 3: drive anywhere in the generated world.
+   Address options: ?seed=word  ?q=low|med|high  ?c=<share code>  ?debug (stats panel)
+   Keys: arrows / W A S D drive, C camera, B back to the road, F free-fly camera, T ride along the road,
+         R new world, G wireframe, H hide panels. */
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { makeConfig, decodeConfig, encodeConfig, VIEW_PRESETS } from './core/config.js';
@@ -12,21 +13,26 @@ import { TileGrid } from './world/chunks.js';
 import { Scatter } from './world/scatter.js';
 import { WIND } from './world/props.js';
 import { grassTex, waterNormalTex } from './world/textures.js';
+import { VEHICLES } from './vehicle/defs.js';
+import { VehiclePhysics, vehicleParams, SURFACES } from './vehicle/physics.js';
+import { VehicleView, loadModel } from './vehicle/vehicle.js';
+import { Controls } from './input/controls.js';
 import { FlyCam } from './debug/flycam.js';
 import { statsPanel } from './debug/stats.js';
 
-const $ = s => document.querySelector(s), q = new URLSearchParams(location.search);
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], q = new URLSearchParams(location.search);
 const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let config = (q.get('c') && decodeConfig(q.get('c'))) || makeConfig({ seed: q.get('seed') || 'peace' });
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };
+document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches);
 
 const canvas = $('#view'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, phone ? 1 : 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.25; renderer.outputColorSpace = THREE.SRGBColorSpace;
-const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(58, 1, 0.5, 14000);
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(58, 1, 0.3, 14000);
 const SKY = 0xcfe6ff; scene.background = new THREE.Color(SKY); scene.fog = new THREE.Fog(SKY, 150, 900);
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;      // soft reflections for water and wet road until the real sky arrives
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;      // soft reflections until the real sky arrives
 const hemi = new THREE.HemisphereLight(0xcfe2ff, 0x7d7a6a, 1.15), sun = new THREE.DirectionalLight(0xfff2dc, 3.2);
 sun.position.set(-0.30, 0.85, -0.45).multiplyScalar(500); scene.add(hemi, sun);
 
@@ -35,14 +41,11 @@ const ripples = waterNormalTex(), RIP = 0.07;
 const waterMat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.9, normalMap: ripples, normalScale: new THREE.Vector2(0.35, 0.35), envMapIntensity: 1.5 });
 const water = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), waterMat); water.renderOrder = 1; scene.add(water);
 
-/* the world: land, the road through it, and everything drawn from them */
+/* ---------- the world: land, the road through it, and everything drawn from them ---------- */
 let terrain, road, roadMesh, scatter, roadS = 0;
-const cam = new FlyCam(canvas);
 const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.rings.length - 1].r * v.tile;      // far tiles leave out what the near grid is guaranteed to cover
   return { tile: f.tile, rings: [{ r: f.r, res: f.res }], budgetMs: 2, rebase: Infinity, inner: Math.floor(reach / f.tile) - 1, sink: f.sink }; };
-function makeWorld() {
-  terrain = createTerrain(config); road = new Road(terrain, config); road.ensure(-2600, 2600); terrain.attachRoad(road); roadS = 0;
-}
+function makeWorld() { terrain = createTerrain(config); road = new Road(terrain, config); road.ensure(-2600, 2600); terrain.attachRoad(road); roadS = 0; }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
 function makeScenery() {
@@ -50,31 +53,54 @@ function makeScenery() {
   roadMesh = new RoadMesh(scene, road, TWO_LANE, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin);
 }
 makeScenery();
-
 function applyView() {
   const reach = (far.outer + 0.5) * far.size; scene.fog.near = reach * 0.1; scene.fog.far = reach * 0.96;
   water.scale.set(reach * 4, 1, reach * 4); water.position.y = terrain.seaLevel; ripples.repeat.set(reach * 4 * RIP, reach * 4 * RIP);
 }
-/* start beside the road, looking along it */
-function spawn() {
-  const p = road.at(0), yaw = Math.atan2(-p.tx, -p.tz);
-  cam.x = p.x - p.tx * 45; cam.z = p.z - p.tz * 45; cam.y = p.y + 16; cam.yaw = yaw; cam.pitch = -0.24; ride = false;
+
+/* ---------- the vehicle ---------- */
+const cam = new FlyCam(canvas), controls = new Controls(), view = new VehicleView(scene);
+const world = { height: (x, z) => terrain.height(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => scatter.near(x, z, r), get seaLevel() { return terrain.seaLevel; } };
+let mode = 'drive', vehicle = 0, phys = null, rideYaw = 0, auto = null;      // mode: 'drive', 'fly' (free camera) or 'ride' (camera glides along the road)
+try { vehicle = Math.max(0, Math.min(VEHICLES.length - 1, +(localStorage.getItem('gfp-next-vehicle') || 0))); } catch (e) { /* storage unavailable */ }
+/* put the vehicle in the left lane at road distance s, facing along the road */
+function placeOnRoad(s) { const p = road.at(s, {}); phys.reset(p.x + p.tz * 2, p.z - p.tx * 2, p.th); view.camYaw = null; }
+async function setVehicle(i) {
+  const def = VEHICLES[i], model = await loadModel(def), old = phys; vehicle = i;
+  phys = new VehiclePhysics(vehicleParams(def.body, def.stats), world);
+  if (old) { phys.reset(old.x, old.z, old.yaw); } else placeOnRoad(0);
+  view.setModel(def, model); $$('#vehicles button').forEach((b, k) => b.classList.toggle('on', k === i)); document.documentElement.style.setProperty('--accent', def.color);
+  try { localStorage.setItem('gfp-next-vehicle', i); } catch (e) { /* storage unavailable */ }
+}
+function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
+function setMode(m) {
+  if (m === 'fly' && phys) { cam.x = phys.x - Math.cos(phys.yaw) * 14; cam.z = phys.z - Math.sin(phys.yaw) * 14; cam.y = phys.y + 7; cam.yaw = -Math.PI / 2 - phys.yaw; cam.pitch = -0.25; }
+  if (m === 'ride') { roadS = road.closestS(phys ? phys.x : cam.x, phys ? phys.z : cam.z, roadS); rideYaw = phys ? -Math.PI / 2 - phys.yaw : cam.yaw; cam.speed = Math.min(cam.speed, 40); }
+  if (m === 'drive' && mode === 'ride' && phys) placeOnRoad(roadS);
+  mode = m; controls.enabled = m === 'drive'; document.body.dataset.mode = m; view.root.visible = m !== 'ride';
+  $('#fly').classList.toggle('on', m === 'fly'); $('#ride').classList.toggle('on', m === 'ride');
 }
 function regenerate(seed) {
-  config = makeConfig({ ...config, seed }); makeWorld(); grid.reset(terrain, config.view); far.reset(terrain.far, farView()); makeScenery(); applyView(); spawn();
-  $('#seed').value = seed; history.replaceState(null, '', '?seed=' + encodeURIComponent(seed) + '&q=' + quality);
+  config = makeConfig({ ...config, seed }); makeWorld(); grid.reset(terrain, config.view); far.reset(terrain.far, farView()); makeScenery(); applyView();
+  if (phys) placeOnRoad(0); setMode('drive');
+  $('#seed').value = seed; history.replaceState(null, '', '?seed=' + encodeURIComponent(seed) + '&q=' + quality + (q.has('debug') ? '&debug' : ''));
 }
-let ride = false, rideYaw = 0;
-applyView(); spawn(); $('#seed').value = config.seed;
+let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
 
+/* ---------- screen controls ---------- */
+applyView(); $('#seed').value = config.seed;
 $('#seedForm').addEventListener('submit', e => { e.preventDefault(); regenerate($('#seed').value.trim() || 'peace'); $('#seed').blur(); });
 $('#newSeed').addEventListener('click', () => regenerate(randomSeed()));
-const toggleRide = () => { ride = !ride; if (ride) { roadS = road.closestS(cam.x, cam.z, roadS); rideYaw = cam.yaw; } $('#ride').classList.toggle('on', ride); };
-$('#ride').addEventListener('click', toggleRide);
+$$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { setVehicle(i); b.blur(); }));
+const toggleView = () => { view.setView(view.view === 'first' ? 'third' : 'first'); toast(view.view === 'first' ? 'Driver view' : 'Chase view'); };
+$('#viewBtn').addEventListener('click', toggleView); $('#reset').addEventListener('click', backToRoad);
+$('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
+controls.on('view', toggleView); controls.on('reset', backToRoad); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
+controls.bindPads($$('.pad'));
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'KeyR') regenerate(randomSeed());
-  if (e.code === 'KeyT') toggleRide();
+  if (e.code === 'KeyT') setMode(mode === 'ride' ? 'drive' : 'ride');
   if (e.code === 'KeyG') ground.wireframe = !ground.wireframe;
   if (e.code === 'KeyH') document.body.classList.toggle('bare');
 });
@@ -82,37 +108,45 @@ function resize() { const w = canvas.clientWidth || innerWidth, h = canvas.clien
 addEventListener('resize', resize); resize();
 
 const stats = statsPanel($('#stats'), renderer, () => {
-  const s = grid.stats(), f = far.stats(), sc = scatter.stats(), h = terrain.height(cam.x, cam.z);
+  const s = grid.stats(), f = far.stats(), sc = scatter.stats();
   return ['tiles       ' + s.tiles + '  (' + s.lod.join(' / ') + ' by detail)   far ' + f.tiles, 'build queue ' + (s.queue + f.queue + sc.queue) + '   pooled ' + (s.pooled + f.pooled) + '   built ' + (s.built + f.built),
     'scenery     ' + sc.things.toLocaleString('en-US') + ' in ' + sc.tiles + ' tiles   road pieces ' + roadMesh.pieces.size,
     'road        at ' + (roadS / 1000).toFixed(2) + ' km   built ' + (road.sMin / 1000).toFixed(1) + ' .. ' + (road.sMax / 1000).toFixed(1) + ' km',
-    'position    ' + cam.x.toFixed(0) + ', ' + cam.z.toFixed(0) + '   origin ' + grid.origin.x + ', ' + grid.origin.z,
-    'ground      ' + h.toFixed(1) + ' m   camera ' + cam.y.toFixed(1) + ' m', (ride ? 'ride speed  ' : 'fly speed   ') + cam.speed.toFixed(0) + ' m/s', 'seed        ' + config.seed + '   quality ' + quality];
+    'origin      ' + grid.origin.x + ', ' + grid.origin.z + '   mode ' + mode,
+    phys ? 'vehicle     u ' + phys.u.toFixed(1) + '  v ' + phys.v.toFixed(2) + '  r ' + phys.r.toFixed(2) + '  slip ' + phys.slip.toFixed(2) + '  ' + phys.surface : '', 'seed        ' + config.seed + '   quality ' + quality];
 });
+const hud = { spd: $('#spd'), unit: $('#unit'), surf: $('#surface') }; let hudT = 0;
 
-const rp = {};
-let last = performance.now();
+/* ---------- one frame of the world: move, keep road and tiles built around the player, draw ---------- */
+const rp = {}; let last = performance.now();
 function frame(now) { requestAnimationFrame(frame); step(Math.min(0.05, (now - last) / 1000), now); last = now; }
-/* one frame of the world: move, keep the road and tiles built around the camera, draw */
 function step(dt, now) {
-  WIND.t.value = now / 1000;
-  if (ride) {                                                   // ride: glide along the right-hand lane at the current speed
+  WIND.t.value = now / 1000; let px, pz;
+  if (mode === 'drive' && phys) {
+    phys.step(dt, auto || controls.read());
+    if (phys.stuck > 1.5) backToRoad();
+    px = phys.x; pz = phys.z; roadS = road.closestS(px, pz, roadS);
+  } else if (mode === 'ride') {
     roadS += Math.min(cam.speed, 90) * dt; road.at(roadS, rp);
-    cam.x = rp.x - rp.tz * 2; cam.z = rp.z + rp.tx * 2; cam.y = rp.y + 1.6;
+    cam.x = rp.x + rp.tz * 2; cam.z = rp.z - rp.tx * 2; cam.y = rp.y + 1.6;
     const want = Math.atan2(-rp.tx, -rp.tz); rideYaw += Math.atan2(Math.sin(want - rideYaw), Math.cos(want - rideYaw)) * Math.min(1, dt * 4);
-    cam.yaw = rideYaw; cam.pitch += (Math.atan(rp.slope) * 0.8 - 0.04 - cam.pitch) * Math.min(1, dt * 3);
+    cam.yaw = rideYaw; cam.pitch += (Math.atan(rp.slope) * 0.8 - 0.04 - cam.pitch) * Math.min(1, dt * 3); px = cam.x; pz = cam.z;
   } else {
-    cam.update(dt, (x, z) => Math.max(terrain.seaLevel, terrain.height(x, z)) + 1.7);
-    roadS = road.closestS(cam.x, cam.z, roadS);
+    cam.update(dt, (x, z) => Math.max(terrain.seaLevel, terrain.height(x, z)) + 1.7); px = cam.x; pz = cam.z; roadS = road.closestS(px, pz, roadS);
   }
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
-  if (grid.rebase(cam.x, cam.z)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
-  grid.update(cam.x, cam.z); far.update(cam.x, cam.z); roadMesh.update(roadS); scatter.update(cam.x, cam.z); cam.apply(camera, grid.origin);
+  if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
+  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz);
+  if (phys) view.update(phys, grid.origin);
+  if (mode === 'drive' && phys) view.aim(camera, phys, grid.origin, dt, (x, z) => Math.max(terrain.seaLevel, terrain.height(x, z)));
+  else { cam.apply(camera, grid.origin); camera.fov = 58; camera.updateProjectionMatrix(); }
   water.position.x = camera.position.x; water.position.z = camera.position.z;
-  ripples.offset.set((cam.x * RIP + now * 0.000011) % 1, (-cam.z * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
+  ripples.offset.set(((camera.position.x + grid.origin.x) * RIP + now * 0.000011) % 1, (-(camera.position.z + grid.origin.z) * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
   renderer.render(scene, camera); stats(now);
+  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; }
 }
-requestAnimationFrame(frame);
+setVehicle(vehicle).then(() => { setMode('drive'); requestAnimationFrame(frame); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); });
 
 window.__next = { get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
-  get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get ride() { return ride; }, toggleRide, grid, far, cam, camera, renderer, scene, regenerate, encodeConfig, step };
+  get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
+  setMode, setVehicle, backToRoad, placeOnRoad, view, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };

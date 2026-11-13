@@ -5,40 +5,81 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Game for Peace: new engine preview</title>
 <style>
-  :root { color-scheme: dark; }
+  :root { color-scheme: dark; --accent: #6f9bff; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1018; font: 13px/1.4 system-ui, "Segoe UI", sans-serif; color: #eef2f8; }
-  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
-  #view:active { cursor: grabbing; }
-  .panel { position: fixed; background: rgba(8, 12, 20, .62); border: 1px solid rgba(255, 255, 255, .12); border-radius: 10px; padding: 10px 12px; backdrop-filter: blur(6px); }
-  #info { left: 12px; top: 12px; max-width: min(340px, calc(100vw - 24px)); box-sizing: border-box; }
-  #info h1 { font-size: 14px; margin: 0 0 2px; font-weight: 600; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .panel { position: fixed; background: rgba(8, 12, 20, .62); border: 1px solid rgba(255, 255, 255, .12); border-radius: 10px; padding: 8px 10px; backdrop-filter: blur(6px); }
+  button { background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; color: inherit; padding: 6px 10px; font: inherit; cursor: pointer; }
+  button:hover { background: rgba(255, 255, 255, .2); }
+  button.on { background: var(--accent); border-color: transparent; color: #0b1020; font-weight: 600; }
+
+  /* top bar: world on the left, vehicle and view on the right */
+  #info { left: 10px; top: 10px; max-width: min(330px, calc(100vw - 20px)); box-sizing: border-box; }
+  #info summary { cursor: pointer; font-weight: 600; list-style: none; }
+  #info summary::-webkit-details-marker { display: none; }
+  #info summary::after { content: ' ▾'; color: #8f9bb0; }
+  #info[open] summary { margin-bottom: 8px; }
   #info p { margin: 0 0 8px; color: #b9c3d3; }
   #seedForm { display: flex; gap: 6px; flex-wrap: wrap; }
   #seed { flex: 1 1 110px; min-width: 0; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); border-radius: 6px; color: inherit; padding: 6px 8px; font: inherit; }
-  button { background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; color: inherit; padding: 6px 10px; font: inherit; cursor: pointer; }
-  button:hover { background: rgba(255, 255, 255, .2); }
-  button.on { background: #3d7dff; border-color: #7aa6ff; }
-  #stats { left: 12px; bottom: 12px; margin: 0; font: 11px/1.4 ui-monospace, Consolas, monospace; color: #d8ffe0; pointer-events: none; white-space: pre; max-width: calc(100vw - 48px); overflow: hidden; }
   .keys { color: #8f9bb0; font-size: 12px; margin-top: 8px; }
-  body.bare .panel { display: none; }
-  @media (max-width: 600px) { .keys { display: none; } #stats { font-size: 10px; } }
-  @media (max-height: 460px) { #info p, .keys { display: none; } #info h1 { margin-bottom: 6px; } #info { max-width: 300px; } #stats { display: none; } }   /* short windows: the view matters more than the numbers */
+  #bar { right: 10px; top: 10px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 130px); }
+  #vehicles { display: flex; gap: 6px; }
+
+  /* driving read-out */
+  #hud { left: 12px; bottom: 12px; display: flex; align-items: baseline; gap: 8px; padding: 8px 14px; pointer-events: none; }
+  #spd { font-size: 34px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; min-width: 2.2ch; text-align: right; }
+  #unit { color: #b9c3d3; font-size: 12px; }
+  #surface { color: var(--accent); font-size: 12px; font-weight: 600; margin-left: 6px; }
+  body:not([data-mode=drive]) #hud, body:not([data-mode=drive]) #pads { display: none; }
+
+  /* touch pads (phones and tablets) */
+  #pads { position: fixed; left: 0; right: 0; bottom: 14px; display: none; justify-content: space-between; padding: 0 14px; pointer-events: none; }
+  body.touch #pads { display: flex; }
+  body.touch #hud { bottom: 104px; }
+  #pads div { display: flex; gap: 10px; }
+  .pad { width: 74px; height: 74px; border-radius: 18px; background: rgba(8, 12, 20, .5); border: 1px solid rgba(255, 255, 255, .22); display: grid; place-items: center; font-size: 26px; pointer-events: auto; user-select: none; touch-action: none; }
+  .pad.down { background: var(--accent); color: #0b1020; }
+
+  #stats { right: 10px; bottom: 12px; margin: 0; font: 11px/1.4 ui-monospace, Consolas, monospace; color: #d8ffe0; pointer-events: none; white-space: pre; max-width: calc(100vw - 48px); overflow: hidden; display: none; }
+  body.debug #stats { display: block; }
+  #toast { position: fixed; left: 50%; top: 58px; transform: translateX(-50%); background: rgba(8, 12, 20, .8); border-radius: 999px; padding: 6px 14px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #toast.on { opacity: 1; }
+  body.bare .panel, body.bare #pads { display: none; }
+  @media (max-width: 640px) { .keys { display: none; } #bar button { padding: 6px 8px; } #stats { font-size: 10px; } }
+  @media (max-height: 460px) { #stats { display: none !important; } .keys { display: none; } }
 </style>
 </head>
-<body>
-<canvas id="view" aria-label="Generated terrain"></canvas>
-<section class="panel" id="info">
-  <h1>New engine preview</h1>
-  <p>Generated land with a routed road and scenery. Driving comes next.</p>
+<body data-mode="drive">
+<canvas id="view" aria-label="Generated world"></canvas>
+
+<details class="panel" id="info">
+  <summary>World</summary>
+  <p>New engine preview: generated land, a routed road and free-roam driving. Sky, weather and sound come next.</p>
   <form id="seedForm">
     <input id="seed" aria-label="World seed" autocomplete="off" spellcheck="false" maxlength="40">
     <button type="submit">Go</button>
     <button type="button" id="newSeed">New world</button>
-    <button type="button" id="ride" title="Ride along the road (T)">Ride the road</button>
   </form>
-  <div class="keys">Drag to look · W A S D fly · Space / Q up and down · Shift fast · wheel speed · T ride the road · R new world · G wireframe · H hide panels</div>
-</section>
+  <div class="keys">Arrows or W A S D drive · C camera · B back to the road · F free camera · T ride along the road · R new world · H hide panels</div>
+</details>
+
+<nav class="panel" id="bar" aria-label="Vehicle and view">
+  <div id="vehicles"><button type="button">Car</button><button type="button">Truck</button><button type="button">Bike</button></div>
+  <button type="button" id="viewBtn" title="Switch camera (C)">Camera</button>
+  <button type="button" id="reset" title="Back to the road (B)">To road</button>
+  <button type="button" id="fly" title="Free camera (F)">Fly</button>
+  <button type="button" id="ride" title="Ride along the road (T)">Ride</button>
+</nav>
+
+<section class="panel" id="hud" aria-label="Speed"><b id="spd">0</b><span id="unit">km/h</span><span id="surface">Road</span></section>
+<div id="pads" aria-label="Touch controls">
+  <div><span class="pad" data-k="left" role="button" aria-label="Steer left">◀</span><span class="pad" data-k="right" role="button" aria-label="Steer right">▶</span></div>
+  <div><span class="pad" data-k="down" role="button" aria-label="Brake and reverse">▼</span><span class="pad" data-k="up" role="button" aria-label="Accelerate">▲</span></div>
+</div>
 <pre class="panel" id="stats"></pre>
+<div id="toast" role="status"></div>
+
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 <script type="module" src="src/main.js"></script>
 </body>
