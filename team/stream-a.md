@@ -2,6 +2,17 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  Phase 1 is on main (PR #2 merged)
+Branch: main
+What changed: nothing new; the entry below is now in `main`.
+For the other stream: bring it into your branch with
+```bash
+git fetch && git merge origin/main
+node tools/selftest.mjs
+```
+Stream A starts Phase 2 (bridges, tunnels or switchbacks, location polish) on `world/bridges`.
+Status: open
+
 ## 2026-11-14  Phase 1 done: road styles, textures, bend fix, city roads
 Branch: world/road-styles  Commit: see `git log` (latest on the branch)
 What changed:
