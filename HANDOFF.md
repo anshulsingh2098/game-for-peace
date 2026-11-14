@@ -4,10 +4,11 @@ State of the work as of 14 November 2026. Read `OVERVIEW.md` first for what the 
 
 ## Where things stand
 
-- **Branch checked out:** `vehicle/cars-and-gears` (Stream B, Phase 1 of `PARALLEL_PLAN.md`: its base is `phase/3-driving` plus the plan commits). It is pushed to GitHub but **not merged and not deployed**. Stream A works in parallel on `world/road-styles`; read `PARALLEL_PLAN.md` for who owns which files. The live `/next` (version `4ab7b600`) does not have this branch's work yet.
+- **Branch checked out:** `vehicle/cars-and-gears` (Stream B, Phase 1 of `PARALLEL_PLAN.md`: its base is `phase/3-driving` plus the plan commits). It is pushed to GitHub and **not merged into `main`**; its work (new cars, gears, steering and slip fixes, and the rebuilt car models) was deployed to `/next` on 2026-11-14. Stream A works in parallel on `world/road-styles`; read `PARALLEL_PLAN.md` for who owns which files. The live `/next` (version `4ab7b600`) does not have this branch's work yet.
 - **Branch chain**, each building on the one before: `main` → `phase/0-groundwork` (phases 0 and 1) → `phase/2-roads` → `phase/3-driving` (phases 3 and 4 so far). The branches are pushed to GitHub (`origin`) so they are backed up. **Nothing has been merged into `main`.**
 - **`main` and the live `/` page:** the original game (`index.html`, `game.js`, `audio.js`) with three bug fixes. Unchanged by the engine rebuild.
 - **Live site:** https://game-for-peace.anshul-rawat.workers.dev. `/` is the original game; **`/next` is the new engine**, deployed from `phase/3-driving` (last deploy: version `4ab7b600`, with the city landmarks). Everything committed was deployed.
+- **Car models (2026-11-14):** all three cars were rebuilt with a production-car look using the shared Blender kit `dev/carkit.py` (`dev/build_car1.py`, `build_car2_sport.py`, `build_car3_rally.py`; run with `blender -b -P <script> -- <out_dir> <render_dir>`, previews in `dev/previews/`). The game contract is unchanged: wheel pivots `Wheel_FL/FR/RL/RR`, an object named `Cabin` (and `Interior`, both hidden in first person), materials `Paint_*`, the livery mask for the Dusk GT. Truck and bike were not rebuilt.
 - **Self-test:** 21 checks pass (`node tools/selftest.mjs`). `node tools/locations_check.mjs [id]` prints land and road statistics per location.
 - **Account for everything:** rawatanshul525@gmail.com (git, GitHub, Cloudflare). Deploy with `python tools/stage_cloudflare.py` then `cd cloudflare && npx wrangler deploy` (wrangler is already logged in on this PC).
 
@@ -49,7 +50,7 @@ Address options: `?seed=word` `?loc=id` `?q=low|med|high` `?shadows=on|off` `?pl
 
 ## Uncommitted work
 
-None on `vehicle/cars-and-gears`. The `cloudflare/public` deploy folder is committed and matches the last deploy.
+None of the work on `vehicle/cars-and-gears`. **Warning:** `cloudflare/public` has stray uncommitted changes (a stage run into it by mistake on 2026-11-14; the live deploy came from a scratch folder, so the site is fine). Discard them with `git checkout -- cloudflare/public && git clean -fd cloudflare/public`; do not commit them.
 
 ## How to test engine work
 
