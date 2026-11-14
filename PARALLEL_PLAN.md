@@ -10,14 +10,28 @@ Two streams. Each person owns one stream and one set of files. Claude only edits
 | Works on | Roads, terrain, scenery, locations, landmarks, world tools | Driving, vehicles, traffic, sound, menus, radio, graphics, the old game |
 | Branch prefix | `world/...` | `vehicle/...` |
 
-## Status (14 Nov 2026)
+## Status (14 Nov 2026, end of day)
 
-- Phase 0 (sync): done. Phase 1 (road styles, bend fix, city roads): done and merged.
-- Phase 2: bridges and tunnels done and merged; location polish (southern coast, Marine Drive, hotel) not done.
-- Tuner dashboard (not in the original plan): done and merged; Publish needs Anshul's one-time Cloudflare setup.
-- Phase 3 (steep land, frame cost) and Phase 4 (switch `index.html` to the new engine): not started.
-- Direction change: the whole game goes photorealistic, see `team/photoreal-plan.md` (it replaces "match the flat stylised look").
-- Stream B: no log entries yet; its Phase 1 and 2 items are all still open.
+- **Done and merged:** Phase 0 (sync), Phase 1 for Stream A (road styles, bend fix, city roads), Phase 2 for Stream A (bridges, tunnels with the Atal-style gate), the tuner dashboard, the photoreal track R0, R1, R5 and part of R4/R6 (see `team/photoreal-plan.md`), autodrive, touch controls, seven camera views, the new brake / handbrake / reverse controls, and the engine sound from Rajul's recording. Pull requests 1 to 13 are merged.
+- **Waiting:** deploy to Cloudflare (Anshul's PC, project account only), the tuner Publish setup, and the first run of `CHECKLIST.md` by a person on a real phone.
+- **Stream B has not started** (`team/stream-b.md` is empty); Rajul's Claude has done some Stream B work at Rajul's request, all logged. The original Phase 1, 2 and 3 items for Stream B below are still open unless the log says otherwise.
+- **Direction change (14 Nov):** the whole game goes photorealistic, see `team/photoreal-plan.md`; it replaces "match the flat stylised look".
+
+## Phases from here (the plan, replacing the original phase numbers below)
+
+Each phase ends with: `python tools/daily_check.py` clean, the relevant `CHECKLIST.md` items ticked by a person, a merge into `main`, a deploy by Anshul, and `HANDOFF.md` updated. Stream A and Stream B can run side by side, as before; the "(A)" and "(B)" marks say who owns the files.
+
+| Phase | Owner | Work | Done when |
+|---|---|---|---|
+| **N0** this week | both | Anshul deploys `main`. Both go through the whole checklist, on two real phones too. Listen to the engine sound. Every defect goes into the team log as an open entry. | Live `/next` works on two phones; the defect list exists and is ordered. |
+| **N1** Driving and sound | B | Cleaner engine recordings (steady revs at six speeds, 10 s each) and a second pass on the loops; tyre, road and wind sounds; rain sound out of tunnels; a physics feel pass with the hard-coded constants moved into the tuner (`rapier-vehicle.js`, `physics.js`); sports car and rally hatchback integrated; manual gears. | Rajul drives the car, truck and bike and says the feel and sound are natural; the tuner exposes the physics constants. |
+| **N2** Sky, weather, vehicle look | B (A helps) | An HDRI that follows weather and time of day (`env/environment.js`), fog and clouds, wet and snow surfaces, headlight beams; fix the white paint glare; detailed vehicle models and clearcoat paint (R2, R3); a calmer, hazier colour grade like slowroads. | Every weather at day, dusk and night looks right on the checklist; vehicles look close to real. |
+| **N3** World polish | A | Tall-grass look and normal maps on the ground; tree levels of detail; Marine Drive seafront, southern coast landmark, better hotel model; bridge rail collision (shared collision list), steel truss bridge and retaining walls from the Atal references, interior signs and walkway; steep-land driving checks in the Alps and Himalayas; research real Rohtang terrain from open height data. | The checklist's world items pass in all eight locations; no known visual defect at a landmark. |
+| **N4** Phones and speed | both | Compressed textures (KTX2) and meshes (meshopt), draw-call and triangle budgets per tier, tune the high tier (about 24 ms on an M4 now), a loading screen, automatic quality choice, a frame-time budget per tier. | Two real phones hold a steady frame rate on low and medium; download size is written down. |
+| **N5** Features | B | Traffic with modes (`src/traffic/`, uses `road.carriedW` and the road lookup), the "My music" station for local songs in the radio, controller rumble, vehicle customisation in the garage, a password for the tuner page and the Publish setup. | Each feature has a checklist line and passes it. |
+| **N6** Switch-over and launch | both | `index.html` becomes the new engine, `game.js` is retired, `next.html` stays as an alias for a while, final full checklist, final deploy. | The live `/` is the new game and plays well on phones and computers. |
+
+Order: N0 first, then N1 and N3 in parallel (different files), N2 after N1 starts, N4 once N1 to N3 have landed, N5 any time after N1, N6 last.
 
 ## File ownership (the anti-collision rule)
 
@@ -47,6 +61,8 @@ Both Claudes read `CLAUDE.md` automatically. It tells them to log changes in `te
 5. **One deployer.** Deploys happen only from the integration branch after a merge (wrangler is logged in on Anshul's PC).
 6. Line endings: the repo mixes LF and CRLF. Do not run tools that rewrite whole files. Make surgical edits and check `git diff --stat` for huge diffs.
 7. The old game (`index.html`, `game.js`) is Stream B's. Stream A never touches it.
+
+## The original phases (kept for reference: Phases 0 to 2 are done for Stream A; the rest is folded into "Phases from here" above)
 
 ## Phase 0: sync (together, about 30 minutes, do first)
 
