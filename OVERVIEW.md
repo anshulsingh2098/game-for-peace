@@ -3,7 +3,7 @@
 A calm, endless driving game that runs in the browser. Built with JavaScript, three.js and WebGL; everything in the world is generated on the player's device from a seed, so there is nothing to download but the page, the scripts and three small vehicle models.
 
 - **Repository:** https://github.com/anshulsingh2098/game-for-peace
-- **Live site:** https://game-for-peace.anshul-rawat.workers.dev (Cloudflare). `/` is the original game; `/next` is the new engine.
+- **Live site:** https://game-for-peace.anshul-rawat.workers.dev (Cloudflare). `/` is the new engine (from the N6 switch-over, once deployed); `/classic.html` is the original game; `/next.html` redirects to `/`.
 - **Account for everything:** rawatanshul525@gmail.com (git, GitHub, Cloudflare). No other account is to be used.
 
 ## Two games in one folder
@@ -12,10 +12,10 @@ The project is in the middle of an engine rebuild, so there are two entry pages.
 
 | Page | What it is | Code |
 |---|---|---|
-| `index.html` | **The current game.** One endless road with land shaped around it; the car is held to a 9 m strip. Menu, garage, paint, settings, weather, day and night, engine sounds, radio. This is what is live. | `index.html`, `game.js`, `audio.js` |
-| `next.html` | **The new engine.** An open world generated terrain-first, a road routed through it, scenery, free-roam driving on Rapier physics, weather, time of day, shadows, engine sound, live radio, menus and garage, and eight locations (landscapes and Indian city landmarks). Not yet the main page. | `src/`, `vendor/three/`, `vendor/rapier/` |
+| `classic.html` | **The original game (was `index.html`, kept for rollback).** One endless road with land shaped around it; the car is held to a 9 m strip. Menu, garage, paint, settings, weather, day and night, engine sounds, radio. This is what is live. | `index.html`, `game.js`, `audio.js` |
+| `index.html` | **The game: the new engine** (`next.html` is now only a redirect to it). An open world generated terrain-first, a road routed through it, scenery, free-roam driving on Rapier physics, weather, time of day, shadows, engine sound, live radio, menus and garage, and eight locations (landscapes and Indian city landmarks). Not yet the main page. | `src/`, `vendor/three/`, `vendor/rapier/` |
 
-When the new engine can do everything the current game does, `index.html` switches to it and `game.js` is retired.
+The switch-over (N6) has been done in the repo: `index.html` is the new engine and `game.js` serves only `classic.html`.
 
 ## How to run it
 
@@ -23,9 +23,9 @@ When the new engine can do everything the current game does, `index.html` switch
 python tools/serve.py
 ```
 
-Then open `http://localhost:8765/` for the current game or `http://localhost:8765/next.html` for the new engine. Opening the HTML files directly from disk does not work: browsers block the scripts.
+Then open `http://localhost:8765/` for the game or `http://localhost:8765/classic.html` for the original. Opening the HTML files directly from disk does not work: browsers block the scripts.
 
-Useful address options for `next.html`: `?seed=word` (which world), `?loc=id` (location: alps, himalayas, california, south, mumbai, delhi, agra), `?q=low|med|high` (quality), `?shadows=on|off`, `?play` (skip the title screen), `?dev` or `?debug` (developer panels and stats), `?phys=old` (the old simple physics).
+Useful address options for `index.html`: `?seed=word` (which world), `?loc=id` (location: alps, himalayas, california, south, mumbai, delhi, agra), `?q=low|med|high` (quality), `?shadows=on|off`, `?play` (skip the title screen), `?dev` or `?debug` (developer panels and stats), `?phys=old` (the old simple physics).
 
 Checks before committing engine work:
 

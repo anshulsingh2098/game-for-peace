@@ -18,7 +18,7 @@ python tools/daily_check.py
 - [ ] Read the newest entries in `team/stream-a.md` and `team/stream-b.md`; anything addressed to you and `open` is a task for today.
 - [ ] `HANDOFF.md` "What is next" still matches reality; `PARALLEL_PLAN.md` status table is current.
 
-## 3. Look at the game (desktop). Start `python tools/serve.py`, open `http://localhost:8765/next.html?play`
+## 3. Look at the game (desktop). Start `python tools/serve.py`, open `http://localhost:8765/?play`
 
 Open the browser console (F12): nothing red except known favicon 404s.
 
@@ -79,7 +79,7 @@ Open the browser console (F12): nothing red except known favicon 404s.
 
 - [ ] `python tools/daily_check.py` is clean; `cloudflare/public` is current (the script checks).
 - [ ] Deploy only from Anshul's PC: `cd cloudflare && npx wrangler deploy`.
-- [ ] After: the live `/` (original game) still loads and plays; `/next` loads; the console has no new errors; `/tuner.html` opens; `/api/settings` answers 200 (set up) or 503 (not set up), never a broken page.
+- [ ] After: the live `/` is the new game and loads and plays on a phone and a computer; `/classic.html` (the original game) still loads; `/next.html` redirects to `/` and keeps `?loc=...`; the console has no new errors; `/tuner.html` opens; `/api/settings` answers 200 (set up) or 503 (not set up), never a broken page.
 
 ## 8. End of day
 

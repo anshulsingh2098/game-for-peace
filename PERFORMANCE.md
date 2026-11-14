@@ -2,7 +2,7 @@
 
 ## How to measure on any device
 
-Open the game with `&bench=30` added to the address, e.g. `http://<address>/next.html?play&loc=california&q=med&bench=30`. After the loading screen and a 4 second pause it drives on autodrive for 30 seconds, then shows a green panel and writes `BENCH {...}` to the console (also kept in `window.__bench`): average, 95% and 99% frame time, worst frame, draw calls, triangles, geometries, textures, downloaded megabytes and the JS heap where the browser reports it. Run it for `q=low`, `q=med` and `q=high` and for two or three locations, on each phone, and paste the panel text into the team log or here. The existing on-screen stats panel (`?stats`, see `HANDOFF.md`) shows the live counters.
+Open the game with `&bench=30` added to the address, e.g. `http://<address>/?play&loc=california&q=med&bench=30`. After the loading screen and a 4 second pause it drives on autodrive for 30 seconds, then shows a green panel and writes `BENCH {...}` to the console (also kept in `window.__bench`): average, 95% and 99% frame time, worst frame, draw calls, triangles, geometries, textures, downloaded megabytes and the JS heap where the browser reports it. Run it for `q=low`, `q=med` and `q=high` and for two or three locations, on each phone, and paste the panel text into the team log or here. The existing on-screen stats panel (`?stats`, see `HANDOFF.md`) shows the live counters.
 
 ## Measured on 15 November 2026 (desktop, Apple silicon, Claude app browser pane, 1280 x 720, California seed `peace`, 8 s autodrive)
 
