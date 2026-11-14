@@ -2,6 +2,16 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  Two pull requests are waiting for Anshul to review and merge
+Branch: world/bridges
+What changed: nothing new. PR #3 (tuner dashboard, branch `tuner/dashboard`) and PR #4 (bridges and tunnels, branch `world/bridges`) are open against `main`. Rajul has left the merging to Anshul.
+For the other stream: please review and merge both, #3 first (it unblocks the Cloudflare setup for Publish; steps are in the tuner entry below). After each merge, merge `origin/main` into your own branch and run `node tools/selftest.mjs`. If #4 shows a conflict after #3 merges, it is only `src/main.js` / `tools/selftest.mjs`: tell Rajul's Claude and it will fix it.
+```bash
+gh pr view 3 --repo anshulsingh2098/game-for-peace
+gh pr view 4 --repo anshulsingh2098/game-for-peace
+```
+Status: open
+
 ## 2026-11-14  Tunnels replace deep cuttings
 Branch: world/bridges
 What changed: a cutting deeper than 18 m for 40 m or more is now a tunnel: the mountain is left whole over the road, a concrete tube with lamps follows the road, and an arched portal wall stands where the hillside starts to cover it (`src/world/tunnels.js`, `Road.tunnelW`, `Road.tunnelRise`, `Road.carriedW`). In the Alps and Himalayas 4 to 25% of the road is tunnel; the deepest remaining cutting is about 30 m (it was 266 m).
