@@ -1,6 +1,6 @@
 /* Entry point of the new engine (next.html). Phase 3: drive anywhere in the generated world.
    Address options: ?seed=word  ?q=low|med|high  ?c=<share code>  ?debug (stats panel)
-   Keys: arrows / W A S D drive (S reverses), Space brake, X handbrake, Shift boost, E autodrive, C camera, B back to the road, L headlights, M sound, F free-fly camera,
+   Keys: arrows / W A S D drive (S reverses), Space brake, X handbrake, Shift boost, E autodrive, V camera view, C driver's seat, B back to the road, L headlights, M sound, F free-fly camera,
          T ride along the road, R new world, G wireframe, H hide panels. */
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -161,10 +161,15 @@ $('#seedForm').addEventListener('submit', e => { e.preventDefault(); regenerate(
 $('#newSeed').addEventListener('click', () => regenerate(randomSeed()));
 $$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { setVehicle(i); b.blur(); }));
 function setAuto(on) { if (on && (mode !== 'drive' || !phys)) return; autodrive.s = roadS; autodrive.toggle(on); $('#autoBtn').classList.toggle('on', on); if (touchUI) touchUI.setAuto(on); toast(on ? 'Autodrive on: steer or brake to take over' : 'Autodrive off'); }
-const toggleView = () => { view.setView(view.view === 'first' ? 'third' : 'first'); toast(view.view === 'first' ? 'Driver view' : 'Chase view'); };
-$('#viewBtn').addEventListener('click', toggleView); $('#reset').addEventListener('click', backToRoad);
+/* camera views, cycled with V like the old GTA games; C jumps to the driver's seat and back */
+const CAMS = ['middle', 'far', 'close', 'hood', 'bumper', 'cockpit', 'cinematic'], CAM_NAMES = { middle: 'Chase', far: 'Far chase', close: 'Close chase', hood: 'Hood', bumper: 'Bumper', cockpit: 'Driver seat', cinematic: 'Cinematic' };
+function setCam(name, quiet) { if (!CAMS.includes(name)) name = 'middle'; view.setMode(name); S.cam = name; save(); if (!quiet) toast('Camera: ' + CAM_NAMES[name]); }
+const cycleCam = () => setCam(CAMS[(CAMS.indexOf(view.mode || 'middle') + 1) % CAMS.length]);
+const toggleView = () => { if (view.mode === 'cockpit') setCam(S.camBefore || 'middle'); else { S.camBefore = view.mode || 'middle'; setCam('cockpit'); } };
+setCam(S.cam, true);
+$('#viewBtn').addEventListener('click', cycleCam); $('#reset').addEventListener('click', backToRoad);
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
-controls.on('auto', () => setAuto(!autodrive.enabled)); $('#autoBtn').addEventListener('click', () => setAuto(!autodrive.enabled)); controls.on('view', toggleView); controls.on('reset', backToRoad); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
+controls.on('auto', () => setAuto(!autodrive.enabled)); $('#autoBtn').addEventListener('click', () => setAuto(!autodrive.enabled)); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
 let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
 $('#time').value = S.time; $('#weather').value = S.weather;

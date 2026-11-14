@@ -2,6 +2,9 @@
 *.mp3
 *.m4a
 *.wav
+# our own engine loops (cut from Rajul's car recording) are not commercial music: keep them
+!assets/audio/*.mp3
+!assets/audio/*.wav
 
 # Hand-made backups from before git; history replaces these
 dev/*_before_*

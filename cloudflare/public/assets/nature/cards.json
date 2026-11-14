@@ -1,0 +1,72 @@
+{
+ "fir_sapling_0": {
+  "width": 0.861,
+  "height": 1.301,
+  "frame": 1.405,
+  "cz": 0.642,
+  "zmin": -0.008
+ },
+ "fir_sapling_1": {
+  "width": 0.818,
+  "height": 0.952,
+  "frame": 1.028,
+  "cz": 0.476,
+  "zmin": -0.0
+ },
+ "fir_sapling_2": {
+  "width": 0.634,
+  "height": 0.736,
+  "frame": 0.795,
+  "cz": 0.368,
+  "zmin": -0.0
+ },
+ "pine_sapling_small_0": {
+  "width": 0.788,
+  "height": 1.299,
+  "frame": 1.403,
+  "cz": 0.634,
+  "zmin": -0.015
+ },
+ "pine_sapling_small_1": {
+  "width": 0.73,
+  "height": 1.046,
+  "frame": 1.129,
+  "cz": 0.524,
+  "zmin": 0.001
+ },
+ "pine_sapling_small_2": {
+  "width": 0.58,
+  "height": 0.961,
+  "frame": 1.038,
+  "cz": 0.481,
+  "zmin": 0.001
+ },
+ "island_tree_02": {
+  "width": 4.208,
+  "height": 3.407,
+  "frame": 4.544,
+  "cz": 1.686,
+  "zmin": -0.017
+ },
+ "shrub_03": {
+  "width": 1.367,
+  "height": 0.403,
+  "frame": 1.476,
+  "cz": 0.2,
+  "zmin": -0.002
+ },
+ "fern_02": {
+  "width": 1.973,
+  "height": 0.428,
+  "frame": 2.13,
+  "cz": 0.183,
+  "zmin": -0.031
+ },
+ "grass_medium_02": {
+  "width": 1.311,
+  "height": 0.405,
+  "frame": 1.415,
+  "cz": 0.197,
+  "zmin": -0.006
+ }
+}

@@ -13,7 +13,7 @@ const OPTIONS = {
   lights: [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']],
   sound: [['on', 'On'], ['off', 'Off']]
 };
-const KEYS = [['W A S D / arrows', 'Drive (S reverses)'], ['Space', 'Brake'], ['X', 'Handbrake'], ['Shift', 'Use your vehicle\'s boost'], ['E', 'Autodrive'], ['C', 'Chase or driver camera'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
+const KEYS = [['W A S D / arrows', 'Drive (S reverses)'], ['Space', 'Brake'], ['X', 'Handbrake'], ['Shift', 'Use your vehicle\'s boost'], ['E', 'Autodrive'], ['V', 'Change camera view'], ['C', 'Driver\'s seat and back'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
 
 export class Menu {
   constructor(api) {

@@ -67,7 +67,7 @@ export class TouchUI {
 
     /* buttons on the right */
     const tap = (id, label, action) => { const b = el('div', id, 't circle', label); b.addEventListener('pointerdown', e => { e.preventDefault(); controls.fire(action); }); return b; };
-    tap('tReset', 'Reset', 'reset'); tap('tCam', 'Cam', 'view'); this.auto = tap('tAuto', 'Auto', 'auto');
+    tap('tReset', 'Reset', 'reset'); tap('tCam', 'Cam', 'cam'); this.auto = tap('tAuto', 'Auto', 'auto');
   }
   setAuto(on) { this.auto.classList.toggle('on', on); }
 }

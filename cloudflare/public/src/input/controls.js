@@ -4,9 +4,9 @@
      brake     the foot brake: slows and holds the car, never reverses (Space)
      hand      the handbrake: locks the rear wheels so the tail can slide (X)
      rev       reverse: brakes first if the car is still rolling forward, then reverses (S / Down)
-   One-shot actions arrive through on(name, fn): 'view', 'reset', 'fly', 'pause', 'buff' (boost: Shift), 'auto'. */
+   One-shot actions arrive through on(name, fn): 'view', 'reset', 'fly', 'pause', 'buff' (boost: Shift), 'auto', 'cam' (camera view: V). */
 const KEYS = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', Space: 'brake', KeyX: 'hand' };
-const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', ShiftLeft: 'buff', ShiftRight: 'buff', KeyE: 'auto' };
+const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', ShiftLeft: 'buff', ShiftRight: 'buff', KeyE: 'auto', KeyV: 'cam' };
 
 export class Controls {
   constructor() {
