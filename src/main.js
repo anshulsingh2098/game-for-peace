@@ -98,7 +98,7 @@ async function setVehicle(i) {
   const def = VEHICLES[i], model = await loadModel(def), old = phys; vehicle = i; await rapierReady;
   const par = vehicleParams(def.body, def.stats);
   if (old && old.free) old.free();
-  phys = rapier ? new RapierVehicle(par, def.id, world) : new VehiclePhysics(par, world); if (phys.setManual) phys.setManual(!!S.manual);                       // Rapier ray-cast vehicle; the old bicycle model remains as a fallback (?phys=old)
+  phys = rapier ? new RapierVehicle(par, def.id, world) : new VehiclePhysics(par, world); if (phys.setManual) phys.setManual(!!S.manual); phys.steerGain = S.steering || 1.3;                       // Rapier ray-cast vehicle; the old bicycle model remains as a fallback (?phys=old)
   if (old) { phys.reset(old.x, old.z, old.yaw); } else placeOnRoad(0);
   buffT = 0; buffCd = 0; $('#buff').firstChild.textContent = def.buff.label; $('#buff').title = def.buff.name + ': ' + def.buff.desc + ' (Space)';
   if (S.paint[def.id] && S.paint[def.id] !== def.paint.colors[0]) await applyPaint(def, model, S.paint[def.id]);
@@ -175,13 +175,14 @@ function setLocation(id) {
 const reloadWith = (k, v) => { const u = new URLSearchParams(location.search); u.set('seed', config.seed); u.set(k, v); location.search = u.toString(); };
 menu = new Menu({
   vehicles: VEHICLES,
-  state: () => ({ manual: !!S.manual, location: config.location, vehicle, paint: S.paint, time: S.time, weather: S.weather, quality, shadows: shadowsOn, lights: S.lights, muted: S.muted, radioVol: radio.vol }),
+  state: () => ({ steering: S.steering || 1.3, manual: !!S.manual, location: config.location, vehicle, paint: S.paint, time: S.time, weather: S.weather, quality, shadows: shadowsOn, lights: S.lights, muted: S.muted, radioVol: radio.vol }),
   pickVehicle: async i => { await setVehicle(i); },
   paint: async (i, c) => { const def = VEHICLES[i]; S.paint[def.id] = c; save(); await applyPaint(def, await loadModel(def), c); },
   set: (k, v) => {
     if (k === 'time') { S.time = v; save(); env.setTime(v); } else if (k === 'weather') { S.weather = v; save(); env.setWeather(v); } else if (k === 'lights') { S.lights = v; save(); }
     else if (k === 'sfx') { S.muted = v === 'off'; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } }
     else if (k === 'manual') setManual(v === 'manual');
+    else if (k === 'steering') { S.steering = +v; save(); if (phys) phys.steerGain = S.steering; }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
   locations: LOCATIONS, setLocation: id => setLocation(id), music: { count: () => radio.local.length, add: files => wheel.add(files), clear: () => { radio.clearLocal(); toast('My music cleared'); } }, radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),

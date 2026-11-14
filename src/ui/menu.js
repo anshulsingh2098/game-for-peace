@@ -12,7 +12,8 @@ const OPTIONS = {
   shadows: [['on', 'On'], ['off', 'Off']],
   lights: [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']],
   sound: [['on', 'On'], ['off', 'Off']],
-  manual: [['auto', 'Automatic'], ['manual', 'Manual']]
+  manual: [['auto', 'Automatic'], ['manual', 'Manual']],
+  steering: [['0.8', 'Relaxed'], ['1', 'Normal'], ['1.3', 'Responsive'], ['1.7', 'Sharp']]
 };
 const KEYS = [['W A S D / arrows', 'Drive'], ['Space', 'Use your vehicle\'s boost'], ['E / Z', 'Shift up / down with a manual gearbox; N switches gearbox'], ['C', 'Chase or driver camera'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
 
@@ -80,6 +81,7 @@ export class Menu {
     const s = api.state();
     seg('Time of day', 'time', s.time); seg('Weather', 'weather', s.weather); seg('Headlights', 'lights', s.lights);
     seg('Graphics quality', 'quality', s.quality, 'Changing this reloads the world.'); seg('Shadows', 'shadows', s.shadows ? 'on' : 'off', 'Changing this reloads the world.');
+    seg('Steering sensitivity', 'steering', String(s.steering), 'How quickly the wheels turn and how much lock you get at speed.');
     seg('Gearbox', 'manual', s.manual ? 'manual' : 'auto', 'Manual: shift with E and Z (or gamepad bumpers, or the on-screen buttons). The bike is electric and has one gear.');
     seg('Engine and weather sounds', 'sfx', s.muted ? 'off' : 'on');
     const mg = mk('div', 'm-group', p); mk('h3', '', mg, 'My music'); const cnt = api.music.count();

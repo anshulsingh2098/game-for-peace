@@ -19,7 +19,7 @@ import { Drivetrain } from './drivetrain.js';
 let ready = null;
 export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIER));
 
-const G = 9.81, H = 1 / 120;
+const G = 9.81, H = 1 / 120, GRIP = 1.15;                    // GRIP: tyres bite a little harder than the stats say, which keeps the cars lively and quick to turn
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
@@ -76,7 +76,7 @@ function calibrate(p, id) {
 export class RapierVehicle {
   /* params: from vehicleParams(); id: 'car' | 'truck' | 'bike'; world: { height, surface, near, seaLevel, grip? } */
   constructor(params, id, world) {
-    this.p = params; this.id = id; this.world = world; this.mod = NO_MOD; this.acc = 0; this.drive = new Drivetrain(id, params); this.gear = 1; this.gearLabel = this.drive.label; this.rpm01 = 0;
+    this.p = params; this.id = id; this.world = world; this.mod = NO_MOD; this.acc = 0; this.drive = new Drivetrain(id, params); this.steerGain = 1.3; this.gear = 1; this.gearLabel = this.drive.label; this.rpm01 = 0;
     this.cal = calibrate(params, id); this.hCom = this.cal.hCom; this.L0 = this.cal.L0;
     this.R = new RAPIER.World({ x: 0, y: -G, z: 0 }); this.R.timestep = H;
     this.N = 44; this.cell = 1.5; this.patch = null; this.ox = 0; this.oz = 0;       // heightfield patch: N x N cells of `cell` metres
@@ -114,6 +114,8 @@ export class RapierVehicle {
   get speed() { return Math.hypot(this.u, this.v); }
   get kmh() { return this.u * 3.6; }
   setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; this.drive.setMod(this.mod); }
+  /* the sensitivity setting also lends the tyres a little grip, so a sharper setting really does turn the car harder at speed (1 at Normal) */
+  assist() { return 1 + 0.35 * (this.steerGain - 1); }
   /* manual gearbox: shift(+1) up, shift(-1) down (false if refused); setManual switches between automatic and manual */
   shift(d) { return this.drive.shift(d, this.u); }
   setManual(on) { this.drive.setManual(on); }
@@ -149,10 +151,12 @@ export class RapierVehicle {
     if (ex > edge * 0.55 || ez > edge * 0.55) { const lead = clamp(this.u * 0.45, -14, 14); this.buildPatch(this.x + Math.cos(this.yaw) * lead, this.z + Math.sin(this.yaw) * lead); this.patchNew = true; }
     else if (this.old) this.dropOld();
 
-    /* steering: rate-limited, slower at speed, quick to centre; the lock shrinks with speed */
-    const want = clamp(input.steer, -1, 1), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = back ? 8 : 5.5 / (1 + Math.abs(this.u) / 14);
+    /* steering: the wheel follows the input quickly (a little slower at high speed), comes back to centre quickly, and the lock at speed is about what the
+       tyres can use. steerGain is the player's sensitivity setting: it scales how fast the wheel moves and how much lock is allowed. A gentle curve
+       makes small or analog inputs count for more than a straight line would. */
+    const sg = this.steerGain, raw = clamp(input.steer, -1, 1), want = Math.sign(raw) * Math.pow(Math.abs(raw), 0.8), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = (back ? 11 : 9 / (1 + Math.abs(this.u) / 32)) * sg;
     this.steer += clamp(want - this.steer, -rate * h, rate * h);
-    this.delta = this.steer * Math.min(p.steerMax, 2.1 * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));
+    this.delta = this.steer * Math.min(p.steerMax, 3.0 * sg * M.steer * p.mu * GRIP * this.assist() * G * p.L / Math.max(this.u * this.u, 1));
     const tn = Math.tan(this.delta), R = Math.abs(tn) > 1e-4 ? p.L / tn : 1e6;
 
     const key = W.surface(this.x, this.z); this.surface = key; const S0 = SURFACES[key] || SURFACES.grass;
@@ -172,7 +176,7 @@ export class RapierVehicle {
     car.wheels.forEach((w, i) => {
       const pos = vc.wheelContactPoint(i), wx = pos ? pos.x + this.ox : this.x, wz = pos ? pos.z + this.oz : this.z, S = SURFACES[W.surface(wx, wz)] || S0;
       const wet = (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(W.surface(wx, wz)) : 1);
-      vc.setWheelFrictionSlip(i, p.mu * S.grip * wet * M.grip);
+      vc.setWheelFrictionSlip(i, p.mu * GRIP * this.assist() * S.grip * wet * M.grip);
       let a = 0; if (w.front) a = w.side === 0 ? this.delta : Math.atan(p.L / (R + w.side * p.track / 2));       // Ackermann: the inner wheel turns more
       vc.setWheelSteering(i, w.front ? -a : 0);
       vc.setWheelEngineForce(i, w.drive ? engine / nDrive : 0);
