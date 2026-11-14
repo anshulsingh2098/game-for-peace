@@ -175,7 +175,13 @@ body.ingame #speedlines{display:block}body.boosting #speedlines{opacity:.55}
 .radio .r-opt{display:flex;gap:10px;align-items:center;justify-content:space-between}
 .radio .r-opt button{padding:7px 14px;border-radius:999px;font-size:.8rem;color:var(--ink-2);border:1px solid var(--line);background:transparent}
 .radio .r-opt button[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}.radio .r-opt select{min-width:0;padding:7px 30px 7px 12px;font-size:.8rem}
-.radio .r-empty{font-size:.8rem;color:var(--ink-3);line-height:1.4}.radio.empty .r-ctl,.radio.empty .r-bar{opacity:.35;pointer-events:none}
+.radio.empty .r-ctl,.radio.empty .r-bar{opacity:.35;pointer-events:none}
+.radio .r-pick{width:100%;min-width:0;padding:7px 30px 7px 12px;font-size:.8rem}
+.radio .r-src{display:flex;gap:10px;align-items:center;font-size:.8rem;color:var(--ink-3)}
+.radio .r-src button,.radio .r-del{padding:7px 14px;border-radius:999px;font-size:.8rem;color:var(--ink);border:1px solid var(--line);background:var(--glass-2);white-space:nowrap}
+.radio .r-src input[type=url]{flex:1;min-width:0;padding:7px 12px;border-radius:999px;font:inherit;font-size:.8rem;color:var(--ink);background:var(--glass-2);border:1px solid var(--line)}
+.radio .r-src input::placeholder{color:var(--ink-3)}.radio .r-del{align-self:flex-start;color:var(--ink-2);background:transparent}
+.radio.drop{outline:2px dashed var(--accent);outline-offset:-6px}
 @media (max-width:520px){.radio{top:calc(var(--safe-t) + 124px);right:calc(var(--safe-r) + 12px)}}
 #lightBtn{position:relative}
 #lightBtn::after{content:attr(data-mode);position:absolute;bottom:-4px;right:-6px;font-size:.5rem;letter-spacing:.06em;padding:1px 5px;border-radius:99px;background:var(--glass);border:1px solid var(--line);color:var(--ink-2)}
@@ -396,7 +402,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   </div>
   <div class="r-vol"><span>Volume</span><input type="range" id="rVol" min="0" max="100" aria-label="Radio volume"></div>
   <div class="r-opt"><button id="rShuf" aria-pressed="true">Shuffle</button><select id="rStation" aria-label="Station" hidden></select></div>
-  <p class="r-empty" id="rEmpty" hidden>Add songs to the music folder and list them in music/playlist.json.</p>
+  <select id="rTrack" class="r-pick" aria-label="Choose what plays" hidden></select>
+  <div class="r-src" id="rLocal" hidden><button type="button" id="rAdd">Add music files</button><span>or drop them here</span><input type="file" id="rFiles" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac" multiple hidden></div>
+  <form class="r-src" id="rStreamForm" novalidate hidden><input type="url" id="rUrl" placeholder="Stream address (https://…)" aria-label="Stream address" autocomplete="off" spellcheck="false"><button type="submit">Add</button></form>
+  <button type="button" class="r-del" id="rDel" hidden>Remove this stream</button>
 </section>
 
 <!-- PAUSE -->
@@ -419,7 +428,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { Sound, Radio } from './audio.js?v=5';
+import { Sound, Radio } from './audio.js?v=6';
 import { Game } from './game.js?v=35';
 /* ---------- Data ---------- */
 /* Vehicles use the real models in assets/. Stats are 0-100 for the bars; Top is km/h. */
@@ -614,15 +623,20 @@ const DEBUG=location.search.includes('debug');
 let game=null;
 /* ---------- audio: radio + engine/weather sounds ---------- */
 const sound=new Sound(),radio=new Radio(sound);if(DEBUG){window.__radio=radio;window.__sound=sound}
-radio.load('music/playlist.json');
-function applyVolumes(){sound.music=(S.musicMuted?0:S.music/100)*0.85;sound.sfx=S.sfx/100;sound.applyVolumes()}
+radio.setCustomStreams(Array.isArray(S.streams)?S.streams:[]);radio.load('music/playlist.json');
+function applyVolumes(){sound.music=(S.musicMuted?0:S.music/100)*0.85;sound.sfx=S.sfx/100;sound.applyVolumes();radio.setVolume(sound.music)}
+applyVolumes();
 function unlockAudio(){if(!sound.ctx){sound.init();applyVolumes()}sound.resume()}
 ['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,unlockAudio,{passive:true}));
 const ico={play:'<path d="M8 5v14l11-7z"/>',pause:'<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>'};
-let lastTitle='';
+let lastTitle='',pickKey='',lastErr=null;
 radio.on(st=>{
-  const t=st.track;$('#rTitle').textContent=t?t.title:'No songs yet';$('#rArtist').textContent=t?(t.artist||''):'';
-  $('#rEmpty').hidden=st.has;$('#radioPanel').classList.toggle('empty',!st.has);
+  const t=st.track;$('#rTitle').textContent=t?t.title:(st.kind==='local'?'Play your own music':'No songs yet');$('#rArtist').textContent=t?(t.artist||''):(st.kind==='local'?'Add audio files from this device, or pick Streams for live radio.':'');
+  $('#radioPanel').classList.toggle('empty',!st.has);$('#rLocal').hidden=st.kind!=='local';$('#rStreamForm').hidden=st.kind!=='streams';$('#rDel').hidden=!(t&&t.custom);
+  const pick=$('#rTrack'),pk=st.si+':'+st.tracks.map(x=>x.title).join('|');
+  if(pk!==pickKey){pickKey=pk;pick.replaceChildren(...st.tracks.map((x,i)=>new Option(x.title+(x.artist&&!x.stream?' · '+x.artist:''),i)))}
+  pick.hidden=st.kind==='files'||st.tracks.length<2;if(st.ti!==undefined)pick.value=st.ti;
+  if(st.error&&t&&lastErr!==t){lastErr=t;toast(t.stream?'Could not play that stream':'Could not play '+t.title)}else if(!st.error)lastErr=null;
   $('#rPlay').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+(st.playing?ico.pause:ico.play)+'</svg>';
   $('#rProg').style.width=(st.d?Math.min(100,st.t/st.d*100):0)+'%';$('#rShuf').setAttribute('aria-pressed',st.shuffle);
   $('#radioBtn').classList.toggle('on',st.playing);
@@ -632,7 +646,20 @@ radio.on(st=>{
 $('#rPlay').onclick=async()=>{unlockAudio();const was=radio.audio.paused;await radio.toggle();S.radio=was;save()};
 $('#rNext').onclick=()=>{unlockAudio();radio.next()};$('#rPrev').onclick=()=>{unlockAudio();radio.prev()};
 $('#rShuf').onclick=()=>radio.setShuffle(!radio.shuffle);
-$('#rStation').onchange=e=>radio.setStation(+e.target.value);
+$('#rStation').onchange=e=>{radio.setStation(+e.target.value);e.target.blur()};
+$('#rTrack').onchange=e=>{unlockAudio();radio.select(+e.target.value);S.radio=true;save();e.target.blur()};
+/* your own files: picker, or drop them anywhere on the page */
+function addMusic(files){const n=radio.addFiles([...files]);if(!n){toast('No new audio files found');return}unlockAudio();radio.play();S.radio=true;save();toast('Added '+n+(n>1?' songs':' song')+' to My music')}
+$('#rAdd').onclick=()=>$('#rFiles').click();$('#rFiles').onchange=e=>{addMusic(e.target.files);e.target.value=''};
+const hasFiles=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
+addEventListener('dragover',e=>{if(!hasFiles(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy';$('#radioPanel').classList.add('drop')});
+addEventListener('dragleave',e=>{if(!e.relatedTarget)$('#radioPanel').classList.remove('drop')});
+addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();$('#radioPanel').classList.remove('drop');addMusic(e.dataTransfer.files)});
+/* internet radio: add or remove a custom stream address (kept in settings) */
+$('#rStreamForm').onsubmit=e=>{e.preventDefault();const inp=$('#rUrl'),t=radio.addStream(inp.value);if(!t){toast('Enter a full stream address (https://…)');return}
+  inp.value='';inp.blur();S.streams=radio.customStreams();S.radio=true;save();unlockAudio();radio.play()};
+$('#rDel').onclick=()=>{const t=radio.track;if(!t||!t.custom)return;radio.removeStream(t);S.streams=radio.customStreams();save();toast('Stream removed')};
+['keydown','keyup'].forEach(ev=>$('#rUrl').addEventListener(ev,e=>e.stopPropagation()));   // typing an address must not steer the car or trigger N/M/R
 $('#rVol').value=S.music;$('#rVol').oninput=e=>{S.music=+e.target.value;S.musicMuted=false;save();$('input[data-key=music]').value=S.music;applyVolumes()};
 $('#radioBtn').onclick=()=>{const p=$('#radioPanel');p.hidden=!p.hidden};$('#rClose').onclick=()=>{$('#radioPanel').hidden=true};
 function toggleMute(){S.musicMuted=!S.musicMuted;save();applyVolumes();toast(S.musicMuted?'Radio muted':'Radio on')}
