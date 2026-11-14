@@ -33,6 +33,12 @@ Status: open | done
 
 After writing an entry, commit it and push it. Entries that need action stay `open` until the other stream sets them to `done` by writing a reply in their own file ("Re: <title>: done").
 
+## Start of every working day
+
+1. Run `python tools/daily_check.py` and show the user the output in a few lines.
+2. Remind the user of the manual checks in `CHECKLIST.md` (sections 3 to 5) and ask which ones they did and what they found. Anything that failed becomes an open entry in your team log, to fix before new features.
+3. Whenever you add a feature or find something nobody has verified, add a line to `CHECKLIST.md`, or a check to `tools/daily_check.py` if a computer can judge it.
+
 ## Rules that always apply
 
 - Only edit files your stream owns (`PARALLEL_PLAN.md`). For shared files make the smallest change and log it.

@@ -1,6 +1,6 @@
 /* Entry point of the new engine (next.html). Phase 3: drive anywhere in the generated world.
    Address options: ?seed=word  ?q=low|med|high  ?c=<share code>  ?debug (stats panel)
-   Keys: arrows / W A S D drive, Space buff, C camera, B back to the road, L headlights, M sound, F free-fly camera,
+   Keys: arrows / W A S D drive (S reverses), Space brake, X handbrake, Shift boost, E autodrive, V camera view, C driver's seat, B back to the road, L headlights, M sound, F free-fly camera,
          T ride along the road, R new world, G wireframe, H hide panels. */
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -22,6 +22,8 @@ import { RapierVehicle, initRapier } from './vehicle/rapier-vehicle.js';
 import { VehicleView, loadModel } from './vehicle/vehicle.js';
 import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
+import { Autodrive } from './input/autodrive.js';
+import { TouchUI } from './input/touchui.js';
 import { Backdrop } from './env/backdrop.js';
 import { Environment, TIMES, WX } from './env/environment.js';
 import { registerRoot, setOverrides, applyWorld, describe, overrides } from './core/tuning.js';
@@ -48,7 +50,7 @@ for (const url of ['api/settings', 'settings.json']) {             // the publis
 registerRoot('world', () => config); applyWorld(config);
 if (q.get('road')) config.road.style = roadStyleById(q.get('road')).id;                  // ?road=highway|boulevard|dirt|gravel
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };
-document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('dev', q.has('dev') || q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches);
+document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('dev', q.has('dev') || q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches || q.has('touch'));
 
 const canvas = $('#view'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, phone ? 1 : 1.5));
@@ -66,8 +68,9 @@ const saved = (() => { try { return JSON.parse(localStorage.getItem('gfp-next') 
 const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, ...saved }, save = () => { try { localStorage.setItem('gfp-next', JSON.stringify(S)); } catch (e) { /* storage unavailable */ } };
 env.setTime(S.time); env.setWeather(S.weather);
 
-let nature = null; if (q.get('nature') !== 'flat') loadNature().then(p => { nature = p; if (p && typeof scatter !== 'undefined' && scatter) scatter.setProps(p); });       // real-scan trees, plants and rocks (src/world/nature.js); ?nature=flat keeps the drawn ones
-const photoGround = q.get('ground') !== 'flat', groundMat = photoGround ? makeGroundMaterial() : null;                // photographic ground (src/world/groundmat.js); ?ground=flat for the old drawn texture
+const natureLevel = q.get('nature') || (quality === 'low' ? 'low' : 'full'), groundLevel = q.get('ground') || (quality === 'low' ? 'flat' : quality === 'med' ? 'lite' : 'full');      // quality tiers: low keeps the cheap ground and fewer scenery variants, med a lighter photographic ground, high everything
+let nature = null; if (natureLevel !== 'flat') loadNature(natureLevel).then(p => { nature = p; if (p && typeof scatter !== 'undefined' && scatter) scatter.setProps(p); });       // real-scan trees, plants and rocks (src/world/nature.js); ?nature=flat keeps the drawn ones
+const photoGround = groundLevel !== 'flat', groundMat = photoGround ? makeGroundMaterial(groundLevel) : null;                // photographic ground (src/world/groundmat.js); ?ground=flat for the old drawn texture
 const ground = groundMat ? groundMat.material : new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
 const ripples = waterNormalTex(), RIP = 0.07;
 const waterMat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.9, normalMap: ripples, normalScale: new THREE.Vector2(0.22, 0.22), envMapIntensity: 1.5 });
@@ -98,7 +101,7 @@ function applyView() {
 }
 
 /* ---------- the vehicle ---------- */
-const cam = new FlyCam(canvas), controls = new Controls(), view = new VehicleView(scene);
+const cam = new FlyCam(canvas), controls = new Controls(), autodrive = new Autodrive(), view = new VehicleView(scene);
 const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r), get seaLevel() { return terrain.seaLevel; },
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
@@ -116,7 +119,7 @@ async function setVehicle(i) {
   if (old && old.free) old.free();
   phys = rapier ? new RapierVehicle(par, def.id, world) : new VehiclePhysics(par, world);                       // Rapier ray-cast vehicle; the old bicycle model remains as a fallback (?phys=old)
   if (old) { phys.reset(old.x, old.z, old.yaw); } else placeOnRoad(0);
-  buffT = 0; buffCd = 0; $('#buff').firstChild.textContent = def.buff.label; $('#buff').title = def.buff.name + ': ' + def.buff.desc + ' (Space)';
+  buffT = 0; buffCd = 0; $('#buff').firstChild.textContent = def.buff.label; $('#buff').title = def.buff.name + ': ' + def.buff.desc + ' (Shift)';
   if (S.paint[def.id] && S.paint[def.id] !== def.paint.colors[0]) await applyPaint(def, model, S.paint[def.id]);
   buildSwatches(def, model);
   view.realShadow = shadowsOn; view.setModel(def, model); $$('#vehicles button').forEach((b, k) => b.classList.toggle('on', k === i)); document.documentElement.style.setProperty('--accent', def.color);
@@ -138,6 +141,7 @@ function useBuff() {
 }
 function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 function setMode(m) {
+  if (m !== 'drive' && autodrive.enabled) { autodrive.toggle(false); $('#autoBtn').classList.remove('on'); }
   if (m === 'fly' && phys) { cam.x = phys.x - Math.cos(phys.yaw) * 14; cam.z = phys.z - Math.sin(phys.yaw) * 14; cam.y = phys.y + 7; cam.yaw = -Math.PI / 2 - phys.yaw; cam.pitch = -0.25; }
   if (m === 'ride') { roadS = road.closestS(phys ? phys.x : cam.x, phys ? phys.z : cam.z, roadS); rideYaw = phys ? -Math.PI / 2 - phys.yaw : cam.yaw; cam.speed = Math.min(cam.speed, 40); }
   if (m === 'drive' && mode === 'ride' && phys) placeOnRoad(roadS);
@@ -156,11 +160,18 @@ applyView(); $('#seed').value = config.seed;
 $('#seedForm').addEventListener('submit', e => { e.preventDefault(); regenerate($('#seed').value.trim() || 'peace'); $('#seed').blur(); });
 $('#newSeed').addEventListener('click', () => regenerate(randomSeed()));
 $$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { setVehicle(i); b.blur(); }));
-const toggleView = () => { view.setView(view.view === 'first' ? 'third' : 'first'); toast(view.view === 'first' ? 'Driver view' : 'Chase view'); };
-$('#viewBtn').addEventListener('click', toggleView); $('#reset').addEventListener('click', backToRoad);
+function setAuto(on) { if (on && (mode !== 'drive' || !phys)) return; autodrive.s = roadS; autodrive.toggle(on); $('#autoBtn').classList.toggle('on', on); if (touchUI) touchUI.setAuto(on); toast(on ? 'Autodrive on: steer or brake to take over' : 'Autodrive off'); }
+/* camera views, cycled with V like the old GTA games; C jumps to the driver's seat and back */
+const CAMS = ['middle', 'far', 'close', 'hood', 'bumper', 'cockpit', 'cinematic'], CAM_NAMES = { middle: 'Chase', far: 'Far chase', close: 'Close chase', hood: 'Hood', bumper: 'Bumper', cockpit: 'Driver seat', cinematic: 'Cinematic' };
+function setCam(name, quiet) { if (!CAMS.includes(name)) name = 'middle'; view.setMode(name); S.cam = name; save(); if (!quiet) toast('Camera: ' + CAM_NAMES[name]); }
+const cycleCam = () => setCam(CAMS[(CAMS.indexOf(view.mode || 'middle') + 1) % CAMS.length]);
+const toggleView = () => { if (view.mode === 'cockpit') setCam(S.camBefore || 'middle'); else { S.camBefore = view.mode || 'middle'; setCam('cockpit'); } };
+setCam(S.cam, true);
+$('#viewBtn').addEventListener('click', cycleCam); $('#reset').addEventListener('click', backToRoad);
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
-controls.on('view', toggleView); controls.on('reset', backToRoad); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
+controls.on('auto', () => setAuto(!autodrive.enabled)); $('#autoBtn').addEventListener('click', () => setAuto(!autodrive.enabled)); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
+let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
 $('#time').value = S.time; $('#weather').value = S.weather;
 $('#time').addEventListener('change', e => { S.time = e.target.value; save(); env.setTime(S.time); e.target.blur(); });
 $('#weather').addEventListener('change', e => { S.weather = e.target.value; save(); env.setWeather(S.weather); e.target.blur(); });
@@ -240,7 +251,11 @@ function step(dt, now) {
   WIND.t.value = now / 1000; let px, pz;
   if (mode === 'drive' && phys) {
     if (!frozen()) {
-      input = auto || controls.read(); phys.step(dt, input);
+      input = controls.read();
+      if (autodrive.enabled) {                                                                       // the car drives itself; steering or braking by hand takes over
+        if (Math.abs(input.steer) > 0.25 || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else input = autodrive.update(phys, road);
+      }
+      if (auto) input = auto; phys.step(dt, input);
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
     }
@@ -257,7 +272,7 @@ function step(dt, now) {
   if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz);
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
-    view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && input.brake > 0.1 && phys.u > 1, drive && phys.u < -0.3, dt); }
+    view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
   if (mode === 'drive' && phys && orbiting()) orbitCam(dt);
   else if (mode === 'drive' && phys) { if (offset) { camera.clearViewOffset(); offset = 0; } view.aim(camera, phys, grid.origin, dt, (x, z) => Math.max(terrain.seaLevel, terrain.drive(x, z)), boostEase); }
@@ -269,7 +284,7 @@ function step(dt, now) {
   if (mode !== 'fly') { const cx = camera.position.x + grid.origin.x, cz = camera.position.z + grid.origin.z; if (terrain.height(cx, cz) - terrain.drive(cx, cz) > 4) { env.rain.visible = false; env.snowfall.visible = false; } }        // inside a mountain (a tunnel): no rain or snow indoors
   landmarks.update(grid.origin, env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && sound.ctx) sound.update({ v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
-    id: VEHICLES[vehicle].id, brake: input.brake > 0.1 && phys.u > 1, off: phys.surface !== 'asphalt', view: view.view });
+    id: VEHICLES[vehicle].id, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view });
   if (fx) fx.render(); else renderer.render(scene, camera); stats(now);
   if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label;
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }

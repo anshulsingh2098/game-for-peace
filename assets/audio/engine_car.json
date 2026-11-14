@@ -1,0 +1,40 @@
+{
+ "sampleRate": 16000,
+ "loops": [
+  {
+   "file": "engine_car_1.wav",
+   "pitch": 76,
+   "seconds": 2.75
+  },
+  {
+   "file": "engine_car_2.wav",
+   "pitch": 105,
+   "seconds": 5.55
+  },
+  {
+   "file": "engine_car_3.wav",
+   "pitch": 127,
+   "seconds": 9.75
+  },
+  {
+   "file": "engine_car_4.wav",
+   "pitch": 146,
+   "seconds": 6.55
+  },
+  {
+   "file": "engine_car_5.wav",
+   "pitch": 207,
+   "seconds": 5.35
+  },
+  {
+   "file": "engine_car_6.wav",
+   "pitch": 274,
+   "seconds": 9.75
+  },
+  {
+   "file": "engine_car_7.wav",
+   "pitch": 320,
+   "seconds": 8.75
+  }
+ ]
+}

@@ -9,11 +9,11 @@
 
 export const SURFACES = {
   asphalt: { name: 'Road',   grip: 1.00, drag: 0.012 },
-  gravel:  { name: 'Gravel', grip: 0.76, drag: 0.030 },
-  grass:   { name: 'Grass',  grip: 0.62, drag: 0.060 },
-  sand:    { name: 'Sand',   grip: 0.50, drag: 0.140 },
+  gravel:  { name: 'Gravel', grip: 0.74, drag: 0.050 },
+  grass:   { name: 'Grass',  grip: 0.55, drag: 0.150 },
+  sand:    { name: 'Sand',   grip: 0.48, drag: 0.300 },
   rock:    { name: 'Rock',   grip: 0.70, drag: 0.040 },
-  snow:    { name: 'Snow',   grip: 0.36, drag: 0.070 }
+  snow:    { name: 'Snow',   grip: 0.36, drag: 0.100 }
 };
 const G = 9.81, H = 1 / 120;                                    // gravity; fixed physics step
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
@@ -70,7 +70,7 @@ export class VehiclePhysics {
     const mu = p.mu * S.grip * (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(key) : 1) /* weather on the tyres; 1 when dry */ * M.grip, N = m * G * Math.cos(this.gPitch);
 
     /* forward force: engine, brakes, reverse */
-    let Fx = 0; const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), flooded = depth > 1.1;
+    let Fx = 0; const thr = clamp(input.throttle, 0, 1), brk = clamp(Math.max(input.brake, input.rev || 0), 0, 1), flooded = depth > 1.1;
     if (thr > 0 && !flooded) Fx = this.u < -0.4 ? m * p.brake * thr : m * p.accel * M.accel * thr * Math.max(0, 1 - (this.u / top) ** 2);
     else if (brk > 0) Fx = this.u > 0.5 ? -m * p.brake * brk : flooded ? 0 : -m * p.revAccel * brk * Math.max(0, 1 - (this.u / p.revTop) ** 2);
     else Fx = -m * 0.55 * clamp(this.u, -1, 1);                                     // engine braking when coasting
