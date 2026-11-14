@@ -51,16 +51,17 @@ node tools/selftest.mjs
 | `world/landmarks.js` | Stylised models of the Gateway of India, Taj Mahal Palace hotel, Marine Drive, India Gate and Taj Mahal; placement beside the road, levelling, collision |
 | `world/textures.js` | Textures drawn at start-up (grass, asphalt, foliage, water ripples) |
 | `vehicle/rapier-vehicle.js` | The driving physics: a Rapier rigid body with ray-cast wheels, a heightfield ground patch, buffs, surfaces, water, collisions |
+| `vehicle/drivetrain.js` | Engine, clutch and gearbox (automatic or manual): torque curve, rev limiter, gear ratios from top speed |
 | `vehicle/physics.js` | The older bicycle-model physics (fallback with `?phys=old`) and the shared surface table |
-| `vehicle/defs.js` | Car, truck and bike: stats and body measurements |
+| `vehicle/defs.js` | The five vehicles (car, truck, bike, sports car, rally hatchback): stats, body measurements, buffs, paint |
 | `vehicle/vehicle.js` | Model loading, wheels (spin, Ackermann steering, suspension travel), cockpit, chase and driver cameras |
 | `vehicle/paint.js` | Vehicle recolouring |
 | `input/controls.js` | Keyboard, touch pads and gamepad as one input |
 | `env/environment.js` | Sky dome, sun, clouds, stars, lights, sun shadows, fog, time of day, weather, rain, snow, lightning, wet roads |
 | `env/backdrop.js` | Four hazed ranges of distant mountains behind the far terrain |
 | `audio/engine.js` | Synthesised engine, wind, gravel, rain and thunder sounds |
-| `audio/radio.js`, `stations.js` | Live internet radio: one stream at a time, and the list of 35 stations (19 from India) |
-| `ui/radiowheel.js` | The GTA-style radio wheel (hold Q) |
+| `audio/radio.js`, `stations.js` | The radio: live internet stations (35, 19 from India) and My music, the player's own songs kept in the browser |
+| `ui/radiowheel.js` | The GTA-style radio wheel (hold Q): India, World and My music pages |
 | `ui/menu.js` | Title screen, garage, location picker, settings and pause menus |
 | `debug/flycam.js`, `stats.js` | Free camera and stats panel |
 
@@ -87,4 +88,4 @@ Design choices already made: terrain-first rebuild with free roam; locations com
 
 - Locations will be stylised impressions with recognisable landmarks, not accurate maps.
 - Browsers offer controller rumble only; true steering-wheel force feedback is not available to web games.
-- The old game's radio songs were commercial tracks; the files in `music/` are not in git, but `tools/stage_cloudflare.py` copies that folder into the deploy, so the live site may carry them until the music upload is removed.
+- The old game's radio songs were commercial tracks; the files in `music/` are not in git. `tools/stage_cloudflare.py` no longer copies that folder, so the next deploy removes them from the live site (the live site carries them until then). Players add their own songs in the browser; those never reach the server.
