@@ -52,7 +52,7 @@ export const LOCATIONS = [
       palette: { grass: [0.56, 0.66, 0.28], grass2: [0.36, 0.52, 0.2], dry: [0.72, 0.64, 0.4], alpine: [0.5, 0.52, 0.34], rock: [0.52, 0.47, 0.4], sand: [0.9, 0.82, 0.62], treeline: 400, snowline: 2500 },
       scatter: { trees: 0.0042, rocks: 0.0003, bushes: 0.0016, tufts: 0.008, pineBias: -0.95, tint: [1.0, 1.04, 0.78] }, water: { color: '#2a7f8e' }, road: { style: 'boulevard', maxAlt: 150 } },
     sky: { time: 'dusk', weather: 'clear' },
-    landmarks: [{ kind: 'marine', s: -250, off: 40, sea: 'front' }, { kind: 'gateway', s: 650, off: 70, sea: true }, { kind: 'tajHotel', after: 'gateway', gap: 130, range: 500, off: 95, sea: true }] },
+    landmarks: [{ kind: 'marine', s: 250, off: 40 }, { kind: 'gateway', s: 650, off: 70, sea: true }, { kind: 'tajHotel', after: 'gateway', gap: 130, range: 500, off: 95, sea: true }] },
 
   { id: 'delhi', name: 'Delhi', blurb: 'India Gate rising over wide lawns, in the warm haze of the plains.', accent: '#e0a070',
     config: {
