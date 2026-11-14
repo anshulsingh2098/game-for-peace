@@ -11,6 +11,7 @@ import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 import { LOCATIONS, locationConfig } from '../src/world/locations.js';
+import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -196,4 +197,19 @@ await atest('drivetrain: manual shifting holds the gear, refuses a downshift int
   const v0 = ph.u; drive(ph, 0.5, COAST); assert.ok(ph.gear === 0 ? ph.u <= v0 + 0.01 : true);
   drive(ph, 20, STOP); assert.ok(ph.u < 0.5); assert.ok(ph.shift(-1) || ph.gear === -1); drive(ph, 4, GO); assert.ok(ph.u < -1, 'reverse gear should move the car backwards: ' + ph.u.toFixed(2)); ph.free();
 });
+
+test('road styles: columns and strips are valid, surfaces are physics keys, two-lane keeps its old widths', () => {
+  for (const st of Object.values(ROAD_STYLES)) {
+    assert.ok(st.cols.length > 1 && st.strips.length > 0, st.id);
+    for (const [a, b] of st.strips) { assert.ok(a >= 0 && b < st.cols.length && b === a + 1, st.id + ' strip'); assert.ok(st.cols[b][0] >= st.cols[a][0], st.id + ' columns run left to right'); }
+    for (const c of st.cols) assert.ok(st.colour[c[2]], st.id + ' colour ' + c[2]);
+    for (const [d, k] of st.surfaces) { assert.ok(SURFACES[k], st.id + ' surface ' + k); assert.ok(d <= st.grade.flat, st.id + ' surface within the flat band'); }
+    assert.ok(st.grade.lift[0] < st.grade.flat, st.id + ' lift ends inside the flat band');
+  }
+  for (const st of Object.values(ROAD_STYLES)) { const sorted = st.strips.map(x => x[0]).sort((a, b) => a - b); if (st.id !== 'two-lane') for (let i = 0; i < st.cols.length; i++) assert.ok(st.cols[i][0] === -st.cols[st.cols.length - 1 - i][0], st.id + ' symmetric'); }
+  const t = ROAD_STYLES['two-lane'];
+  assert.deepEqual([t.grade.flat, t.grade.blend, t.clear, t.grade.lift[0]], [9, 46, 10, 5.4]);
+  assert.equal(roadSurfaceAt(t, 3), 'asphalt'); assert.equal(roadSurfaceAt(t, 5), 'gravel'); assert.equal(roadSurfaceAt(t, 8), null);
+});
+
 console.log(`\n${passed} checks passed`);

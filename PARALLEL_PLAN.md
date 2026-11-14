@@ -25,6 +25,10 @@ Two streams. Each person owns one stream and one set of files. Claude only edits
 - B promises A: the vehicle position/speed that `main.js` hands to the world each frame, and `defs.js` stats.
 - If one needs to change, add a new function and keep the old one working. Remove the old one only in a later phase.
 
+## Talking to each other's Claude
+
+Both Claudes read `CLAUDE.md` automatically. It tells them to log changes in `team/stream-a.md` (Rajul) and `team/stream-b.md` (Anshul), and to read both at the start of a session. Type `/sync` in Claude to pull and get a summary of what the other stream needs from you. When you want the other person's Claude to do something, say "log it for the other stream" and tell them to run `/sync`.
+
 ## Git routine (both people, every day)
 
 1. Start: `git fetch`, then `git switch -c world/<task>` (or `vehicle/<task>`) from the latest integration branch.

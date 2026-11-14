@@ -18,11 +18,14 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
 const cr = (p0, p1, p2, p3, t) => 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
 const crd = (p0, p1, p2, p3, t) => 0.5 * ((-p0 + p2) + 2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) * t + 3 * (-p0 + 3 * p1 - 3 * p2 + p3) * t * t);
 
+import { roadStyleById } from './roadstyles.js';
+
 export class Road {
   constructor(terrain, config) {
     this.t = terrain; this.c = config.road; this.sea = terrain.seaLevel; this.step = this.c.step; this.ds = this.step / SUB;
     this.maxTurn = this.step / this.c.minRadius; this.noise = createNoise(config.seed + ':road');
-    this.cell = 32; this.reach = this.c.blend + 2; this.cells = new Map(); this.hit = { d: 0, s: 0, y: 0 };
+    this.style = roadStyleById(this.c.style); this.g = this.style.grade;       // widths come from the style
+    this.cell = 32; this.reach = this.g.blend + 2; this.cells = new Map(); this.hit = { d: 0, s: 0, y: 0 };
     const p = terrain.findSpawn(), h0 = terrain.base(p.x, p.z);
     let best = 0, bestCost = Infinity;                          // first bearing: the gentlest line through the start point
     for (let a = 0; a < 16; a++) {
@@ -160,14 +163,14 @@ export class Road {
   /* land height with the road cut or filled in: level under the road, easing back to the natural height */
   grade(x, z, natural) {
     if (!this.nearest(x, z)) return natural;
-    const c = this.c, h = this.hit, bed = h.y - c.sink * (1 - sstep(c.flat - 2.5, c.flat, h.d));
-    return bed + (natural - bed) * sstep(c.flat, c.blend, h.d);
+    const c = this.c, g = this.g, h = this.hit, bed = h.y - c.sink * (1 - sstep(g.flat - 2.5, g.flat, h.d));
+    return bed + (natural - bed) * sstep(g.flat, g.blend, h.d);
   }
   /* height a vehicle drives on: the graded land, lifted back up to the road surface (the land is cut `sink` below the road so the ribbon sits on top) */
   drive(x, z, natural) {
     if (!this.nearest(x, z)) return natural;
-    const c = this.c, h = this.hit, bed = h.y - c.sink * (1 - sstep(c.flat - 2.5, c.flat, h.d));
-    return bed + (natural - bed) * sstep(c.flat, c.blend, h.d) + c.sink * (1 - sstep(5.4, 7, h.d));
+    const c = this.c, g = this.g, h = this.hit, bed = h.y - c.sink * (1 - sstep(g.flat - 2.5, g.flat, h.d));
+    return bed + (natural - bed) * sstep(g.flat, g.blend, h.d) + c.sink * (1 - sstep(g.lift[0], g.lift[1], h.d));
   }
   /* road distance of the point on the road closest to (x, z), searching outward from a hint */
   closestS(x, z, hint = 0) {
