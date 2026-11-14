@@ -19,7 +19,8 @@ import { Drivetrain } from './drivetrain.js';
 let ready = null;
 export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIER));
 
-const G = 9.81, H = 1 / 120, GRIP = 1.15;                    // GRIP: tyres bite a little harder than the stats say, which keeps the cars lively and quick to turn
+const SCRUB = 0.12;
+const G = 9.81, H = 1 / 120, GRIP = 1.35;                    // GRIP: tyres bite harder than the stats say, which keeps the cars lively and quick to turn; SCRUB: speed lost per unit of sideways acceleration
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
@@ -81,6 +82,7 @@ export class RapierVehicle {
     this.R = new RAPIER.World({ x: 0, y: -G, z: 0 }); this.R.timestep = H;
     this.N = 44; this.cell = 1.5; this.patch = null; this.ox = 0; this.oz = 0;       // heightfield patch: N x N cells of `cell` metres
     this.car = makeCar(this.R, params, id, this.hCom + 0.5); this.body = this.car.body; this.vc = this.car.vc;
+    this.Iz = params.mass / 12 * ((params.track + 0.24) ** 2 + ((params.front + params.rear) + 2 * this.car.T.extraL) ** 2);          // yaw inertia of the body box, for the turn assist
     this.wheelStates = this.car.wheels.map(w => ({ front: w.front, side: w.side, spin: 0, steer: 0, susp: 0 }));
     this.reset(0, 0, 0);
   }
@@ -185,11 +187,20 @@ export class RapierVehicle {
     /* rolling resistance by surface, water drag, air drag, and what a buff changes about slopes */
     const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
     const roll = -m * G * (S0.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(u / 0.5, -1, 1), air = -p.aero * u * Math.abs(u);
-    let F = roll + air; const fwd = { x: c, z: s };
+    let F = roll + air - SCRUB * m * Math.abs(this.ay) * Math.sign(u) * sstep(2, 8, Math.abs(u)); const fwd = { x: c, z: s };                // hard cornering scrubs off speed, so holding the throttle in a corner does not widen the arc as much
     if (M.slope < 1) F += m * G * Math.sin(this.pitch) * (1 - M.slope);                                           // Hill Hauler: climbs as if the slope were not there
     b.resetForces(true); b.addForce({ x: fwd.x * F, y: 0, z: fwd.z * F }, true);
     /* anti-roll: a spring and damper about the forward axis so tall vehicles lean but do not tip over (a bike is held upright) */
     stabilise(b, car.T);
+    /* turn assist: nudge the body's yaw rate toward the rate the steering asks for (speed x tan(steering angle) / wheelbase), but never beyond what the
+       tyres can hold on this surface (grip x gravity / speed). Holding the throttle in a corner then no longer washes the car wide. It fades out at a
+       crawl and with no steering, and follows the sensitivity setting. */
+    if (Math.abs(this.delta) > 0.004) {
+      const au = Math.abs(u), muEff = p.mu * GRIP * this.assist() * S0.grip * (depth > 0.3 ? 0.6 : 1) * M.grip, rT = u * Math.tan(this.delta) / p.L, rMax = 1.0 * muEff * G / Math.max(au, 3), rTgt = clamp(rT, -rMax, rMax);
+      const fade = sstep(1.0, 5.0, au) * sstep(0, 0.25, Math.abs(this.steer)), alpha = clamp(7 * this.steerGain * (rTgt - this.r), -9, 9) * fade;          // wanted change of yaw rate per second, capped
+      const t = b.rotation(), ty = -this.Iz * alpha;                                                                                                  // r is minus the body's world y spin, hence the sign
+      b.addTorque({ x: 0, y: ty, z: 0 }, true);
+    }
     vc.updateVehicle(h); this.R.step();
     if (this.patchNew) this.patchNew = false;
     const du = (this.u - u) / h; this.axL += (du - this.axL) * Math.min(1, h * 6);

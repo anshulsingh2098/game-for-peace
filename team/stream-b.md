@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  Steering turns much tighter (turn assist, more grip, cornering scrub)
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: `src/vehicle/rapier-vehicle.js` only. Holding the throttle in a corner used to make the car turn 3 to 4 times wider; now a turn assist nudges the body toward the yaw rate the steering asks for (capped at what the tyres hold), tyres bite harder (GRIP 1.15 -> 1.35), and hard cornering scrubs a little speed (SCRUB 0.12). About 35% tighter radius under full throttle (car, 60 km/h: 56 m -> 37 m); rally car sharpest. All five vehicles still follow the road at speed. Not deployed yet.
+For the other stream: nothing. If the tuner dashboard is merged, `GRIP`, `SCRUB` and the steering numbers are good first candidates to expose; they are constants at the top of `rapier-vehicle.js`.
+Status: open
+
 ## 2026-11-14  Deployed again: bridges and tunnels are live (merged into the Stream B branch)
 Branch: vehicle/cars-and-gears  Commit: see `git log` (merge of origin/world/bridges is the latest code commit)
 What changed:
