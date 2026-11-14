@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  More ground clearance (body lifted over the wheels)
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: `src/vehicle/vehicle.js` only. The three cars' body, cabin, details and interior are drawn 0.08 (Dusk GT), 0.07 (Ember RS) and 0.05 (Dust Runner) metres higher; the wheels and physics are unchanged, so the tyres show more under the arches and the underbody clears the road more. Measured: the tyres were touching the road correctly; the body just sat low over them.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-14  All three cars rebuilt with a production-car look
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed: new shared Blender kit `dev/carkit.py`; `dev/build_car1.py`, `build_car2_sport.py`, `build_car3_rally.py` rewritten on it. Each car is now one smooth lofted body (shoulder line, tumblehome, glasshouse with pillars), cut wheel arches with liners, headlight units, grille/intakes, mirrors, door handles, shut lines, plates, exhausts, diffuser, a simple interior and detailed wheels with tyre profile, spokes, discs and calipers. New models are in `assets/car_0{1,2,3}_*.glb` (same wheel pivots, `Cabin`, `Paint_*` materials and livery mask, so recolouring and physics are unchanged). `src/vehicle/vehicle.js` also hides the new `Interior` mesh in first person. Previews in `dev/previews/`.
