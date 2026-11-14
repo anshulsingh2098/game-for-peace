@@ -25,6 +25,7 @@ export const DOCS = {
   'handling.slideSpeed': ['Speed in m/s above which throttle plus hard steering starts a power slide (14 m/s is about 50 km/h).', '8 to 30'],
   'handling.yawAssist': ['How strongly the car is pulled toward the turn the steering asks for, per second. Higher is sharper and more eager to turn in, lower is lazy and understeers.', '0.5 to 8 (3.2 default)'],
   'handling.maxYaw': ['The fastest turn rate the steering assist will ask for, in radians per second.', '0.8 to 3 (1.7 default)'],
+  'handling.downforce': ['Downforce area (lift coefficient times area, in m2) for cars with powertrain data. The faster the car, the harder the air presses it into the road, so it grips and stays stable at speed. 0 = none (floaty at 200 km/h).', '0 to 2 (a road sports car about 0.3, a race car 3 or more; 0.9 default)'],
   'handling.curve': ['How late the engine pull fades toward top speed on the old simple engine (trucks and bikes). 2 fades early, 3 or more keeps pulling.', '2 to 5'],
   'handling.aeroMul': ['Air drag multiplier on the simple engine (trucks and bikes). The car uses its own drag from its powertrain data.', '0.2 to 1.5'],
   'handling.brakeMul': ['Brake strength multiplier on top of each vehicle\'s own brake value. Higher stops in less distance.', '0.8 to 2 (1.35 default)'],
