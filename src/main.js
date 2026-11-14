@@ -157,13 +157,13 @@ const cycleLights = () => { const o = ['auto', 'on', 'off']; S.lights = o[(o.ind
 /* live radio: a stream in its own <audio> element, a wheel to pick the station, and a chip that names what is playing */
 const radio = new Radio(), nowEl = $('#now'); let nowT;
 radio.setVolume(S.radioVol ?? 0.6); radio.setMuted(S.muted);
-const wheel = new RadioWheel(radio, { locked: v => { controls.locked = v || frozen(); }, onTune: i => {
-  S.station = i >= 0 ? radio.stations[i].id : null; save(); unlockAudio();
+const wheel = new RadioWheel(radio, { locked: v => { controls.locked = v || frozen(); }, onAdd: n => toast('Added ' + n + (n > 1 ? ' songs' : ' song') + ' to My music'), onTune: (i, kind) => {
+  const st = kind === 'local' ? radio.localStation(i) : radio.stations[i]; S.station = i >= 0 && kind !== 'local' && st ? st.id : null; save(); unlockAudio();
   if (i === -2) { toast('Radio off'); return; }
-  const st = radio.stations[i]; if (!st) return; nowEl.textContent = ''; nowEl.appendChild(logo(st));
+  if (!st) return; nowEl.textContent = ''; nowEl.appendChild(logo(st));
   const t = document.createElement('span'); t.innerHTML = '<b></b><small></small>'; t.firstChild.textContent = st.name; t.lastChild.textContent = st.genre + ' · ' + st.region; nowEl.appendChild(t);
   nowEl.classList.add('on'); clearTimeout(nowT); nowT = setTimeout(() => nowEl.classList.remove('on'), 4000); } });
-radio.on(s => { if (s.error && s.station) toast(s.station.name + ' is off air'); S.radioVol = s.vol; });
+radio.on(s => { if (s.error && s.station) toast(s.station.name + ' is off air'); else if (s.error && s.trackInfo) toast('Cannot play ' + s.trackInfo.title); S.radioVol = s.vol; });
 $('#radioBtn').addEventListener('click', () => wheel.toggle());
 const toggleMute = () => { S.muted = !S.muted; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } toast(S.muted ? 'Sound off' : 'Sound on'); };
 /* a location: its land and plants from the profile, and the sky it starts with */
@@ -184,7 +184,7 @@ menu = new Menu({
     else if (k === 'manual') setManual(v === 'manual');
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
-  locations: LOCATIONS, setLocation: id => setLocation(id), radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
+  locations: LOCATIONS, setLocation: id => setLocation(id), music: { count: () => radio.local.length, add: files => wheel.add(files), clear: () => { radio.clearLocal(); toast('My music cleared'); } }, radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
   onOpen: () => { document.body.dataset.menu = 'open'; controls.locked = true; sound.setEngineOn(false); },
   onClose: () => { delete document.body.dataset.menu; controls.locked = false; camera.fov = 58; if (offset) { camera.clearViewOffset(); offset = 0; lastShot = ''; } sound.setEngineOn(mode === 'drive'); unlockAudio(); if (view.camYaw !== null) view.camYaw = phys ? phys.yaw : null; }
 });

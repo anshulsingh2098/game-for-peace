@@ -82,6 +82,10 @@ export class Menu {
     seg('Graphics quality', 'quality', s.quality, 'Changing this reloads the world.'); seg('Shadows', 'shadows', s.shadows ? 'on' : 'off', 'Changing this reloads the world.');
     seg('Gearbox', 'manual', s.manual ? 'manual' : 'auto', 'Manual: shift with E and Z (or gamepad bumpers, or the on-screen buttons). The bike is electric and has one gear.');
     seg('Engine and weather sounds', 'sfx', s.muted ? 'off' : 'on');
+    const mg = mk('div', 'm-group', p); mk('h3', '', mg, 'My music'); const cnt = api.music.count();
+    const inp = mk('input', '', mg); inp.type = 'file'; inp.multiple = true; inp.hidden = true; inp.accept = 'audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac'; inp.onchange = () => { api.music.add(inp.files); inp.value = ''; this.show('settings'); };
+    const mr = mk('div', 'm-row', mg); btn(mr, 'Add songs', () => inp.click()); if (cnt) btn(mr, 'Remove all (' + cnt + ')', () => { api.music.clear(); this.show('settings'); });
+    mk('small', '', mg, cnt ? cnt + (cnt > 1 ? ' songs' : ' song') + ' on this device. Hold Q in the game and open the My music page to play them.' : 'Play your own songs on the radio. They stay on this device and are never uploaded.');
     const g = mk('div', 'm-group', p); mk('h3', '', g, 'Radio volume'); const v = mk('input', 'm-range', g); v.type = 'range'; v.min = 0; v.max = 100; v.value = Math.round(s.radioVol * 100); v.oninput = () => api.set('radioVol', v.value / 100);
     const rb = mk('div', 'm-row', g); btn(rb, 'Open radio', () => api.radio());
     const k = mk('div', 'm-group', p); mk('h3', '', k, 'Controls'); const t = mk('div', 'm-keys', k); for (const [a, b] of KEYS) { mk('b', '', t, a); mk('span', '', t, b); }

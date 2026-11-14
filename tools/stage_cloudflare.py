@@ -1,7 +1,8 @@
 """Builds the Cloudflare deploy folder from the project, replacing hand copying.
 Usage: python tools/stage_cloudflare.py [--out <folder>] [--dry-run]
-Default output is cloudflare/public. Copies the pages, scripts, three.js, models, textures and the radio
-playlist and songs; leaves out Blender sources, dev files and backups. Files in the output that are no
+Default output is cloudflare/public. Copies the pages, scripts, three.js, models and textures; leaves out Blender
+sources, dev files, backups and the music/ folder (its songs are commercial tracks and are not to be published; players add their own
+songs in the browser and they never reach the server). Files in the output that are no
 longer part of the site are removed, so the folder always mirrors the project."""
 import os, sys, shutil, filecmp
 
@@ -9,8 +10,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FILES = ['index.html', 'next.html', 'game.js', 'audio.js']                      # single files, if present
 TREES = {                                                                      # folder -> allowed extensions
     'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', ''}, 'assets': {'.glb', '.png', '.jpg', '.webp'},
-    'music': {'.json', '.mp3', '.m4a', '.ogg'},
-}
+}                                                                              # no 'music' tree: nothing from music/ is deployed
 
 def lp(p):                                                                     # long-path safe on Windows
     p = os.path.abspath(p); pre = '\\\\?\\'

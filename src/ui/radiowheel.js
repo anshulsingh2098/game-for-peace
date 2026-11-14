@@ -1,16 +1,19 @@
 /* The radio wheel, in the style of the GTA 5 one: hold Q (or tap the Radio button), point at a station or use the arrow keys,
-   release Q (or click / tap) to tune in. Two pages: India and World (Tab or E switches). The hub shows the station under the pointer,
+   release Q (or click / tap) to tune in. Three pages: India, World and My music (Tab or E switches); My music holds the player's own songs,
+   added with the button or by dropping files on the page, and kept on this device. The hub shows the station under the pointer,
    its logo, its genre, a volume slider and Radio off. Station logos come from the stations' own sites; a coloured badge with
    initials stands in if one cannot load. */
 import { REGIONS } from '../audio/stations.js';
 
-const mk = (tag, cls, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; };
+const PAGES = [...REGIONS, 'My music'], MINE = PAGES.length - 1;
+
+const mk = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; if (parent) parent.appendChild(e); return e; };
 const hue = s => { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
 const initials = n => n.replace(/[^\p{L}\p{N} ]/gu, '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '♪';
 
 /* a station logo (or badge) as a DOM node */
 export function logo(st, cls) {
-  const box = mk('span', 'logo ' + (cls || '')); box.style.setProperty('--h', hue(st.name)); box.textContent = initials(st.name);
+  const box = mk('span', 'logo ' + (cls || '')); box.style.setProperty('--h', hue(st.name)); box.textContent = st.local ? '♪' : initials(st.name);
   if (st.icon) {
     const img = new Image(); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.decoding = 'async';
     img.onload = () => { if (img.naturalWidth > 8) { box.textContent = ''; box.classList.add('img'); box.appendChild(img); } };
@@ -20,28 +23,44 @@ export function logo(st, cls) {
 }
 
 export class RadioWheel {
-  /* onTune(i) after a choice (i = station index, -2 for off); locked(bool) tells the game to ignore driving keys while the wheel is open */
-  constructor(radio, { onTune, locked }) {
-    this.radio = radio; this.onTune = onTune || (() => {}); this.setLocked = locked || (() => {});
+  /* onTune(i, kind) after a choice (i = station index, or song index when kind is 'local'; -2 for off); locked(bool) tells the game to ignore
+     driving keys while the wheel is open; onAdd(n) after n songs were added */
+  constructor(radio, { onTune, locked, onAdd }) {
+    this.radio = radio; this.onTune = onTune || (() => {}); this.setLocked = locked || (() => {}); this.onAdd = onAdd || (() => {});
     this.open = false; this.page = 0; this.sel = -1; this.items = []; this.heldAt = 0; this.moved = false; this.R = 200;
     const root = this.root = mk('div', 'rw'); root.hidden = true; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Radio');
     this.ring = mk('div', 'rw-ring', root);
     const hub = mk('div', 'rw-hub', root);
     this.hubLogo = mk('div', 'rw-hublogo', hub); this.hubName = mk('div', 'rw-name', hub); this.hubSub = mk('div', 'rw-sub', hub);
     this.tabs = mk('div', 'rw-tabs', hub);
-    REGIONS.forEach((r, i) => { const b = mk('button', '', this.tabs); b.type = 'button'; b.textContent = r; b.onclick = e => { e.stopPropagation(); this.setPage(i); }; });
+    PAGES.forEach((r, i) => { const b = mk('button', '', this.tabs); b.type = 'button'; b.textContent = r; b.onclick = e => { e.stopPropagation(); this.setPage(i); }; });
     const vol = this.vol = mk('input', 'rw-vol', hub); vol.type = 'range'; vol.min = 0; vol.max = 100; vol.value = Math.round(radio.vol * 100); vol.setAttribute('aria-label', 'Radio volume');
     vol.oninput = () => radio.setVolume(vol.value / 100); vol.addEventListener('click', e => e.stopPropagation());
+    const mine = this.mine = mk('div', 'rw-mine', hub);                                                                                       // shown on the My music page
+    this.file = mk('input', '', mine); this.file.type = 'file'; this.file.accept = 'audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac'; this.file.multiple = true; this.file.hidden = true;
+    this.file.onchange = () => { this.add(this.file.files); this.file.value = ''; };
+    this.addBtn = mk('button', 'primary', mine, 'Add songs'); this.addBtn.type = 'button'; this.addBtn.onclick = e => { e.stopPropagation(); this.file.click(); };
+    this.delBtn = mk('button', '', mine, 'Remove song'); this.delBtn.type = 'button'; this.delBtn.onclick = e => { e.stopPropagation(); this.removeSel(); };
+    this.note = mk('small', '', mine, 'Your songs stay on this device. Drop audio files anywhere on the page.');
     const off = this.offBtn = mk('button', 'rw-off', hub); off.type = 'button'; off.textContent = 'Radio off'; off.onclick = e => { e.stopPropagation(); this.commit(-2); };
     document.body.appendChild(root);
     root.addEventListener('pointermove', e => this.point(e));
     root.addEventListener('pointerdown', e => { if (e.target === root || e.target === this.ring) this.close(); });
     addEventListener('resize', () => { if (this.open) this.layout(); });
     addEventListener('keydown', e => this.key(e), true); addEventListener('keyup', e => this.keyup(e), true);
+    const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');                                                         // drop songs anywhere on the page
+    addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+    addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); this.add(e.dataTransfer.files); });
     radio.on(() => this.refresh());
   }
-  /* stations on the current page, with their index in the radio's list */
-  list() { return this.radio.stations.map((s, i) => ({ s, i })).filter(x => (x.s.region === 'India') === (this.page === 0)); }
+  /* songs added from files or a drop; opens the My music page so they show */
+  add(files) { const n = this.radio.addFiles([...files]); if (n) { this.onAdd(n); if (this.open) this.setPage(MINE); } return n; }
+  removeSel() { if (this.page === MINE && this.sel >= 0 && this.items[this.sel]) { this.radio.removeLocal(this.items[this.sel].i); this.sel = -1; this.setPage(MINE); } }
+  /* what the current page lists, with each item's index (a station's place in the radio list, or a song's place in My music) */
+  list() {
+    if (this.page === MINE) return this.radio.local.map((_, k) => ({ s: this.radio.localStation(k), i: k }));
+    return this.radio.stations.map((s, i) => ({ s, i })).filter(x => (x.s.region === 'India') === (this.page === 0));
+  }
   setPage(p) { this.page = p; this.sel = -1; this.build(); this.layout(); this.refresh(); }
   build() {
     this.ring.textContent = ''; this.items = [];
@@ -67,22 +86,26 @@ export class RadioWheel {
     if (best !== this.sel) { this.sel = best; this.moved = true; this.refresh(); }
   }
   refresh() {
-    const st = this.radio.state(), cur = this.sel >= 0 ? this.items[this.sel] : null, shown = cur ? cur.s : st.station;
-    this.items.forEach((t, k) => { t.b.classList.toggle('sel', k === this.sel); t.b.classList.toggle('now', t.i === st.index); });
+    const st = this.radio.state(), cur = this.sel >= 0 ? this.items[this.sel] : null;
+    const nowIdx = this.page === MINE ? (st.mode === 'local' ? st.track : -9) : (st.mode === 'live' ? st.index : -9);
+    this.items.forEach((t, k) => { t.b.classList.toggle('sel', k === this.sel); t.b.classList.toggle('now', t.i === nowIdx); });
+    const playing = st.mode === 'live' ? st.station : st.mode === 'local' ? this.radio.localStation(st.track) : null, shown = cur ? cur.s : playing, empty = this.page === MINE && !this.items.length;
     this.hubLogo.textContent = ''; if (shown) this.hubLogo.appendChild(logo(shown, 'big')); else this.hubLogo.textContent = '♪';
-    this.hubName.textContent = shown ? shown.name : 'Radio off';
-    this.hubSub.textContent = shown ? shown.genre + ' · ' + shown.region + (cur ? '' : st.error ? ' · off air' : st.loading ? ' · tuning…' : ' · now playing') : 'Hold Q, point, release';
+    this.hubName.textContent = shown ? shown.name : empty ? 'My music' : 'Radio off';
+    this.hubSub.textContent = shown ? (shown.local ? (shown.genre === 'My music' ? 'My music' : shown.genre + ' · My music') : shown.genre + ' · ' + shown.region) + (cur ? '' : st.error ? (st.mode === 'local' ? ' · cannot play this file' : ' · off air') : st.loading ? (st.mode === 'local' ? ' · loading…' : ' · tuning…') : ' · now playing') : empty ? 'Add songs from this device' : 'Hold Q, point, release';
+    this.mine.style.display = this.page === MINE ? 'grid' : 'none'; this.delBtn.style.display = this.page === MINE && cur ? '' : 'none'; this.note.style.display = empty ? '' : 'none';
+    this.tabs.children[MINE].textContent = this.radio.local.length ? 'My music (' + this.radio.local.length + ')' : 'My music';
     this.offBtn.disabled = st.index < 0; this.vol.value = Math.round(st.vol * 100);
   }
   show() {
     if (this.open) return; const st = this.radio.state();
-    this.open = true; this.moved = false; this.page = st.station && st.station.region !== 'India' ? 1 : 0; this.root.hidden = false; this.setLocked(true); this.build(); this.layout();
-    this.sel = st.station ? this.items.findIndex(t => t.i === st.index) : -1; this.refresh();
+    this.open = true; this.moved = false; this.page = st.mode === 'local' ? MINE : st.station && st.station.region !== 'India' ? 1 : 0; this.root.hidden = false; this.setLocked(true); this.build(); this.layout();
+    this.sel = this.page === MINE ? (st.mode === 'local' ? this.items.findIndex(t => t.i === st.track) : -1) : st.station ? this.items.findIndex(t => t.i === st.index) : -1; this.refresh();
   }
   close() { if (!this.open) return; this.open = false; this.root.hidden = true; this.heldAt = 0; this.setLocked(false); }
   toggle() { if (this.open) this.close(); else { this.heldAt = 0; this.show(); } }
   /* i: station index, -2 for radio off */
-  commit(i) { if (i === -2) this.radio.off(); else if (i >= 0) this.radio.tune(i); this.onTune(i); this.close(); }
+  commit(i) { const kind = this.page === MINE && i >= 0 ? 'local' : 'live'; if (i === -2) this.radio.off(); else if (kind === 'local') this.radio.playLocal(i); else if (i >= 0) this.radio.tune(i); this.onTune(i, kind); this.close(); }
   key(e) {
     if (e.target && e.target.tagName === 'INPUT' && e.target !== this.vol) return;
     if (e.code === 'KeyQ' && !e.ctrlKey && !e.metaKey) {
@@ -95,10 +118,11 @@ export class RadioWheel {
     if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowUp') {
       stop(); const d = (k === 'ArrowRight' || k === 'ArrowDown') ? 1 : -1;
       this.sel = this.sel < 0 ? (d > 0 ? 0 : n - 1) : (this.sel + d + n) % n; this.moved = true; this.refresh();
-    } else if (k === 'Tab' || k === 'KeyE') { stop(); this.setPage((this.page + 1) % REGIONS.length); }
+    } else if (k === 'Tab' || k === 'KeyE') { stop(); this.setPage((this.page + 1) % PAGES.length); }
     else if (k === 'Enter' || k === 'Space') { stop(); if (this.sel >= 0) this.commit(this.items[this.sel].i); else this.close(); }
     else if (k === 'Escape') { stop(); this.close(); }
     else if (k === 'KeyX' || k === 'Backspace') { stop(); this.commit(-2); }
+    else if (k === 'Delete') { stop(); this.removeSel(); }
   }
   /* releasing Q after a hold tunes the highlighted station; a quick tap leaves the wheel open */
   keyup(e) {
