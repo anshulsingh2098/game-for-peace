@@ -78,7 +78,7 @@ export class Scatter {
     const variants = (k, f) => defs(k).forEach((d, vi, all) => { const sub = all.length > 1 ? lists[k].filter((_, i) => i % all.length === vi) : lists[k]; if (sub.length) f(d, sub); });
     for (const k of ['pine', 'round']) if (lists[k].length) variants(k, (d, sub) => { if (d.trunk) { fill(d.trunk, pr.solid, sub, false); fill(d.foliage, d.mat, sub, true); count -= sub.length; } else fill(d.foliage, d.mat, sub, true); });
     for (const k of ['bush', 'tuft']) if (lists[k].length) variants(k, (d, sub) => fill(d.foliage, d.mat, sub, true));
-    if (lists.rock.length) { if (nat && nat.rock && nat.rock.length) nat.rock.forEach((d, vi) => { const sub = lists.rock.filter((_, i) => i % nat.rock.length === vi); if (sub.length) fill(d.geom, d.mat, sub, true); }); else fill(pr.rock, pr.solid, lists.rock, true); }
+    if (lists.rock.length) { if (full && nat && nat.rock && nat.rock.length) nat.rock.forEach((d, vi) => { const sub = lists.rock.filter((_, i) => i % nat.rock.length === vi); if (sub.length) fill(d.geom, d.mat, sub, true); }); else fill(pr.rock, pr.solid, lists.rock, true); }
     g.position.set(x0 - this.origin.x, 0, z0 - this.origin.z); this.group.add(g); this.count += count;
     return { tx, tz, full, g, hits, count };
   }
