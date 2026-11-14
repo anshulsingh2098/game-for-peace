@@ -22,6 +22,8 @@ import { RapierVehicle, initRapier } from './vehicle/rapier-vehicle.js';
 import { VehicleView, loadModel } from './vehicle/vehicle.js';
 import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
+import { Autodrive } from './input/autodrive.js';
+import { TouchUI } from './input/touchui.js';
 import { Backdrop } from './env/backdrop.js';
 import { Environment, TIMES, WX } from './env/environment.js';
 import { registerRoot, setOverrides, applyWorld, describe, overrides } from './core/tuning.js';
@@ -48,7 +50,7 @@ for (const url of ['api/settings', 'settings.json']) {             // the publis
 registerRoot('world', () => config); applyWorld(config);
 if (q.get('road')) config.road.style = roadStyleById(q.get('road')).id;                  // ?road=highway|boulevard|dirt|gravel
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };
-document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('dev', q.has('dev') || q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches);
+document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('dev', q.has('dev') || q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches || q.has('touch'));
 
 const canvas = $('#view'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, phone ? 1 : 1.5));
@@ -99,7 +101,7 @@ function applyView() {
 }
 
 /* ---------- the vehicle ---------- */
-const cam = new FlyCam(canvas), controls = new Controls(), view = new VehicleView(scene);
+const cam = new FlyCam(canvas), controls = new Controls(), autodrive = new Autodrive(), view = new VehicleView(scene);
 const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r), get seaLevel() { return terrain.seaLevel; },
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
@@ -139,6 +141,7 @@ function useBuff() {
 }
 function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 function setMode(m) {
+  if (m !== 'drive' && autodrive.enabled) { autodrive.toggle(false); $('#autoBtn').classList.remove('on'); }
   if (m === 'fly' && phys) { cam.x = phys.x - Math.cos(phys.yaw) * 14; cam.z = phys.z - Math.sin(phys.yaw) * 14; cam.y = phys.y + 7; cam.yaw = -Math.PI / 2 - phys.yaw; cam.pitch = -0.25; }
   if (m === 'ride') { roadS = road.closestS(phys ? phys.x : cam.x, phys ? phys.z : cam.z, roadS); rideYaw = phys ? -Math.PI / 2 - phys.yaw : cam.yaw; cam.speed = Math.min(cam.speed, 40); }
   if (m === 'drive' && mode === 'ride' && phys) placeOnRoad(roadS);
@@ -157,11 +160,13 @@ applyView(); $('#seed').value = config.seed;
 $('#seedForm').addEventListener('submit', e => { e.preventDefault(); regenerate($('#seed').value.trim() || 'peace'); $('#seed').blur(); });
 $('#newSeed').addEventListener('click', () => regenerate(randomSeed()));
 $$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { setVehicle(i); b.blur(); }));
+function setAuto(on) { if (on && (mode !== 'drive' || !phys)) return; autodrive.s = roadS; autodrive.toggle(on); $('#autoBtn').classList.toggle('on', on); if (touchUI) touchUI.setAuto(on); toast(on ? 'Autodrive on: steer or brake to take over' : 'Autodrive off'); }
 const toggleView = () => { view.setView(view.view === 'first' ? 'third' : 'first'); toast(view.view === 'first' ? 'Driver view' : 'Chase view'); };
 $('#viewBtn').addEventListener('click', toggleView); $('#reset').addEventListener('click', backToRoad);
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
-controls.on('view', toggleView); controls.on('reset', backToRoad); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
+controls.on('auto', () => setAuto(!autodrive.enabled)); $('#autoBtn').addEventListener('click', () => setAuto(!autodrive.enabled)); controls.on('view', toggleView); controls.on('reset', backToRoad); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
+let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
 $('#time').value = S.time; $('#weather').value = S.weather;
 $('#time').addEventListener('change', e => { S.time = e.target.value; save(); env.setTime(S.time); e.target.blur(); });
 $('#weather').addEventListener('change', e => { S.weather = e.target.value; save(); env.setWeather(S.weather); e.target.blur(); });
@@ -241,7 +246,11 @@ function step(dt, now) {
   WIND.t.value = now / 1000; let px, pz;
   if (mode === 'drive' && phys) {
     if (!frozen()) {
-      input = auto || controls.read(); phys.step(dt, input);
+      input = controls.read();
+      if (autodrive.enabled) {                                                                       // the car drives itself; steering or braking by hand takes over
+        if (Math.abs(input.steer) > 0.25 || input.brake > 0.25) setAuto(false); else input = autodrive.update(phys, road);
+      }
+      if (auto) input = auto; phys.step(dt, input);
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
     }

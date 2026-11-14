@@ -36,7 +36,7 @@ export async function loadNature(level = 'full') {            // level 'low': fe
       pine: fewer([conifer('fir_sapling_0', 13), conifer('fir_sapling_1', 11), conifer('fir_sapling_2', 9), conifer('pine_sapling_small_0', 13), conifer('pine_sapling_small_1', 11), conifer('pine_sapling_small_2', 9)], [0, 4]),
       round: [{ foliage: card(tex.island_tree_02, meta.island_tree_02, 9, 3), mat: mat.island_tree_02 }],
       bush: fewer([{ foliage: card(tex.shrub_03, meta.shrub_03, 0.9, 3), mat: mat.shrub_03 }, { foliage: card(tex.fern_02, meta.fern_02, 1.0, 3), mat: mat.fern_02 }], [0]),
-      tuft: [{ foliage: card(tex.grass_medium_02, meta.grass_medium_02, 0.6, 3), mat: mat.grass_medium_02 }],
+      tuft: [{ foliage: card(tex.grass_medium_02, meta.grass_medium_02, 0.9, 3), mat: mat.grass_medium_02 }],
       rock: fewer(rocks, [0])
     };
   } catch (e) { console.warn('nature assets not loaded, keeping the drawn scenery', e); return null; }

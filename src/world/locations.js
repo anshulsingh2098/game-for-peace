@@ -8,7 +8,7 @@
 import { makeConfig } from '../core/config.js';
 
 export const LOCATIONS = [
-  { id: 'default', name: 'Green Valley', blurb: 'Rolling hills, forests and a lake or two. The original world.', accent: '#7fd46a', config: {}, sky: { time: 'day', weather: 'clear' } },
+  { id: 'default', name: 'Green Valley', blurb: 'Rolling hills, forests and a lake or two. The original world.', accent: '#7fd46a', config: { scatter: { trees: 0.0034, tufts: 0.024, bushes: 0.0012, clearRoad: 17 } }, sky: { time: 'day', weather: 'clear' } },
 
   { id: 'alps', name: 'The Alps', blurb: 'Pine valleys, blue lakes and snow-capped peaks. Cool, clear and high.', accent: '#8fc8ff',
     config: {

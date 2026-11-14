@@ -2,12 +2,12 @@
    { steer -1..1 (right is +), throttle 0..1, brake 0..1 }. One-shot actions arrive through on(name, fn):
    'view', 'reset', 'fly', 'pause', 'buff'. */
 const KEYS = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' };
-const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', Space: 'buff' };
+const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', Space: 'buff', KeyE: 'auto' };
 
 export class Controls {
   constructor() {
     this.k = { left: 0, right: 0, up: 0, down: 0 }; this.touch = { left: 0, right: 0, up: 0, down: 0 }; this.handlers = {}; this.prev = []; this.enabled = true; this.locked = false;
-    this.input = { steer: 0, throttle: 0, brake: 0 };
+    this.input = { steer: 0, throttle: 0, brake: 0 }; this.analog = { steer: 0, throttle: 0 };      // analog: the touch steering handle and throttle slider (src/input/touchui.js)
     addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT') return;
       if (KEYS[e.code]) { this.k[KEYS[e.code]] = 1; if (this.enabled) e.preventDefault(); }
@@ -28,7 +28,7 @@ export class Controls {
   /* call once a frame; returns the merged input */
   read() {
     if (this.locked) { const i = this.input; i.steer = i.throttle = i.brake = 0; return i; }
-    const k = this.k, t = this.touch; let steer = (k.right || t.right) - (k.left || t.left), up = k.up || t.up, down = k.down || t.down;
+    const k = this.k, t = this.touch; let steer = (k.right || t.right) - (k.left || t.left) + this.analog.steer, up = Math.max(k.up || t.up, this.analog.throttle), down = k.down || t.down;
     const gp = (navigator.getGamepads ? [...navigator.getGamepads()] : []).find(g => g && g.connected && g.mapping === 'standard' && g.buttons.length >= 16);
     if (gp) {
       const b = i => gp.buttons[i] && gp.buttons[i].pressed, v = i => gp.buttons[i] ? gp.buttons[i].value : 0, ax = gp.axes[0] || 0, dead = x => x > 0.15 ? x : 0;

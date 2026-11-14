@@ -31,6 +31,8 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] **Bridge**: drive onto one (default world, seed `peace`): deck, rails, piers; the car rides the deck. (Known: no rail collision.)
 - [ ] **Tunnel** (Himalayas, seed `hill`): gate with a readable "ATAL TUNNEL, ROHTANG" board, portal, tiled lit interior, cones, camera stays inside, no rain inside. Try the truck.
 - [ ] **Weather and time**: clear, overcast, fog, rain, storm, snow, each at day, dusk and night: nothing goes black or white, road looks wet in rain, tunnel and bridge look right at night.
+- [ ] **Autodrive** (press E, or the Auto button): the car follows the road by itself at about 70 km/h, slows for bends, goes through tunnels and over bridges; steering or braking by hand takes over. Try the Himalayas (seed `hill`) and the default world.
+- [ ] **Green Valley** looks like open meadow with tall grass and trees set back from the road, not a forest at the verge.
 - [ ] **Quality tiers**: add `&q=low`, `&q=med`, `&q=high`. Low: old cheap ground, fewer tree variants, no shadows; med: lighter photographic ground; high: full ground, bigger shadows and view. Each looks acceptable and none shows broken ground. Phones start on low. (Draw calls and triangles for the Alps at 1400x800: low 176 / 96k, med 523 / 430k, high 898 / 895k. High took about 24 ms on an M4: too slow, still to be tuned.)
 - [ ] **Vehicles**: car, truck and bike each drive; paint colours work; white paint does not glare to a white blob.
 - [ ] **Radio and sound**: radio wheel (hold Q) plays a station; engine, wind and rain sounds; (known: rain plays inside tunnels).
@@ -46,6 +48,8 @@ Open the browser console (F12): nothing red except known favicon 404s.
 
 - [ ] Open the live or local address on a real phone (same wifi: `http://<your computer's address>:8765/next.html`).
 - [ ] Loads in a reasonable time; touch controls work; menus fit the screen; text readable.
+- [ ] **Touch layout** (or on a computer: add `&touch` and use a phone-sized window): left, a vertical throttle lever (stays where you leave it) with BRAKE and BOOST; right, the steering handle on its arc (springs back to the middle) with AUTO, CAM and RESET; speed at the top left. Works held sideways and upright.
+- [ ] **Phone camera**: lower, closer and wider than on a computer (compare with the slowroads.io screenshots).
 - [ ] Frame rate feels smooth (note it); the phone does not heat up or crash after five minutes.
 - [ ] Write down what you saw. Nothing so far has been measured on a phone.
 

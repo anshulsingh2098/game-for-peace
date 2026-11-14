@@ -90,7 +90,7 @@ export class VehicleView {
   }
   /* aim the camera. floor(x, z) is the lowest height the camera may sit at. */
   aim(camera, ph, origin, dt, floor, boost = 0) {
-    const d = this.def, speed = Math.abs(ph.u);
+    const d = this.def, speed = Math.abs(ph.u), cm = this.camMul || { back: 1, up: 1, look: 1, fov: 0 };       // camMul: closer, lower, wider on phones (set in main.js)
     if (this.view === 'first') {
       this.root.updateMatrixWorld(true); this.eye.set(...d.eye); this.root.localToWorld(this.eye); camera.position.copy(this.eye);
       camera.rotation.order = 'YXZ'; camera.rotation.set(ph.pitch * 0.9 - 0.03, -Math.PI / 2 - ph.yaw, -(ph.roll + ph.lean) * 0.5);
@@ -99,10 +99,10 @@ export class VehicleView {
       const want = ph.yaw + Math.atan2(ph.v, Math.max(Math.abs(ph.u), 4)) * 0.4;       // follow where the car is going, a little, when it slides
       if (this.camYaw === null) this.camYaw = want;
       this.camYaw += Math.atan2(Math.sin(want - this.camYaw), Math.cos(want - this.camYaw)) * Math.min(1, dt * 3.2);
-      const cx = Math.cos(this.camYaw), cz = Math.sin(this.camYaw), wx = ph.x - cx * d.cam.back, wz = ph.z - cz * d.cam.back;
-      const y = Math.max(ph.y + d.cam.up, floor(wx, wz) + 1.2);
-      camera.position.set(wx - origin.x, y, wz - origin.z); camera.lookAt(ph.x + cx * d.cam.look - origin.x, ph.y + d.cam.up * 0.45, ph.z + cz * d.cam.look - origin.z);
-      camera.fov = 56 + Math.min(14, speed * 0.16) + boost * 4;
+      const cx = Math.cos(this.camYaw), cz = Math.sin(this.camYaw), wx = ph.x - cx * d.cam.back * cm.back, wz = ph.z - cz * d.cam.back * cm.back;
+      const y = Math.max(ph.y + d.cam.up * cm.up, floor(wx, wz) + 1.2);
+      camera.position.set(wx - origin.x, y, wz - origin.z); camera.lookAt(ph.x + cx * d.cam.look * cm.look - origin.x, ph.y + d.cam.up * 0.45, ph.z + cz * d.cam.look * cm.look - origin.z);
+      camera.fov = 56 + cm.fov + Math.min(14, speed * 0.16) + boost * 4;
     }
     camera.updateProjectionMatrix();
   }
