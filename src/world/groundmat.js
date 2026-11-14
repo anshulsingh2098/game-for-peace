@@ -25,8 +25,14 @@ export function makeGroundMaterial(level = 'full') {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP; varying vec3 vWN;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vWN = normalize(mat3(modelMatrix) * normal);');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-uniform sampler2D tGrass; uniform sampler2D tRock; uniform sampler2D tSnow; uniform sampler2D tSand; uniform float uSea; varying vec3 vWP; varying vec3 vWN;
+uniform sampler2D tGrassN; uniform sampler2D tRockN; uniform sampler2D tGrass; uniform sampler2D tRock; uniform sampler2D tSnow; uniform sampler2D tSand; uniform float uSea; varying vec3 vWP; varying vec3 vWN;
 vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z); return texture2D(tRock, p.zy / 8.0).rgb * w.x + texture2D(tRock, p.xz / 8.0).rgb * w.y + texture2D(tRock, p.xy / 8.0).rgb * w.z; }`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{ ${lite ? '' : `
+  vec3 wn = normalize(vWN); float sl = 1.0 - wn.y, rk = smoothstep(0.30, 0.52, sl), fade = 1.0 - smoothstep(25.0, 110.0, length(vViewPosition));
+  vec2 g1 = texture2D(tGrassN, vWP.xz / 2.0).xy * 2.0 - 1.0, g2 = texture2D(tGrassN, vWP.xz / 9.0).xy * 2.0 - 1.0, r1 = texture2D(tRockN, vWP.xz / 8.0).xy * 2.0 - 1.0;
+  vec2 d = mix(g1 * 0.55 + g2 * 0.45, r1, rk) * mix(0.8, 1.1, rk) * fade;
+  normal = normalize(normal + (viewMatrix * vec4(d.x, 0.0, d.y, 0.0)).xyz * 0.9);`} }`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 {
   vec3 vc = vColor.rgb; float lum = dot(vc, vec3(0.3, 0.59, 0.11)); vec3 n = normalize(vWN);

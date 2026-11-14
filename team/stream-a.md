@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 18:00  Ground normal maps now used (N3 A)
+Branch: feat/ground-detail
+What changed: `src/world/groundmat.js`: the grass and rock normal maps were loaded but never used; the ground shader now perturbs the surface normal with them (two grass scales blended into the rock map on steep slopes, faded out between 25 and 110 m so far ground does not shimmer). Full tier only; the `lite` tier is unchanged. Checked in California at high tier: renders, no shader or console errors. Tall grass (a separate layer of blades) is NOT done. Not measured for frame cost on a phone: add to the N4 phone run.
+For the other stream: nothing.
+Status: done
+
 ## 2026-11-16 17:00  Core architecture addendum added to the plan
 Branch: feat/collision-audit
 What changed: `docs/open-world-core-architecture-addendum.md` (verbatim) and an "Addendum: open-world core architecture" section in `PARALLEL_PLAN.md` mapping its fifteen areas to N7 to N20, what exists, the gaps, and two change requests (an N7a core contracts note; an N14a player-facing layer for HUD, map, prompts, accessibility). Docs only.
