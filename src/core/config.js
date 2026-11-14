@@ -41,8 +41,8 @@ export const DEFAULT_CONFIG = {
 
 export const VIEW_PRESETS = {
   low:  { rings: [{ r: 1, res: 32 }, { r: 2, res: 16 }, { r: 4, res: 8 }], far: { tile: 512, r: 5, res: 8, sink: 12 }, scenery: { near: 1, far: 2, density: 0.5 } },
-  med:  { rings: [{ r: 1, res: 64 }, { r: 3, res: 32 }, { r: 8, res: 16 }], far: { tile: 512, r: 9, res: 8, sink: 10 }, scenery: { near: 1, far: 4, density: 1 } },
-  high: { rings: [{ r: 2, res: 64 }, { r: 5, res: 32 }, { r: 12, res: 16 }], far: { tile: 512, r: 14, res: 16, sink: 8 }, scenery: { near: 2, far: 6, density: 1 } }
+  med:  { rings: [{ r: 1, res: 64 }, { r: 3, res: 32 }, { r: 5, res: 16 }, { r: 8, res: 8 }], far: { tile: 512, r: 9, res: 8, sink: 10 }, scenery: { near: 1, far: 4, density: 1 } },
+  high: { rings: [{ r: 2, res: 64 }, { r: 5, res: 32 }, { r: 8, res: 16 }, { r: 12, res: 8 }], far: { tile: 512, r: 14, res: 16, sink: 8 }, scenery: { near: 2, far: 6, density: 1 } }
 };
 
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);

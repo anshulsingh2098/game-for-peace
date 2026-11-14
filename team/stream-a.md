@@ -13,6 +13,14 @@ Branch: feat/n3-grade-check
 What changed: `tools/locations_check.mjs` now also prints the share of the road above the hard grade limit. Finding: Alps 7-24% and Himalayas 10-21% of the road is over the hard limit (14-15%), peaking near 21%; Mumbai 0%, default 3.7%. Allowing deeper cuts and a lower fallback grade (`maxCut`, `lastGrade`) helped some seeds and made others worse (Himalayas coast 21% to 47%), so I kept the config as it was. The cause is the route choice in `router.js`, not the limits. Next: make the router prefer gentler lines in the mountains (switchbacks) and re-measure with this check.
 For the other stream: nothing. Expect the climb to feel steep in the Alps and Himalayas until this is fixed.
 Status: open
+## 2026-11-15 10:00  Marine Drive fixed and placed near the start (N3)
+Branch: feat/n3-marine-drive
+What changed: `src/world/landmarks.js`: the Marine Drive strip was never rotated into its own frame, so the sea wall, lamps and tetrapods drifted 100+ m off the road; fixed. It now carves its own bay in front of the sea wall, and the sea-side parts sit 7 m further from the road. Landmark search now prefers spots near the requested distance (Mumbai's three landmarks were 1.1 km behind the start). `src/world/locations.js`: Marine Drive no longer needs natural sea and starts the search at s=250.
+## 2026-11-14 20:00  Coarser outer terrain ring on med and high (speed)
+Branch: feat/n3-terrain-lod
+What changed: `src/core/config.js` (shared): the med and high tiers get one more, coarser terrain ring (8 cells per tile at the far edge). Medium: 310k to 282k triangles per frame (-9%), same scene. Not checked by eye on hills; look at distant ridges in the Alps and Himalayas.
+For the other stream: nothing.
+Status: done
 
 ## 2026-11-14 19:00  Far rocks are cheap now (N3/N4 speed)
 Branch: feat/n3-world-polish
