@@ -2,6 +2,24 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 21:00  Retaining walls and parapets (N3 A)
+Branch: feat/ground-detail
+What changed: new `src/world/retaining.js` (wired into `road.js` like bridges and tunnels: `update`, `reposition`, `dispose`): where the land beside the road falls away more than 1.8 m within 3 m of the bed, a low stone parapet (0.9 m) with a coping runs along the road edge and a wall face goes down the drop (at most 5 m); where the land climbs more than 1.4 m, a wall with coping stands on the bed edge (up to 4.5 m). Skips bridges and tunnels. Visual only. Measured: Himalayas has about 22% of road sides with a drop (all of them small, at most about 2 m), and no cuts steep enough for a wall (the grading eases the hill in), so in practice you see parapets and an occasional wall at a bend; Alps, California and Mumbai have almost none. Checked by eye in the Himalayas at medium tier, no console errors, self-test 33 checks. Phone cost not measured (one merged mesh per 200 m piece).
+For the other stream: nothing.
+Status: done
+
+## 2026-11-16 20:00  Southern lighthouse and a richer Taj hotel (N3 A)
+Branch: feat/ground-detail
+What changed: `src/world/landmarks.js`: new `lighthouse` landmark (tapering red and white banded tower, gallery with railing, lantern room and cap, keeper's cottage, boundary walls; three obstacle circles) placed on the Southern Coast by a spec in `locations.js` (`{ kind: 'lighthouse', s: 700, off: 80, sea: true, range: 3000 }`); `tajHotel` gets string courses and cornices on every block, parapet finials, four corner turrets with domes, balcony rails, an entrance porch and forecourt lamps. Checked by eye at medium tier (south seed `peace`, Mumbai): both render, no console errors. Self-test 33 checks. The lighthouse has no interior and is not lit at night (no beam yet).
+For the other stream: nothing.
+Status: done
+
+## 2026-11-16 18:00  Ground normal maps now used (N3 A)
+Branch: feat/ground-detail
+What changed: `src/world/groundmat.js`: the grass and rock normal maps were loaded but never used; the ground shader now perturbs the surface normal with them (two grass scales blended into the rock map on steep slopes, faded out between 25 and 110 m so far ground does not shimmer). Full tier only; the `lite` tier is unchanged. Checked in California at high tier: renders, no shader or console errors. Tall grass (a separate layer of blades) is NOT done. Not measured for frame cost on a phone: add to the N4 phone run.
+For the other stream: nothing.
+Status: done
+
 ## 2026-11-16 17:00  Core architecture addendum added to the plan
 Branch: feat/collision-audit
 What changed: `docs/open-world-core-architecture-addendum.md` (verbatim) and an "Addendum: open-world core architecture" section in `PARALLEL_PLAN.md` mapping its fifteen areas to N7 to N20, what exists, the gaps, and two change requests (an N7a core contracts note; an N14a player-facing layer for HUD, map, prompts, accessibility). Docs only.
