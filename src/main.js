@@ -39,7 +39,9 @@ let savedLoc = null; try { savedLoc = JSON.parse(localStorage.getItem('gfp-next'
 let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || savedLoc || 'default', q.get('seed') || 'peace');
 /* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
 registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES);
-try { const r = await fetch('settings.json', { cache: 'no-store' }); if (r.ok) setOverrides((await r.json()).overrides || {}); } catch (e) { /* none published */ }
+for (const url of ['api/settings', 'settings.json']) {             // the published settings (tuner Publish), else a settings.json committed with the site
+  try { const r = await fetch(url); if (r.ok) { const j = await r.json(); if (j && j.overrides) { setOverrides(j.overrides); break; } } } catch (e) { /* not there: carry on */ }
+}
 registerRoot('world', () => config); applyWorld(config);
 if (q.get('road')) config.road.style = roadStyleById(q.get('road')).id;                  // ?road=highway|boulevard|dirt|gravel
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };

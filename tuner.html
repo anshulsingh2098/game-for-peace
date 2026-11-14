@@ -45,7 +45,9 @@
   <span class="sp"></span>
   <span id="status">connecting…</span><span id="count"></span>
   <button id="reset">Reset all</button><button id="import">Import…</button><button id="export" class="primary">Export settings.json</button>
-  <button id="publish" disabled title="Needs the Cloudflare worker: not built yet">Publish</button>
+  <select id="hist" title="Earlier published versions (loads into the panel, does not publish)"><option value="">History…</option></select>
+  <button id="pull" title="Replace the panel with what is live now">Load live</button>
+  <button id="publish" class="primary" title="Make these settings live for everyone who opens the game">Publish</button>
   <input id="file" type="file" accept="application/json" hidden>
 </header>
 <aside id="side"><input id="search" type="search" placeholder="Search settings (mass, fog, grip…)"><div id="tree"></div></aside>

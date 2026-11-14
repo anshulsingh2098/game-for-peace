@@ -13,6 +13,7 @@ import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 import { LOCATIONS, locationConfig } from '../src/world/locations.js';
 import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
 import * as tuning from '../src/core/tuning.js';
+import worker from '../cloudflare/worker.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -204,6 +205,21 @@ test('tuning: settings are found by path, applied, replaced as a whole and reset
   assert.equal(V[0].body.mass, 2000); assert.equal(T.day.sun[1], 0.2); assert.equal(cfg.terrain.hills.amp, 90);
   tuning.setOverrides({ 'world.terrain.hills.amp': 70 }); assert.equal(V[0].body.mass, 1350); assert.equal(T.day.sun[1], 0.85);      // a path left out goes back to its default
   assert.equal(tuning.applyWorld({ terrain: { hills: { amp: 1 } } }).terrain.hills.amp, 70); tuning.setOverrides({});
+});
+
+await atest('worker: anyone reads the published settings; only the password publishes; bad data is refused; history keeps versions', async () => {
+  const kv = new Map(), env = { SETTINGS: { get: async (k, t) => kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null, put: async (k, v) => { kv.set(k, v); } }, TUNER_PASSWORD: 'pw', ASSETS: { fetch: async () => new Response('static') } };
+  const call = (path, method = 'GET', body, pw) => worker.fetch(new Request('https://x.test' + path, { method, body: body && JSON.stringify(body), headers: pw ? { authorization: 'Bearer ' + pw } : {} }), env);
+  assert.equal((await call('/api/settings')).status, 200); assert.deepEqual((await (await call('/api/settings')).json()).overrides, {});
+  assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 1 } })).status, 401); assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 1 } }, 'nope')).status, 401);
+  assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a b': 1 } }, 'pw')).status, 400); assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 'text' } }, 'pw')).status, 400); assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': NaN } }, 'pw')).status, 400);
+  assert.equal((await call('/api/settings', 'PUT', { overrides: { 'vehicles.car.body.mass': 2000, 'times.day.top': '#aabbcc' } }, 'pw')).status, 200);
+  assert.equal((await (await call('/api/settings')).json()).overrides['vehicles.car.body.mass'], 2000);
+  await call('/api/settings', 'PUT', { overrides: { 'a.b': 2 }, note: 'second' }, 'pw');
+  assert.equal((await call('/api/history')).status, 401); const h = (await (await call('/api/history', 'GET', null, 'pw')).json()).history; assert.equal(h.length, 2); assert.equal(h[0].note, 'second');
+  assert.equal(await (await call('/index.html')).text(), 'static');
+  const bare = { ASSETS: env.ASSETS }; assert.equal((await worker.fetch(new Request('https://x.test/api/settings'), bare)).status, 503);        // not set up: API says so, nothing else breaks
+  assert.equal((await worker.fetch(new Request('https://x.test/next.html'), bare)).status, 200);
 });
 
 console.log(`\n${passed} checks passed`);

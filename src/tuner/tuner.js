@@ -1,6 +1,7 @@
 /* The tuner dashboard: a settings panel beside a live copy of the game (next.html in an iframe).
    The game describes its own settings (core/tuning.js), this page builds sliders for them and sends the changed values back.
-   Export writes settings.json (the file the game loads at start); the draft is also kept in this browser. */
+   Export writes settings.json; Publish sends the settings to the site's worker (cloudflare/worker.js), which every player's game reads at start.
+   The draft is also kept in this browser. */
 const $ = s => document.querySelector(s), frame = $('#game'), tree = $('#tree');
 const DRAFT = 'gfp-tuner-draft';
 let fields = [], overrides = {}, timer = 0, ready = false;
@@ -84,3 +85,34 @@ $('#file').onchange = async e => {
   e.target.value = '';
 };
 frame.addEventListener('load', () => { ready = false; $('#status').textContent = 'loading game…'; setTimeout(() => { if (!ready) send({ type: 'hello' }); }, 1500); });
+
+/* ---- Publish: send the settings to the worker, which needs the password (kept for this tab only) ---- */
+const PW = 'gfp-tuner-pw', say = t => { $('#status').textContent = t; };
+const password = ask => { let p = ''; try { p = sessionStorage.getItem(PW) || ''; } catch (e) { /* none */ } if (!p && ask) { p = prompt('Tuner password') || ''; try { sessionStorage.setItem(PW, p); } catch (e) { /* none */ } } return p; };
+const forget = () => { try { sessionStorage.removeItem(PW); } catch (e) { /* none */ } };
+async function api(path, opts = {}, needPw = false) {
+  const h = { ...(opts.headers || {}) }; if (needPw) { const p = password(true); if (!p) throw new Error('no password'); h.authorization = 'Bearer ' + p; }
+  const r = await fetch(path, { ...opts, headers: h }); let j = {}; try { j = await r.json(); } catch (e) { /* not JSON */ }
+  if (r.status === 401) { forget(); throw new Error('wrong password'); }
+  if (r.status === 503) throw new Error(j.error || 'the settings API is not set up on this site yet');
+  if (!r.ok) throw new Error(j.error || 'error ' + r.status); return j;
+}
+const adopt = o => { overrides = { ...o }; const known = new Set(fields.map(f => f.path)); for (const p of Object.keys(overrides)) if (!known.has(p)) delete overrides[p]; for (const f of fields) f.value = f.path in overrides ? overrides[f.path] : f.def; build(); push(); };
+
+$('#publish').onclick = async () => {
+  const n = Object.keys(overrides).length;
+  if (!confirm(`Publish ${n} changed setting${n === 1 ? '' : 's'}?\n\nEveryone who opens the game gets them from now on${n ? '' : ' (this puts everything back to default)'}.`)) return;
+  const note = prompt('A short note for the history (optional)') || '';
+  try { const r = await api('api/settings', { method: 'PUT', body: JSON.stringify({ version: 1, overrides, note }) }, true); say('published ' + r.count + ' at ' + new Date(r.updated).toLocaleTimeString()); }
+  catch (e) { say('not published: ' + e.message); alert('Not published: ' + e.message); }
+};
+$('#pull').onclick = async () => {
+  if (Object.keys(overrides).length && !confirm('Replace the settings in the panel with what is live now?')) return;
+  try { const j = await api('api/settings?t=' + Date.now()); adopt(j.overrides || {}); say('loaded live settings' + (j.updated ? ' from ' + new Date(j.updated).toLocaleString() : '')); } catch (e) { say('could not load: ' + e.message); }
+};
+let history = [];
+$('#hist').onfocus = async () => {
+  try { history = (await api('api/history', {}, true)).history; } catch (e) { say('history: ' + e.message); return; }
+  $('#hist').innerHTML = '<option value="">History…</option>' + history.map((h, i) => `<option value="${i}">${new Date(h.updated).toLocaleString()} · ${Object.keys(h.overrides).length}${h.note ? ' · ' + h.note.replace(/[<>&]/g, '') : ''}</option>`).join('');
+};
+$('#hist').onchange = e => { const h = history[+e.target.value]; if (h) { adopt(h.overrides); say('loaded an earlier version: press Publish to make it live'); } e.target.value = ''; };
