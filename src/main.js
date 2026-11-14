@@ -21,7 +21,8 @@ import { VehicleView, loadModel } from './vehicle/vehicle.js';
 import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
 import { Backdrop } from './env/backdrop.js';
-import { Environment } from './env/environment.js';
+import { Environment, TIMES, WX } from './env/environment.js';
+import { registerRoot, setOverrides, applyWorld, describe, overrides } from './core/tuning.js';
 import { Sound } from './audio/engine.js';
 import { Radio } from './audio/radio.js';
 import { RadioWheel, logo } from './ui/radiowheel.js';
@@ -36,6 +37,10 @@ const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let savedLoc = null; try { savedLoc = JSON.parse(localStorage.getItem('gfp-next') || '{}').location || null; } catch (e) { /* no saved choice */ }
 let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || savedLoc || 'default', q.get('seed') || 'peace');
+/* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
+registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES);
+try { const r = await fetch('settings.json', { cache: 'no-store' }); if (r.ok) setOverrides((await r.json()).overrides || {}); } catch (e) { /* none published */ }
+registerRoot('world', () => config); applyWorld(config);
 if (q.get('road')) config.road.style = roadStyleById(q.get('road')).id;                  // ?road=highway|boulevard|dirt|gravel
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };
 document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('dev', q.has('dev') || q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches);
@@ -131,7 +136,7 @@ function setMode(m) {
   $('#fly').classList.toggle('on', m === 'fly'); $('#ride').classList.toggle('on', m === 'ride');
 }
 function regenerate(seed, locId) {
-  if (locId) config = { ...locationConfig(locId, seed), view: config.view }; else config = makeConfig({ ...config, seed }); makeWorld(); grid.reset(terrain, config.view); far.reset(terrain.far, farView()); makeScenery(); applyView();
+  if (locId) config = { ...locationConfig(locId, seed), view: config.view }; else config = makeConfig({ ...config, seed }); applyWorld(config); makeWorld(); grid.reset(terrain, config.view); far.reset(terrain.far, farView()); makeScenery(); applyView();
   if (phys) placeOnRoad(0); setMode('drive');
   $('#seed').value = seed; history.replaceState(null, '', '?seed=' + encodeURIComponent(seed) + '&loc=' + config.location + '&q=' + quality + (q.has('debug') ? '&debug' : ''));
 }
@@ -258,6 +263,20 @@ function step(dt, now) {
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }
 }
 setVehicle(vehicle).then(() => { setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); });
+
+/* the tuner dashboard (tuner.html) embeds this page and talks to it by postMessage: settings in, a few commands, the list of settings out */
+addEventListener('message', async e => {
+  const d = e.data; if (e.origin !== location.origin || !d || typeof d !== 'object') return;
+  if (d.type === 'hello') parent.postMessage({ type: 'schema', fields: describe(), overrides, locations: LOCATIONS.map(l => ({ id: l.id, name: l.name })), vehicles: VEHICLES.map(v => ({ id: v.id, name: v.name })), state: { location: config.location, vehicle: VEHICLES[vehicle].id } }, location.origin);
+  else if (d.type === 'tune') {
+    const changed = setOverrides(d.overrides || {});
+    if (changed.some(p => p.startsWith('world.'))) regenerate(config.seed, config.location); else if (changed.some(p => p.startsWith('vehicles.'))) await setVehicle(vehicle);
+  } else if (d.type === 'cmd') {
+    if (d.name === 'location') setLocation(d.arg); else if (d.name === 'vehicle') setVehicle(Math.max(0, VEHICLES.findIndex(v => v.id === d.arg))); else if (d.name === 'weather') env.setWeather(d.arg);
+    else if (d.name === 'time') env.setTime(d.arg); else if (d.name === 'newWorld') regenerate(randomSeed()); else if (d.name === 'toRoad') backToRoad();
+  }
+});
+if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
 window.__next = { get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },

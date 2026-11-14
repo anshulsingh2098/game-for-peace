@@ -12,6 +12,7 @@ import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 import { LOCATIONS, locationConfig } from '../src/world/locations.js';
 import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
+import * as tuning from '../src/core/tuning.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -192,6 +193,17 @@ test('road styles: columns and strips are valid, surfaces are physics keys, two-
   const t = ROAD_STYLES['two-lane'];
   assert.deepEqual([t.grade.flat, t.grade.blend, t.clear, t.grade.lift[0]], [9, 46, 10, 5.4]);
   assert.equal(roadSurfaceAt(t, 3), 'asphalt'); assert.equal(roadSurfaceAt(t, 5), 'gravel'); assert.equal(roadSurfaceAt(t, 8), null);
+});
+
+test('tuning: settings are found by path, applied, replaced as a whole and reset', () => {
+  const V = [{ id: 'car', name: 'x', body: { mass: 1350 }, stats: { Top: 240 } }], T = { day: { top: '#2f6fd6', sun: [-0.3, 0.85, -0.45], li: 3.2 } }; let cfg = { seed: 'a', terrain: { hills: { amp: 46 } } };
+  tuning.registerRoot('vehicles', V); tuning.registerRoot('times', T); tuning.registerRoot('world', () => cfg);
+  const f = tuning.describe(), by = p => f.find(x => x.path === p);
+  assert.equal(by('vehicles.car.body.mass').value, 1350); assert.equal(by('times.day.top').type, 'colour'); assert.ok(by('times.day.sun.1')); assert.ok(!f.some(x => x.path.endsWith('.name') || x.path.endsWith('.seed')));
+  assert.deepEqual(tuning.setOverrides({ 'vehicles.car.body.mass': 2000, 'times.day.sun.1': 0.2, 'world.terrain.hills.amp': 90 }).length, 3);
+  assert.equal(V[0].body.mass, 2000); assert.equal(T.day.sun[1], 0.2); assert.equal(cfg.terrain.hills.amp, 90);
+  tuning.setOverrides({ 'world.terrain.hills.amp': 70 }); assert.equal(V[0].body.mass, 1350); assert.equal(T.day.sun[1], 0.85);      // a path left out goes back to its default
+  assert.equal(tuning.applyWorld({ terrain: { hills: { amp: 1 } } }).terrain.hills.amp, 70); tuning.setOverrides({});
 });
 
 console.log(`\n${passed} checks passed`);

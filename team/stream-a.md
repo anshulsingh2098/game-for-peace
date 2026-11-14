@@ -2,6 +2,17 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  Tuner dashboard (tuner.html), first version
+Branch: tuner/dashboard
+What changed: a settings dashboard for Rajul and Anshul, at `tuner.html` (open it through `python tools/serve.py`). It shows the game beside a panel of sliders and colour pickers; changes apply live, and Export writes `settings.json`, which the game loads at start.
+- `src/core/tuning.js` finds every number and colour inside the registered objects: `world` (the config), `vehicles` (`src/vehicle/defs.js`), `times` and `weather` (`src/env/environment.js`), `surfaces` (`src/vehicle/physics.js`). So **any number you add to those objects shows up in the dashboard by itself**, with a guessed range. Exact ranges go in `HINTS` in `tuning.js`.
+- `src/main.js` (shared, small): registers the roots, loads `settings.json`, listens for dashboard messages.
+For the other stream (Stream B owns the vehicle side):
+- Physics numbers that are hard-coded inside `src/vehicle/rapier-vehicle.js` (spring, damper, tyre friction, gears later) are NOT in the dashboard yet. Move them into `body` in `defs.js` (or a new exported object registered in `main.js` with `registerRoot`) and they appear. Say which ones you want first.
+- Engine sound and camera numbers are the same story (`src/audio/engine.js`).
+- Not built yet: Publish to Cloudflare (needs a Worker, a stored password and Anshul's wrangler login), and password protection for the page.
+Status: open
+
 ## 2026-11-14  Phase 1 is on main (PR #2 merged)
 Branch: main
 What changed: nothing new; the entry below is now in `main`.
