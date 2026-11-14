@@ -9,6 +9,7 @@ import { fillTile, tileIndex, vertexCount, skirtDepth } from '../src/world/tiled
 import { Road } from '../src/world/router.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
+import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -135,4 +136,36 @@ test('driving: slopes, reverse, water and obstacles behave', () => {
   assert.ok(bang > 5, 'no impact felt'); for (const off of p.circles) assert.ok(Math.hypot(hit.x + Math.cos(hit.yaw) * off - tree.x, hit.z + Math.sin(hit.yaw) * off - tree.z) >= p.radius + tree.r - 0.05, 'ended inside the tree');
   assert.ok(Object.keys(SURFACES).every(k => SURFACES[k].grip > 0 && SURFACES[k].grip <= 1));
 });
+/* ---- the Rapier ray-cast vehicle (the physics the game uses) ---- */
+await initRapier(); const rv = (i, over) => { const V = VEHICLES[i]; return new RapierVehicle(vehicleParams(V.body, V.stats), V.id, flat(over)); };
+const atest = async (name, fn) => { await fn(); passed++; console.log('ok   ' + name); };
+await atest('rapier: each vehicle rests level on its wheels, reaches about its top speed, and brakes straight', () => {
+  for (let i = 0; i < VEHICLES.length; i++) {
+    const V = VEHICLES[i], ph = rv(i); drive(ph, 1.5, COAST); assert.ok(Math.abs(ph.pitch) < 0.06 && Math.abs(ph.roll) < 0.06 && ph.wheelStates.every(w => w.contact), V.id + ' not resting on its wheels');
+    drive(ph, 40, GO); const top = ph.u * 3.6; assert.ok(top > V.stats.Top * 0.8 && top < V.stats.Top * 1.02, V.id + ' top speed ' + top.toFixed(0));
+    ph.reset(0, 0, 0); ph.body.setLinvel({ x: 27.8, y: 0, z: 0 }, true); ph.read(); const x0 = ph.x; let stopped = false; drive(ph, 14, q => { if (q.u < 0.3) stopped = true; return stopped ? COAST : STOP; });
+    assert.ok(stopped && ph.x - x0 > 5 && ph.x - x0 < 70 && Math.abs(ph.z) < 1.5, V.id + ' braking: ' + (ph.x - x0).toFixed(0) + ' m, ' + ph.z.toFixed(1) + ' m off line');
+    ph.free();
+  }
+});
+await atest('rapier: cornering is grip-limited and stable; steering is Ackermann and the lock shrinks with speed', () => {
+  for (let i = 0; i < VEHICLES.length; i++) {
+    const V = VEHICLES[i], ph = rv(i); drive(ph, 14, GO); let slip = 0, hi = 0; drive(ph, 4, q => { slip = Math.max(slip, q.slip); if (hi === 0 && q.steer > 0.99) hi = Math.abs(q.delta); return { steer: 1, throttle: 0, brake: 0 }; });
+    assert.ok(ph.u > 5 && slip < 0.8 && Math.abs(ph.roll) < 0.4, V.id + ' lost it at full lock: slip ' + slip.toFixed(2));
+    const lowLock = rv(i); drive(lowLock, 0.8, { steer: 1, throttle: 0.2, brake: 0 }); const lo = Math.abs(lowLock.delta); assert.ok(lo > hi + 0.01, V.id + ' lock does not shrink with speed: ' + lo.toFixed(3) + ' vs ' + hi.toFixed(3));
+    ph.free(); lowLock.free();
+  }
+  const car = rv(0); drive(car, 3, { steer: -1, throttle: 0.2, brake: 0 }); const s = car.wheelStates.filter(w => w.front && w.side); assert.ok(s.length === 2 && Math.abs(s[0].steer - s[1].steer) > 0.002, 'no Ackermann difference'); car.free();
+});
+await atest('rapier: slopes, water, obstacles and buffs', () => {
+  const V = VEHICLES[0], p = vehicleParams(V.body, V.stats);
+  const hill = new RapierVehicle(p, V.id, flat({ height: x => 0.15 * x })); drive(hill, 5, COAST); assert.ok(Math.abs(hill.x) < 0.5, 'rolled away while parked on a hill: ' + hill.x.toFixed(2));
+  const climb = new RapierVehicle(p, V.id, flat({ height: x => 0.15 * x })); drive(climb, 12, GO); assert.ok(climb.x > 40, 'could not climb a 15% slope: ' + climb.x.toFixed(0));
+  const sea = new RapierVehicle(p, V.id, flat({ seaLevel: 2 })); drive(sea, 12, GO); assert.ok(sea.u < 1 && sea.stuck > 4, 'kept driving under 2 m of water');
+  const tree = { x: 60, z: 0.2, r: 0.4 }, hit = new RapierVehicle(p, V.id, flat({ near: () => [[tree]] })); let bang = 0; drive(hit, 10, q => { bang = Math.max(bang, q.impact); return GO; });
+  assert.ok(bang > 5, 'no impact felt'); for (const off of p.circles) assert.ok(Math.hypot(hit.x + Math.cos(hit.yaw) * off - tree.x, hit.z + Math.sin(hit.yaw) * off - tree.z) >= p.radius + tree.r - 0.05, 'drove through the tree');
+  const boost = new RapierVehicle(p, V.id, flat()); boost.setMod({ top: 1.3, accel: 1.6 }); drive(boost, 40, GO); const norm = new RapierVehicle(p, V.id, flat()); drive(norm, 40, GO); assert.ok(boost.u > norm.u * 1.1, 'speed buff does nothing');
+  for (const v of [hill, climb, sea, hit, boost, norm]) v.free();
+});
+
 console.log(`\n${passed} checks passed`);

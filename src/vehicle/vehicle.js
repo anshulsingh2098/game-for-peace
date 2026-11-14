@@ -24,7 +24,7 @@ export class VehicleView {
     this.def = def; this.model = model.clone(true); this.root.add(this.model);
     this.wheels = []; this.riders = []; this.cockpit = null; this.wheel = null;
     this.model.traverse(o => {
-      if (/^Wheel_[A-Z]{1,2}$/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, front: /^Wheel_F/.test(o.name), side: Math.abs(o.position.x) < 0.1 ? 0 : o.position.x > 0 ? 1 : -1 }); }       // side +1 = the car's left (the model faces +z, so left is +x), taken from where the wheel is, not its name
+      if (/^Wheel_[A-Z]{1,2}$/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, y0: o.position.y, front: /^Wheel_F/.test(o.name), side: Math.abs(o.position.x) < 0.1 ? 0 : o.position.x > 0 ? 1 : -1 }); }       // side +1 = the car's left (the model faces +z, so left is +x), taken from where the wheel is, not its name
       if (/^Rider/.test(o.name)) this.riders.push(o);
       if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; }); }
     });
@@ -73,10 +73,14 @@ export class VehicleView {
   }
   /* place the model from the physics state. `origin` is the floating render origin. */
   update(ph, origin) {
-    const r = this.root; r.position.set(ph.x - origin.x, ph.y, ph.z - origin.z); r.rotation.set(-(ph.pitch + ph.dPitch), Math.PI / 2 - ph.yaw, ph.roll + ph.dRoll + ph.lean);
+    const r = this.root, rb = !!ph.quat;
+    if (rb) {                                                                                                   // rigid-body physics: use the body's real orientation, then a touch of pitch and lean for the look
+      const q = ph.quat; r.position.set(ph.x - origin.x, ph.bodyY, ph.z - origin.z); r.quaternion.set(q.x, q.y, q.z, q.w); r.translateY(-ph.hCom); r.rotateX(-ph.dPitch); r.rotateZ(ph.dRoll + ph.lean);
+    } else { r.position.set(ph.x - origin.x, ph.y, ph.z - origin.z); r.rotation.set(-(ph.pitch + ph.dPitch), Math.PI / 2 - ph.yaw, ph.roll + ph.dRoll + ph.lean); }
     /* front wheels follow the real road-wheel angle, with Ackermann geometry: the inner wheel turns more than the outer */
     const L = ph.p.L, T = ph.p.track, tn = Math.tan(ph.delta), R = Math.abs(tn) > 1e-4 ? L / tn : 1e6;
     for (const w of this.wheels) {
+      if (rb) { const st = ph.wheelStates.find(s => s.front === w.front && s.side === w.side); if (st) { w.o.rotation.x = st.spin; w.o.rotation.y = st.steer; w.o.position.y = w.y0 + st.susp; } continue; }      // each wheel's own spin, steering and spring travel
       w.o.rotation.x = ph.spin; let a = 0;
       if (w.front) a = w.side === 0 ? ph.delta : Math.atan(L / (R + w.side * T / 2));          // side: +1 left wheel, -1 right wheel, 0 a single front wheel (bike)
       w.o.rotation.y = -a;
