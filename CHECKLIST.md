@@ -46,7 +46,7 @@ Open the browser console (F12): nothing red except known favicon 404s.
 
 ## 5. Phone (do this at least weekly, and before any deploy)
 
-- [ ] Open the live or local address on a real phone (same wifi: `http://<your computer's address>:8765/next.html`).
+- [ ] Open the live or local address on a real phone (same wifi: start the server with `python tools/serve.py --lan`; it prints the address to type into the phone. Plain `python tools/serve.py` is only reachable from the computer itself).
 - [ ] Loads in a reasonable time; touch controls work; menus fit the screen; text readable.
 - [ ] **Touch layout** (or on a computer: add `&touch` and use a phone-sized window): left, a vertical throttle lever (stays where you leave it) with BRAKE and BOOST; right, the steering handle on its arc (springs back to the middle) with AUTO, CAM and RESET; speed at the top left. Works held sideways and upright.
 - [ ] **Phone camera**: lower, closer and wider than on a computer (compare with the slowroads.io screenshots).
