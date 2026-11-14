@@ -15,6 +15,7 @@ function blobShadow() {
   m.renderOrder = 2; return m;
 }
 
+const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 export class VehicleView {
   constructor(scene) { this.scene = scene; this.root = new THREE.Group(); this.root.rotation.order = 'YXZ'; this.shadow = blobShadow(); scene.add(this.root, this.shadow); this.view = 'third'; this.camYaw = null; this.eye = new THREE.Vector3(); }
   /* swap in a vehicle's model (already loaded with loadModel) */
@@ -23,7 +24,7 @@ export class VehicleView {
     this.def = def; this.model = model.clone(true); this.root.add(this.model);
     this.wheels = []; this.riders = []; this.cockpit = null; this.wheel = null;
     this.model.traverse(o => {
-      if (/^Wheel_[A-Z]{1,2}$/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, front: /^Wheel_F/.test(o.name) }); }
+      if (/^Wheel_[A-Z]{1,2}$/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, front: /^Wheel_F/.test(o.name), side: Math.abs(o.position.x) < 0.1 ? 0 : o.position.x > 0 ? 1 : -1 }); }       // side +1 = the car's left (the model faces +z, so left is +x), taken from where the wheel is, not its name
       if (/^Rider/.test(o.name)) this.riders.push(o);
       if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; }); }
     });
@@ -72,9 +73,15 @@ export class VehicleView {
   }
   /* place the model from the physics state. `origin` is the floating render origin. */
   update(ph, origin) {
-    const r = this.root; r.position.set(ph.x - origin.x, ph.y, ph.z - origin.z); r.rotation.set(-ph.pitch, Math.PI / 2 - ph.yaw, ph.roll + ph.lean);
-    for (const w of this.wheels) { w.o.rotation.x = ph.spin; w.o.rotation.y = w.front ? -ph.delta * 0.9 : 0; }
-    if (this.wheel) this.wheel.rotation.z = -ph.steer * 1.3;
+    const r = this.root; r.position.set(ph.x - origin.x, ph.y, ph.z - origin.z); r.rotation.set(-(ph.pitch + ph.dPitch), Math.PI / 2 - ph.yaw, ph.roll + ph.dRoll + ph.lean);
+    /* front wheels follow the real road-wheel angle, with Ackermann geometry: the inner wheel turns more than the outer */
+    const L = ph.p.L, T = ph.p.track, tn = Math.tan(ph.delta), R = Math.abs(tn) > 1e-4 ? L / tn : 1e6;
+    for (const w of this.wheels) {
+      w.o.rotation.x = ph.spin; let a = 0;
+      if (w.front) a = w.side === 0 ? ph.delta : Math.atan(L / (R + w.side * T / 2));          // side: +1 left wheel, -1 right wheel, 0 a single front wheel (bike)
+      w.o.rotation.y = -a;
+    }
+    if (this.wheel) this.wheel.rotation.z = -clamp(ph.delta * 15, -2.6, 2.6);              // steering wheel: a real car turns it about 15 times as far as the road wheels
     this.shadow.position.set(r.position.x, ph.y + 0.05, r.position.z); this.shadow.rotation.y = Math.PI / 2 - ph.yaw; this.shadow.visible = ph.wet < 0.3 && !this.realShadow;
   }
   /* aim the camera. floor(x, z) is the lowest height the camera may sit at. */

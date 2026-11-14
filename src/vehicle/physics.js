@@ -23,7 +23,7 @@ const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 export function vehicleParams(body, stats) {
   const L = body.front + body.rear;
   return {
-    ...body, L, mass: body.mass, Iz: body.mass * (0.45 * L) ** 2,
+    ...body, L, cg: body.cg || 0.5, mass: body.mass, Iz: body.mass * (0.45 * L) ** 2,
     top: stats.Top / 3.6, accel: 0.8 + stats.Accel * 0.05,     // top speed (m/s) and standing-start acceleration (m/s2)
     mu: 0.72 + stats.Grip * 0.005,                             // tyre grip on dry asphalt: the Grip stat is real now
     stiff: 8 + stats.Handling * 0.06                           // how sharply the tyres answer the steering: the Handling stat
@@ -38,7 +38,7 @@ export class VehiclePhysics {
   /* apply a buff's multipliers, or clear them with no argument */
   setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; }
   reset(x, z, yaw) {
-    Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0 });
+    Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0, afS: 0, arS: 0, axL: 0, dPitch: 0, dRoll: 0 });
     this.y = this.world.height(x, z); this.ground(1);
   }
   get speed() { return Math.hypot(this.u, this.v); }
@@ -60,8 +60,10 @@ export class VehiclePhysics {
   }
   sub(input) {
     const p = this.p, W = this.world, h = H, m = p.mass, M = this.mod, top = p.top * M.top;
-    this.steer += (clamp(input.steer, -1, 1) - this.steer) * Math.min(1, h * 7);
-    this.delta = this.steer * Math.min(p.steerMax, 1.35 * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));     // full lock when slow; at speed only as much as dry tyres could use
+    /* steering: the wheel is turned at a limited rate (slower at speed, quick to come back to centre), and the lock shrinks with speed like a real car's effective steering */
+    const want = clamp(input.steer, -1, 1), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = back ? 8 : 5.5 / (1 + Math.abs(this.u) / 14);
+    this.steer += clamp(want - this.steer, -rate * h, rate * h);
+    this.delta = this.steer * Math.min(p.steerMax, 1.7 * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));     // full lock when slow; at speed about what the tyres can use (a little more, so you can run wide)
     this.ground(Math.min(1, h * 14));
     const key = W.surface(this.x, this.z); this.surface = key; const S = SURFACES[key] || SURFACES.grass;
     const depth = W.seaLevel - this.groundY; this.wet = depth > 0 ? depth : 0;
@@ -80,14 +82,19 @@ export class VehiclePhysics {
     /* sideways forces from the tyres (above walking pace); below it the car simply follows its front wheels */
     const blend = sstep(3, 6, this.u); let dv = 0, dr = 0;
     if (blend > 0) {
-      const a = p.front, b = p.rear, Nf = N * b / p.L, Nr = N * a / p.L, C = p.stiff;
+      const a = p.front, b = p.rear, C = p.stiff, dN = clamp(m * this.axL * p.cg / p.L, -0.3 * N, 0.3 * N);       // weight moves to the rear under power and to the front under braking
+      const Nf0 = N * b / p.L, Nr0 = N * a / p.L, Nf = Nf0 - dN, Nr = Nr0 + dN;       // stiffness follows the static loads (keeps the car stable); the grip limit follows the moving ones
       const af = this.delta - Math.atan2(this.v + a * this.r, this.u), ar = -Math.atan2(this.v - b * this.r, this.u);
-      const muF = mu * 0.88;                                                        // the front lets go a little before the rear, so the car runs wide instead of spinning
-      const Fyf = clamp(C * Nf * af, -muF * Nf, muF * Nf), room = Math.sqrt(Math.max(0, (mu * Nr) ** 2 - (0.7 * Fx) ** 2));      // driving or braking hard uses up rear grip
-      const Fyr = clamp(C * 1.15 * Nr * ar, -room, room);
+      const k = Math.min(1, Math.abs(this.u) * h / 0.12); this.afS += (af - this.afS) * k; this.arS += (ar - this.arS) * k;   // tyres take a moment to build side force (relaxation length)
+      const muF = mu * 0.9;                                                         // the front lets go a little before the rear, so the car runs wide instead of spinning
+      const roomF = Fx < 0 ? Math.sqrt(Math.max(0, (muF * Nf) ** 2 - (0.6 * Fx * 0.65) ** 2)) : muF * Nf;                      // hard braking uses up front grip too
+      const Fyf = clamp(C * Nf0 * this.afS, -roomF, roomF), room = Math.sqrt(Math.max(0, (mu * Nr) ** 2 - (0.7 * Fx) ** 2));      // driving or braking hard uses up rear grip
+      const Fyr = clamp(C * 1.15 * Nr0 * this.arS, -room, room);
       dv = (Fyf * Math.cos(this.delta) + Fyr + Fside) / m - this.u * this.r; dr = (a * Fyf * Math.cos(this.delta) - b * Fyr) / p.Iz;
       this.slip = Math.max(Math.abs(af), Math.abs(ar)); this.ay = (Fyf * Math.cos(this.delta) + Fyr) / m;      // sideways acceleration from the tyres
     } else { this.slip = 0; this.ay = this.u * this.r; }
+    const ax = (Fx + roll + air) / m; this.axL += (ax - this.axL) * Math.min(1, h * 6);
+    this.dPitch += (this.axL * 0.016 * p.cg - this.dPitch) * Math.min(1, h * 7); this.dRoll += (this.ay * 0.016 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);   // the body squats, dives and leans on its springs
     this.u += ((Fx + roll + air + Fg) / m + this.v * this.r) * h;
     const vDyn = this.v + dv * h, rDyn = this.r + dr * h;
     const rKin = this.u * Math.tan(this.delta) / p.L, vKin = this.v * (1 - Math.min(1, h * 8)) + (Math.abs(this.gRoll) > 0.5 ? Fside / m * h : 0);     // very steep side slopes still slide you
