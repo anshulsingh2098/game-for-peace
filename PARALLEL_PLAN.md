@@ -10,6 +10,15 @@ Two streams. Each person owns one stream and one set of files. Claude only edits
 | Works on | Roads, terrain, scenery, locations, landmarks, world tools | Driving, vehicles, traffic, sound, menus, radio, graphics, the old game |
 | Branch prefix | `world/...` | `vehicle/...` |
 
+## Status (14 Nov 2026)
+
+- Phase 0 (sync): done. Phase 1 (road styles, bend fix, city roads): done and merged.
+- Phase 2: bridges and tunnels done and merged; location polish (southern coast, Marine Drive, hotel) not done.
+- Tuner dashboard (not in the original plan): done and merged; Publish needs Anshul's one-time Cloudflare setup.
+- Phase 3 (steep land, frame cost) and Phase 4 (switch `index.html` to the new engine): not started.
+- Direction change: the whole game goes photorealistic, see `team/photoreal-plan.md` (it replaces "match the flat stylised look").
+- Stream B: no log entries yet; its Phase 1 and 2 items are all still open.
+
 ## File ownership (the anti-collision rule)
 
 **Stream A owns:** `src/world/*` (router, road, terrain, tiledata, chunks, scatter, props, textures, locations, landmarks), `src/env/backdrop.js`, `tools/locations_check.mjs`, new `src/world/*` files and a new `tools/worldconfig*` tool.

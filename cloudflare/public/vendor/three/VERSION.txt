@@ -1,1 +1,1 @@
-﻿three 0.160.0 (npm package), only the files the game imports
+three.js r187 (0.187.0), MIT licence, from the npm package. Vendored: build (module + core), and these addons: postprocessing, shaders, csm, math, utils, environments, controls, loaders (GLTF, KTX2, DRACO, HDR/RGBE/EXR), libs (draco, basis, ktx-parse, meshopt_decoder, fflate).
