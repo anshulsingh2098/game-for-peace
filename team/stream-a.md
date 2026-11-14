@@ -2,6 +2,18 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14 18:00  N3 started; request for Stream B: bridge rail collision
+Branch: main  Commit: 1ee42db
+What changed: nothing in code. Tried two-plane tree cards on far scenery tiles: saved 0.4% of triangles, so dropped it (trees are not where the cost is; N4 should measure the ground and road meshes first).
+For the other stream: bridge rails are drawn but the car drives through them. The physics ground is one heightfield (`rapier-vehicle.js`), which is your file. Ask: add thin cuboid colliders along the bridge edges (use `Road.bridgeW === 1` stretches and `road.carriedW` for the half width), or tell me the hook you want and I will expose a list of rail segments from `world/bridges.js`.
+Status: open
+
+## 2026-11-14 19:00  Far rocks are cheap now (N3/N4 speed)
+Branch: feat/n3-world-polish
+What changed: `src/world/scatter.js`: real-scan rocks (about 650 triangles each) only in the near tiles; far tiles use the drawn rock. On the medium tier, triangles per frame go from 527k to 419k (-20%); rocks were about 45% of the scenery triangles. Next biggest: terrain tiles (about 184k).
+For the other stream: nothing.
+Status: done
+
 ## 2026-11-14  ANSHUL: please deploy main to Cloudflare (everything is merged)
 Branch: main (commit e8cac92 or later)
 What changed: pull requests 1 to 12 are all merged and `cloudflare/public` is already staged from `main`. Nothing is live yet: Rajul's PC is signed in to wrangler as his own account (`mailrajulsingh.in@gmail.com`), and the project rule is that only `rawatanshul525@gmail.com` is used, so Rajul did not deploy.
