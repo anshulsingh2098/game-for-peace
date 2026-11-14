@@ -2,6 +2,20 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  ANSHUL: please deploy main to Cloudflare (everything is merged)
+Branch: main (commit e8cac92 or later)
+What changed: pull requests 1 to 12 are all merged and `cloudflare/public` is already staged from `main`. Nothing is live yet: Rajul's PC is signed in to wrangler as his own account (`mailrajulsingh.in@gmail.com`), and the project rule is that only `rawatanshul525@gmail.com` is used, so Rajul did not deploy.
+For the other stream (Anshul, on the PC signed in as the project account):
+```bash
+git switch main && git pull
+npx wrangler whoami                  # must say rawatanshul525@gmail.com
+cd cloudflare && npx wrangler deploy
+```
+In this release: road styles, bridges, tunnels with the Atal-style gate, the tuner dashboard (`/tuner.html`), photographic ground and roads, real-scan trees and rocks, quality tiers, autodrive, phone touch controls, new brake / handbrake / reverse controls (Space, X, S, Shift, E), seven camera views on V, and the car's engine sound from Rajul's own recording.
+After deploying, check (about 5 minutes): the live `/` (original game) still plays; `/next.html?play` loads and drives; `/tuner.html` opens; open it on a phone and tell Rajul how it runs (nothing has been measured on a phone). Then, once, the tuner Publish setup in `HANDOFF.md` (KV namespace, `TUNER_PASSWORD`, deploy again).
+Also please read `HANDOFF.md` "What is next" and tell Rajul which Stream B items you will take (vehicle models and paint, weather and sky realism, rain sound in tunnels, the physics constants for the tuner, traffic). Please also listen to the new engine sound on the live site and say what is off.
+Status: open
+
 ## 2026-11-14  Engine sound from Rajul's recording, camera views on V (branch fix/driving-feel)
 Branch: fix/driving-feel
 What changed: `src/audio/engine.js` plays the car's engine from `assets/audio/engine_car_*.wav` (seven seamless loops cut from Rajul's own recording by `tools/make_engine_loops.mjs`, analysed with `tools/analyse_sound.mjs`): one continuous looping source per loop, the two nearest the target pitch crossfaded (equal power) and pitch-shifted at most about 20%; falls back to the synthesised engine if the files fail; `?engine=synth` forces the old one. A first version (overlapping 3 s chunks) caused a phasing swirl and was replaced. No free modern-car engine pack with a usable licence exists (searched): paid packs cost $7.50 to $30 and restrict redistribution. `src/vehicle/vehicle.js` has seven camera views (`setMode`, `aim`): middle, far, close, hood, bumper, cockpit, cinematic; V cycles them (`controls.js` action `cam`), C toggles the driver's seat, the choice is saved in `S.cam`.
