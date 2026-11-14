@@ -16,7 +16,7 @@ export const LOCATIONS = [
         hills: { scale: 1000, amp: 90, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 3400, start: -0.2, full: 0.2, scale: 6800, amp: 980, octaves: 5, gain: 0.38, sharp: 1.3 } },
       palette: { grass: [0.48, 0.72, 0.28], grass2: [0.26, 0.48, 0.18], dry: [0.6, 0.58, 0.34], alpine: [0.52, 0.54, 0.4], rock: [0.52, 0.5, 0.48], treeline: 520, snowline: 760 },
       scatter: { trees: 0.011, rocks: 0.0007, pineBias: 0.35, tint: [0.92, 1.02, 0.95] }, water: { color: '#1c5f86' },
-      road: { maxAlt: 1500, maxGrade: 0.09, hardGrade: 0.14 } },
+      road: { maxAlt: 1500, maxGrade: 0.09, hardGrade: 0.11, maxCut: 1000 } },
     sky: { time: 'day', weather: 'clear' } },
 
   { id: 'himalayas', name: 'The Himalayas', blurb: 'A thin high road between brown ridges and white giants. Sparse pines, thin air.', accent: '#e8e4dc',
@@ -25,7 +25,7 @@ export const LOCATIONS = [
         hills: { scale: 1300, amp: 180, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4600, start: -0.3, full: 0.15, scale: 11500, amp: 2100, octaves: 5, gain: 0.38, sharp: 1.3 } },
       palette: { grass: [0.52, 0.5, 0.3], grass2: [0.4, 0.42, 0.24], dry: [0.6, 0.52, 0.36], alpine: [0.5, 0.45, 0.36], rock: [0.5, 0.44, 0.38], treeline: 3500, snowline: 3300 },
       scatter: { trees: 0.003, rocks: 0.0016, bushes: 0.0008, tufts: 0.004, pineBias: 0.6, tint: [0.85, 0.95, 0.85] }, water: { color: '#2f6a78' },
-      road: { maxAlt: 7500, maxGrade: 0.1, hardGrade: 0.15, minRadius: 55, tunnelName: 'ATAL TUNNEL, ROHTANG' } },
+      road: { maxAlt: 7500, maxGrade: 0.1, hardGrade: 0.11, maxCut: 1000, minRadius: 55, tunnelName: 'ATAL TUNNEL, ROHTANG' } },
     sky: { time: 'day', weather: 'snow' } },
 
   { id: 'california', name: 'California Coast', blurb: 'Golden hills tumbling to a deep blue Pacific. Sun, sea air and wide skies.', accent: '#ffc857',
