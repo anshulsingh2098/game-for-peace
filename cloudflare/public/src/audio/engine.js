@@ -5,7 +5,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 
 /* per-vehicle engine character */
 const CFG = {
-  car:   { kind: 'v8',     idle: 850, max: 7200, G: 5, pulse: r => r / 15, vol: 0.55, cutLo: 520, cutHi: 4600, lope: 0.32, growl: 0.55, whine: 0.10, hiss: 0.20 },
+  car:   { kind: 'v8',     idle: 800, max: 6800, G: 6, pulse: r => r / 15, vol: 0.55, cutLo: 380, cutHi: 3000, lope: 0.30, growl: 0.16, whine: 0.025, hiss: 0.07 },
   truck: { kind: 'diesel', idle: 620, max: 2100, G: 8, pulse: r => r / 20, vol: 0.72, cutLo: 300, cutHi: 1700, lope: 0.28, growl: 0.28, whine: 0.04, hiss: 0.10 },
   bike:  { kind: 'ev',     idle: 0,   max: 1,    G: 1, pulse: () => 0,     vol: 0.95, cutLo: 900, cutHi: 6000, lope: 0,    growl: 0,    whine: 0,    hiss: 0.05 }
 };
@@ -44,8 +44,8 @@ export class Sound {
   wave(kind) {
     const N = 30, re = new Float32Array(N + 1), im = new Float32Array(N + 1);
     for (let n = 1; n <= N; n++) {
-      let a = 1 / Math.pow(n, kind === 'v8' ? 0.72 : 0.55);
-      if (kind === 'v8') a *= 1 + 1.3 * Math.exp(-Math.pow((n - 3) / 1.4, 2)) + 0.9 * Math.exp(-Math.pow((n - 8) / 2, 2));
+      let a = 1 / Math.pow(n, kind === 'v8' ? 1.05 : 0.55);
+      if (kind === 'v8') a *= (1 + 1.1 * Math.exp(-Math.pow((n - 2) / 1.2, 2)) + 1.3 * Math.exp(-Math.pow((n - 4) / 1.6, 2)) + 0.5 * Math.exp(-Math.pow((n - 8) / 2, 2))) * Math.exp(-Math.pow(n / 15, 2));
       else a *= (n % 2 ? 1.25 : 0.7) * (1 + 1.0 * Math.exp(-Math.pow((n - 4) / 2, 2)));
       im[n] = a;
     }
@@ -63,9 +63,9 @@ export class Sound {
       v.g3 = c.createGain(); v.m3.connect(v.g3); v.g3.connect(lfoAM); v.gt = c.createGain(); v.mt.connect(v.gt); v.gt.connect(lfoAM);
     } else {
       v.a = osc(null, this.wave(cfg.kind)); v.sub = osc('sine'); v.gr = osc('square'); v.wh = osc('sawtooth');
-      v.lp = c.createBiquadFilter(); v.lp.type = 'lowpass'; v.lp.Q.value = 3.5; v.ga = c.createGain(); v.ga.gain.value = 0.9; v.a.connect(v.ga); v.ga.connect(v.lp); v.lp.connect(lfoAM);
+      v.lp = c.createBiquadFilter(); v.lp.type = 'lowpass'; v.lp.Q.value = cfg.kind === 'v8' ? 0.9 : 3.5; v.ga = c.createGain(); v.ga.gain.value = 0.9; v.a.connect(v.ga); v.ga.connect(v.lp); v.lp.connect(lfoAM);
       v.gs = c.createGain(); v.sub.connect(v.gs); v.gs.connect(lfoAM);
-      v.grbp = c.createBiquadFilter(); v.grbp.type = 'bandpass'; v.grbp.Q.value = 1.6; v.gg = c.createGain(); v.gr.connect(v.grbp); v.grbp.connect(v.gg); v.gg.connect(lfoAM);
+      v.grbp = c.createBiquadFilter(); v.grbp.type = 'bandpass'; v.grbp.Q.value = cfg.kind === 'v8' ? 0.8 : 1.6; v.gg = c.createGain(); v.gr.connect(v.grbp); v.grbp.connect(v.gg); v.gg.connect(lfoAM);
       v.whbp = c.createBiquadFilter(); v.whbp.type = 'bandpass'; v.whbp.Q.value = 6; v.gw = c.createGain(); v.wh.connect(v.whbp); v.whbp.connect(v.gw); v.gw.connect(out);
       const ns = c.createBufferSource(); ns.buffer = this.noiseBuf; ns.loop = true; ns.start(); v.stop.push(ns); v.hbp = c.createBiquadFilter(); v.hbp.type = 'bandpass'; v.hbp.frequency.value = 1100; v.hbp.Q.value = 0.8;
       v.gh = c.createGain(); ns.connect(v.hbp); v.hbp.connect(v.gh); v.gh.connect(lfoAM);
@@ -110,11 +110,11 @@ export class Sound {
       if (s.buff && !P.buff) this.whoosh();
     } else {                                                                              // ---- combustion engines
       const gp = Math.min(r * cfg.G, cfg.G - 0.001), gear = Math.floor(gp), frac = gp - gear;
-      const rpm01 = s.v < 0.8 ? 0.0 : clamp(0.16 + 0.84 * (gear === 0 ? frac * 0.9 + 0.08 : frac), 0, 1);
-      this.rpmSm += (rpm01 - this.rpmSm) * Math.min(1, dt * (rpm01 > this.rpmSm ? 7 : 5)); const rr = this.rpmSm;
-      const rpm = cfg.idle + (cfg.max - cfg.idle) * rr, f = cfg.pulse(rpm), tc = 0.05;
+      const rpm01 = s.v < 0.6 ? th * 0.22 : clamp(gear === 0 ? 0.12 + 0.8 * frac : 0.36 + 0.62 * frac + th * 0.04, 0, 1);       // each gear starts mid-range and climbs; a shift drops the revs
+      this.rpmSm += (rpm01 - this.rpmSm) * Math.min(1, dt * (rpm01 > this.rpmSm ? 8 + th * 4 : 3.2)); const rr = this.rpmSm;       // revs rise briskly under power and fall away slowly when you lift
+      const rpm = cfg.idle + (cfg.max - cfg.idle) * rr, f = cfg.pulse(rpm) * (1 + (Math.random() - 0.5) * (cfg.kind === 'v8' ? 0.008 : 0.004)), tc = 0.05;    // a hair of cycle-to-cycle unevenness
       v.a.frequency.setTargetAtTime(f, t, tc); v.sub.frequency.setTargetAtTime(f * 0.5, t, tc); v.gr.frequency.setTargetAtTime(f * 2, t, tc); v.wh.frequency.setTargetAtTime(f * 6.5, t, tc);
-      v.lp.frequency.setTargetAtTime(cfg.cutLo + (cfg.cutHi - cfg.cutLo) * (0.15 + 0.6 * rr + 0.4 * th) * 0.8, t, 0.06);
+      v.lp.frequency.setTargetAtTime(cfg.cutLo + (cfg.cutHi - cfg.cutLo) * (0.1 + 0.55 * rr + 0.45 * th * (0.5 + 0.5 * rr)), t, 0.08);
       v.grbp.frequency.setTargetAtTime(350 + rr * 1500, t, 0.07); v.gg.gain.setTargetAtTime(cfg.growl * (0.2 + 0.8 * th), t, 0.06);
       v.gs.gain.setTargetAtTime(0.55 + 0.25 * (1 - rr), t, 0.08); v.whbp.frequency.setTargetAtTime(f * 6.5, t, 0.06); v.gw.gain.setTargetAtTime(cfg.whine * r * (0.4 + th), t, 0.08);
       v.gh.gain.setTargetAtTime(cfg.hiss * (0.1 + th * rr), t, 0.06); v.hbp.frequency.setTargetAtTime(700 + rr * 1500, t, 0.1);
@@ -122,9 +122,9 @@ export class Sound {
       if (v.clD) { v.cl.frequency.setTargetAtTime(f * 1.5, t, 0.08); v.clD.gain.setTargetAtTime(0.22, t, 0.1); v.cg.gain.value = 0.035 + 0.07 * (1 - rr) + 0.035 * th; }
       const spool = clamp(th * rr * 1.2 + (s.buff ? 0.5 : 0), 0, 1); v.tw.frequency.setTargetAtTime(700 + spool * (cfg.kind === 'diesel' ? 1500 : 2600), t, 0.15); v.gtw.gain.setTargetAtTime(spool * spool * (cfg.kind === 'diesel' ? 0.02 : 0.03), t, 0.2);
       const shiftDip = P.gear !== undefined && P.gear !== gear && s.v > 4 ? 1 : 0;                                              // gear change: brief throttle cut
-      if (shiftDip) { v.out.gain.cancelScheduledValues(t); v.out.gain.setValueAtTime(v.out.gain.value * 0.35, t); if (cfg.kind === 'v8') this.pops(2, 0.16); else this.burst(0, 3800, 0.25, 0.1, 'highpass'); }
+      if (shiftDip) { v.out.gain.cancelScheduledValues(t); v.out.gain.setValueAtTime(v.out.gain.value * 0.35, t); if (cfg.kind === 'v8') this.pops(1, 0.08); else this.burst(0, 3800, 0.25, 0.1, 'highpass'); }
       v.out.gain.setTargetAtTime(cfg.vol * (0.11 + 0.14 * th + 0.07 * rr) * loud, t + (shiftDip ? 0.09 : 0), 0.07);
-      if (P.throttle > 0.7 && th < 0.3 && rr > 0.45) { if (cfg.kind === 'v8') { this.pops(4 + Math.floor(rand(0, 4)), 0.28 + (s.buff ? 0.2 : 0)); this.blowOff(); } else this.burst(0, 260, 0.5, 0.22, 'bandpass', 0.8); }   // lift off: exhaust crackle, turbo blow-off / engine brake
+      if (P.throttle > 0.7 && th < 0.3 && rr > 0.6) { if (cfg.kind === 'v8') { if (Math.random() < 0.45 || s.buff) this.pops(2 + Math.floor(rand(0, 3)), 0.12 + (s.buff ? 0.14 : 0)); } else this.burst(0, 260, 0.5, 0.22, 'bandpass', 0.8); }   // lift off: exhaust crackle, turbo blow-off / engine brake
       if (cfg.kind === 'diesel' && s.brake && !P.brake && s.v > 9) this.airBrake();
       if (s.buff && !P.buff && cfg.kind === 'v8') { this.whoosh(); this.pops(5, 0.3); }
       P.gear = gear;

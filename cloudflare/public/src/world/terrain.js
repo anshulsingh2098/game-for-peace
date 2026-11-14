@@ -32,6 +32,7 @@ export function createTerrain(config) {
     return h;
   }
   function height(x, z) { const h = base(x, z); return road ? road.grade(x, z, h) : h; }
+  function drive(x, z) { const h = base(x, z); return road ? road.drive(x, z, h) : h; }                  // what wheels roll on: the road surface itself
   function forest(x, z) { return sstep(-0.18, 0.32, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
 
   /* what the wheels are on at a point: a key of SURFACES in vehicle/physics.js */
@@ -80,7 +81,7 @@ export function createTerrain(config) {
     return { x: 0, z: 0, y: Math.max(sea, base(0, 0)) };
   }
 
-  const terrain = { base, height, surface, colour, forest, findSpawn, seaLevel: sea, config,
+  const terrain = { base, height, drive, surface, colour, forest, findSpawn, seaLevel: sea, config,
     attachRoad(r) { road = r; }, get road() { return road; },
     /* the same land without the road, for the coarse horizon tiles */
     far: { height: base, colour: (x, z, h, ny, out) => colour(x, z, h, ny, out, false) } };

@@ -163,6 +163,12 @@ export class Road {
     const c = this.c, h = this.hit, bed = h.y - c.sink * (1 - sstep(c.flat - 2.5, c.flat, h.d));
     return bed + (natural - bed) * sstep(c.flat, c.blend, h.d);
   }
+  /* height a vehicle drives on: the graded land, lifted back up to the road surface (the land is cut `sink` below the road so the ribbon sits on top) */
+  drive(x, z, natural) {
+    if (!this.nearest(x, z)) return natural;
+    const c = this.c, h = this.hit, bed = h.y - c.sink * (1 - sstep(c.flat - 2.5, c.flat, h.d));
+    return bed + (natural - bed) * sstep(c.flat, c.blend, h.d) + c.sink * (1 - sstep(5.4, 7, h.d));
+  }
   /* road distance of the point on the road closest to (x, z), searching outward from a hint */
   closestS(x, z, hint = 0) {
     const lo = Math.max(this.sMin, hint - 3000), hi = Math.min(this.sMax, hint + 3000), p = this._p || (this._p = {}); let bs = hint, bd = Infinity;
