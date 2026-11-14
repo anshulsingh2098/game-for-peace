@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 12:00  Post-N6 plan (N7 to N15) added and reviewed; status refreshed
+Branch: docs/post-n6-plan
+What changed: `docs/post-n6-open-world-plan.md` (the owner's open-world India plan, verbatim); `PARALLEL_PLAN.md` has a new status table (done / not done for N0 to N6) and an "After N6" section with N7 to N15, what each builds on in the current code, and six review notes (gate, missing Asset Acquisition Brief, product direction change, risks, ownership, owner decisions); `HANDOFF.md` status corrected (PR 22 merged) and points to the new plan. No runtime code changed.
+For the other stream: read the new section in `PARALLEL_PLAN.md`. Do not start N7. The N7 kickoff report is Stream B's first task once N0 to N6 are accepted.
+Status: open
+
 ## 2026-11-14 18:00  N3 started; request for Stream B: bridge rail collision
 Branch: main  Commit: 1ee42db
 What changed: nothing in code. Tried two-plane tree cards on far scenery tiles: saved 0.4% of triangles, so dropped it (trees are not where the cost is; N4 should measure the ground and road meshes first).

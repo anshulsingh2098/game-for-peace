@@ -4,10 +4,10 @@ State of the work as of 14 November 2026, end of Rajul's session. Read `OVERVIEW
 
 ## Where things stand
 
-State as of 16 November 2026. Written after pull requests 1 to 21 were merged into `main` and a large branch (`feat/plan-n0-n1`, pull request 22) worked through the Master Plan (the plan came from an outside review of a ZIP and is not in the repo; check its claims against the code).
+State as of 16 November 2026. Written after pull requests 1 to 22 were merged into `main` (pull request 22 worked through N0 to N5) (the plan came from an outside review of a ZIP and is not in the repo; check its claims against the code).
 
-- **On `main`:** pull requests 1 to 21: terrain rings and rocks (-29% triangles), Marine Drive, gentler mountain roads, the powertrain and Magic Formula tyre model, arcade handling, quick steering, colour grade and paint, the Aero Concept car, bridge rail collision, the world contract note.
-- **In pull request 22 (open, not merged):** N0 to N5 work done for both streams at Rajul's request: telemetry contract, truck and bike powertrains, vehicle acceptance script, tunnel-aware weather sound, weather and lighting that read, loading screen and `?bench=30`, My music, controller rumble, validated saved choices, hardened tuner worker, traffic (Off / Low / Mid / High) with real vehicle models, autodrive that keeps a lane and follows traffic, **your original Dusk GT restored as the first vehicle** (the new car is a fourth vehicle, "Aero Concept"), and a vehicle set for traffic (below).
+- **On `main`:** pull requests 1 to 22 (merged 16 Nov, commit 310a470). Pull requests 1 to 21: terrain rings and rocks (-29% triangles), Marine Drive, gentler mountain roads, the powertrain and Magic Formula tyre model, arcade handling, quick steering, colour grade and paint, the Aero Concept car, bridge rail collision, the world contract note.
+- **Pull request 22 (now merged):** N0 to N5 work done for both streams at Rajul's request: telemetry contract, truck and bike powertrains, vehicle acceptance script, tunnel-aware weather sound, weather and lighting that read, loading screen and `?bench=30`, My music, controller rumble, validated saved choices, hardened tuner worker, traffic (Off / Low / Mid / High) with real vehicle models, autodrive that keeps a lane and follows traffic, **your original Dusk GT restored as the first vehicle** (the new car is a fourth vehicle, "Aero Concept"), and a vehicle set for traffic (below).
 - **Live site: NOT updated.** https://game-for-peace.anshul-rawat.workers.dev still serves the last deploy (version `4ab7b600`). `/` is the original game; `/next` is the new engine. **Waiting on Anshul** (account `rawatanshul525@gmail.com`; `wrangler whoami` on Rajul's PC says a different account, so Rajul did not deploy).
 - **Checks:** `python tools/daily_check.py` (self-test 33 checks, vehicle acceptance, every location builds a road, deploy folder current, asset sizes and credits, open log entries). `CHECKLIST.md` lists the manual checks.
 - **Accounts:** Cloudflare and GitHub belong to rawatanshul525@gmail.com. Nobody else deploys.
@@ -37,7 +37,7 @@ For tuner Publish (once): `npx wrangler kv namespace create SETTINGS`, add the p
 
 ## What is next: phases from here
 
-Full table with owners and "done when" is in `PARALLEL_PLAN.md`; the outside Master Plan uses the same N0 to N6 labels. Status after pull request 22:
+Full table with owners and "done when" is in `PARALLEL_PLAN.md`; the outside Master Plan uses the same N0 to N6 labels. Status after pull request 22 (merged). **After N6 there is now a second plan, N7 to N15, the open-world India programme: `docs/post-n6-open-world-plan.md`, summarised with review notes in `PARALLEL_PLAN.md`. It is gated: nothing from N7 starts until N0 to N6 are accepted on real devices.**
 
 1. **N0 (needs people):** Anshul deploys; both people go through `CHECKLIST.md`; two real phones; listen to the engine. Baseline checked by script on the real clone; every defect is in the list below.
 2. **N1 Driving and sound:** built (telemetry, powertrains for all three, acceptance numbers, tunnel-aware weather sound). **Open:** a person must drive each vehicle and listen; cleaner engine recordings; tyre, road and wind sound refinement; truck and bike sound pass.
