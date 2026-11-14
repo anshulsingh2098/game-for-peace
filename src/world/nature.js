@@ -12,10 +12,14 @@ function card(tex, meta, tall, count) {                                  // `cou
   const k = tall / meta.height, size = meta.frame * k, up = (meta.cz - meta.zmin) * k, parts = [];
   for (let i = 0; i < count; i++) { const p = new THREE.PlaneGeometry(size, size); p.rotateY(i * Math.PI / count); p.translate(0, up, 0); parts.push(p); }
   const g = mergeGeometries(parts), pos = g.attributes.position, n = new Float32Array(pos.count * 3), v = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) { v.set(pos.getX(i), pos.getY(i) - up * 0.9, pos.getZ(i)).normalize(); v.y = v.y * 0.6 + 0.5; v.normalize(); n[i * 3] = v.x; n[i * 3 + 1] = v.y; n[i * 3 + 2] = v.z; }
+  for (let i = 0; i < pos.count; i++) { v.set(pos.getX(i), pos.getY(i) - up * 0.9, pos.getZ(i)).normalize(); v.multiplyScalar(0.4); v.y += 0.95; v.normalize(); n[i * 3] = v.x; n[i * 3 + 1] = v.y; n[i * 3 + 2] = v.z; }
   g.setAttribute('normal', new THREE.BufferAttribute(n, 3)); return g;
 }
-const material = tex => { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; return sway(new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide })); };
+const material = tex => {
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; const m = sway(new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide })), wind = m.onBeforeCompile;
+  m.onBeforeCompile = sh => { wind(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;', 'float faceDirection = 1.0;')); };       // a card seen from behind is lit like its front: foliage is translucent, and the flipped normal made every back face near black
+  return m;
+};
 
 /* resolves to { pine: [...], round: [...], bush: [...], tuft: [...], rock: [{geom, mat}...] }, or null if anything fails */
 export async function loadNature(level = 'full') {            // level 'low': fewer variants (fewer draw calls on weak devices)

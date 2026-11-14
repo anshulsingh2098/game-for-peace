@@ -5,8 +5,18 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { CAMFX } from './camfx.js';
 const loader = new GLTFLoader(), cache = new Map(); let glowTex = null;
+/* paint the car like a car: a metallic base under a clear glossy coat, dark mirror-like glass, brighter chrome and rim reflections, tyres that do not shine */
+function polish(scene) {
+  scene.traverse(o => { if (!o.isMesh) return; [].concat(o.material).forEach(m => {
+    const n = m.name;
+    if (m.isMeshPhysicalMaterial && /^Paint/.test(n)) { m.metalness = 0.55; m.roughness = 0.32; m.clearcoat = 1; m.clearcoatRoughness = 0.035; m.envMapIntensity = 1.5; }
+    else if (n === 'Glass') { m.color.set(0x0b0f16); m.roughness = 0.02; m.metalness = 0.9; m.envMapIntensity = 2.2; }
+    else if (n === 'Chrome' || n === 'Rim') m.envMapIntensity = 1.6; else if (n === 'Carbon') m.envMapIntensity = 1.2; else if (n === 'Tyre') m.envMapIntensity = 0.3;
+  }); });
+  return scene;
+}
 export function loadModel(def) {
-  if (!cache.has(def.id)) cache.set(def.id, new Promise((ok, no) => loader.load(def.file, g => ok(g.scene), undefined, no)));
+  if (!cache.has(def.id)) cache.set(def.id, new Promise((ok, no) => loader.load(def.file, g => ok(polish(g.scene)), undefined, no)));
   return cache.get(def.id);
 }
 function blobShadow() {

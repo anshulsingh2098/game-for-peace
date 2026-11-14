@@ -65,7 +65,7 @@ export class Environment {
     const sp = new Float32Array(900 * 3), sr = alea('stars'); for (let i = 0; i < 900; i++) { const u = sr() * 6.283, v = 0.05 + sr() * 0.95, rr = SKY_R * 0.95; sp[i * 3] = Math.cos(u) * Math.sqrt(1 - v * v) * rr; sp[i * 3 + 1] = v * rr; sp[i * 3 + 2] = Math.sin(u) * Math.sqrt(1 - v * v) * rr; }
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
     this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, fog: false, depthWrite: false })); this.stars.frustumCulled = false; scene.add(this.stars);
-    this.envScene = new THREE.Scene(); this.envScene.add(new THREE.Mesh(this.sky.geometry, this.skyMat));
+    this.envScene = new THREE.Scene(); this.envScene.add(new THREE.Mesh(this.sky.geometry, this.skyMat)); { const g = new THREE.Mesh(new THREE.CircleGeometry(SKY_R * 1.5, 32), new THREE.MeshBasicMaterial({ color: 0x33373a, side: THREE.DoubleSide, fog: false })); g.rotation.x = -Math.PI / 2; g.position.y = -40; this.envScene.add(g); }      // a darker ground below the horizon, so the car's paint shows a horizon line when it reflects the sky
     this.rain = this.makeRain(); this.snowfall = this.makeSnow(); scene.add(this.rain, this.snowfall);
     this.fogCol = new THREE.Color(); scene.fog = new THREE.Fog(this.fogCol, 60, 900); scene.background = null;
     this.time = 'day'; this.tod = 0.30; this.fixedWx = 'clear'; this.wxTarget = 'clear'; this.wxTimer = 60; this.w = { ...WX.clear };

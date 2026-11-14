@@ -8,6 +8,13 @@ What changed: nothing in code. Tried two-plane tree cards on far scenery tiles: 
 For the other stream: bridge rails are drawn but the car drives through them. The physics ground is one heightfield (`rapier-vehicle.js`), which is your file. Ask: add thin cuboid colliders along the bridge edges (use `Road.bridgeW === 1` stretches and `road.carriedW` for the half width), or tell me the hook you want and I will expose a list of rail segments from `world/bridges.js`.
 Status: open
 
+## 2026-11-15 20:00  Look pass: grade, car paint, reflection horizon, tree card fix (shared files touched, please read)
+Branch: feat/nfs-handling (PR 20)
+What changed: (1) NEW `src/fx/grade.js` + tuner root "look": a CSS-filter colour grade on the canvas (contrast 1.1, saturate 1.14, brightness 0.98) and a soft vignette overlay; off on the low tier; hooked in `main.js` (also re-applied when the tuner changes `look.*`). (2) `src/vehicle/vehicle.js` (Stream B file): `polish()` runs once on each loaded model: car paint becomes metallic base plus clearcoat 1.0, glass dark and mirror-like, chrome/rim reflections up, tyres matt. (3) `src/env/environment.js` (Stream B file): a dark ground disc in the reflection scene, so reflections show a horizon. (4) `src/main.js`: PCF soft shadows on the high tier. (5) World bug fixed in `src/world/nature.js` and `scatter.js`: every plant card showed a solid black rectangle in sunlight, because double-sided cards flip their lighting normal on the back side, which made all back faces near black; the card material now keeps the front normal, the card normals are lit mostly from above, and cards cast cut-out shadows (custom depth material). Selftest 25 of 25.
+For the other stream: nothing to do, but the sky/lighting/vehicle look (N2) now starts from this; tell me if the car polish clashes with anything in your model work.
+Not done: a detailed car model (the current model is low-detail), sun glare/bloom, motion blur.
+Status: done
+
 ## 2026-11-15 14:00  Arcade handling layer, Need for Speed style (Stream B file, at Rajul's request)
 Branch: feat/nfs-handling
 What changed: `src/vehicle/rapier-vehicle.js`: new `ARCADE` constants and an `arcade()` step after the tyres: sideways speed is killed faster (planted grip), throttle plus hard steering above 14 m/s lets the tail step out (power slide), the handbrake gives a drift that holds, and the car is pulled toward the yaw rate the steering asks for (crisp turn-in). Off with `?arcade=0`. Not for the bike. Original code, not ported from any other game. Measured at 82 km/h with the handbrake held for 1 s: before, slip 1.47 and the car stopped dead; now slip 0.51 and it keeps 66 km/h.
