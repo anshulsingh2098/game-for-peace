@@ -22,7 +22,7 @@ Two streams. Each person owns one stream and one set of files. Claude only edits
 | **N3** (A) | Rail collision, world contract, Marine Drive, mountain grades, tunnel walkway and signs, steel truss bridge, location smoke test | Retaining walls; tall grass and ground normal maps; tree levels of detail; better hotel; southern coast landmark; collision for tunnel walls and bridge piers; Rohtang terrain research |
 | **N4** | Loading screen, `?bench=30`, measured tiers on a desktop | Any real phone; texture and mesh compression (only if a phone needs it); long-session leak test |
 | **N5** | Traffic (Off/Low/Mid/High, thirteen vehicle shapes), My music, rumble, validated saved choices, hardened tuner worker | Customisation beyond paint; the tuner page's own login (owner's decision); Cloudflare KV and password setup (operator) |
-| **N6** | Nothing, on purpose | Everything: it waits for N0 to N5 to pass on real devices |
+| **N6** | Switch-over done in the repo at the owner's request (`index.html` is the new engine, `classic.html` the old game, `next.html` a redirect); script checks all pass | Anshul's stage and deploy; the real-phone and driving acceptance the plan wanted first |
 
 Waiting on people: Anshul (deploy, review, Cloudflare setup), Rajul and Anshul (phones, driving, listening, `CHECKLIST.md`).
 Direction: the whole game goes photorealistic (`team/photoreal-plan.md`). **Product direction (owner, 15 Nov 2026): after N6, grow into an open-world India game, see the N7 to N15 section below.**
@@ -45,7 +45,7 @@ Order: N0 first, then N1 and N3 in parallel (different files), N2 after N1 start
 
 ## After N6: the open-world India programme (N7 to N15)
 
-The owner supplied a second plan on 15 Nov 2026, kept in full in `docs/post-n6-open-world-plan.md` (it was written from a study of the public `gta-reversed` repository as an architecture reference only: nothing is copied from it, its code, assets, maps or scripts, which matches the project's earlier decision not to port decompiled game code). **N7 onward must not start until N0 to N6 are accepted on real devices.** Until then agents may read it and, if the owner asks, write a design note for N7 that touches no runtime file.
+The owner supplied a second plan on 15 Nov 2026, kept in full in `docs/post-n6-open-world-plan.md` (it was written from a study of the public `gta-reversed` repository as an architecture reference only: nothing is copied from it, its code, assets, maps or scripts, which matches the project's earlier decision not to port decompiled game code). **N7 onward must not start until N0 to N6 are accepted on real devices** (N6 is built but not yet accepted). Until then agents may read it and, if the owner asks, write a design note for N7 that touches no runtime file.
 
 | Phase | Owner | What | Builds on what exists |
 |---|---|---|---|
@@ -98,7 +98,7 @@ Ten cross-system principles in section 3 of the addendum become review criteria 
 2. **N14a Player-facing layer (HUD, map and route guidance, prompts, accessibility):** the plan has no home for it. Proposed between N13 and N14, or inside N14; the owner decides.
 3. Shared world state for weather and time (N7 or N8): visuals already exist, the event interface does not.
 
-Rules unchanged: `/` stays untouched, work on `/next`, stream file ownership, PR workflow, self-test and daily check, no deploys, no edits to `cloudflare/public/`.
+Rules unchanged: `/classic.html` (the old game) stays untouched; work on the game at `/`, stream file ownership, PR workflow, self-test and daily check, no deploys, no edits to `cloudflare/public/`.
 
 ## File ownership (the anti-collision rule)
 

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 23:00  N6 switch-over done in the repo (owner request)
+Branch: feat/n6-switchover
+What changed: `index.html` is now the new engine (title "Game for Peace"); the original game moved to `classic.html` (still uses `game.js` and `audio.js`, which stay for rollback); `next.html` is a tiny redirect to `./` that keeps the query string and hash, so old links with `?loc=` and `?seed=` still work; `tuner.html` previews `index.html`; `tools/stage_cloudflare.py` copies `classic.html`; OVERVIEW, HANDOFF, CHECKLIST, PERFORMANCE and PARALLEL_PLAN updated. Checked locally: `/next.html?loc=mumbai&...` lands on `/?loc=mumbai&...` and loads the new game; `/classic.html` loads the old one; tuner opens. Self-test 33, vehicle acceptance, collision audit, all locations build a road, daily check 0 failed (one warning: `cloudflare/public` is out of date, as expected until staging). NOT done: the real-phone and driving acceptance the plan wanted before this switch (the owner asked to proceed); nothing deployed.
+For the other stream: Anshul (the only deployer): `git switch main && git pull`, `python tools/stage_cloudflare.py`, `npx wrangler whoami` (must be the project account), `cd cloudflare && npx wrangler deploy`. Rollback: the live version before this deploy is `4ab7b600` (the old `/`); `/classic.html` is the quick stopgap. After deploy run the "After" lines of `CHECKLIST.md` section 7. The old game (`classic.html`, `game.js`) is your file; it is frozen, not deleted.
+Status: open
+
 ## 2026-11-16 21:00  Retaining walls and parapets (N3 A)
 Branch: feat/ground-detail
 What changed: new `src/world/retaining.js` (wired into `road.js` like bridges and tunnels: `update`, `reposition`, `dispose`): where the land beside the road falls away more than 1.8 m within 3 m of the bed, a low stone parapet (0.9 m) with a coping runs along the road edge and a wall face goes down the drop (at most 5 m); where the land climbs more than 1.4 m, a wall with coping stands on the bed edge (up to 4.5 m). Skips bridges and tunnels. Visual only. Measured: Himalayas has about 22% of road sides with a drop (all of them small, at most about 2 m), and no cuts steep enough for a wall (the grading eases the hill in), so in practice you see parapets and an occasional wall at a bend; Alps, California and Mumbai have almost none. Checked by eye in the Himalayas at medium tier, no console errors, self-test 33 checks. Phone cost not measured (one merged mesh per 200 m piece).
