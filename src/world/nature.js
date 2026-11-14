@@ -18,7 +18,7 @@ function card(tex, meta, tall, count) {                                  // `cou
 const material = tex => { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; return sway(new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide })); };
 
 /* resolves to { pine: [...], round: [...], bush: [...], tuft: [...], rock: [{geom, mat}...] }, or null if anything fails */
-export async function loadNature() {
+export async function loadNature(level = 'full') {            // level 'low': fewer variants (fewer draw calls on weak devices)
   try {
     const meta = await (await fetch('assets/nature/cards.json')).json(), t = n => tl.loadAsync(`assets/nature/${n}.png`);
     const names = ['fir_sapling_0', 'fir_sapling_1', 'fir_sapling_2', 'pine_sapling_small_0', 'pine_sapling_small_1', 'pine_sapling_small_2', 'island_tree_02', 'shrub_03', 'fern_02', 'grass_medium_02'];
@@ -31,12 +31,13 @@ export async function loadNature() {
       const gltf = await gl.loadAsync(`assets/nature/${n}.glb`); let mesh = null; gltf.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
       if (mesh) { const m = mesh.material; m.roughness = 0.92; m.metalness = 0; m.envMapIntensity = 0.3; rocks.push({ geom: mesh.geometry, mat: m }); }
     }
+    const low = level === 'low', fewer = (list, keep) => low ? keep.map(i => list[i]) : list;
     return {
-      pine: [conifer('fir_sapling_0', 13), conifer('fir_sapling_1', 11), conifer('fir_sapling_2', 9), conifer('pine_sapling_small_0', 13), conifer('pine_sapling_small_1', 11), conifer('pine_sapling_small_2', 9)],
+      pine: fewer([conifer('fir_sapling_0', 13), conifer('fir_sapling_1', 11), conifer('fir_sapling_2', 9), conifer('pine_sapling_small_0', 13), conifer('pine_sapling_small_1', 11), conifer('pine_sapling_small_2', 9)], [0, 4]),
       round: [{ foliage: card(tex.island_tree_02, meta.island_tree_02, 9, 3), mat: mat.island_tree_02 }],
-      bush: [{ foliage: card(tex.shrub_03, meta.shrub_03, 0.9, 3), mat: mat.shrub_03 }, { foliage: card(tex.fern_02, meta.fern_02, 1.0, 3), mat: mat.fern_02 }],
+      bush: fewer([{ foliage: card(tex.shrub_03, meta.shrub_03, 0.9, 3), mat: mat.shrub_03 }, { foliage: card(tex.fern_02, meta.fern_02, 1.0, 3), mat: mat.fern_02 }], [0]),
       tuft: [{ foliage: card(tex.grass_medium_02, meta.grass_medium_02, 0.6, 3), mat: mat.grass_medium_02 }],
-      rock: rocks
+      rock: fewer(rocks, [0])
     };
   } catch (e) { console.warn('nature assets not loaded, keeping the drawn scenery', e); return null; }
 }

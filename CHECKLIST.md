@@ -31,6 +31,7 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] **Bridge**: drive onto one (default world, seed `peace`): deck, rails, piers; the car rides the deck. (Known: no rail collision.)
 - [ ] **Tunnel** (Himalayas, seed `hill`): gate with a readable "ATAL TUNNEL, ROHTANG" board, portal, tiled lit interior, cones, camera stays inside, no rain inside. Try the truck.
 - [ ] **Weather and time**: clear, overcast, fog, rain, storm, snow, each at day, dusk and night: nothing goes black or white, road looks wet in rain, tunnel and bridge look right at night.
+- [ ] **Quality tiers**: add `&q=low`, `&q=med`, `&q=high`. Low: old cheap ground, fewer tree variants, no shadows; med: lighter photographic ground; high: full ground, bigger shadows and view. Each looks acceptable and none shows broken ground. Phones start on low. (Draw calls and triangles for the Alps at 1400x800: low 176 / 96k, med 523 / 430k, high 898 / 895k. High took about 24 ms on an M4: too slow, still to be tuned.)
 - [ ] **Vehicles**: car, truck and bike each drive; paint colours work; white paint does not glare to a white blob.
 - [ ] **Radio and sound**: radio wheel (hold Q) plays a station; engine, wind and rain sounds; (known: rain plays inside tunnels).
 

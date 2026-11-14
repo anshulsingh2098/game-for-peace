@@ -41,7 +41,7 @@ HDRI sky and lighting from real photos (PMREM), tone mapping tuned per time of d
 | R3 | Not started (vehicles: Stream B). |
 | R4 | Partly: Atal Tunnel gate (Blender) and tiled interior done. Truss bridge, retaining walls, interior signs, other landmarks not done. |
 | R5 | Done: real-scan trees, plants and rocks (`nature.js`). Cards are flat images facing one way; no LODs. |
-| R6 | Not started: phone tiers, compression (KTX2), streaming. |
+| R6 | Started: quality tiers (`?q=low`, `med`, `high`): low = old ground and fewer scenery variants, med = lite photographic ground, high = full. Not done: the high tier is too slow (about 24 ms on an M4), compression (KTX2), streaming, phone measurements. |
 
 ## Risks to accept knowingly
 
