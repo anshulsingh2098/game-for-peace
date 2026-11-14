@@ -48,7 +48,7 @@ Full table with owners and "done when" is in `PARALLEL_PLAN.md`. In order:
 1. **Nothing has been checked by a person on a real phone**, and nobody has listened to the engine sound with the real revs, or driven the new handling and car by hand. All numbers in the logs are from scripts. Do `CHECKLIST.md` sections 3 to 5.
 2. **Heavy car on phones:** the new car is 67,806 triangles and 41 draw calls on every tier (the old one was 16,000). Measure on a phone; if it costs too much, cut it or add a lower model for the low tier.
 3. **Live deploy is out of date** and the tuner Publish needs its one-time Cloudflare setup (below).
-4. **Rain and thunder sound still play inside tunnels** (Stream B, `audio/engine.js`).
+4. **Weather and time** were captured on a desktop only, California only (`VISUAL_MATRIX.md` lists what was and was not looked at); rain, snow and thunder are now off inside tunnels (the road's own tunnel signal), checked in the Himalayas but not heard by a person.
 5. **Tunnel walls and bridge piers have no obstacle circles**; not tested whether the car can reach them.
 6. **Engine sound:** the car's loops (from the owner's own recording) have road and wind noise, and the sound now follows the car's real revs and gear, but nobody has listened to it. The truck and bike use the synthesised engine, the guessed gear and the old simple physics.
 7. **Inside the new car** the steering wheel model does not turn.

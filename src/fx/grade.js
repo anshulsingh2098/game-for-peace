@@ -4,10 +4,10 @@
 export const LOOK = { contrast: 1.1, saturate: 1.14, brightness: 0.98, vignette: 0.32 };
 
 let veil = null;
-export function applyLook(canvas, on = true) {
+export function applyLook(canvas, on = true, dark = 0) {          // dark: 0 fair weather .. 1 storm; the grade fades colour and brightness in bad weather, so storms look grey, not vivid
   if (!canvas) return;
   if (!veil) { veil = document.createElement('div'); veil.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:1'; canvas.parentNode.insertBefore(veil, canvas.nextSibling); }
   if (!on) { canvas.style.filter = ''; veil.style.background = ''; return; }
-  canvas.style.filter = `contrast(${LOOK.contrast}) saturate(${LOOK.saturate}) brightness(${LOOK.brightness})`;
+  const f = `contrast(${LOOK.contrast}) saturate(${(LOOK.saturate * (1 - 0.45 * dark)).toFixed(3)}) brightness(${(LOOK.brightness * (1 - 0.1 * dark)).toFixed(3)})`; if (canvas.style.filter !== f) canvas.style.filter = f;
   veil.style.background = LOOK.vignette > 0 ? `radial-gradient(ellipse at 50% 55%, rgba(0,0,0,0) 55%, rgba(8,10,16,${LOOK.vignette}) 100%)` : '';
 }

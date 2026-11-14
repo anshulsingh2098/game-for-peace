@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 00:30  Master Plan N2: weather and lighting made to read (weather matrix, fixes)
+Branch: feat/plan-n0-n1 (stacked on PR 22)
+What changed: `src/env/environment.js`: bad weather now lowers the reflected sky light (`scene.environmentIntensity = 1 - 0.55 * dark`) and the sky hemisphere light, darkens wet ground to 66%, and has denser fog (overcast .75, rain .42, storm .28, snow .32); `src/fx/grade.js` + `src/main.js`: the colour grade fades colour and brightness with the weather (rain: saturate 0.77, brightness 0.91). Before this, rain and storm at midday looked almost like clear weather. Captured the matrix on a desktop (California): `VISUAL_MATRIX.md` says what was and was not looked at. White paint: 1.1% of bright pixels clipped, not a blown blob.
+For the other stream (Anshul): judge the weather and the night on your own screen and a phone; dawn, overcast/fog/storm at dusk and night, other locations and low/high tiers are not captured yet.
+Status: open
+
 ## 2026-11-15 23:50  Master Plan N0 and N1 done by Rajul's Claude on Rajul's instruction (both streams); Anshul please review
 Branch: feat/plan-n0-n1
 What changed: (1) Telemetry contract `phys.telemetry()` and `VEHICLE_CONTRACT.md` (one meaning for speed, gear, revs, slip, with units); the sound reads gear and revs from it. (2) The truck and bike now have real powertrain data in `defs.js` (truck: 300 kW diesel, 8 gears, 0.5 s shifts; bike: 75 kW, 6 gears, quick shifts, own lean model via `tyres: false`) and use `powertrain()`; the truck also uses the tyre model. (3) Gearbox hunting fixed: it never upshifts into a gear it would shift straight out of; downshift points are data (`down`, `downEasy`); per-vehicle `brakeMul`, `downforce`. (4) New `tools/vehicle_acceptance.mjs` (in `daily_check.py`): car 0-100 in 3.3 s, top 269, 130 to 0 in 55 m; truck 0-100 in 32 s, top 111, 88 to 0 in 45 m, climbs a 10% hill at 44 km/h; bike 0-100 in 4.2 s, top 200; all repeatable to the last digit. (5) Tunnel signal from the road (`road.tunnelW` at the camera's nearest road point): no rain, snow or thunder inside, roomier reverb; checked in the Himalayas (hidden inside, visible before and after). (6) Vendored Rapier init patched to the object form its own warning asks for (the deprecation message is gone). (7) `CHECKLIST.md` has lines for the rails, car, handling, look, camera and tuner.

@@ -286,7 +286,7 @@ function step(dt, now) {
   { const cx = camera.position.x + grid.origin.x, cz = camera.position.z + grid.origin.z;                                              // inside a tunnel (the road says so): no rain, snow or thunder, and a roomier sound
     const now1 = road && road.nearest(cx, cz) && road.hit.d < road.style.shoulder + 2 && road.tunnelW(road.hit.s) > 0.5 ? 1 : 0; tunnelAmt += (now1 - tunnelAmt) * Math.min(1, dt * 5);
     if (tunnelAmt > 0.5) { env.rain.visible = false; env.snowfall.visible = false; } }        // inside a mountain (a tunnel): no rain or snow indoors
-  landmarks.update(grid.origin, env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
+  applyLook(canvas, quality !== 'low', env.w.dark); landmarks.update(grid.origin, env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && sound.ctx) { const tel = phys.telemetry ? phys.telemetry() : { rpm01: null, gear: null }; sound.update({ tunnel: tunnelAmt, v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
     id: VEHICLES[vehicle].id, rpm01: tel.rpm01 === null ? undefined : tel.rpm01, gear: tel.gear === null ? undefined : tel.gear, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view }); }
   if (fx) fx.render(); else renderer.render(scene, camera); stats(now);

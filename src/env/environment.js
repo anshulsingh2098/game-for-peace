@@ -17,11 +17,11 @@ const CYCLE = 360, TOD_KEYS = [[0, 'night'], [0.20, 'night'], [0.27, 'dawn'], [0
 export const TIME_NAME = { dawn: 'Dawn', day: 'Day', dusk: 'Dusk', night: 'Night' };
 export const WX = {
   clear:    { cloud: .55, dark: 0,   fogMul: 1,   light: 1,   rain: 0,   snow: 0, wet: 0 },
-  overcast: { cloud: 1,   dark: .55, fogMul: .85, light: .55, rain: 0,   snow: 0, wet: .05 },
+  overcast: { cloud: 1,   dark: .55, fogMul: .75, light: .55, rain: 0,   snow: 0, wet: .05 },
   fog:      { cloud: .9,  dark: .35, fogMul: .22, light: .55, rain: 0,   snow: 0, wet: .2 },
-  rain:     { cloud: 1,   dark: .72, fogMul: .55, light: .38, rain: .75, snow: 0, wet: .85 },
-  storm:    { cloud: 1,   dark: .95, fogMul: .40, light: .22, rain: 1,   snow: 0, wet: 1 },
-  snow:     { cloud: 1,   dark: .45, fogMul: .40, light: .55, rain: 0,   snow: 1, wet: .1 }
+  rain:     { cloud: 1,   dark: .72, fogMul: .42, light: .38, rain: .75, snow: 0, wet: .85 },
+  storm:    { cloud: 1,   dark: .95, fogMul: .28, light: .22, rain: 1,   snow: 0, wet: 1 },
+  snow:     { cloud: 1,   dark: .45, fogMul: .32, light: .55, rain: 0,   snow: 1, wet: .1 }
 };
 export const WX_NAME = { clear: 'Clear', overcast: 'Overcast', fog: 'Fog', rain: 'Rain', storm: 'Storm', snow: 'Snow' };
 const WX_AUTO = { clear: 4, overcast: 2.5, rain: 2, fog: 1, storm: .5 };
@@ -147,11 +147,11 @@ export class Environment {
     u.cloudAmt.value = Math.min(1, T.ca * (0.4 + W.cloud));
     this.stars.material.opacity = T.stars * Math.max(0, 1 - dk * 1.3); this.stars.visible = this.stars.material.opacity > 0.05;
     if (dk > 0.9) { this.flashT -= dt; if (this.flashT <= 0) { this.flash = 1; this.flashT = 3 + Math.random() * 7; } } this.flash = Math.max(0, this.flash - dt * 3.5);      // lightning in storms
-    this.sun.intensity = T.li * W.light + this.flash * 2; this.hemi.intensity = T.hi * (0.65 + 0.35 * W.light) + this.flash * 2.5; this.fill.intensity = (T.li < 1.8 ? 0.25 : 0.7) * (0.5 + 0.5 * W.light);
+    this.sun.intensity = T.li * W.light + this.flash * 2; this.hemi.intensity = T.hi * (0.4 + 0.6 * W.light) + this.flash * 2.5; this.scene.environmentIntensity = 1 - 0.55 * dk;          // bad weather: less sky light from above and less reflected sky ambient this.fill.intensity = (T.li < 1.8 ? 0.25 : 0.7) * (0.5 + 0.5 * W.light);
     const f = this.scene.fog; f.far = reach * 0.96 * Math.pow(W.fogMul, 2.2); f.near = f.far * 0.1;
     const m = this.mats;
     if (m.road) { m.road.roughness = lerp(0.95, 0.3, W.wet); m.road.envMapIntensity = 0.2 + W.wet; m.road.color.setScalar(lerp(1, 0.62, W.wet)); }
-    if (m.ground) m.ground.color.setScalar(lerp(1, 0.8, W.wet)); this.uSnow.value = W.snow;
+    if (m.ground) m.ground.color.setScalar(lerp(1, 0.66, W.wet)); this.uSnow.value = W.snow;
     this.sky.position.copy(cam); this.stars.position.copy(cam);
     const sp = this.shadowSnap(cam); this.sun.position.copy(sp).addScaledVector(this.sunDir, 300); this.sun.target.position.copy(sp);
     this.fill.position.set(cam.x - this.sunDir.x * 100, cam.y + 80, cam.z - this.sunDir.z * 100); this.fill.target.position.copy(cam);
