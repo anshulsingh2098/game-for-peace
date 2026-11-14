@@ -27,7 +27,7 @@ const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
    yawAssist how hard the car is pulled toward the yaw rate the steering asks for (1/s): crisp turn-in, and it holds a drift
    maxYaw    the fastest turn rate (rad/s) the assist asks for.  Off with ?arcade=0 */
 export const ARCADE = { on: !/[?&]arcade=0/.test(typeof location !== 'undefined' ? location.search : ''), latGrip: 2.6, latPower: 0.3, latHand: 0.12, slideSpeed: 14, yawAssist: 3.2, maxYaw: 1.7,
-  tyre: true, tyreAssist: 0.3, lockGrip: 0.85, tyreB: 10, tyreC: 1.9, tyreE: 0.9, downforce: 0.9, power: { car: 1.45, truck: 1.3, bike: 1.2 }, curve: 3, aeroMul: 0.55, brakeMul: 1.35, gripMul: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
+  tyre: true, tyreAssist: 0.3, lockGrip: 1, combined: 0.6, steerLock: 3.5, tyreB: 10, tyreC: 1.9, tyreE: 0.9, downforce: 0.9, power: { car: 1.45, truck: 1.3, bike: 1.2 }, curve: 3, aeroMul: 0.55, brakeMul: 1.35, gripMul: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* per-vehicle suspension and body tuning (stiffness is per unit mass, so it reads as a natural frequency) */
@@ -151,7 +151,7 @@ export class RapierVehicle {
     /* steering: rate-limited, slower at speed, quick to centre; the lock shrinks with speed */
     const want = clamp(input.steer, -1, 1), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = back ? 8 : 5.5 / (1 + Math.abs(this.u) / 14);
     this.steer += clamp(want - this.steer, -rate * h, rate * h);
-    this.delta = this.steer * Math.min(p.steerMax, 2.1 * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));
+    this.delta = this.steer * Math.min(p.steerMax, (ARCADE.on ? ARCADE.steerLock : 2.1) * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));
     const tn = Math.tan(this.delta), R = Math.abs(tn) > 1e-4 ? p.L / tn : 1e6;
 
     const key = W.surface(this.x, this.z); this.surface = key; const S0 = SURFACES[key] || SURFACES.grass;
@@ -168,6 +168,7 @@ export class RapierVehicle {
       if (Math.abs(u) < 0.25) brake = m * G * 0.9;                                                            // parked: hold still, even on a slope
       else coast = true;                                                                                       // lifting off: engine braking, applied to the body below so it works on any surface
     }
+    if (ARCADE.on && p.pt && !(thr > 0 && !flooded && u >= -0.4)) this.powertrain(0, u, h, M, S0);          // off the throttle: the gearbox still changes down and the revs still follow the wheels
     const nDrive = car.wheels.filter(w => w.drive).length, nF = car.wheels.filter(w => w.front).length, nR = car.wheels.length - nF;
     const fShare = this.id === 'bike' ? 0.55 : 0.62;
     car.wheels.forEach((w, i) => {
@@ -177,7 +178,7 @@ export class RapierVehicle {
       vc.setWheelFrictionSlip(i, muW);      // a locked rear wheel slides: the tail steps out
       let a = 0; if (w.front) a = w.side === 0 ? this.delta : Math.atan(p.L / (R + w.side * p.track / 2));       // Ackermann: the inner wheel turns more
       vc.setWheelSteering(i, w.front ? -a : 0);
-      vc.setWheelEngineForce(i, w.drive ? engine / nDrive : 0);
+      vc.setWheelEngineForce(i, w.drive ? engine / nDrive : 0); this.drvF = engine / nDrive;
       const share = w.front ? fShare / nF : (1 - fShare) / nR; vc.setWheelBrake(i, (brake * share + (w.front ? 0 : rearBrake / nR)) * h);
     });
     /* rolling resistance by surface, water drag, air drag, and what a buff changes about slopes */
@@ -210,7 +211,7 @@ export class RapierVehicle {
     if (this.shiftT > 0) this.shiftT -= h;
     else if (g < n - 1 && rpmIn(g) > pt.upshift * pt.redline) { this.gear = ++g; this.shiftT = pt.shiftTime; }
     else if (g > 0 && rpmIn(g) < (thr > 0.9 ? 0.6 : 0.42) * pt.redline && rpmIn(g - 1) < 0.92 * pt.redline) { this.gear = --g; this.shiftT = pt.shiftTime * 0.6; }
-    const rpm = Math.max(rpmIn(g), g === 0 ? pt.launch : pt.idle); this.rpm += (rpm - this.rpm) * Math.min(1, h * 25);
+    const rpm = Math.max(rpmIn(g), g === 0 && thr > 0.05 ? pt.idle + (pt.launch - pt.idle) * thr : pt.idle); this.rpm += (rpm - this.rpm) * Math.min(1, h * 25);
     if (rpm >= pt.redline) return 0;                                                                              // rev limiter
     const x = rpm / pt.peak, P = pt.kw * 1000 * clamp(x * (0.55 + 1.15 * x - 0.7 * x * x), 0, 1.05), T = P / (rpm / TAU);        // power curve (turbo-like shape, 1.0 at the peak), torque = power / angular speed
     let F = T * ratio(g) / M.top * pt.eff / R * thr * M.accel * (this.shiftT > 0 ? 0.08 : 1);
@@ -238,7 +239,9 @@ export class RapierVehicle {
       const vl = vx * lat[0] + vy * lat[1] + vz * lat[2], vf = vx * wf[0] + vy * wf[1] + vz * wf[2], alpha = Math.atan2(vl, Math.max(Math.abs(vf), 1));
       this.alpha = this.alpha || []; this.alpha[i] = alpha;
       const lock = !this.car.wheels[i].front && this.hnd > 0 ? (1 - A.lockGrip * this.hnd) / (1 - 0.5 * this.hnd) : 1;                        // a locked rear wheel slides: it keeps only a little sideways grip
-      const F = -(this.muW[i] || 1) * fz * mf(alpha) / peak * blend * lock;
+      const drv = this.car.wheels[i].drive ? Math.min(0.95, Math.abs(this.drvF || 0) / Math.max(1, (this.muW[i] || 1) * fz)) : 0;                        // traction circle: grip used to push the car forward is not left for cornering
+      const circle = 1 - A.combined * (1 - Math.sqrt(1 - drv * drv));
+      const F = -(this.muW[i] || 1) * fz * mf(alpha) / peak * blend * lock * circle;
       b.addForceAtPoint({ x: lat[0] * F, y: lat[1] * F, z: lat[2] * F }, pt, true);
     }
   }

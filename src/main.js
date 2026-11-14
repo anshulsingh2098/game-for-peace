@@ -20,6 +20,7 @@ import { VEHICLES } from './vehicle/defs.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from './vehicle/physics.js';
 import { RapierVehicle, initRapier, ARCADE } from './vehicle/rapier-vehicle.js';
 import { VehicleView, loadModel } from './vehicle/vehicle.js';
+import { CAMFX } from './vehicle/camfx.js';
 import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
 import { Autodrive } from './input/autodrive.js';
@@ -43,7 +44,7 @@ const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let savedLoc = null; try { savedLoc = JSON.parse(localStorage.getItem('gfp-next') || '{}').location || null; } catch (e) { /* no saved choice */ }
 let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || savedLoc || 'default', q.get('seed') || 'peace');
 /* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
-registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES); registerRoot('handling', ARCADE);
+registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES); registerRoot('handling', ARCADE); registerRoot('camera', CAMFX);
 for (const url of ['api/settings', 'settings.json']) {             // the published settings (tuner Publish), else a settings.json committed with the site
   try { const r = await fetch(url); if (r.ok) { const j = await r.json(); if (j && j.overrides) { setOverrides(j.overrides); break; } } } catch (e) { /* not there: carry on */ }
 }
@@ -284,7 +285,7 @@ function step(dt, now) {
   if (mode !== 'fly') { const cx = camera.position.x + grid.origin.x, cz = camera.position.z + grid.origin.z; if (terrain.height(cx, cz) - terrain.drive(cx, cz) > 4) { env.rain.visible = false; env.snowfall.visible = false; } }        // inside a mountain (a tunnel): no rain or snow indoors
   landmarks.update(grid.origin, env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && sound.ctx) sound.update({ v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
-    id: VEHICLES[vehicle].id, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view });
+    id: VEHICLES[vehicle].id, rpm01: phys.p.pt ? Math.max(0, Math.min(1, (phys.rpm - phys.p.pt.idle) / (phys.p.pt.redline - phys.p.pt.idle))) : undefined, gear: phys.p.pt ? phys.gear : undefined, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view });
   if (fx) fx.render(); else renderer.render(scene, camera); stats(now);
   if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label;
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }

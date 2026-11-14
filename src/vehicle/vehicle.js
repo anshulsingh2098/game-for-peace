@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+import { CAMFX } from './camfx.js';
 const loader = new GLTFLoader(), cache = new Map(); let glowTex = null;
 export function loadModel(def) {
   if (!cache.has(def.id)) cache.set(def.id, new Promise((ok, no) => loader.load(def.file, g => ok(g.scene), undefined, no)));
@@ -96,6 +97,15 @@ export class VehicleView {
   setMode(name) {
     this.mode = name; this.setView(name === 'cockpit' ? 'first' : 'third'); this.camYaw = null; this.cine = null;
   }
+  /* chase-camera feel: a springy field-of-view kick on boost and hard acceleration, and a faint high-speed shake */
+  kickFov(dt, boost, ph) {
+    dt = Math.min(dt, 0.05); const F = CAMFX, target = boost * F.fovKick + Math.max(0, Math.min(10, ph.axL || 0)) * F.fovAccel;
+    this.kv = (this.kv || 0) + ((target - (this.kk || 0)) * 70 - (this.kv || 0) * 10) * dt; this.kk = (this.kk || 0) + this.kv * dt; return this.kk;       // a damped spring: it overshoots a little, then settles
+  }
+  shake(camera, speed, boost) {
+    const F = CAMFX, a = F.shake * Math.max(0, Math.min(1, (speed - F.shakeFrom) / 35)) * (1 + boost * 1.5); if (a < 0.001) return; const t = performance.now() / 1000;
+    camera.position.y += (Math.sin(t * 47) + 0.6 * Math.sin(t * 83.1)) * 0.012 * a; camera.rotateZ((Math.sin(t * 39.7) + 0.5 * Math.sin(t * 71)) * 0.0035 * a);
+  }
   /* aim the camera. floor(x, z) is the lowest height the camera may sit at. */
   aim(camera, ph, origin, dt, floor, boost = 0) {
     const d = this.def, speed = Math.abs(ph.u), cm = this.camMul || { back: 1, up: 1, look: 1, fov: 0 }, mode = this.mode || 'middle';       // camMul: closer, lower, wider on phones (set in main.js)
@@ -119,11 +129,11 @@ export class VehicleView {
       const m = mode === 'far' ? { back: 1.75, up: 1.9, look: 1.25 } : mode === 'close' ? { back: 0.62, up: 0.72, look: 0.9 } : { back: 1, up: 1, look: 1 };
       const want = ph.yaw + Math.atan2(ph.v, Math.max(Math.abs(ph.u), 4)) * 0.4;       // follow where the car is going, a little, when it slides
       if (this.camYaw === null || this.camYaw === undefined) this.camYaw = want;
-      this.camYaw += Math.atan2(Math.sin(want - this.camYaw), Math.cos(want - this.camYaw)) * Math.min(1, dt * 3.2);
+      this.camYaw += Math.atan2(Math.sin(want - this.camYaw), Math.cos(want - this.camYaw)) * Math.min(1, dt * 3.2 / (1 + CAMFX.driftLag * Math.min(1, Math.abs(ph.slip || 0) * 3)));       // in a slide the camera turns after the car more slowly, so the car swings across the frame
       const cx = Math.cos(this.camYaw), cz = Math.sin(this.camYaw), back = d.cam.back * cm.back * m.back, wx = ph.x - cx * back, wz = ph.z - cz * back;
       const y = Math.max(ph.y + d.cam.up * cm.up * m.up, floor(wx, wz) + 1.2);
       camera.position.set(wx - origin.x, y, wz - origin.z); camera.lookAt(ph.x + cx * d.cam.look * cm.look * m.look - origin.x, ph.y + d.cam.up * 0.45, ph.z + cz * d.cam.look * cm.look * m.look - origin.z);
-      camera.fov = 56 + cm.fov + (mode === 'far' ? 4 : mode === 'close' ? 6 : 0) + Math.min(14, speed * 0.16) + boost * 4;
+      this.shake(camera, speed, boost); camera.fov = 56 + cm.fov + (mode === 'far' ? 4 : mode === 'close' ? 6 : 0) + Math.min(14, speed * CAMFX.fovSpeed) + boost * 4 + this.kickFov(dt, boost, ph);
     }
     camera.updateProjectionMatrix();
   }
