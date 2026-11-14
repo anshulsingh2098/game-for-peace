@@ -1,0 +1,2 @@
+Ground and road textures from ambientCG (https://ambientcg.com), CC0 1.0 (public domain). Resized to 512 px; colour, normal (OpenGL) and roughness maps.
+ground/grass = Grass001, ground/rock = Rock030, ground/snow = Snow010A, ground/sand = Ground054, roads/asphalt = Asphalt033, roads/pavement = PavingStones138, roads/gravel = Gravel023

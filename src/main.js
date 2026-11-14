@@ -14,6 +14,8 @@ import { TileGrid } from './world/chunks.js';
 import { Scatter } from './world/scatter.js';
 import { WIND } from './world/props.js';
 import { grassTex, waterNormalTex } from './world/textures.js';
+import { makeGroundMaterial } from './world/groundmat.js';
+import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from './vehicle/physics.js';
 import { RapierVehicle, initRapier } from './vehicle/rapier-vehicle.js';
@@ -31,6 +33,7 @@ import { LOCATIONS, locationConfig, locationById } from './world/locations.js';
 import { Landmarks } from './world/landmarks.js';
 import { FlyCam } from './debug/flycam.js';
 import { statsPanel } from './debug/stats.js';
+import { createFx, loadSkyLight } from './fx/pipeline.js';
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], q = new URLSearchParams(location.search);
 const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
@@ -53,15 +56,19 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(58, 1, 0.3, 14000);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;      // first-frame reflections; the sky replaces them
 const env = new Environment(renderer, scene); let reach = 900;
+let skyLight = null; const fx = q.get('fx') ? createFx(renderer, scene, camera, q.get('fx')) : null;                       // ?fx=1 realism pipeline (src/fx/pipeline.js), ?fx=lite without ambient occlusion
+if (fx) loadSkyLight(renderer, 'assets/sky/drakensberg_puresky_1k.hdr').then(t => { skyLight = t; });                     // a photographed sky for light and reflections, dimmed by the sun's height below
 /* real sun shadows (trees, rocks, the vehicle) on the nearby ground and road; off on the low preset unless ?shadows=on */
 const shadowsOn = q.get('shadows') ? q.get('shadows') !== 'off' : quality !== 'low';
-renderer.shadowMap.enabled = shadowsOn; renderer.shadowMap.type = THREE.PCFSoftShadowMap; env.setShadows(shadowsOn ? (quality === 'high' ? 4096 : 2048) : 0, quality === 'high' ? 90 : 70);
+renderer.shadowMap.enabled = shadowsOn; renderer.shadowMap.type = THREE.PCFShadowMap; env.setShadows(shadowsOn ? (quality === 'high' ? 4096 : 2048) : 0, quality === 'high' ? 90 : 70);
 /* saved choices for this preview */
 const saved = (() => { try { return JSON.parse(localStorage.getItem('gfp-next') || '{}'); } catch (e) { return {}; } })();
 const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, ...saved }, save = () => { try { localStorage.setItem('gfp-next', JSON.stringify(S)); } catch (e) { /* storage unavailable */ } };
 env.setTime(S.time); env.setWeather(S.weather);
 
-const ground = new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
+let nature = null; if (q.get('nature') !== 'flat') loadNature().then(p => { nature = p; if (p && typeof scatter !== 'undefined' && scatter) scatter.setProps(p); });       // real-scan trees, plants and rocks (src/world/nature.js); ?nature=flat keeps the drawn ones
+const photoGround = q.get('ground') !== 'flat', groundMat = photoGround ? makeGroundMaterial() : null;                // photographic ground (src/world/groundmat.js); ?ground=flat for the old drawn texture
+const ground = groundMat ? groundMat.material : new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
 const ripples = waterNormalTex(), RIP = 0.07;
 const waterMat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.9, normalMap: ripples, normalScale: new THREE.Vector2(0.22, 0.22), envMapIntensity: 1.5 });
 /* ripples fade out with distance (beyond a few hundred metres they only alias into a checker pattern) and the surface is calmer far off */
@@ -81,8 +88,8 @@ function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
   if (landmarks) landmarks.dispose(); landmarks = new Landmarks(scene, terrain, road, config, grid.origin, locationById(config.location).landmarks);       // sights beside the road; they also level the land under them
-  roadMesh = new RoadMesh(scene, road, road.style, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin);
-  env.attach({ ground, road: roadMesh.surface }); waterMat.color.set(config.water.color);
+  roadMesh = new RoadMesh(scene, road, road.style, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
+  env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); } waterMat.color.set(config.water.color);
 }
 makeScenery();
 function applyView() {
@@ -201,7 +208,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyL') cycleLights();
   if (e.code === 'KeyM') toggleMute();
 });
-function resize() { const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+function resize() { const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight; renderer.setSize(w, h, false); if (fx) fx.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
 const stats = statsPanel($('#stats'), renderer, () => {
@@ -258,11 +265,12 @@ function step(dt, now) {
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   ripples.offset.set(((camera.position.x + grid.origin.x) * RIP + now * 0.000011) % 1, (-(camera.position.z + grid.origin.z) * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
   env.update(dt, now, camera, reach);
+  if (skyLight) { scene.environment = skyLight; scene.environmentIntensity = 0.4 * Math.min(1, Math.max(0.06, 0.12 + env.sunDir.y * 1.1)); }
   if (mode !== 'fly') { const cx = camera.position.x + grid.origin.x, cz = camera.position.z + grid.origin.z; if (terrain.height(cx, cz) - terrain.drive(cx, cz) > 4) { env.rain.visible = false; env.snowfall.visible = false; } }        // inside a mountain (a tunnel): no rain or snow indoors
   landmarks.update(grid.origin, env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && sound.ctx) sound.update({ v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
     id: VEHICLES[vehicle].id, brake: input.brake > 0.1 && phys.u > 1, off: phys.surface !== 'asphalt', view: view.view });
-  renderer.render(scene, camera); stats(now);
+  if (fx) fx.render(); else renderer.render(scene, camera); stats(now);
   if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label;
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }
 }
@@ -282,6 +290,6 @@ addEventListener('message', async e => {
 });
 if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
-window.__next = { get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
+window.__next = { fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };

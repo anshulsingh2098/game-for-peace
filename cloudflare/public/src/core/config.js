@@ -21,7 +21,8 @@ export const DEFAULT_CONFIG = {
     treeline: 210, snowline: 340
   },
   road: {
-    step: 20, minRadius: 75,                                    // routing step and the tightest bend allowed
+    style: 'two-lane',                                          // cross-section: two-lane, highway, boulevard, dirt, gravel (world/roadstyles.js)
+    step: 20, minRadius: 130,                                    // routing step and the tightest bend allowed
     look: 12, scout: 15, spread: 0.9, swing: 2.0,               // short-range steps looked ahead; long-range scouting distance (x 100 m); half-width of the steering cone; how far (radians) an arm may ever swing from its first bearing
     maxGrade: 0.08, hardGrade: 0.13, lastGrade: 0.2, maxCut: 14, smooth: 3, clearance: 2.5, maxAlt: 190,   // grade the router aims to stay under, grade never exceeded, height averaging (nodes each side), height kept above the sea, altitude the router avoids
     flat: 9, blend: 46, sink: 0.3,                              // grading: level out to 'flat' metres from the centre line, natural again by 'blend'
