@@ -26,6 +26,8 @@ const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const TUNE = {
   car:   { rest: 0.26, travel: 0.20, k: 32, comp: 3.6, relax: 5.0, hy: 0.32, extraL: 0.55, rollK: 0, rollC: 0, ang: 0.4 },
   truck: { rest: 0.40, travel: 0.30, k: 18, comp: 2.8, relax: 3.8, hy: 0.9,  extraL: 1.2,  rollK: 0, rollC: 0, ang: 0.6 },
+  sport: { rest: 0.22, travel: 0.16, k: 40, comp: 4.4, relax: 5.8, hy: 0.30, extraL: 0.5, rollK: 0, rollC: 0, ang: 0.4 },
+  rally: { rest: 0.34, travel: 0.26, k: 26, comp: 3.2, relax: 4.6, hy: 0.34, extraL: 0.5, rollK: 0, rollC: 0, ang: 0.45, awd: true },      // long travel, four driven wheels
   bike:  { rest: 0.24, travel: 0.18, k: 38, comp: 4.0, relax: 5.5, hy: 0.3,  extraL: 0.3,  rollK: 16000, rollC: 2400, pitchK: 22000, pitchC: 3000, ang: 0.8 }
 };
 
@@ -44,7 +46,7 @@ function makeCar(world, p, id, startY) {
     vc.setWheelSuspensionStiffness(i, T.k); vc.setWheelSuspensionCompression(i, T.comp); vc.setWheelSuspensionRelaxation(i, T.relax);
     vc.setWheelMaxSuspensionTravel(i, T.travel); vc.setWheelMaxSuspensionForce(i, 1e7); vc.setWheelFrictionSlip(i, 1); vc.setWheelSideFrictionStiffness(i, 1);
   }
-  return { body, vc, wheels: wheels.map(([x, z, front]) => ({ x, z, front, side: x === 0 ? 0 : x > 0 ? 1 : -1, drive: !front })), T, cy };
+  return { body, vc, wheels: wheels.map(([x, z, front]) => ({ x, z, front, side: x === 0 ? 0 : x > 0 ? 1 : -1, drive: !front || !!T.awd })), T, cy };
 }
 
 /* anti-roll and anti-pitch springs about the body's forward and left axes: tall vehicles lean but do not tip over, and a bike stays upright and

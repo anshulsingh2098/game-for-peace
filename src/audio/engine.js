@@ -7,6 +7,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const CFG = {
   car:   { kind: 'v8',     idle: 800, max: 6800, G: 6, pulse: r => r / 15, vol: 0.55, cutLo: 380, cutHi: 3000, lope: 0.30, growl: 0.16, whine: 0.025, hiss: 0.07 },
   truck: { kind: 'diesel', idle: 620, max: 2100, G: 8, pulse: r => r / 20, vol: 0.72, cutLo: 300, cutHi: 1700, lope: 0.28, growl: 0.28, whine: 0.04, hiss: 0.10 },
+  sport: { kind: 'v8',     idle: 900, max: 8200, G: 6, pulse: r => r / 15, vol: 0.55, cutLo: 450, cutHi: 3800, lope: 0.14, growl: 0.12, whine: 0.05, hiss: 0.08 },
+  rally: { kind: 'v8',     idle: 950, max: 7200, G: 6, pulse: r => r / 30, vol: 0.55, cutLo: 420, cutHi: 3400, lope: 0.18, growl: 0.2,  whine: 0.07, hiss: 0.10 },
   bike:  { kind: 'ev',     idle: 0,   max: 1,    G: 1, pulse: () => 0,     vol: 0.95, cutLo: 900, cutHi: 6000, lope: 0,    growl: 0,    whine: 0,    hiss: 0.05 }
 };
 
