@@ -6,7 +6,7 @@ longer part of the site are removed, so the folder always mirrors the project.""
 import os, sys, shutil, filecmp
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FILES = ['index.html', 'next.html', 'game.js', 'audio.js']                      # single files, if present
+FILES = ['index.html', 'next.html', 'tuner.html', 'game.js', 'audio.js']                      # single files, if present
 TREES = {                                                                      # folder -> allowed extensions
     'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', ''}, 'assets': {'.glb', '.png', '.jpg', '.webp', '.hdr'},
     'music': {'.json', '.mp3', '.m4a', '.ogg'},

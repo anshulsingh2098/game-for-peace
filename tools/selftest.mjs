@@ -12,6 +12,9 @@ import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 import { LOCATIONS, locationConfig } from '../src/world/locations.js';
 import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
+import * as tuning from '../src/core/tuning.js';
+import { explain, DOCS } from '../src/core/tuning-docs.js';
+import worker from '../cloudflare/worker.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -215,6 +218,39 @@ test('road styles: columns and strips are valid, surfaces are physics keys, two-
   const t = ROAD_STYLES['two-lane'];
   assert.deepEqual([t.grade.flat, t.grade.blend, t.clear, t.grade.lift[0]], [9, 46, 10, 5.4]);
   assert.equal(roadSurfaceAt(t, 3), 'asphalt'); assert.equal(roadSurfaceAt(t, 5), 'gravel'); assert.equal(roadSurfaceAt(t, 8), null);
+});
+
+test('tuning: settings are found by path, applied, replaced as a whole and reset', () => {
+  const V = [{ id: 'car', name: 'x', body: { mass: 1350 }, stats: { Top: 240 } }], T = { day: { top: '#2f6fd6', sun: [-0.3, 0.85, -0.45], li: 3.2 } }; let cfg = { seed: 'a', terrain: { hills: { amp: 46 } } };
+  tuning.registerRoot('vehicles', V); tuning.registerRoot('times', T); tuning.registerRoot('world', () => cfg);
+  const f = tuning.describe(), by = p => f.find(x => x.path === p);
+  assert.equal(by('vehicles.car.body.mass').value, 1350); assert.equal(by('times.day.top').type, 'colour'); assert.ok(by('times.day.sun.1')); assert.ok(!f.some(x => x.path.endsWith('.name') || x.path.endsWith('.seed')));
+  assert.deepEqual(tuning.setOverrides({ 'vehicles.car.body.mass': 2000, 'times.day.sun.1': 0.2, 'world.terrain.hills.amp': 90 }).length, 3);
+  assert.equal(V[0].body.mass, 2000); assert.equal(T.day.sun[1], 0.2); assert.equal(cfg.terrain.hills.amp, 90);
+  tuning.setOverrides({ 'world.terrain.hills.amp': 70 }); assert.equal(V[0].body.mass, 1350); assert.equal(T.day.sun[1], 0.85);      // a path left out goes back to its default
+  assert.equal(tuning.applyWorld({ terrain: { hills: { amp: 1 } } }).terrain.hills.amp, 70); tuning.setOverrides({});
+});
+
+await atest('worker: anyone reads the published settings; only the password publishes; bad data is refused; history keeps versions', async () => {
+  const kv = new Map(), env = { SETTINGS: { get: async (k, t) => kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null, put: async (k, v) => { kv.set(k, v); } }, TUNER_PASSWORD: 'pw', ASSETS: { fetch: async () => new Response('static') } };
+  const call = (path, method = 'GET', body, pw) => worker.fetch(new Request('https://x.test' + path, { method, body: body && JSON.stringify(body), headers: pw ? { authorization: 'Bearer ' + pw } : {} }), env);
+  assert.equal((await call('/api/settings')).status, 200); assert.deepEqual((await (await call('/api/settings')).json()).overrides, {});
+  assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 1 } })).status, 401); assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 1 } }, 'nope')).status, 401);
+  assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a b': 1 } }, 'pw')).status, 400); assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 'text' } }, 'pw')).status, 400); assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': NaN } }, 'pw')).status, 400);
+  assert.equal((await call('/api/settings', 'PUT', { overrides: { 'vehicles.car.body.mass': 2000, 'times.day.top': '#aabbcc' } }, 'pw')).status, 200);
+  assert.equal((await (await call('/api/settings')).json()).overrides['vehicles.car.body.mass'], 2000);
+  await call('/api/settings', 'PUT', { overrides: { 'a.b': 2 }, note: 'second' }, 'pw');
+  assert.equal((await call('/api/history')).status, 401); const h = (await (await call('/api/history', 'GET', null, 'pw')).json()).history; assert.equal(h.length, 2); assert.equal(h[0].note, 'second');
+  assert.equal(await (await call('/index.html')).text(), 'static');
+  const bare = { ASSETS: env.ASSETS }; assert.equal((await worker.fetch(new Request('https://x.test/api/settings'), bare)).status, 503);        // not set up: API says so, nothing else breaks
+  assert.equal((await worker.fetch(new Request('https://x.test/next.html'), bare)).status, 200);
+});
+
+test('tuner help: every vehicle, surface and world setting has an explanation and a range', () => {
+  tuning.registerRoot('vehicles', VEHICLES); tuning.registerRoot('surfaces', SURFACES); tuning.registerRoot('world', DEFAULT_CONFIG);
+  const missing = tuning.describe().filter(f => !explain(f.path)).map(f => f.path);
+  assert.deepEqual(missing, [], 'no help written for: ' + missing.join(', '));
+  for (const [k, v] of Object.entries(DOCS)) { assert.ok(Array.isArray(v) && v.length === 2 && v[0].length > 10 && v[1].length > 1, k); }
 });
 
 console.log(`\n${passed} checks passed`);
