@@ -20,6 +20,13 @@ export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIE
 
 const G = 9.81, H = 1 / 120;
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+/* Arcade handling layer (the "Most Wanted" feel): the tyre model alone is realistic and twitchy, so these steer the result.
+   latGrip   how fast sideways speed is killed while gripping (1/s): high = planted, never floaty
+   latPower  grip left when on the throttle and steering hard above slideSpeed (m/s): low = the tail steps out, a power slide
+   latHand   grip left while the handbrake is held: the car slides and keeps sliding
+   yawAssist how hard the car is pulled toward the yaw rate the steering asks for (1/s): crisp turn-in, and it holds a drift
+   maxYaw    the fastest turn rate (rad/s) the assist asks for.  Off with ?arcade=0 */
+export const ARCADE = { on: !/[?&]arcade=0/.test(typeof location !== 'undefined' ? location.search : ''), latGrip: 2.6, latPower: 0.3, latHand: 0.12, slideSpeed: 14, yawAssist: 3.2, maxYaw: 1.7 };
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* per-vehicle suspension and body tuning (stiffness is per unit mass, so it reads as a natural frequency) */
@@ -181,6 +188,7 @@ export class RapierVehicle {
     /* anti-roll: a spring and damper about the forward axis so tall vehicles lean but do not tip over (a bike is held upright) */
     stabilise(b, car.T);
     vc.updateVehicle(h); this.R.step();
+    this.read(); this.arcade(h, thr, want, hnd, tn, flooded);
     if (this.patchNew) this.patchNew = false;
     /* body pitch and lean are worked out after read() below, once the new speed is known (they used to compare the old speed with itself, so the body never moved) */
     this.stuck = flooded ? this.stuck + h : 0;
@@ -189,6 +197,18 @@ export class RapierVehicle {
     this.dPitch += (clamp(this.axL, -12, 12) * (this.axL < 0 ? 0.013 : 0.02) * p.cg - this.dPitch) * Math.min(1, h * 7);                          // nose dips under braking, squats under power
     this.dRoll += (-clamp(this.ay, -12, 12) * 0.022 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);   // body leans in corners (a bike leans by its own model)
     if (this.u > Math.max(top * 1.08, 1)) { const lv = b.linvel(), k = Math.max(top * 1.08, this.u - 6 * h) / this.u; b.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); }          // hard speed ceiling (a buff's extra speed bleeds off)
+  }
+
+  /* the arcade layer: runs once per physics step after the tyres have done their work */
+  arcade(h, thr, want, hnd, tn, flooded) {
+    const A = ARCADE, p = this.p; if (!A.on || flooded || this.id === 'bike') return;
+    const sp = Math.abs(this.u); if (sp < 3 || this.wheelStates.filter(w => w.contact).length < 2) return;
+    const b = this.body, lv = b.linvel(), av = b.angvel(), c = Math.cos(this.yaw), s = Math.sin(this.yaw), S = SURFACES[this.surface] || SURFACES.grass;
+    let k = A.latGrip * Math.min(1, S.grip + 0.2);
+    if (hnd > 0) k = A.latGrip * (1 - hnd) + A.latHand * hnd; else if (thr > 0.5 && Math.abs(want) > 0.5 && sp > A.slideSpeed) k *= A.latPower;      // power slide
+    const dv = -this.v * (1 - Math.exp(-k * h));                                                                // kill some sideways speed along the car's own side axis
+    const target = clamp(this.u * tn / p.L, -A.maxYaw, A.maxYaw) * (hnd > 0 ? 1 - 0.55 * hnd : 1), yaw = (target - this.r) * A.yawAssist * h;
+    b.setLinvel({ x: lv.x - s * dv, y: lv.y, z: lv.z + c * dv }, true); b.setAngvel({ x: av.x, y: av.y - yaw, z: av.z }, true);
   }
 
   /* trees and rocks: push the body out of them and take away the speed that was going in */

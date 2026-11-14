@@ -8,6 +8,12 @@ What changed: nothing in code. Tried two-plane tree cards on far scenery tiles: 
 For the other stream: bridge rails are drawn but the car drives through them. The physics ground is one heightfield (`rapier-vehicle.js`), which is your file. Ask: add thin cuboid colliders along the bridge edges (use `Road.bridgeW === 1` stretches and `road.carriedW` for the half width), or tell me the hook you want and I will expose a list of rail segments from `world/bridges.js`.
 Status: open
 
+## 2026-11-15 14:00  Arcade handling layer, Need for Speed style (Stream B file, at Rajul's request)
+Branch: feat/nfs-handling
+What changed: `src/vehicle/rapier-vehicle.js`: new `ARCADE` constants and an `arcade()` step after the tyres: sideways speed is killed faster (planted grip), throttle plus hard steering above 14 m/s lets the tail step out (power slide), the handbrake gives a drift that holds, and the car is pulled toward the yaw rate the steering asks for (crisp turn-in). Off with `?arcade=0`. Not for the bike. Original code, not ported from any other game. Measured at 82 km/h with the handbrake held for 1 s: before, slip 1.47 and the car stopped dead; now slip 0.51 and it keeps 66 km/h.
+For the other stream (Anshul): the constants are plain numbers at the top of the file; please move them into the tuner (`core/tuning.js`, `tuning-docs.js`) and tune by feel on the car and the truck. The truck has not been tried.
+Status: open
+
 ## 2026-11-14 19:00  Far rocks are cheap now (N3/N4 speed)
 Branch: feat/n3-world-polish
 What changed: `src/world/scatter.js`: real-scan rocks (about 650 triangles each) only in the near tiles; far tiles use the drawn rock. On the medium tier, triangles per frame go from 527k to 419k (-20%); rocks were about 45% of the scenery triangles. Next biggest: terrain tiles (about 184k).
