@@ -2,6 +2,7 @@
    that come and go around the player. Lane markings are a second mesh just above the surface. */
 import * as THREE from 'three';
 import { Bridges } from './bridges.js';
+import { Tunnels, COVER } from './tunnels.js';
 import { asphaltTex } from './textures.js';
 
 export { TWO_LANE } from './roadstyles.js';          // styles are data in roadstyles.js: see there for the cross-section format
@@ -15,10 +16,11 @@ export class RoadMesh {
     this.paint = new THREE.MeshBasicMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8 });
     this.group = new THREE.Group(); scene.add(this.group); this._p = {};
     this.bridges = new Bridges(scene, road, road.t, style, origin, ROWS);                     // decks, rails and piers where the road crosses water
+    this.tunnels = new Tunnels(scene, road, style, origin, ROWS);                              // tubes and portals where the road goes through a mountain
   }
   /* keep pieces within range of road distance s; build at most a few per frame */
   update(s) {
-    this.bridges.update(s);
+    this.bridges.update(s); this.tunnels.update(s);
     const r = this.road, L = this.len, lo = Math.floor(Math.max(r.sMin + L, s - this.range) / L), hi = Math.floor(Math.min(r.sMax - L, s + this.range) / L) - 1;
     for (const [k, p] of this.pieces) if (k < lo - 1 || k > hi + 1) { this.drop(p); this.pieces.delete(k); }
     const t0 = performance.now(), mid = Math.floor(s / L);
@@ -30,7 +32,7 @@ export class RoadMesh {
   build(k) {
     const r = this.road, st = this.style, p = this._p, s0 = k * this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, nc = st.cols.length;
     const pos = [], col = [], uv = [], idx = [], lp = [], lc = [], li = [];
-    const bridged = []; for (let row = 0; row <= ROWS; row++) bridged.push(r.bridgeW(s0 + row * r.ds) === 1);       // rows on a bridge (see bridges.js)
+    const bridged = []; for (let row = 0; row <= ROWS; row++) bridged.push(r.bridgeW(s0 + row * r.ds) === 1 || r.tunnelRise(s0 + row * r.ds) >= COVER);       // rows on a bridge (see bridges.js)
     for (let row = 0; row <= ROWS; row++) {
       const s = s0 + row * r.ds; r.at(s, p); const nx = -p.tz, nz = p.tx;          // nx, nz: unit vector pointing to the right of travel
       for (const [t, drop, kind, u] of st.cols) { pos.push(p.x + nx * t - ox, p.y - drop, p.z + nz * t - oz); col.push(...st.colour[kind]); uv.push(u, s / 9); }
@@ -55,6 +57,6 @@ export class RoadMesh {
   }
   get solid() { return this.style.lines.filter(l => !l.dash).length; }
   drop(grp) { this.group.remove(grp); for (const m of grp.children) m.geometry.dispose(); }
-  reposition() { for (const g of this.pieces.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); this.bridges.reposition(); }
-  dispose() { this.bridges.dispose(); for (const g of this.pieces.values()) this.drop(g); this.pieces.clear(); this.group.parent && this.group.parent.remove(this.group); this.surface.dispose(); this.paint.dispose(); }
+  reposition() { for (const g of this.pieces.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); this.bridges.reposition(); this.tunnels.reposition(); }
+  dispose() { this.bridges.dispose(); this.tunnels.dispose(); for (const g of this.pieces.values()) this.drop(g); this.pieces.clear(); this.group.parent && this.group.parent.remove(this.group); this.surface.dispose(); this.paint.dispose(); }
 }

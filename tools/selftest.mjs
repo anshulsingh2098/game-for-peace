@@ -193,6 +193,16 @@ test('bridges: over water the deck carries the road and the land is left alone; 
   }
   assert.ok(bridged > 0 && land > bridged, 'some bridge, mostly land: ' + bridged + ' / ' + land);
 });
+test('tunnels: a deep cutting becomes a tunnel (mountain left whole, wheels on the deck) and no canyon is left', () => {
+  const cfg = locationConfig('alps', 'alps'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-4000, 4000); t.attachRoad(r);
+  let tunnel = 0, worstCut = 0;
+  for (let s = r.sMin + 80; s < r.sMax - 80; s += 5) {
+    const p = r.at(s, {}), w = r.tunnelW(s);
+    if (w === 1) { tunnel++; assert.ok(Math.abs(t.height(p.x, p.z) - t.base(p.x, p.z)) < 0.05, 'mountain left whole'); assert.ok(Math.abs(t.drive(p.x, p.z) - p.y) < 0.05, 'wheels on the deck'); }
+    else if (!r.carriedW(s)) worstCut = Math.max(worstCut, t.base(p.x, p.z) - p.y);
+  }
+  assert.ok(tunnel > 0, 'the Alps have tunnels'); assert.ok(worstCut < 45, 'deepest remaining cutting ' + worstCut.toFixed(0) + ' m');
+});
 test('road styles: columns and strips are valid, surfaces are physics keys, two-lane keeps its old widths', () => {
   for (const st of Object.values(ROAD_STYLES)) {
     assert.ok(st.cols.length > 1 && st.strips.length > 0, st.id);

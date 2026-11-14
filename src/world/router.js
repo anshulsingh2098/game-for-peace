@@ -12,6 +12,7 @@
    Everything is a pure function of the seed, generated on demand as far as it is asked for. */
 import { createNoise } from '../core/noise.js';
 
+const TUNNEL_DEPTH = 18, TUNNEL_MIN = 40, TUNNEL_RAMP = 14;      // a cutting deeper than this (m) for this long (m) becomes a tunnel; the hill rises over this many metres (steeply: the portal wall stands here)
 const SUB = 4;                                                  // spline samples per node step, used for distance queries
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -25,7 +26,7 @@ export class Road {
     this.t = terrain; this.c = config.road; this.sea = terrain.seaLevel; this.step = this.c.step; this.ds = this.step / SUB;
     this.maxTurn = this.step / this.c.minRadius; this.noise = createNoise(config.seed + ':road');
     this.style = roadStyleById(this.c.style); this.g = this.style.grade;       // widths come from the style
-    this.wc = new Map(); this.bw = new Map();                                    // bridge caches (see bridgeW)
+    this.wc = new Map(); this.bw = new Map(); this.dc = new Map(); this.tc = new Map();      // bridge and tunnel caches (see bridgeW, tunnelW)
     this.cell = 32; this.reach = this.g.blend + 2; this.cells = new Map(); this.hit = { d: 0, s: 0, y: 0 };
     const p = terrain.findSpawn(), h0 = terrain.base(p.x, p.z);
     let best = 0, bestCost = Infinity;                          // first bearing: the gentlest line through the start point
@@ -165,14 +166,14 @@ export class Road {
   grade(x, z, natural) {
     if (!this.nearest(x, z)) return natural;
     const c = this.c, g = this.g, h = this.hit, bed = h.y - c.sink * (1 - sstep(g.flat - 2.5, g.flat, h.d));
-    const gv = bed + (natural - bed) * sstep(g.flat, g.blend, h.d), w = this.bridgeW(h.s);
-    return w ? gv + (natural - gv) * w : gv;                    // on a bridge the land is left alone: the deck carries the road
+    const gv = bed + (natural - bed) * sstep(g.flat, g.blend, h.d), w = this.carriedW(h.s);
+    return w ? gv + (natural - gv) * w : gv;                    // on a bridge or in a tunnel the land is left alone: the deck carries the road
   }
   /* height a vehicle drives on: the graded land, lifted back up to the road surface (the land is cut `sink` below the road so the ribbon sits on top) */
   drive(x, z, natural) {
     if (!this.nearest(x, z)) return natural;
     const c = this.c, g = this.g, h = this.hit, bed = h.y - c.sink * (1 - sstep(g.flat - 2.5, g.flat, h.d));
-    const dv = bed + (natural - bed) * sstep(g.flat, g.blend, h.d) + c.sink * (1 - sstep(g.lift[0], g.lift[1], h.d)), w = this.bridgeW(h.s);
+    const dv = bed + (natural - bed) * sstep(g.flat, g.blend, h.d) + c.sink * (1 - sstep(g.lift[0], g.lift[1], h.d)), w = this.carriedW(h.s);
     if (!w) return dv;
     const out = this.style.outer, deck = h.d <= out ? h.y : h.y + (natural - h.y) * sstep(out, out + 1.5, h.d);        // wheels roll on the deck, and fall off its edge
     return dv + (deck - dv) * w;
@@ -184,6 +185,28 @@ export class Road {
     const s = k * this.ds; if (s < this.sMin + 2 || s > this.sMax - 2) return false;
     const p = this.at(s, this._bp || (this._bp = {})); v = this.t.base(p.x, p.z) < this.sea - 0.4; this.wc.set(k, v); return v;
   }
+  /* tunnels: a cutting deeper than TUNNEL_DEPTH for at least TUNNEL_MIN metres becomes a tunnel. The mountain is left whole over the road
+     (tunnelW is 1 inside, easing to 0 over TUNNEL_RAMP metres outside, so the hill rises over the approach) and the deck carries the road, as on a bridge. */
+  deep(k) {
+    let v = this.dc.get(k); if (v !== undefined) return v;
+    const s = k * this.ds; if (s < this.sMin + 2 || s > this.sMax - 2) return false;
+    const p = this.at(s, this._bp || (this._bp = {})); v = !this.bridgeW(s) && this.t.base(p.x, p.z) - p.y > TUNNEL_DEPTH; this.dc.set(k, v); return v;
+  }
+  tunnel(k) {                                                   // is sample k inside a deep run that is long enough?
+    let v = this.tc.get(k); if (v !== undefined) return v;
+    if (!this.deep(k)) { this.tc.set(k, false); return false; }
+    let a = k, b = k; while (this.deep(a - 1) && k - a < 160) a--; while (this.deep(b + 1) && b - k < 160) b++;
+    v = (b - a + 1) * this.ds >= TUNNEL_MIN; if (a * this.ds > this.sMin + 40 && b * this.ds < this.sMax - 40) this.tc.set(k, v); return v;
+  }
+  tunnelW(s) {                                                  // continuous in s: distance to the nearest tunnel sample, so the hillside has no steps
+    const k = Math.round(s / this.ds), R = Math.ceil(TUNNEL_RAMP / this.ds) + 1; let d = Infinity;
+    for (let j = -R; j <= R; j++) if (this.tunnel(k + j)) d = Math.min(d, Math.abs(s - (k + j) * this.ds));
+    const t = 1 - Math.min(1, d / TUNNEL_RAMP); return t * t * (3 - 2 * t);
+  }
+  /* how much the land over the road is left alone: bridge or tunnel */
+  carriedW(s) { return Math.max(this.bridgeW(s), this.tunnelW(s)); }
+  /* metres of mountain above the road at s when the road is in a tunnel (the tube is drawn where this is enough to cover it) */
+  tunnelRise(s) { const w = this.tunnelW(s); if (!w) return 0; const p = this.at(s, this._bp || (this._bp = {})); return Math.max(0, this.t.base(p.x, p.z) - p.y) * w; }
   bridgeW(s) {
     const k = Math.round(s / this.ds), c = this.bw.get(k); if (c !== undefined) return c;
     let dmin = Infinity; for (let j = -6; j <= 6 && dmin; j++) if (this.wet(k + j)) dmin = Math.min(dmin, Math.abs(j));
