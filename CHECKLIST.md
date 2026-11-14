@@ -64,6 +64,9 @@ Open the browser console (F12): nothing red except known favicon 404s.
 
 ## 6. Speed (when you changed rendering, scenery or textures)
 
+- [ ] **Benchmark** (`&bench=30` on the address, see `PERFORMANCE.md`): run it on `q=low`, `q=med` and `q=high`, on desktop and on each phone; copy the green panel into the team log. Compare with the table in `PERFORMANCE.md`.
+- [ ] **Loading screen** shows while the game starts (what is loading, a bar) and fades away by itself; nothing is left on the screen.
+
 - [ ] In the console: `__next.renderer.info.render` shows calls and triangles; note them (the car alone is about 41 calls and 68,000 triangles). Reference on an M4 at 1400x800: plain about 5 to 7 ms a frame, 460 draw calls, 730k triangles.
 - [ ] The assets folder stayed under 30 MB (script checks this).
 

@@ -39,7 +39,7 @@ Full table with owners and "done when" is in `PARALLEL_PLAN.md`. In order:
 2. **N1 Driving and sound (Stream B).** Cleaner engine recordings at steady revs, tyre and road sounds, rain sound out of tunnels; a physics feel pass with the constants moved into the tuner; new vehicle models and paint, the sports car and rally hatchback, manual gears.
 3. **N2 Sky, weather and vehicles' look (Stream B, with A).** HDRI that follows weather and time, fog and clouds, wet and snow surfaces, headlights; detailed vehicles; a calmer, hazier colour grade like slowroads.
 4. **N3 World polish (Stream A).** Tall-grass look and normal maps on the ground; tree levels of detail; Marine Drive seafront, southern coast landmark, hotel model; bridge rail collision, steel truss bridge and retaining walls from the Atal references; steep-land driving checks; real Rohtang terrain from open height data (research first).
-5. **N4 Phones and speed (both).** Compressed textures and meshes, draw-call budgets, tune the high tier (about 24 ms on an M4 now), loading screen, frame-time budget per tier, acceptance on two real phones.
+5. **N4 Phones and speed (both).** Compressed textures and meshes, draw-call budgets, tune the high tier (9.1 ms on a desktop now, see `PERFORMANCE.md`; phones not measured), loading screen, frame-time budget per tier, acceptance on two real phones.
 6. **N5 Features (Stream B).** Traffic with modes, "My music" station in the radio, controller rumble, vehicle customisation, tuner password and Publish setup.
 7. **N6 Switch-over and launch (both).** `index.html` becomes the new engine, `game.js` retired, final run of the checklist, deploy.
 

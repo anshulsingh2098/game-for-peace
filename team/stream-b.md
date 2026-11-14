@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 01:10  Master Plan N4 (first part): loading screen, `?bench=30`, measured tiers
+Branch: feat/plan-n0-n1 (stacked on PR 22)
+What changed: `next.html` + `src/main.js`: loading screen (what is loading, a bar, fades at the first drawn frame); `?bench=30` autodrives for 30 s and shows a panel with average/95%/99%/worst frame time, draw calls, triangles, geometries, textures, MB downloaded and JS heap (also `BENCH {...}` in the console and `window.__bench`). `PERFORMANCE.md`: how to measure on any device and the numbers for low/med/high on this desktop (5.6 / 5.6 / 9.1 ms average, capped at about 180 fps by the display; 183 / 520 / 878 draw calls; 140k / 428k / 826k triangles; 12.3 MB downloaded). The old "24 ms on high" note is replaced. `CHECKLIST.md` has the benchmark and loading-screen lines.
+For the other stream (Anshul): run `&bench=30` on each phone for low, med and high and paste the panels into this log; that is the plan's N4 gate. Nothing is compressed yet (KTX2/meshopt) because no device has shown a need.
+Status: open
+
 ## 2026-11-16 00:30  Master Plan N2: weather and lighting made to read (weather matrix, fixes)
 Branch: feat/plan-n0-n1 (stacked on PR 22)
 What changed: `src/env/environment.js`: bad weather now lowers the reflected sky light (`scene.environmentIntensity = 1 - 0.55 * dark`) and the sky hemisphere light, darkens wet ground to 66%, and has denser fog (overcast .75, rain .42, storm .28, snow .32); `src/fx/grade.js` + `src/main.js`: the colour grade fades colour and brightness with the weather (rain: saturate 0.77, brightness 0.91). Before this, rain and storm at midday looked almost like clear weather. Captured the matrix on a desktop (California): `VISUAL_MATRIX.md` says what was and was not looked at. White paint: 1.1% of bright pixels clipped, not a blown blob.
