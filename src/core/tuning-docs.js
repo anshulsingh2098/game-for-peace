@@ -29,7 +29,7 @@ export const DOCS = {
   'camera.fovKick': ['Extra field of view, in degrees, that the chase camera springs out to while you boost. It overshoots a little and settles, which gives the "kick" of nitrous.', '0 to 15 (7 default)'],
   'camera.fovAccel': ['Extra field of view in degrees for every m/s2 of hard acceleration, so the view stretches when the car launches or shifts hard.', '0 to 1.5 (0.5 default)'],
   'camera.fovSpeed': ['Field of view added per m/s of speed, capped at 14 degrees in total. More makes high speed feel faster.', '0 to 0.3 (0.16 default)'],
-  'camera.shake': ['Strength of the faint high-speed camera shake (it grows with speed and doubles with boost). 0 turns it off.', '0 to 3 (1 default)'],
+  'camera.shake': ['Strength of the faint high-speed camera shake (it grows with speed and doubles with boost). 0 turns it off.', '0 to 3 (0 default, off)'],
   'camera.shakeFrom': ['Speed in m/s where the camera shake starts to build (28 m/s is about 100 km/h).', '10 to 60'],
   'camera.driftLag': ['How much more slowly the chase camera turns after the car while it slides. Higher lets the car swing across the screen in a drift; 0 keeps the camera glued behind it.', '0 to 4 (1.2 default)'],
   'handling.combined': ['Traction circle: how much of a driven wheel\'s grip that is used for pushing the car forward is taken away from its cornering. High means hard throttle in a low gear lets the tail step out (power oversteer); 0 means power never costs cornering grip.', '0 to 1 (0.6 default)'],
