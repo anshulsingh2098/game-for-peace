@@ -6,7 +6,7 @@ const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', Spa
 
 export class Controls {
   constructor() {
-    this.k = { left: 0, right: 0, up: 0, down: 0 }; this.touch = { left: 0, right: 0, up: 0, down: 0 }; this.handlers = {}; this.prev = []; this.enabled = true;
+    this.k = { left: 0, right: 0, up: 0, down: 0 }; this.touch = { left: 0, right: 0, up: 0, down: 0 }; this.handlers = {}; this.prev = []; this.enabled = true; this.locked = false;
     this.input = { steer: 0, throttle: 0, brake: 0 };
     addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT') return;
@@ -27,6 +27,7 @@ export class Controls {
   }
   /* call once a frame; returns the merged input */
   read() {
+    if (this.locked) { const i = this.input; i.steer = i.throttle = i.brake = 0; return i; }
     const k = this.k, t = this.touch; let steer = (k.right || t.right) - (k.left || t.left), up = k.up || t.up, down = k.down || t.down;
     const gp = (navigator.getGamepads ? [...navigator.getGamepads()] : []).find(g => g && g.connected && g.mapping === 'standard' && g.buttons.length >= 16);
     if (gp) {

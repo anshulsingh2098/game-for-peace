@@ -1,0 +1,41 @@
+/* Live radio stations: real names, public stream addresses and the stations' own logos (loaded from their sites; a coloured badge shows if a logo cannot load).
+   Picked from the open Radio Browser directory (radio-browser.info), most-listened first, and each stream was checked to answer as audio.
+   Region 'India' stations come first. To add one, append a line here. */
+export const STATIONS = [
+  { id: "bollywood-gaane-purane", name: "Bollywood Gaane Purane", region: "India", genre: "Retro Bollywood", url: "https://stream.zeno.fm/6n6ewddtad0uv", icon: "https://mytuner.global.ssl.fastly.net/media/tvos_radios/ppqbgfej6skx.jpeg" },
+  { id: "hindi-gold-radio", name: "Hindi Gold Radio", region: "India", genre: "Retro Bollywood", url: "https://azuracast.vibesounds.in:8010/radio.mp3", icon: "https://onlineradiohub.com/wp-content/uploads/2023/07/hindi-gold-radio.jpg" },
+  { id: "radio-hungama-bollywood-dil-se", name: "Radio Hungama Bollywood Dil Se", region: "India", genre: "Bollywood", url: "https://stream.zeno.fm/143d7gty24zuv", icon: "https://onlineradiohub.com/wp-content/uploads/2023/02/bollywood-dilse.jpg" },
+  { id: "kishore-kumar-radio", name: "Kishore Kumar Radio", region: "India", genre: "Retro Bollywood", url: "https://stream-48.zeno.fm/0ghtfp8ztm0uv", icon: "" },
+  { id: "radio-gaana", name: "Radio Gaana", region: "India", genre: "Bollywood", url: "https://sp14.instainternet.com/8044/stream", icon: "https://radiohotstar.com/logo2.png" },
+  { id: "kannada-hits", name: "Kannada Hits", region: "India", genre: "Kannada", url: "https://stream.zeno.fm/68snnbug8rhvv", icon: "https://radiosindia.com/https://radiosindia.com/images/kannadahits.jpg" },
+  { id: "radio-mirchi-lucknow", name: "Radio Mirchi Lucknow", region: "India", genre: "Hindi hits", url: "https://stream-284.surfernetwork.com/wgaznsmt92quv?zt=eyJhbGciOiJIUzI1NiJ9.eyJzdHJlYW0iOiJ3Z2F6bnNtdDkycXV2IiwiaG9zdCI6InN0cmVhbS0yODQuc3VyZmVybmV0d29yay5jb20iLCJydHRsIjo1LCJqdGkiOiJMTkRwYXZ3OVR1eXhLc2NGbllucG9RIiwiaWF0IjoxNzg0MTkxMjUyLCJleHAiOjE3ODQxOTEzMTJ9.DRVDJc3m4PiAGfCN-9SiCsWcbLpZjtfIxcfUyv68_G4", icon: "" },
+  { id: "radio-indigo-91-9-fm", name: "Radio Indigo 91.9 FM", region: "India", genre: "Pop", url: "https://a5.asurahosting.com:8600/radio.mp3", icon: "" },
+  { id: "kcrw-eclectic-24", name: "KCRW Eclectic 24", region: "USA", genre: "Eclectic", url: "https://streams.kcrw.com/e24_mp3", icon: "https://www.kcrw.com/music/shows/eclectic24/@@images/square_image/listing-square" },
+  { id: "kexp-90-3-seattle", name: "KEXP 90.3 Seattle", region: "USA", genre: "Indie", url: "https://kexp.streamguys1.com/kexp160.aac?listenerid=f4bcb5c771d830fbdd4195088a946ea6&awparams=companionAds%3Atrue", icon: "https://www.kexp.org/static/assets/img/logo-header.svg" },
+  { id: "heart-80s", name: "Heart 80s", region: "UK", genre: "80s", url: "https://media-ssl.musicradio.com/Heart80sMP3", icon: "https://www.heart.co.uk/assets_v4r/heart/img/favicon-196x196.png" },
+  { id: "heart-90s", name: "Heart 90s", region: "UK", genre: "90s", url: "https://media-ssl.musicradio.com/Heart90sMP3", icon: "https://www.heart.co.uk/assets_v4r/heart/img/favicon-196x196.png" },
+  { id: "heart-dance", name: "Heart Dance", region: "UK", genre: "Dance", url: "https://media-ssl.musicradio.com/HeartDanceMP3", icon: "https://www.heart.co.uk/assets_v4r/heart/img/favicon-196x196.png" },
+  { id: "radio-x-classic-rock", name: "Radio X Classic Rock", region: "UK", genre: "Rock", url: "https://media-ice.musicradio.com/RadioXClassicRockMP3", icon: "https://i.imgur.com/eBIsjQw.jpg" },
+  { id: "capital-fm-london", name: "Capital FM London", region: "UK", genre: "Pop", url: "https://media-ssl.musicradio.com/CapitalMP3", icon: "" },
+  { id: "bbc-world-service", name: "BBC World Service", region: "UK", genre: "News", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service", icon: "https://rmp.files.bbci.co.uk/rmp-shared-assets/1.4.0/img/network-logos/national/bbc_world_service_colour.svg" },
+  { id: "fip-metal", name: "FIP Metal", region: "France", genre: "Metal", url: "https://icecast.radiofrance.fr/fipmetal-hifi.aac?id=radiofrance", icon: "https://www.radiofrance.fr/s3/cruiser-production/2022/07/160994f8-296b-4cd8-97a0-34c9111cdd9d/400x400_fip-metal-20222x_2.webp" },
+  { id: "fip-pop", name: "FIP Pop", region: "France", genre: "Pop", url: "https://icecast.radiofrance.fr/fippop-hifi.aac?id=radiofrance", icon: "https://www.fip.fr/dist/favicons/logo-120.png" },
+  { id: "skyrock-klassics", name: "Skyrock Klassics", region: "France", genre: "Hip hop", url: "https://icecast.skyrock.net/s/klassiks_aac_64k?tvr_name=radiofr&tvr_section1=64aac", icon: "https://skyrock.fm/favicon.ico" },
+  { id: "bayern-3", name: "Bayern 3", region: "Germany", genre: "Pop", url: "https://dispatcher.rndfnk.com/br/br3/live/mp3/mid", icon: "https://api.ardmediathek.de/image-service/images/urn:ard:image:52fd25fc45de7c6a?w=512" },
+  { id: "1live", name: "1LIVE", region: "Germany", genre: "Pop", url: "https://wdr-1live-live.icecastssl.wdr.de/wdr/1live/live/mp3/128/stream.mp3", icon: "https://www1.wdr.de/radio/1live/resources/img/favicon/apple-touch-icon.png" },
+  { id: "radio-swiss-jazz", name: "Radio Swiss Jazz", region: "Switzerland", genre: "Jazz", url: "https://stream.srg-ssr.ch/srgssr/rsj/aac/192", icon: "https://www.radioswissjazz.ch/social-media/rsj-web.png" },
+  { id: "radio-swiss-pop", name: "Radio Swiss Pop", region: "Switzerland", genre: "Pop", url: "https://stream.srg-ssr.ch/srgssr/rsp/aac/192", icon: "https://www.radioswisspop.ch/social-media/rsp-web.png" },
+  { id: "rmf-fm", name: "RMF FM", region: "Poland", genre: "Pop", url: "https://rs101-krk-cyfronet.rmfstream.pl/rmf_fm", icon: "" },
+  { id: "los40-classic", name: "LOS40 Classic", region: "Spain", genre: "Pop", url: "https://22543.live.streamtheworld.com/LOS40_CLASSIC.mp3", icon: "https://los40es00.epimg.net/favicon.png" },
+  { id: "big-92-7-fm", name: "BIG 92.7 FM", region: "India", genre: "Bollywood", url: "https://stream.zeno.fm/dbstwo3dvhhtv", icon: "https://bigfmindia.com/wp-content/themes/big-fm/assets/images/favicon.png" },
+  { id: "diverse-fm", name: "Diverse FM", region: "India", genre: "Hindi hits", url: "https://carol.epichosts.co.uk:8570/;", icon: "https://onlineradiohub.com/wp-content/uploads/2023/05/diverse-fm-hindi.jpg" },
+  { id: "radio-udaan", name: "Radio Udaan", region: "India", genre: "Hindi hits", url: "https://stream.radioudaan.com/listen/radio_udaan/radio.mp3", icon: "https://radioudaan.com/sites/default/files/Radioudaan%20small%202_0.png" },
+  { id: "filmy-mirchi", name: "Filmy Mirchi", region: "India", genre: "Hindi hits", url: "https://stream-142.zeno.fm/6n6ewddtad0uv", icon: "https://onlineradiohub.com/wp-content/uploads/2023/05/filmy-mirchi-hindi.jpg" },
+  { id: "free-fm-top-100-india", name: "Free FM Top 100 India", region: "India", genre: "Hindi hits", url: "https://stream.zeno.fm/a5h7vfret68uv", icon: "https://cdn.instant.audio/images/logos/emisora-org-es/free-top-100.png" },
+  { id: "mohammed-rafi-radio", name: "Mohammed Rafi Radio", region: "India", genre: "Retro Bollywood", url: "https://stream.zeno.fm/6yqvumgfxtzuv", icon: "" },
+  { id: "anbu-fm-malayalam", name: "Anbu FM Malayalam", region: "India", genre: "Malayalam", url: "https://stream.zeno.fm/8ca40byv4x8uv", icon: "https://onlineradiohub.com/wp-content/uploads/2023/02/anbu-fm-malayalam.jpg" },
+  { id: "radio-malayalam-98-6", name: "Radio Malayalam 98.6", region: "India", genre: "Malayalam", url: "https://stream.zeno.fm/512rbf1e3qzuv", icon: "https://radiosindia.com/images/986malayalamradio.jpg" },
+  { id: "kalai-fm-tamil", name: "Kalai FM Tamil", region: "India", genre: "Tamil", url: "https://stream.zenolive.com/2vghnwshsqzuv.aac", icon: "" },
+  { id: "kumar-sanu-radio", name: "Kumar Sanu Radio", region: "India", genre: "Retro Bollywood", url: "https://stream-164.zeno.fm/shxt7qxapy8uv", icon: "https://vividhbharati.in/uploads/kumar-sanu-songs.jpg" }
+];
+export const REGIONS = ['India', 'World'];                       // wheel pages; every region other than India is shown under World

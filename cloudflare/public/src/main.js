@@ -20,6 +20,8 @@ import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
 import { Environment } from './env/environment.js';
 import { Sound } from './audio/engine.js';
+import { Radio } from './audio/radio.js';
+import { RadioWheel, logo } from './ui/radiowheel.js';
 import { FlyCam } from './debug/flycam.js';
 import { statsPanel } from './debug/stats.js';
 
@@ -131,7 +133,18 @@ $('#time').value = S.time; $('#weather').value = S.weather;
 $('#time').addEventListener('change', e => { S.time = e.target.value; save(); env.setTime(S.time); e.target.blur(); });
 $('#weather').addEventListener('change', e => { S.weather = e.target.value; save(); env.setWeather(S.weather); e.target.blur(); });
 const cycleLights = () => { const o = ['auto', 'on', 'off']; S.lights = o[(o.indexOf(S.lights) + 1) % 3]; save(); toast('Headlights: ' + S.lights); };
-const toggleMute = () => { S.muted = !S.muted; save(); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } toast(S.muted ? 'Sound off' : 'Sound on'); };
+/* live radio: a stream in its own <audio> element, a wheel to pick the station, and a chip that names what is playing */
+const radio = new Radio(), nowEl = $('#now'); let nowT;
+radio.setVolume(S.radioVol ?? 0.6); radio.setMuted(S.muted);
+const wheel = new RadioWheel(radio, { locked: v => { controls.locked = v; }, onTune: i => {
+  S.station = i >= 0 ? radio.stations[i].id : null; save(); unlockAudio();
+  if (i === -2) { toast('Radio off'); return; }
+  const st = radio.stations[i]; if (!st) return; nowEl.textContent = ''; nowEl.appendChild(logo(st));
+  const t = document.createElement('span'); t.innerHTML = '<b></b><small></small>'; t.firstChild.textContent = st.name; t.lastChild.textContent = st.genre + ' · ' + st.region; nowEl.appendChild(t);
+  nowEl.classList.add('on'); clearTimeout(nowT); nowT = setTimeout(() => nowEl.classList.remove('on'), 4000); } });
+radio.on(s => { if (s.error && s.station) toast(s.station.name + ' is off air'); S.radioVol = s.vol; });
+$('#radioBtn').addEventListener('click', () => wheel.toggle());
+const toggleMute = () => { S.muted = !S.muted; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } toast(S.muted ? 'Sound off' : 'Sound on'); };
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'KeyR') regenerate(randomSeed());
@@ -192,5 +205,5 @@ function step(dt, now) {
 setVehicle(vehicle).then(() => { setMode('drive'); requestAnimationFrame(frame); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); });
 
 window.__next = { get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
-  get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
+  radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
   setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
