@@ -29,6 +29,13 @@ export class Controls {
       el.addEventListener('pointerdown', set(1)); for (const n of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(n, set(0));
     }
   }
+  /* gamepad vibration: feature-detected, silent when there is no pad or the browser cannot vibrate it (see rumble.js for what to play) */
+  rumble(strong, weak, ms = 100) {
+    const now = performance.now(); if (now < (this.rumbleAt || 0)) return;
+    const gp = (navigator.getGamepads ? [...navigator.getGamepads()] : []).find(g => g && g.connected && g.mapping === 'standard'), act = gp && (gp.vibrationActuator || (gp.hapticActuators && gp.hapticActuators[0]));
+    if (!act || !act.playEffect) return; this.rumbleAt = now + ms * 0.8;
+    try { const p = act.playEffect('dual-rumble', { startDelay: 0, duration: ms, weakMagnitude: weak, strongMagnitude: strong }); if (p && p.catch) p.catch(() => {}); } catch (e) { /* not supported for this pad */ }
+  }
   /* call once a frame; returns the merged input */
   read() {
     const i = this.input;

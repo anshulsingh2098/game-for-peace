@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 02:30  Master Plan N5 (part 1): My music, controller rumble, safe saved choices, tuner worker hardening
+Branch: feat/plan-n0-n1 (stacked on PR 22)
+What changed: (1) **My music**: `src/audio/localmusic.js` (pure: which files are kept, clean titles), `src/audio/radio.js` (`addLocal`, `skipTrack`, `clearLocal`, a "My music" station that plays the songs round and round and frees them), `src/ui/radiowheel.js` ("Add my songs" button and file picker, "My music" tab, "Next song"); files stay in the browser, nothing is uploaded; checked live with two generated tones and a text file. (2) **Rumble**: `src/input/rumble.js` (pure rules from telemetry: thump on a hit, buzz on gravel/grass/sand/snow, slide, boost, handbrake) and `Controls.rumble()` (feature-detected), Settings > Controller rumble; checked live with a fake pad. (3) **Saved choices** are validated on load (`src/core/saved.js`): a null `paint` used to crash the garage and a text radio volume used to throw; tested with 19 kinds of rubbish and live with damaged storage. (4) **Worker** (`cloudflare/worker.js`): numbers limited to 10 million, size refused from the declared length before reading, 0.4 s wait on a wrong password, `nosniff`; tests extended (bad JSON, array body, absurd numbers, oversize, slow wrong password, no password set). Self-test 30 checks. `HANDOFF.md` has a "Tuner security" section with what is in place and the one decision left for the owner (hide the page itself or not).
+For the other stream (Anshul): listen to My music and try a gamepad; the Cloudflare KV and `TUNER_PASSWORD` setup is still yours to run.
+Status: open
+
 ## 2026-11-16 01:10  Master Plan N4 (first part): loading screen, `?bench=30`, measured tiers
 Branch: feat/plan-n0-n1 (stacked on PR 22)
 What changed: `next.html` + `src/main.js`: loading screen (what is loading, a bar, fades at the first drawn frame); `?bench=30` autodrives for 30 s and shows a panel with average/95%/99%/worst frame time, draw calls, triangles, geometries, textures, MB downloaded and JS heap (also `BENCH {...}` in the console and `window.__bench`). `PERFORMANCE.md`: how to measure on any device and the numbers for low/med/high on this desktop (5.6 / 5.6 / 9.1 ms average, capped at about 180 fps by the display; 183 / 520 / 878 draw calls; 140k / 428k / 826k triangles; 12.3 MB downloaded). The old "24 ms on high" note is replaced. `CHECKLIST.md` has the benchmark and loading-screen lines.

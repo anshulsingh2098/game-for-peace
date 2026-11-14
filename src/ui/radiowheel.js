@@ -21,8 +21,8 @@ export function logo(st, cls) {
 
 export class RadioWheel {
   /* onTune(i) after a choice (i = station index, -2 for off); locked(bool) tells the game to ignore driving keys while the wheel is open */
-  constructor(radio, { onTune, locked }) {
-    this.radio = radio; this.onTune = onTune || (() => {}); this.setLocked = locked || (() => {});
+  constructor(radio, { onTune, locked, toast }) {
+    this.radio = radio; this.toast = toast || (() => {}); this.onTune = onTune || (() => {}); this.setLocked = locked || (() => {});
     this.open = false; this.page = 0; this.sel = -1; this.items = []; this.heldAt = 0; this.moved = false; this.R = 200;
     const root = this.root = mk('div', 'rw'); root.hidden = true; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Radio');
     this.ring = mk('div', 'rw-ring', root);
@@ -30,9 +30,18 @@ export class RadioWheel {
     this.hubLogo = mk('div', 'rw-hublogo', hub); this.hubName = mk('div', 'rw-name', hub); this.hubSub = mk('div', 'rw-sub', hub);
     this.tabs = mk('div', 'rw-tabs', hub);
     REGIONS.forEach((r, i) => { const b = mk('button', '', this.tabs); b.type = 'button'; b.textContent = r; b.onclick = e => { e.stopPropagation(); this.setPage(i); }; });
+    const mine = this.mineTab = mk('button', '', this.tabs); mine.type = 'button'; mine.textContent = 'My music'; mine.hidden = true; mine.onclick = e => { e.stopPropagation(); this.setPage(2); };      // appears once songs have been added
     const vol = this.vol = mk('input', 'rw-vol', hub); vol.type = 'range'; vol.min = 0; vol.max = 100; vol.value = Math.round(radio.vol * 100); vol.setAttribute('aria-label', 'Radio volume');
     vol.oninput = () => radio.setVolume(vol.value / 100); vol.addEventListener('click', e => e.stopPropagation());
     const off = this.offBtn = mk('button', 'rw-off', hub); off.type = 'button'; off.textContent = 'Radio off'; off.onclick = e => { e.stopPropagation(); this.commit(-2); };
+    const add = this.addBtn = mk('button', 'rw-off', hub); add.type = 'button'; add.textContent = 'Add my songs'; add.title = 'Play songs from this device: they stay on this device and are never uploaded';
+    const pick = mk('input', '', hub); pick.type = 'file'; pick.accept = 'audio/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.flac'; pick.multiple = true; pick.hidden = true;
+    add.onclick = e => { e.stopPropagation(); pick.click(); };
+    pick.onchange = () => {
+      const r = radio.addLocal(pick.files); pick.value = ''; const why = [...new Set(r.skipped.map(s => s.reason))].join(', ');
+      this.toast((r.added ? 'Added ' + r.added + (r.added === 1 ? ' song' : ' songs') : 'No songs added') + (r.skipped.length ? ' · left out ' + r.skipped.length + ' (' + why + ')' : '')); if (r.added) this.setPage(2);
+    };
+    const next = this.nextBtn = mk('button', 'rw-off', hub); next.type = 'button'; next.textContent = 'Next song'; next.hidden = true; next.onclick = e => { e.stopPropagation(); radio.skipTrack(1); };
     document.body.appendChild(root);
     root.addEventListener('pointermove', e => this.point(e));
     root.addEventListener('pointerdown', e => { if (e.target === root || e.target === this.ring) this.close(); });
@@ -41,7 +50,7 @@ export class RadioWheel {
     radio.on(() => this.refresh());
   }
   /* stations on the current page, with their index in the radio's list */
-  list() { return this.radio.stations.map((s, i) => ({ s, i })).filter(x => (x.s.region === 'India') === (this.page === 0)); }
+  list() { const p = this.page; return this.radio.stations.map((s, i) => ({ s, i })).filter(x => p === 0 ? x.s.region === 'India' : p === 2 ? x.s.local : x.s.region !== 'India' && !x.s.local); }
   setPage(p) { this.page = p; this.sel = -1; this.build(); this.layout(); this.refresh(); }
   build() {
     this.ring.textContent = ''; this.items = [];
@@ -71,12 +80,13 @@ export class RadioWheel {
     this.items.forEach((t, k) => { t.b.classList.toggle('sel', k === this.sel); t.b.classList.toggle('now', t.i === st.index); });
     this.hubLogo.textContent = ''; if (shown) this.hubLogo.appendChild(logo(shown, 'big')); else this.hubLogo.textContent = '♪';
     this.hubName.textContent = shown ? shown.name : 'Radio off';
-    this.hubSub.textContent = shown ? shown.genre + ' · ' + shown.region + (cur ? '' : st.error ? ' · off air' : st.loading ? ' · tuning…' : ' · now playing') : 'Hold Q, point, release';
-    this.offBtn.disabled = st.index < 0; this.vol.value = Math.round(st.vol * 100);
+    this.hubSub.textContent = shown ? (shown.local && !cur && st.track ? st.track : shown.genre) + ' · ' + (shown.local ? 'on this device' : shown.region) + (cur ? '' : st.error ? ' · off air' : st.loading ? ' · tuning…' : ' · now playing') : 'Hold Q, point, release';
+    this.offBtn.disabled = st.index < 0; this.vol.value = Math.round(st.vol * 100); this.mineTab.hidden = !this.radio.stations.includes(this.radio.local); this.nextBtn.hidden = !(st.station && st.station.local);
+    if (this.page === 2 && this.mineTab.hidden) { this.page = 1; this.build(); this.layout(); }
   }
   show() {
     if (this.open) return; const st = this.radio.state();
-    this.open = true; this.moved = false; this.page = st.station && st.station.region !== 'India' ? 1 : 0; this.root.hidden = false; this.setLocked(true); this.build(); this.layout();
+    this.open = true; this.moved = false; this.page = st.station && st.station.local ? 2 : st.station && st.station.region !== 'India' ? 1 : 0; this.root.hidden = false; this.setLocked(true); this.build(); this.layout();
     this.sel = st.station ? this.items.findIndex(t => t.i === st.index) : -1; this.refresh();
   }
   close() { if (!this.open) return; this.open = false; this.root.hidden = true; this.heldAt = 0; this.setLocked(false); }
@@ -95,7 +105,7 @@ export class RadioWheel {
     if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowUp') {
       stop(); const d = (k === 'ArrowRight' || k === 'ArrowDown') ? 1 : -1;
       this.sel = this.sel < 0 ? (d > 0 ? 0 : n - 1) : (this.sel + d + n) % n; this.moved = true; this.refresh();
-    } else if (k === 'Tab' || k === 'KeyE') { stop(); this.setPage((this.page + 1) % REGIONS.length); }
+    } else if (k === 'Tab' || k === 'KeyE') { stop(); this.setPage((this.page + 1) % (this.mineTab.hidden ? REGIONS.length : REGIONS.length + 1)); }
     else if (k === 'Enter' || k === 'Space') { stop(); if (this.sel >= 0) this.commit(this.items[this.sel].i); else this.close(); }
     else if (k === 'Escape') { stop(); this.close(); }
     else if (k === 'KeyX' || k === 'Backspace') { stop(); this.commit(-2); }

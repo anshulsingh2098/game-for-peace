@@ -55,10 +55,19 @@ Full table with owners and "done when" is in `PARALLEL_PLAN.md`. In order:
 8. **Rapier prints a warning** in the self-test ("using deprecated parameters for the initialization function"); check the right API before changing it.
 9. Handbrake drift at 100 km/h gives about 15 to 20 degrees of slide; whether that feels right is unknown.
 10. **Not done yet from the plan:** weather-aware sky and lighting (N2), tall grass and ground normal maps, tree levels of detail, steel truss bridge and retaining walls, southern coast landmark, better hotel model (N3); loading screen, compressed textures and meshes, phone budgets (N4); traffic, "My music", controller rumble, tuner password (N5); switch of `index.html` (N6).
+- **My music** keeps the songs in memory only: after a reload they must be added again (storing the file handles in the browser is possible later; nothing is ever uploaded).
 - The Poly Haven hero trees (958 MB, 487 MB) are unusable in a browser: do not download them.
 - Blender scripts in `tools/blender/` that were run from a scratch folder need their paths adjusted before reuse (the new `make_car_concept.py` takes its paths as arguments).
 - Line endings are mixed LF and CRLF: make surgical edits and check `git diff --stat`. `git diff --check` flags CRLF files as trailing whitespace; that is a false alarm.
 - Worlds from earlier handoffs look different (sea, bend radius, bridges and tunnels changed the roads).
+
+## Tuner security (N5): what is in place and what is still a decision
+
+In place (tested in the self-test): the page `tuner.html` is `noindex`; reading `/api/settings` is open (the game reads it at start); publishing and history need the password (`TUNER_PASSWORD`, a Cloudflare secret, never in the repo) and compare it in constant time; a wrong password waits 0.4 s before the answer; bodies over 64 KB are refused (also from the declared size, before reading); only paths of letters, digits, dots, underscores and dashes with a plain number (up to 10 million) or a `#rrggbb` colour are accepted; at most 2000 settings; 15 versions of history; no KV or no password gives a clear 503 and the rest of the site is untouched.
+
+**Still a decision for the owner (not made by the code):** whether the tuner page itself should be hidden behind a login. Today anyone who finds `/tuner.html` can open it and change the settings in their own browser, but cannot publish without the password. Making the page private needs Cloudflare Access (or a second password screen) set up by the account owner. A simple, safe default: leave the page unlinked and `noindex`, keep the publish password strong, and decide later if more people join.
+
+Open: the one-time Cloudflare setup (KV namespace and secret) is still pending, so Publish does not work live yet.
 
 ## How to test engine work
 

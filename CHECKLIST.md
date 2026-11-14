@@ -43,7 +43,10 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] **Green Valley** looks like open meadow with tall grass and trees set back from the road, not a forest at the verge.
 - [ ] **Quality tiers**: add `&q=low`, `&q=med`, `&q=high`. Low: old cheap ground, fewer tree variants, no shadows; med: lighter photographic ground; high: full ground, bigger shadows and view. Each looks acceptable and none shows broken ground. Phones start on low. (Draw calls and triangles for the Alps at 1400x800: low 176 / 96k, med 523 / 430k, high 898 / 895k. High took about 24 ms on an M4: too slow, still to be tuned.)
 - [ ] **Vehicles**: car, truck and bike each drive; paint colours work; white paint does not glare to a white blob.
-- [ ] **Radio and sound**: radio wheel (hold Q) plays a station; engine, wind and rain sounds; (known: rain plays inside tunnels).
+- [ ] **Radio and sound**: radio wheel (hold Q) plays a station; engine, wind and rain sounds; no rain, snow or thunder sound or picture inside a tunnel (try the Himalayas, seed `hill`, rain).
+- [ ] **My music**: in the radio wheel press "Add my songs" and pick a few audio files (also try a text file and a very large file: they are left out with a message). A "My music" tab appears, the songs play one after another and loop, "Next song" skips, "Radio off" stops. After a reload the songs are gone (they are never uploaded or stored); check that nothing was sent over the network (browser network panel).
+- [ ] **Controller rumble** (a gamepad that can vibrate): a thump on hitting something, a light buzz on gravel or grass, a rumble in a slide, a push on boost; Settings > Controller rumble > Off stops it. Playing with no gamepad works exactly as before.
+- [ ] **Saved choices**: in the browser console `localStorage.setItem('gfp-next', '{"paint":null,"radioVol":"loud","vehicle":"x"}')` then reload: the game starts normally with defaults and no red errors.
 
 ## 4. Tuner (`http://localhost:8765/tuner.html`)
 
@@ -51,6 +54,7 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] A vehicle mass change rebuilds the car; a world setting regenerates the map.
 - [ ] "i" button shows text and a range for any setting you try. Reset all, Export, Import work. **Each section header has a "Reset section" button** that shows only while something in it has changed, and resets only that section. New groups: handling, camera, look.
 - [ ] Publish: only after the Cloudflare setup (see `HANDOFF.md`): wrong password is refused, right password publishes, Load live and History work.
+- [ ] Worker checks (after the Cloudflare setup): a wrong password is refused after a short wait (about 0.4 s) every time; a body over 64 KB is refused; a number over 10 million is refused; `/api/settings` without the password cannot publish; with no KV or no password the API answers 503 and the rest of the site still loads.
 
 ## 5. Phone (do this at least weekly, and before any deploy)
 

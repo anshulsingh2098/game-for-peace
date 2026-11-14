@@ -8,6 +8,8 @@ import { createTerrain } from '../src/world/terrain.js';
 import { fillTile, tileIndex, vertexCount, skirtDepth } from '../src/world/tiledata.js';
 import { Road } from '../src/world/router.js';
 import { createRails, RAIL_R } from '../src/world/bridge_rails.js';
+import { rumbleFor } from '../src/input/rumble.js';
+import { sanitiseSaved } from '../src/core/saved.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier, ARCADE } from '../src/vehicle/rapier-vehicle.js';
@@ -260,7 +262,7 @@ test('tuning: settings are found by path, applied, replaced as a whole and reset
 });
 
 await atest('worker: anyone reads the published settings; only the password publishes; bad data is refused; history keeps versions', async () => {
-  const kv = new Map(), env = { SETTINGS: { get: async (k, t) => kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null, put: async (k, v) => { kv.set(k, v); } }, TUNER_PASSWORD: 'pw', ASSETS: { fetch: async () => new Response('static') } };
+  const kv = new Map(), env = { SETTINGS: { get: async (k, t) => kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null, put: async (k, v) => { kv.set(k, v); } }, TUNER_PASSWORD: 'pw', AUTH_DELAY_MS: 0, ASSETS: { fetch: async () => new Response('static') } };
   const call = (path, method = 'GET', body, pw) => worker.fetch(new Request('https://x.test' + path, { method, body: body && JSON.stringify(body), headers: pw ? { authorization: 'Bearer ' + pw } : {} }), env);
   assert.equal((await call('/api/settings')).status, 200); assert.deepEqual((await (await call('/api/settings')).json()).overrides, {});
   assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 1 } })).status, 401); assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 1 } }, 'nope')).status, 401);
@@ -269,11 +271,53 @@ await atest('worker: anyone reads the published settings; only the password publ
   assert.equal((await (await call('/api/settings')).json()).overrides['vehicles.car.body.mass'], 2000);
   await call('/api/settings', 'PUT', { overrides: { 'a.b': 2 }, note: 'second' }, 'pw');
   assert.equal((await call('/api/history')).status, 401); const h = (await (await call('/api/history', 'GET', null, 'pw')).json()).history; assert.equal(h.length, 2); assert.equal(h[0].note, 'second');
+  const raw = (body, headers) => worker.fetch(new Request('https://x.test/api/settings', { method: 'PUT', body, headers: { authorization: 'Bearer pw', ...headers } }), env);
+  assert.equal((await raw('{not json')).status, 400); assert.equal((await raw('[1,2]')).status, 400); assert.equal((await raw(JSON.stringify({ overrides: { 'a.b': 1e12 } }))).status, 400, 'absurd number refused'); assert.equal((await raw(JSON.stringify({ overrides: { 'a.b': -1e12 } }))).status, 400);
+  assert.equal((await raw(JSON.stringify({ overrides: { 'a.b': 1e6 } }))).status, 200, 'a big but sane number is fine');
+  assert.equal((await raw('x'.repeat(70000))).status, 413, 'a body over 64 KB is refused'); assert.equal((await raw('{}', { 'content-length': '999999' })).status, 413, 'refused from the declared size, before reading');
+  assert.equal((await call('/api/settings')).headers.get('x-content-type-options'), 'nosniff');
+  const t0 = Date.now(); const slow = await worker.fetch(new Request('https://x.test/api/settings', { method: 'PUT', body: '{}', headers: { authorization: 'Bearer nope' } }), { ...env, AUTH_DELAY_MS: 250 }); assert.equal(slow.status, 401); assert.ok(Date.now() - t0 >= 240, 'a wrong password waits before it answers');
+  assert.equal((await worker.fetch(new Request('https://x.test/api/settings', { method: 'PUT', body: '{}', headers: { authorization: 'Bearer pw' } }), { ...env, TUNER_PASSWORD: undefined })).status, 503, 'no password set up: the API says so');
   assert.equal(await (await call('/index.html')).text(), 'static');
   const bare = { ASSETS: env.ASSETS }; assert.equal((await worker.fetch(new Request('https://x.test/api/settings'), bare)).status, 503);        // not set up: API says so, nothing else breaks
   assert.equal((await worker.fetch(new Request('https://x.test/next.html'), bare)).status, 200);
 });
 
+test('rumble: quiet on smooth road, thumps on a hit, buzzes on loose ground, and the level and the off switch work', () => {
+  const calm = { speed: 30, surface: 'asphalt', slip: 0.02, impact: 0, buff: false, throttle: 0.5, hand: 0 };
+  assert.equal(rumbleFor(calm, 1), null); assert.equal(rumbleFor({ ...calm, impact: 9 }, 0), null, 'off means off'); assert.equal(rumbleFor(null, 1), null);
+  const hit = rumbleFor({ ...calm, impact: 10 }, 1); assert.ok(hit.strong > 0.7 && hit.ms >= 150, 'a hard hit is a heavy thump');
+  assert.ok(rumbleFor({ ...calm, impact: 4 }, 1).strong < hit.strong, 'a softer hit is a softer thump');
+  const grass = rumbleFor({ ...calm, surface: 'grass' }, 1); assert.ok(grass.weak > 0.05 && grass.strong === 0, 'grass is a light buzz');
+  assert.equal(rumbleFor({ ...calm, surface: 'grass', speed: 1 }, 1), null, 'no buzz when almost stopped');
+  const slide = rumbleFor({ ...calm, slip: 0.5 }, 1); assert.ok(slide.weak >= 0.4, 'a slide is felt');
+  const half = rumbleFor({ ...calm, impact: 10 }, 0.5); assert.ok(Math.abs(half.strong - hit.strong / 2) < 1e-9, 'level scales the strength');
+  for (const t of [hit, grass, slide]) assert.ok(t.strong >= 0 && t.strong <= 1 && t.weak >= 0 && t.weak <= 1, 'magnitudes stay in 0..1');
+});
+test('saved choices: rubbish in storage never gets into the game (null, text, wrong types, bad colours, unknown ids)', () => {
+  const ctx = { vehicles: 3, vehicleIds: ['car', 'truck', 'bike'], locations: ['default', 'alps'] };
+  for (const bad of [null, undefined, 'text', 42, [1, 2], true, { paint: null }, { paint: 'x' }, { paint: [] }, { radioVol: 'loud' }, { radioVol: NaN }, { vehicle: 'x' }, { vehicle: -1 }, { vehicle: 99 }, { vehicle: 1.5 }, { time: 'midnight' }, { weather: {} }, { lights: 7 }, { muted: 'yes' }]) {
+    const s = sanitiseSaved(bad, ctx); assert.equal(typeof s.paint, 'object'); assert.ok(s.paint && !Array.isArray(s.paint), 'paint is always an object');
+    for (const k of ['radioVol', 'vehicle', 'time', 'weather', 'lights', 'muted']) assert.ok(!(k in s), k + ' dropped for ' + JSON.stringify(bad));
+  }
+  const good = sanitiseSaved({ time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 3, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C', truck: 'red', ghost: '#ffffff', bike: '#12' }, extra: 'ignored' }, ctx);
+  assert.deepEqual(good, { time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 1, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C' } });
+  assert.equal(sanitiseSaved({ location: 'atlantis' }, ctx).location, undefined);
+});
+await atest('my music: only audio files within limits are kept, songs play in turn and are freed again (nothing leaves the device)', async () => {
+  const fake = new Map(); class FakeAudio { constructor() { this.attrs = {}; this.ev = {}; this.volume = 1; this.paused = true; } addEventListener(n, f) { this.ev[n] = f; } set src(v) { this.attrs.src = v; } get src() { return this.attrs.src; } getAttribute(k) { return this.attrs[k] || null; } removeAttribute(k) { delete this.attrs[k]; } load() {} pause() { this.paused = true; } play() { this.paused = false; return Promise.resolve(); } error = null; }
+  globalThis.Audio = FakeAudio; const { Radio } = await import('../src/audio/radio.js'); const { classify, cleanName, MAX_BYTES, MAX_TRACKS } = await import('../src/audio/localmusic.js');
+  assert.equal(cleanName('03 - Night Drive (Official Video).mp3'), 'Night Drive'); assert.equal(cleanName('my_song.flac'), 'my song');
+  const c = classify([{ name: 'a.mp3', type: 'audio/mpeg', size: 10 }, { name: 'b.txt', type: 'text/plain', size: 10 }, { name: 'c.wav', type: '', size: 10 }, { name: 'huge.mp3', type: 'audio/mpeg', size: MAX_BYTES + 1 }, { name: 'e.mp3', type: 'audio/mpeg', size: 0 }], 0);
+  assert.deepEqual(c.ok.map(f => f.name), ['a.mp3', 'c.wav']); assert.deepEqual(c.skipped.map(f => f.reason), ['not an audio file', 'too big (over 80 MB)', 'empty file']);
+  assert.equal(classify([{ name: 'x.mp3', type: 'audio/mpeg', size: 5 }], MAX_TRACKS).skipped.length, 1);
+  const r = new Radio(), before = r.stations.length, revoked = [], realRevoke = URL.revokeObjectURL; URL.revokeObjectURL = u => { revoked.push(u); realRevoke.call(URL, u); };
+  const res = r.addLocal([new File(['aaa'], '01 One.mp3', { type: 'audio/mpeg' }), new File(['bbb'], 'Two.ogg', { type: 'audio/ogg' }), new File(['x'], 'notes.txt', { type: 'text/plain' })]);
+  assert.equal(res.added, 2); assert.equal(res.skipped.length, 1); assert.equal(r.stations.length, before + 1); assert.equal(r.stations[before].name, 'My music'); assert.equal(r.stations[before].genre, '2 songs');
+  r.tune(before); assert.equal(r.state().track, 'One'); const first = r.audio.src; r.audio.ev.ended(); assert.equal(r.state().track, 'Two'); assert.notEqual(r.audio.src, first); r.audio.ev.ended(); assert.equal(r.state().track, 'One');    // round and round
+  r.skipTrack(-1); assert.equal(r.state().track, 'Two');
+  r.clearLocal(); assert.equal(r.stations.length, before); assert.equal(r.index, -1); assert.equal(revoked.length, 2); URL.revokeObjectURL = realRevoke; delete globalThis.Audio;
+});
 test('tuner help: every vehicle, surface and world setting has an explanation and a range', () => {
   tuning.registerRoot('vehicles', VEHICLES); tuning.registerRoot('surfaces', SURFACES); tuning.registerRoot('world', DEFAULT_CONFIG); tuning.registerRoot('handling', ARCADE); tuning.registerRoot('camera', CAMFX); tuning.registerRoot('look', LOOK);
   const missing = tuning.describe().filter(f => !explain(f.path)).map(f => f.path);
