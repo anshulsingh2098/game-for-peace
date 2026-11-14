@@ -11,6 +11,7 @@ import { createRails, RAIL_R } from '../src/world/bridge_rails.js';
 import { rumbleFor } from '../src/input/rumble.js';
 import { sanitiseSaved } from '../src/core/saved.js';
 import { TrafficSim, MODES, SLOT } from '../src/traffic/sim.js';
+import { Autodrive } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier, ARCADE } from '../src/vehicle/rapier-vehicle.js';
@@ -342,6 +343,24 @@ await atest('traffic: a traffic car is solid: the player hits it and does not pa
     const i = VEHICLES.findIndex(v => v.id === id), V = VEHICLES[i], p = vehicleParams(V.body, V.stats), ph = new RapierVehicle(p, V.id, flat({ near: (x, z, rr) => sim.circles(x, z, rr) }));
     let hit = false, worst = 0, maxX = -1e9; for (let k = 0; k < 60 * 14; k++) { ph.step(1 / 60, { steer: 0, throttle: ph.kmh < (id === 'car' ? 100 : 60) ? 1 : 0.3, brake: 0 }); if (ph.impact > 2) hit = true; maxX = Math.max(maxX, ph.x); assert.ok(Number.isFinite(ph.x + ph.z + ph.u), id + ' physics blew up at the traffic car'); }
     assert.ok(hit, id + ' felt the traffic car'); assert.ok(maxX < 90 - 1.5, id + ' went through the traffic car (reached x = ' + maxX.toFixed(1) + ')'); ph.free();
+  }
+});
+await atest('autodrive among traffic: it keeps to its lane, follows slower cars at a gap and never hits one over a long run', () => {
+  for (const [seed, mode, drive] of [['peace', 'busy', 'right'], ['coast', 'busy', 'left']]) {
+    const { t, r } = world(seed), sim = new TrafficSim(r, { seed: 'ad' + seed, mode, drive }), V = VEHICLES[0], p = vehicleParams(V.body, V.stats);
+    const ph = new RapierVehicle(p, V.id, { height: (x, z) => t.drive(x, z), surface: (x, z) => t.surface(x, z), near: (x, z, rr) => sim.circles(x, z, rr), seaLevel: t.seaLevel });
+    const q = r.at(40, {}), dir = 1; ph.reset(q.x - q.tz * sim.lateral(dir, 0) * -1, q.z + q.tx * sim.lateral(dir, 0), q.th);                  // in the lane the traffic uses for this direction
+    const ad = new Autodrive(); ad.lane = d => sim.lateral(d, 0); ad.leader = (pp, s) => sim.leaderAhead({ x: pp.x, z: pp.z, s, yaw: pp.yaw, u: pp.u }); ad.toggle(true); ad.s = 40;
+    let s = 40, hits = 0, off = 0, closest = 1e9, follow = 0, slowest = 99, truck = null; const lat = {};      // a slow truck is put 150 m ahead in the lane, so there is always something to follow
+    for (let k = 0; k < 60 * 90; k++) {
+      const inp = ad.update(ph, r); ph.step(1 / 60, { steer: inp.steer, throttle: inp.throttle, brake: inp.brake, hand: 0, rev: 0 }); s = ad.s;
+      sim.update(1 / 60, { x: ph.x, z: ph.z, s, u: ph.u, yaw: ph.yaw }); if (ph.impact > 1) hits++;
+      if (k === 0) { truck = { id: 9999, s: s + 150, dir: 1, lane: 0, kind: 'truck', len: 8.5, w: 2.5, v0: 7, speed: 7, colour: 0, lat: sim.lateral(1, 0), stuck: 0, bump: 0, born: 0, bornDist: 150, x: 0, z: 0, y: 0, yaw: 0, brake: 0 }; sim.place(truck); sim.cars.push(truck); }
+      r.at(s, lat); const pl = (ph.x - lat.x) * -lat.tz + (ph.z - lat.z) * lat.tx; if (Math.abs(pl - sim.lateral(dir, 0)) > 1.6) off++;
+      const L = sim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, 30); if (L) { closest = Math.min(closest, L.gap); follow++; if (L.gap < 20) slowest = Math.min(slowest, ph.u); }
+    }
+    assert.ok(follow > 60, seed + ': it met the slow truck (' + (follow / 60).toFixed(1) + ' s)'); assert.ok(slowest < 12, seed + ': it slowed down behind the truck (slowest ' + slowest.toFixed(1) + ' m/s)'); assert.equal(hits, 0, seed + ': the autodrive hit a traffic car ' + hits + ' times'); assert.ok(s - 40 > 500, seed + ': it made progress (' + (s - 40).toFixed(0) + ' m)');
+    console.log('     autodrive+traffic', seed, drive, 'progress', (s - 40).toFixed(0), 'm, met traffic for', (follow / 60).toFixed(1), 's, closest', closest > 1e8 ? 'none' : closest.toFixed(1) + ' m, off lane', (off / 60).toFixed(1), 's'); assert.ok(off < 60 * 90 * 0.04, seed + ': it kept its lane (off the lane for ' + (off / 60).toFixed(1) + ' s)'); assert.ok(closest > 1.5, seed + ': it kept a gap behind cars (closest ' + closest.toFixed(1) + ' m)'); ph.free();
   }
 });
 await atest('my music: only audio files within limits are kept, songs play in turn and are freed again (nothing leaves the device)', async () => {

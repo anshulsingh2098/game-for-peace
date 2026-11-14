@@ -172,6 +172,7 @@ applyView(); $('#seed').value = config.seed;
 $('#seedForm').addEventListener('submit', e => { e.preventDefault(); regenerate($('#seed').value.trim() || 'peace'); $('#seed').blur(); });
 $('#newSeed').addEventListener('click', () => regenerate(randomSeed()));
 $$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { setVehicle(i); b.blur(); }));
+autodrive.lane = dir => traffic ? traffic.sim.lateral(dir, 0) : 0; autodrive.leader = (ph, s) => traffic && traffic.mode !== 'off' ? traffic.sim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }) : null;       // autodrive keeps to a lane and follows traffic
 function setAuto(on) { if (on && (mode !== 'drive' || !phys)) return; autodrive.s = roadS; autodrive.toggle(on); $('#autoBtn').classList.toggle('on', on); if (touchUI) touchUI.setAuto(on); toast(on ? 'Autodrive on: steer or brake to take over' : 'Autodrive off'); }
 /* camera views, cycled with V like the old GTA games; C jumps to the driver's seat and back */
 const CAMS = ['middle', 'far', 'close', 'hood', 'bumper', 'cockpit', 'cinematic'], CAM_NAMES = { middle: 'Chase', far: 'Far chase', close: 'Close chase', hood: 'Hood', bumper: 'Bumper', cockpit: 'Driver seat', cinematic: 'Cinematic' };

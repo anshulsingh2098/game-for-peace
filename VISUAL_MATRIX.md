@@ -16,3 +16,20 @@ Checked on 15 November 2026 on a desktop (1280 x 720, California coast, seed `pe
 **White paint** (`Paint_Body` set to white, clear midday sun): only 1.1% of the bright pixels on the car are fully clipped; the body shows its shape. The "white paint glares to a white blob" defect is not reproduced after the lighting and clearcoat changes. Check it on a phone screen.
 
 **Not yet covered:** dawn in any weather, overcast/fog/storm at dusk and night, tunnel and bridge interiors at night and in rain, every location (only California was captured), the low and high tiers. Tunnel precipitation and sound are tested separately (`HANDOFF.md`, tunnel signal).
+
+## Location smoke test (Master Plan N3 gate, 16 November 2026)
+
+Each location was regenerated on seed `peace` (medium tier, desktop), the car placed on the road, and the autodrive left on for 12 seconds with traffic Light. A smoke test only: about 210 m of road each, not a full drive.
+
+| Location | Autodrive stayed on | End speed | Surface | Traffic keeps | Cars | Landmarks | Errors |
+|---|---|---|---|---|---|---|---|
+| Green Valley | yes | 69 km/h | asphalt | right | 6 | none | 0 |
+| The Alps | yes | 69 km/h | asphalt | right | 6 | none | 0 |
+| The Himalayas | yes | 75 km/h | asphalt | right | 6 | none | 0 |
+| California Coast | yes | 69 km/h | asphalt | right | 5 | none | 0 |
+| Southern Coast | yes | 69 km/h | asphalt | right | 6 | none | 0 |
+| Mumbai | yes | 70 km/h | asphalt | left | 6 | Marine Drive, Gateway of India, Taj Hotel | 0 |
+| Delhi | yes | 70 km/h | asphalt | left | 6 | India Gate | 0 |
+| Agra | yes | 70 km/h | asphalt | left | 6 | Taj Mahal | 0 |
+
+This test found a real conflict between two features: the autodrive followed the road's centre line and had no idea traffic existed, so it drove into the back of slower cars and stopped. It now keeps to a lane and follows the car in front at a safe gap (`Autodrive.lane`, `Autodrive.leader`, tested headless with a slow truck for 90 s on both driving sides: no hits, lane kept, gap 14 to 16 m).

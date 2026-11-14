@@ -83,6 +83,16 @@ export class TrafficSim {
     }
   }
 
+  /* the car in front of the player in the player's own lane, if any within `range` m: { gap (m between the bumpers), speed (its speed along the player's direction, m/s) } or null.
+     A car coming the other way in the player's lane counts as a stopped obstacle. player: { x, z, s, yaw, u }. Used by the autodrive to follow traffic. */
+  leaderAhead(player, range = 90) {
+    const R = this.road, p = R.at(player.s, this._p), dirP = Math.cos((player.yaw || 0) - p.th) >= 0 ? 1 : -1, plat = (player.x - p.x) * -p.tz + (player.z - p.z) * p.tx; let best = null;
+    for (const c of this.cars) {
+      const along = (c.s - player.s) * dirP - c.len / 2 - 2.3; if (along < -1 || along > range || Math.abs(c.lat - plat) > 2.4) continue;
+      if (!best || along < best.gap) best = { gap: Math.max(0, along), speed: c.dir === dirP ? c.speed : 0 };
+    }
+    return best;
+  }
   /* obstacle circles for the player's physics: three per car along its length (the contract of world.near) */
   circles(x, z, r) {
     const out = this._out || (this._out = []), list = this._list || (this._list = [out]); out.length = 0;
