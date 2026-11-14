@@ -11,9 +11,10 @@ const OPTIONS = {
   quality: [['low', 'Low'], ['med', 'Medium'], ['high', 'High']],
   shadows: [['on', 'On'], ['off', 'Off']],
   lights: [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']],
-  sound: [['on', 'On'], ['off', 'Off']]
+  sound: [['on', 'On'], ['off', 'Off']],
+  manual: [['auto', 'Automatic'], ['manual', 'Manual']]
 };
-const KEYS = [['W A S D / arrows', 'Drive'], ['Space', 'Use your vehicle\'s boost'], ['C', 'Chase or driver camera'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
+const KEYS = [['W A S D / arrows', 'Drive'], ['Space', 'Use your vehicle\'s boost'], ['E / Z', 'Shift up / down with a manual gearbox; N switches gearbox'], ['C', 'Chase or driver camera'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
 
 export class Menu {
   constructor(api) {
@@ -79,6 +80,7 @@ export class Menu {
     const s = api.state();
     seg('Time of day', 'time', s.time); seg('Weather', 'weather', s.weather); seg('Headlights', 'lights', s.lights);
     seg('Graphics quality', 'quality', s.quality, 'Changing this reloads the world.'); seg('Shadows', 'shadows', s.shadows ? 'on' : 'off', 'Changing this reloads the world.');
+    seg('Gearbox', 'manual', s.manual ? 'manual' : 'auto', 'Manual: shift with E and Z (or gamepad bumpers, or the on-screen buttons). The bike is electric and has one gear.');
     seg('Engine and weather sounds', 'sfx', s.muted ? 'off' : 'on');
     const g = mk('div', 'm-group', p); mk('h3', '', g, 'Radio volume'); const v = mk('input', 'm-range', g); v.type = 'range'; v.min = 0; v.max = 100; v.value = Math.round(s.radioVol * 100); v.oninput = () => api.set('radioVol', v.value / 100);
     const rb = mk('div', 'm-row', g); btn(rb, 'Open radio', () => api.radio());

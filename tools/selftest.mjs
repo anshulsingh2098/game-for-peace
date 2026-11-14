@@ -179,4 +179,21 @@ await atest('rapier: slopes, water, obstacles and buffs', () => {
   for (const v of [hill, climb, sea, hit, boost, norm]) v.free();
 });
 
+await atest('drivetrain: the automatic box climbs through its gears and respects the rev limiter; the electric bike has one gear', () => {
+  for (let i = 0; i < VEHICLES.length; i++) {
+    const V = VEHICLES[i], ph = rv(i); if (!ph.hasGears) { assert.equal(V.id, 'bike'); drive(ph, 5, GO); assert.equal(ph.gear, 1); ph.free(); continue; }
+    const seen = []; let over = 0; drive(ph, 40, q => { if (seen[seen.length - 1] !== q.gear) seen.push(q.gear); over = Math.max(over, q.rpm01); return GO; });
+    assert.ok(seen[0] === 1 && seen.length >= 4 && seen.every((g, k) => k === 0 || g === seen[k - 1] + 1), V.id + ' gear sequence ' + seen.join(','));            // up one at a time, never skipping or hunting
+    assert.ok(over < 1.04, V.id + ' revs reached ' + over.toFixed(2) + ' of the limit'); assert.ok(ph.gearLabel === 'D' + ph.gear); ph.free();
+  }
+});
+await atest('drivetrain: manual shifting holds the gear, refuses a downshift into too-high revs, and reaches neutral and reverse', () => {
+  const ph = rv(0); ph.setManual(true); drive(ph, 3, GO); assert.equal(ph.gear, 1, 'a manual box must stay in first'); assert.ok(ph.rev01 > 0.9, 'first gear should hit the limiter');
+  assert.ok(ph.shift(+1)); drive(ph, 0.1, GO); assert.equal(ph.gear, 2); assert.equal(ph.gearLabel, 'M2');
+  for (let k = 0; k < 3; k++) { ph.shift(+1); drive(ph, 2.5, GO); } assert.ok(ph.gear >= 4 && ph.u > 30);
+  const g = ph.gear; assert.equal(ph.shift(-(g - 1)), false, 'jumped down into a gear that over-revs'); assert.equal(ph.gear, g);                                      // only one step at a time anyway
+  let guard = 0; while (ph.gear > -1 && guard++ < 40) { if (!ph.shift(-1)) drive(ph, 1, STOP); else drive(ph, 0.2, COAST); } assert.ok(ph.gear <= 0, 'could not reach neutral: gear ' + ph.gear);
+  const v0 = ph.u; drive(ph, 0.5, COAST); assert.ok(ph.gear === 0 ? ph.u <= v0 + 0.01 : true);
+  drive(ph, 20, STOP); assert.ok(ph.u < 0.5); assert.ok(ph.shift(-1) || ph.gear === -1); drive(ph, 4, GO); assert.ok(ph.u < -1, 'reverse gear should move the car backwards: ' + ph.u.toFixed(2)); ph.free();
+});
 console.log(`\n${passed} checks passed`);

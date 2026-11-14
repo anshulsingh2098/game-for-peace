@@ -98,7 +98,7 @@ async function setVehicle(i) {
   const def = VEHICLES[i], model = await loadModel(def), old = phys; vehicle = i; await rapierReady;
   const par = vehicleParams(def.body, def.stats);
   if (old && old.free) old.free();
-  phys = rapier ? new RapierVehicle(par, def.id, world) : new VehiclePhysics(par, world);                       // Rapier ray-cast vehicle; the old bicycle model remains as a fallback (?phys=old)
+  phys = rapier ? new RapierVehicle(par, def.id, world) : new VehiclePhysics(par, world); if (phys.setManual) phys.setManual(!!S.manual);                       // Rapier ray-cast vehicle; the old bicycle model remains as a fallback (?phys=old)
   if (old) { phys.reset(old.x, old.z, old.yaw); } else placeOnRoad(0);
   buffT = 0; buffCd = 0; $('#buff').firstChild.textContent = def.buff.label; $('#buff').title = def.buff.name + ': ' + def.buff.desc + ' (Space)';
   if (S.paint[def.id] && S.paint[def.id] !== def.paint.colors[0]) await applyPaint(def, model, S.paint[def.id]);
@@ -143,6 +143,11 @@ $$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { set
 const toggleView = () => { view.setView(view.view === 'first' ? 'third' : 'first'); toast(view.view === 'first' ? 'Driver view' : 'Chase view'); };
 $('#viewBtn').addEventListener('click', toggleView); $('#reset').addEventListener('click', backToRoad);
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
+/* gearbox: automatic or manual, and shifting (E up, Z down, N switches; gamepad bumpers; on-screen buttons) */
+const setManual = on => { S.manual = !!on; save(); if (phys && phys.setManual) phys.setManual(S.manual); document.body.classList.toggle('manual', S.manual); toast(S.manual ? 'Manual gearbox: E up, Z down' : 'Automatic gearbox'); };
+const shiftGear = d => { if (frozen() || mode !== 'drive' || !phys || !phys.shift || !S.manual) return; if (!phys.shift(d) && d < 0 && phys.u > 2) toast('Too fast for that gear'); };
+document.body.classList.toggle('manual', !!S.manual); controls.bindShift($('#gUp'), $('#gDn'));
+controls.on('shiftUp', () => shiftGear(+1)); controls.on('shiftDown', () => shiftGear(-1)); controls.on('gearbox', () => { if (!frozen() && mode === 'drive') setManual(!S.manual); });
 controls.on('view', toggleView); controls.on('reset', backToRoad); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
 $('#time').value = S.time; $('#weather').value = S.weather;
@@ -170,12 +175,13 @@ function setLocation(id) {
 const reloadWith = (k, v) => { const u = new URLSearchParams(location.search); u.set('seed', config.seed); u.set(k, v); location.search = u.toString(); };
 menu = new Menu({
   vehicles: VEHICLES,
-  state: () => ({ location: config.location, vehicle, paint: S.paint, time: S.time, weather: S.weather, quality, shadows: shadowsOn, lights: S.lights, muted: S.muted, radioVol: radio.vol }),
+  state: () => ({ manual: !!S.manual, location: config.location, vehicle, paint: S.paint, time: S.time, weather: S.weather, quality, shadows: shadowsOn, lights: S.lights, muted: S.muted, radioVol: radio.vol }),
   pickVehicle: async i => { await setVehicle(i); },
   paint: async (i, c) => { const def = VEHICLES[i]; S.paint[def.id] = c; save(); await applyPaint(def, await loadModel(def), c); },
   set: (k, v) => {
     if (k === 'time') { S.time = v; save(); env.setTime(v); } else if (k === 'weather') { S.weather = v; save(); env.setWeather(v); } else if (k === 'lights') { S.lights = v; save(); }
     else if (k === 'sfx') { S.muted = v === 'off'; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } }
+    else if (k === 'manual') setManual(v === 'manual');
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
   locations: LOCATIONS, setLocation: id => setLocation(id), radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
@@ -203,7 +209,7 @@ const stats = statsPanel($('#stats'), renderer, () => {
     'origin      ' + grid.origin.x + ', ' + grid.origin.z + '   mode ' + mode,
     phys ? 'vehicle     u ' + phys.u.toFixed(1) + '  v ' + phys.v.toFixed(2) + '  r ' + phys.r.toFixed(2) + '  slip ' + phys.slip.toFixed(2) + '  ' + phys.surface : '', 'seed        ' + config.seed + '   quality ' + quality];
 });
-const hud = { spd: $('#spd'), unit: $('#unit'), surf: $('#surface'), sky: $('#sky'), buff: $('#buff'), cd: $('#buffCd') }; let hudT = 0;
+const hud = { spd: $('#spd'), unit: $('#unit'), surf: $('#surface'), sky: $('#sky'), buff: $('#buff'), cd: $('#buffCd'), gear: $('#gear'), rpm: $('#rpm i') }; let hudT = 0;
 
 /* ---------- the camera slowly circling the vehicle behind the title screen and the garage ---------- */
 let orbitA = 0.6, offset = 0, lastShot = '';
@@ -250,9 +256,9 @@ function step(dt, now) {
   ripples.offset.set(((camera.position.x + grid.origin.x) * RIP + now * 0.000011) % 1, (-(camera.position.z + grid.origin.z) * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
   env.update(dt, now, camera, reach); landmarks.update(grid.origin, env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && sound.ctx) sound.update({ v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
-    id: VEHICLES[vehicle].id, brake: input.brake > 0.1 && phys.u > 1, off: phys.surface !== 'asphalt', view: view.view });
+    id: VEHICLES[vehicle].id, brake: input.brake > 0.1 && phys.u > 1, off: phys.surface !== 'asphalt', view: view.view, rev: phys.hasGears ? phys.rev01 : undefined, gear: phys.hasGears ? phys.gear : undefined });
   renderer.render(scene, camera); stats(now);
-  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label;
+  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label; hud.gear.textContent = phys.hasGears ? phys.gearLabel : ''; hud.rpm.style.width = phys.hasGears ? Math.round(Math.min(1, phys.rpm01) * 100) + '%' : '0%'; hud.rpm.parentNode.classList.toggle('hot', !!phys.hasGears && phys.rpm01 > 0.92);
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }
 }
 setVehicle(vehicle).then(() => { setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); });

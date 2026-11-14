@@ -14,6 +14,7 @@
    left; the game's steering angle (delta) is positive to the right, so the two are opposite in sign. */
 import RAPIER from '../../vendor/rapier/rapier.mjs';
 import { SURFACES, NO_MOD } from './physics.js';
+import { Drivetrain } from './drivetrain.js';
 
 let ready = null;
 export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIER));
@@ -75,7 +76,7 @@ function calibrate(p, id) {
 export class RapierVehicle {
   /* params: from vehicleParams(); id: 'car' | 'truck' | 'bike'; world: { height, surface, near, seaLevel, grip? } */
   constructor(params, id, world) {
-    this.p = params; this.id = id; this.world = world; this.mod = NO_MOD; this.acc = 0;
+    this.p = params; this.id = id; this.world = world; this.mod = NO_MOD; this.acc = 0; this.drive = new Drivetrain(id, params); this.gear = 1; this.gearLabel = this.drive.label; this.rpm01 = 0;
     this.cal = calibrate(params, id); this.hCom = this.cal.hCom; this.L0 = this.cal.L0;
     this.R = new RAPIER.World({ x: 0, y: -G, z: 0 }); this.R.timestep = H;
     this.N = 44; this.cell = 1.5; this.patch = null; this.ox = 0; this.oz = 0;       // heightfield patch: N x N cells of `cell` metres
@@ -106,12 +107,17 @@ export class RapierVehicle {
     const q = qm(qm({ x: 0, y: Math.sin(th / 2), z: 0, w: Math.cos(th / 2) }, { x: Math.sin(-pitch / 2), y: 0, z: 0, w: Math.cos(pitch / 2) }), { x: 0, y: 0, z: Math.sin(rollA / 2), w: Math.cos(rollA / 2) });
     const b = this.body; b.setTranslation({ x: 0, y: gy + this.hCom + 0.02, z: 0 }, true); b.setRotation(q, true); b.setLinvel({ x: 0, y: 0, z: 0 }, true); b.setAngvel({ x: 0, y: 0, z: 0 }, true);
     for (let i = 0; i < this.car.wheels.length; i++) { this.vc.setWheelSteering(i, 0); this.vc.setWheelEngineForce(i, 0); this.vc.setWheelBrake(i, 0); }
+    this.drive.reset();
     Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0, dPitch: 0, dRoll: 0, afS: 0, arS: 0, axL: 0 });
     this.y = gy; this.groundY = gy; this.quat = { x: q.x, y: q.y, z: q.z, w: q.w }; this.R.step(); this.read();
   }
   get speed() { return Math.hypot(this.u, this.v); }
   get kmh() { return this.u * 3.6; }
-  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; }
+  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; this.drive.setMod(this.mod); }
+  /* manual gearbox: shift(+1) up, shift(-1) down (false if refused); setManual switches between automatic and manual */
+  shift(d) { return this.drive.shift(d, this.u); }
+  setManual(on) { this.drive.setManual(on); }
+  get manual() { return this.drive.manual; }
 
   step(dt, input) {
     this.acc += Math.min(dt, 0.1); this.impact = 0;
@@ -130,6 +136,7 @@ export class RapierVehicle {
     this.y = t.y - this.hCom; this.bodyY = t.y;                                                                           // y: the tyre plane under the body centre
     this.ay = this.u * this.r; this.slip = Math.min(2, Math.abs(Math.atan2(this.v, Math.max(Math.abs(this.u), 2))));
     this.lean += (clamp(Math.atan(this.u * this.r / G), -0.8, 0.8) * this.p.lean - this.lean) * 0.15;
+    this.gear = this.drive.gear; this.gearLabel = this.drive.label; this.rpm01 = this.drive.rpm01; this.rev01 = this.drive.rev01; this.hasGears = !this.drive.ev;
     const vc = this.vc;
     this.car.wheels.forEach((w, i) => { const st = this.wheelStates[i]; st.spin = -(vc.wheelRotation(i) || 0); st.steer = vc.wheelSteering(i) || 0; st.susp = this.L0 - (vc.wheelSuspensionLength(i) ?? this.L0); st.contact = vc.wheelIsInContact(i); });
     this.spin = this.wheelStates[this.wheelStates.length - 1].spin;
@@ -153,11 +160,13 @@ export class RapierVehicle {
     const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), u = this.u;
 
     /* forces on the wheels */
-    let engine = 0, brake = 0;
-    if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = m * p.accel * M.accel * thr * Math.max(0, 1 - (u / top) ** 2); }
-    else if (brk > 0) { if (u > 0.5) brake = m * p.brake * brk; else if (!flooded) engine = -m * p.revAccel * brk * Math.max(0, 1 - (u / p.revTop) ** 2); }
-    else if (Math.abs(u) < 0.25) brake = m * G * 0.9;                                                         // parked: hold still, even on a slope
-    else brake = m * 0.55 * clamp(Math.abs(u), 0, 1);                                                            // engine braking when coasting
+    let engine = 0, brake = 0; const dr = this.drive, gear = dr.gear;
+    engine = dr.update(h, u, thr, brk, flooded);                                                                // engine, clutch and gearbox decide the driving force
+    if (thr > 0 && !flooded && ((u < -0.4 && gear >= 0) || (u > 0.4 && gear < 0))) brake = m * p.brake * thr;       // throttle against the direction of travel brakes first
+    else if (brk > 0 && (u > 0.5 || dr.manual)) brake = m * p.brake * brk;              // the brake pedal; with a manual box it never reverses you
+    else if (brk === 0 && thr === 0 && Math.abs(u) < 0.25) brake = m * G * 0.9;                                  // parked: hold still, even on a slope
+    else if (thr === 0 && brk === 0 && Math.abs(u) < 0.6) brake = m * 0.55 * clamp(Math.abs(u), 0, 1);           // settle to a stop
+    if (engine * u < 0 && Math.abs(u) > 0.3) { brake += Math.abs(engine); engine = 0; }                           // engine braking works through the brakes: Rapier ignores the brakes while an engine force is set
     const nDrive = car.wheels.filter(w => w.drive).length, nF = car.wheels.filter(w => w.front).length, nR = car.wheels.length - nF;
     const fShare = this.id === 'bike' ? 0.55 : 0.62;
     car.wheels.forEach((w, i) => {

@@ -40,6 +40,10 @@
   #hud { left: 12px; bottom: 12px; display: flex; align-items: baseline; gap: 8px; padding: 8px 14px; pointer-events: none; }
   #spd { font-size: 34px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; min-width: 2.2ch; text-align: right; }
   #unit { color: #b9c3d3; font-size: 12px; }
+  #gear { font-weight: 700; font-size: 15px; min-width: 2.4ch; text-align: center; margin-left: 4px; color: var(--accent); }
+  #rpm { display: inline-block; width: 52px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .15); overflow: hidden; align-self: center; } #rpm i { display: block; height: 100%; width: 0; background: var(--accent); } #rpm.hot i { background: #ff5a4a; }
+  #shifter { position: fixed; right: 14px; bottom: 200px; display: none; flex-direction: column; gap: 8px; } #shifter button { width: 54px; height: 54px; border-radius: 14px; font-size: 18px; touch-action: none; }
+  body.touch.manual[data-mode=drive] #shifter { display: flex; } body[data-menu] #shifter { display: none !important; } body.debug.touch #shifter { bottom: 290px; }
   #surface { color: var(--accent); font-size: 12px; font-weight: 600; margin-left: 6px; }
   #sky { color: #b9c3d3; font-size: 12px; margin-left: 6px; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; color: #b9c3d3; }
@@ -138,7 +142,8 @@
   <button type="button" id="pauseBtn" title="Pause menu (Esc)">Menu</button>
 </nav>
 
-<section class="panel" id="hud" aria-label="Speed"><b id="spd">0</b><span id="unit">km/h</span><span id="surface">Road</span><span id="sky"></span></section>
+<section class="panel" id="hud" aria-label="Speed"><b id="spd">0</b><span id="unit">km/h</span><span id="gear" title="Gear"></span><span id="rpm" title="Engine revs"><i></i></span><span id="surface">Road</span><span id="sky"></span></section>
+<div id="shifter" aria-label="Gears"><button type="button" id="gUp" aria-label="Shift up">▲</button><button type="button" id="gDn" aria-label="Shift down">▼</button></div>
 <div id="pads" aria-label="Touch controls">
   <div><span class="pad" data-k="left" role="button" aria-label="Steer left">◀</span><span class="pad" data-k="right" role="button" aria-label="Steer right">▶</span></div>
   <div><span class="pad" data-k="down" role="button" aria-label="Brake and reverse">▼</span><span class="pad" data-k="up" role="button" aria-label="Accelerate">▲</span></div>
