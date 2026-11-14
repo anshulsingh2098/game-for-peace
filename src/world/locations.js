@@ -44,6 +44,7 @@ export const LOCATIONS = [
       palette: { grass: [0.42, 0.8, 0.2], grass2: [0.2, 0.58, 0.12], dry: [0.62, 0.62, 0.3], alpine: [0.34, 0.6, 0.22], rock: [0.48, 0.44, 0.4], sand: [0.92, 0.85, 0.66], treeline: 500, snowline: 2000 },
       scatter: { trees: 0.017, rocks: 0.0003, bushes: 0.003, tufts: 0.012, pineBias: -0.95, tint: [0.88, 1.12, 0.78] }, water: { color: '#1f93a0' },
       road: { maxAlt: 150 } },
+    landmarks: [{ kind: 'lighthouse', s: 700, off: 80, sea: true, range: 3000 }],
     sky: { time: 'day', weather: 'clear' } },
   /* ---- India's cities: flat ground, warm dry light, and the sights beside the road. `landmarks` are placed by world/landmarks.js ---- */
   { id: 'mumbai', drive: 'left', name: 'Mumbai', blurb: 'the art-deco curve of Marine Drive, the Gateway of India and the Taj Mahal Palace hotel, at golden hour by the Arabian Sea.', accent: '#ff9d5c',

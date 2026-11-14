@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 20:00  Southern lighthouse and a richer Taj hotel (N3 A)
+Branch: feat/ground-detail
+What changed: `src/world/landmarks.js`: new `lighthouse` landmark (tapering red and white banded tower, gallery with railing, lantern room and cap, keeper's cottage, boundary walls; three obstacle circles) placed on the Southern Coast by a spec in `locations.js` (`{ kind: 'lighthouse', s: 700, off: 80, sea: true, range: 3000 }`); `tajHotel` gets string courses and cornices on every block, parapet finials, four corner turrets with domes, balcony rails, an entrance porch and forecourt lamps. Checked by eye at medium tier (south seed `peace`, Mumbai): both render, no console errors. Self-test 33 checks. The lighthouse has no interior and is not lit at night (no beam yet).
+For the other stream: nothing.
+Status: done
+
 ## 2026-11-16 18:00  Ground normal maps now used (N3 A)
 Branch: feat/ground-detail
 What changed: `src/world/groundmat.js`: the grass and rock normal maps were loaded but never used; the ground shader now perturbs the surface normal with them (two grass scales blended into the rock map on steep slopes, faded out between 25 and 110 m so far ground does not shimmer). Full tier only; the `lite` tier is unchanged. Checked in California at high tier: renders, no shader or console errors. Tall grass (a separate layer of blades) is NOT done. Not measured for frame cost on a phone: add to the N4 phone run.
