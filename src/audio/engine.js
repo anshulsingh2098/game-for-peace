@@ -132,12 +132,28 @@ export class Sound {
       P.gear = gear;
     }
     // ---- shared layers: wind, road, gravel, rain
-    this.wind.g.gain.setTargetAtTime(r * r * 0.34 * (fp ? 1.2 : 1), t, 0.15); this.wind.f.frequency.setTargetAtTime(400 + r * 1300, t, 0.2);
-    this.hum.g.gain.setTargetAtTime(r * 0.1, t, 0.2); this.gravel.g.gain.setTargetAtTime(s.off ? Math.min(0.28, r * 0.5) : 0, t, 0.1); this.rainN.g.gain.setTargetAtTime(s.rain * 0.2, t, 0.4);
+    this.wind.g.gain.setTargetAtTime(r * r * 0.34 * (fp ? 1.2 : 1) * (s.covered ? 0.45 : 1), t, 0.15); this.wind.f.frequency.setTargetAtTime(400 + r * 1300, t, 0.2);
+    this.hum.g.gain.setTargetAtTime(r * 0.1 + (s.covered ? 0.07 + r * 0.08 : 0), t, 0.2);                                // a tunnel drones
+    this.ambience(s, t, now); this.gravel.g.gain.setTargetAtTime(s.off ? Math.min(0.28, r * 0.5) : 0, t, 0.1); this.rainN.g.gain.setTargetAtTime(s.rain * 0.2 * (s.covered ? 0.08 : 1), t, 0.3);
     if (s.rev && s.id === 'truck') { if (!this._beepAt || now > this._beepAt) { this._beepAt = now + 900; const o = c.createOscillator(), og = c.createGain(); o.type = 'sine'; o.frequency.value = 1050;       // reversing beeper
       og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.09, t + 0.01); og.gain.setValueAtTime(0.09, t + 0.3); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.34); o.connect(og); og.connect(this.fxIn); o.start(t); o.stop(t + 0.4); } }
     P.throttle = th; P.buff = s.buff; P.brake = s.brake;
     if (s.flash > 0.9 && !this._thunder) { this._thunder = true; setTimeout(() => this.thunder(), 500 + Math.random() * 1500); } else if (s.flash < 0.2) this._thunder = false;
+  }
+  /* the world around the car: birds on a clear day, crickets on a clear night; nothing in a tunnel, rain, fog or at speed */
+  ambience(s, t, now) {
+    const c = this.ctx, calm = !s.covered && s.rain < 0.05 && !s.fog, quiet = Math.max(0, 1 - s.v / 28), night = s.night || 0;
+    if (!this.cricket) { const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 4300; f.Q.value = 14;
+      const am = c.createGain(); am.gain.value = 0; const lfo = c.createOscillator(); lfo.frequency.value = 17; const lg = c.createGain(); lg.gain.value = 0.5; lfo.connect(lg); lg.connect(am.gain);
+      const g = c.createGain(); g.gain.value = 0; src.connect(f); f.connect(am); am.connect(g); g.connect(this.fxIn); src.start(); lfo.start(); this.cricket = g; }
+    this.cricket.gain.setTargetAtTime(calm ? night * quiet * 0.07 : 0, t, 0.6);
+    if (calm && night < 0.3 && quiet > 0.2 && (!this._birdAt || now > this._birdAt)) {
+      this._birdAt = now + 1800 + Math.random() * 5200; const n = 2 + Math.floor(Math.random() * 4), base = 2400 + Math.random() * 1800, pan = Math.random() * 2 - 1;
+      for (let i = 0; i < n; i++) { const st = t + i * 0.13, o = c.createOscillator(), og = c.createGain(); o.type = 'sine';
+        o.frequency.setValueAtTime(base * (1 + Math.random() * 0.15), st); o.frequency.exponentialRampToValueAtTime(base * (1.25 + Math.random() * 0.4), st + 0.09);
+        og.gain.setValueAtTime(0.0001, st); og.gain.exponentialRampToValueAtTime(0.035 * quiet, st + 0.02); og.gain.exponentialRampToValueAtTime(0.0001, st + 0.11);
+        o.connect(og); og.connect(this.fxIn); o.start(st); o.stop(st + 0.13); }
+    }
   }
   thunder() {
     if (!this.ctx || !this.engineOn) return; const c = this.ctx, t = c.currentTime, src = c.createBufferSource(); src.buffer = this.noiseBuf;

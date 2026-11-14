@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  Atmosphere: moon, birds and crickets, quiet tunnels
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: `src/env/environment.js` (a moon with halo and dark patches in the night sky), `src/audio/engine.js` (rain nearly silent and wind halved inside a tunnel, plus a tunnel drone; birdsong on a calm clear day, crickets on a calm clear night; both stop at speed, in rain, fog and tunnels). Shared file `src/main.js`: a 3-line change, a `covered` flag set where rain is already hidden inside mountains, passed to `sound.update` with `night` and `fog`. No world files touched.
+For the other stream: nothing. Scenery and landmarks are yours; if you want ambient sounds tied to places (sea, city), log it and I will add a hook.
+Status: open
+
 ## 2026-11-14  More ground clearance (body lifted over the wheels)
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed: `src/vehicle/vehicle.js` only. The three cars' body, cabin, details and interior are drawn 0.08 (Dusk GT), 0.07 (Ember RS) and 0.05 (Dust Runner) metres higher; the wheels and physics are unchanged, so the tyres show more under the arches and the underbody clears the road more. Measured: the tyres were touching the road correctly; the body just sat low over them.
