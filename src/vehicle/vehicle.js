@@ -9,9 +9,9 @@ const loader = new GLTFLoader(), cache = new Map(); let glowTex = null;
 function polish(scene) {
   scene.traverse(o => { if (!o.isMesh) return; [].concat(o.material).forEach(m => {
     const n = m.name;
-    if (m.isMeshPhysicalMaterial && /^Paint/.test(n)) { m.metalness = 0.55; m.roughness = 0.32; m.clearcoat = 1; m.clearcoatRoughness = 0.035; m.envMapIntensity = 1.5; }
-    else if (n === 'Glass') { m.color.set(0x0b0f16); m.roughness = 0.02; m.metalness = 0.9; m.envMapIntensity = 2.2; }
-    else if (n === 'Chrome' || n === 'Rim') m.envMapIntensity = 1.6; else if (n === 'Carbon') m.envMapIntensity = 1.2; else if (n === 'Tyre') m.envMapIntensity = 0.3;
+    if (m.isMeshPhysicalMaterial && /^Paint/.test(n)) { m.metalness = 0.55; m.roughness = 0.32; m.clearcoat = 1; m.clearcoatRoughness = 0.035; m.envMapIntensity = m.userData.env = 1.5; }
+    else if (n === 'Glass') { m.color.set(0x0b0f16); m.roughness = 0.02; m.metalness = 0.9; m.envMapIntensity = m.userData.env = 2.2; }
+    else if (n === 'Chrome' || /^Rim/.test(n) || n === 'Mirror') m.envMapIntensity = m.userData.env = 1.6; else if (n === 'Carbon') m.envMapIntensity = m.userData.env = 1.2; else if (/^Tyre/.test(n)) m.envMapIntensity = m.userData.env = 0.3;
   }); });
   return scene;
 }
@@ -37,13 +37,13 @@ export class VehicleView {
     this.model.traverse(o => {
       if (/^Wheel_[A-Z]{1,2}$/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, y0: o.position.y, front: /^Wheel_F/.test(o.name), side: Math.abs(o.position.x) < 0.1 ? 0 : o.position.x > 0 ? 1 : -1 }); }       // side +1 = the car's left (the model faces +z, so left is +x), taken from where the wheel is, not its name
       if (/^Rider/.test(o.name)) this.riders.push(o);
-      if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; }); }
+      if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = m.userData.env ?? 0.7; }); }
     });
     this.buildCockpit(def.id); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
   }
   /* dashboard and steering wheel for the driver view (the models have no interior) */
   buildCockpit(id) {
-    if (id === 'bike') return;
+    if (id === 'bike' || this.def.interior) return;                 // models with their own interior need no stand-in dashboard
     const g = new THREE.Group(), dark = new THREE.MeshLambertMaterial({ color: 0x15151b }), mid = new THREE.MeshLambertMaterial({ color: 0x30303a }), glow = new THREE.MeshBasicMaterial({ color: 0x6fd0ff });
     const box = (w, h, d, x, y, z, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || dark); m.position.set(x, y, z); g.add(m); return m; };
     let pos, R, tilt;
