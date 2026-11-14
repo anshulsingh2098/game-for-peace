@@ -23,10 +23,10 @@ export const LOCATIONS = [
     config: {
       terrain: { seaLevel: 0, seabed: 2500, lowland: 3000, continent: { scale: 8000, rise: 200 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1800, amp: 320 },
         hills: { scale: 1300, amp: 180, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4600, start: -0.3, full: 0.15, scale: 11500, amp: 2100, octaves: 5, gain: 0.38, sharp: 1.3 } },
-      palette: { grass: [0.52, 0.5, 0.3], grass2: [0.4, 0.42, 0.24], dry: [0.6, 0.52, 0.36], alpine: [0.5, 0.45, 0.36], rock: [0.5, 0.44, 0.38], treeline: 3500, snowline: 4300 },
+      palette: { grass: [0.52, 0.5, 0.3], grass2: [0.4, 0.42, 0.24], dry: [0.6, 0.52, 0.36], alpine: [0.5, 0.45, 0.36], rock: [0.5, 0.44, 0.38], treeline: 3500, snowline: 3300 },
       scatter: { trees: 0.003, rocks: 0.0016, bushes: 0.0008, tufts: 0.004, pineBias: 0.6, tint: [0.85, 0.95, 0.85] }, water: { color: '#2f6a78' },
-      road: { maxAlt: 7500, maxGrade: 0.1, hardGrade: 0.15, minRadius: 55 } },
-    sky: { time: 'day', weather: 'clear' } },
+      road: { maxAlt: 7500, maxGrade: 0.1, hardGrade: 0.15, minRadius: 55, tunnelName: 'ATAL TUNNEL, ROHTANG' } },
+    sky: { time: 'day', weather: 'snow' } },
 
   { id: 'california', name: 'California Coast', blurb: 'Golden hills tumbling to a deep blue Pacific. Sun, sea air and wide skies.', accent: '#ffc857',
     config: {
