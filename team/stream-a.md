@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 14:00  Collision audit: tunnel walls and bridge rails hold; asset job recorded
+Branch: feat/collision-audit
+What changed: new `tools/collision_audit.mjs` drives the real vehicle physics on the real graded ground (`terrain.drive`, with the bridge rails) sideways into a tunnel wall and a bridge edge, Alps and Himalayas. Result: in a tunnel the car stops at 4.2 to 4.4 m from the centre line (the mountain, left whole over the road, is the wall); on the Alps bridge it stops at the rail, 3.1 m. No fix needed. Bridge piers are below the deck and not reachable while the rails hold. `PARALLEL_PLAN.md` now records the owner's instruction that Claude sources or builds all assets for N11 to N14 (write `docs/ASSET_PLAN.md` first).
+For the other stream: nothing.
+Status: done
+
 ## 2026-11-16 12:00  Post-N6 plan (N7 to N15) added and reviewed; status refreshed
 Branch: docs/post-n6-plan
 What changed: `docs/post-n6-open-world-plan.md` (the owner's open-world India plan, verbatim); `PARALLEL_PLAN.md` has a new status table (done / not done for N0 to N6) and an "After N6" section with N7 to N15, what each builds on in the current code, and six review notes (gate, missing Asset Acquisition Brief, product direction change, risks, ownership, owner decisions); `HANDOFF.md` status corrected (PR 22 merged) and points to the new plan. No runtime code changed.
