@@ -25,13 +25,15 @@ import { Sound } from './audio/engine.js';
 import { Radio } from './audio/radio.js';
 import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
+import { LOCATIONS, locationConfig, locationById } from './world/locations.js';
 import { FlyCam } from './debug/flycam.js';
 import { statsPanel } from './debug/stats.js';
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], q = new URLSearchParams(location.search);
 const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
-let config = (q.get('c') && decodeConfig(q.get('c'))) || makeConfig({ seed: q.get('seed') || 'peace' });
+let savedLoc = null; try { savedLoc = JSON.parse(localStorage.getItem('gfp-next') || '{}').location || null; } catch (e) { /* no saved choice */ }
+let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || savedLoc || 'default', q.get('seed') || 'peace');
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };
 document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('dev', q.has('dev') || q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches);
 
@@ -69,7 +71,7 @@ function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
   roadMesh = new RoadMesh(scene, road, TWO_LANE, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin);
-  env.attach({ ground, road: roadMesh.surface });
+  env.attach({ ground, road: roadMesh.surface }); waterMat.color.set(config.water.color);
 }
 makeScenery();
 function applyView() {
@@ -124,10 +126,10 @@ function setMode(m) {
   mode = m; controls.enabled = m === 'drive'; document.body.dataset.mode = m; view.root.visible = m !== 'ride'; sound.setEngineOn(m === 'drive' && !frozen());
   $('#fly').classList.toggle('on', m === 'fly'); $('#ride').classList.toggle('on', m === 'ride');
 }
-function regenerate(seed) {
-  config = makeConfig({ ...config, seed }); makeWorld(); grid.reset(terrain, config.view); far.reset(terrain.far, farView()); makeScenery(); applyView();
+function regenerate(seed, locId) {
+  if (locId) config = { ...locationConfig(locId, seed), view: config.view }; else config = makeConfig({ ...config, seed }); makeWorld(); grid.reset(terrain, config.view); far.reset(terrain.far, farView()); makeScenery(); applyView();
   if (phys) placeOnRoad(0); setMode('drive');
-  $('#seed').value = seed; history.replaceState(null, '', '?seed=' + encodeURIComponent(seed) + '&q=' + quality + (q.has('debug') ? '&debug' : ''));
+  $('#seed').value = seed; history.replaceState(null, '', '?seed=' + encodeURIComponent(seed) + '&loc=' + config.location + '&q=' + quality + (q.has('debug') ? '&debug' : ''));
 }
 let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
 
@@ -157,11 +159,16 @@ const wheel = new RadioWheel(radio, { locked: v => { controls.locked = v || froz
 radio.on(s => { if (s.error && s.station) toast(s.station.name + ' is off air'); S.radioVol = s.vol; });
 $('#radioBtn').addEventListener('click', () => wheel.toggle());
 const toggleMute = () => { S.muted = !S.muted; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } toast(S.muted ? 'Sound off' : 'Sound on'); };
+/* a location: its land and plants from the profile, and the sky it starts with */
+function setLocation(id) {
+  const L = locationById(id); if (L.id === config.location) return; S.location = L.id; S.time = L.sky.time; S.weather = L.sky.weather; save(); env.setTime(S.time); env.setWeather(S.weather);
+  regenerate(config.seed, L.id); toast(L.name);
+}
 /* ---------- menus: title, garage, settings, pause ---------- */
 const reloadWith = (k, v) => { const u = new URLSearchParams(location.search); u.set('seed', config.seed); u.set(k, v); location.search = u.toString(); };
 menu = new Menu({
   vehicles: VEHICLES,
-  state: () => ({ vehicle, paint: S.paint, time: S.time, weather: S.weather, quality, shadows: shadowsOn, lights: S.lights, muted: S.muted, radioVol: radio.vol }),
+  state: () => ({ location: config.location, vehicle, paint: S.paint, time: S.time, weather: S.weather, quality, shadows: shadowsOn, lights: S.lights, muted: S.muted, radioVol: radio.vol }),
   pickVehicle: async i => { await setVehicle(i); },
   paint: async (i, c) => { const def = VEHICLES[i]; S.paint[def.id] = c; save(); await applyPaint(def, await loadModel(def), c); },
   set: (k, v) => {
@@ -169,7 +176,7 @@ menu = new Menu({
     else if (k === 'sfx') { S.muted = v === 'off'; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
-  radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
+  locations: LOCATIONS, setLocation: id => setLocation(id), radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
   onOpen: () => { document.body.dataset.menu = 'open'; controls.locked = true; sound.setEngineOn(false); },
   onClose: () => { delete document.body.dataset.menu; controls.locked = false; camera.fov = 58; if (offset) { camera.clearViewOffset(); offset = 0; lastShot = ''; } sound.setEngineOn(mode === 'drive'); unlockAudio(); if (view.camYaw !== null) view.camYaw = phys ? phys.yaw : null; }
 });
@@ -203,7 +210,7 @@ function orbitCam(dt) {
   const d = VEHICLES[vehicle].cam, ph = phys, o = grid.origin, R = d.back * 1.0 + 4; orbitA += dt * 0.28;
   const a = ph.yaw + orbitA, x = ph.x + Math.cos(a) * R, z = ph.z + Math.sin(a) * R, ground = Math.max(terrain.seaLevel, terrain.height(x, z)), y = Math.max(ph.y + 0.9 + d.up * 0.4, ground + 0.8);
   camera.position.set(x - o.x, y, z - o.z); camera.lookAt(ph.x - o.x, ph.y + 0.45 + d.up * 0.2, ph.z - o.z); camera.fov = 46;
-  const side = menu.screen === 'garage' || menu.screen === 'settings', w = innerWidth, h = innerHeight, narrow = w <= 640, want = narrow ? 2 : side ? 1 : 0;       // park the vehicle left of a side panel, or above a bottom one on a phone
+  const side = ['garage', 'settings', 'locations'].includes(menu.screen), w = innerWidth, h = innerHeight, narrow = w <= 640, want = narrow ? 2 : side ? 1 : 0;       // park the vehicle left of a side panel, or above a bottom one on a phone
   const shot = want + ':' + w + 'x' + h; if (shot !== lastShot) { lastShot = shot; if (want === 1) camera.setViewOffset(w, h, w * 0.14, 0, w, h); else if (want === 2) camera.setViewOffset(w, h, 0, h * (side ? 0.27 : 0.2), w, h); else camera.clearViewOffset(); offset = want; }
   camera.updateProjectionMatrix();
 }

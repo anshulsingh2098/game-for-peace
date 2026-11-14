@@ -39,7 +39,7 @@ export class Scatter {
       if (keep > T.forest(x, z) * 1.15 - 0.1 || !clear(x, z, c.clearRoad)) continue;
       const h = T.height(x, z), up = h - sea; if (up < 3 || up > pal.treeline + 25) continue;
       if (Math.abs(T.height(x + 3, z) - h) > 1.8 || Math.abs(T.height(x, z + 3) - h) > 1.8) continue;        // too steep for a tree
-      const pine = kind < 0.2 + 0.75 * Math.min(1, up / pal.treeline);                                    // more pines with altitude
+      const pine = kind < 0.2 + 0.75 * Math.min(1, up / pal.treeline) + (c.pineBias || 0);                                    // more pines with altitude
       lists[pine ? 'pine' : 'round'].push([x - x0, h - 0.15, z - z0, sc, rot, tall, shade]); hits.push({ x, z, r: 0.4 * sc });
     }
     for (let n = Math.round(c.rocks * Sz * Sz * dens); n > 0; n--) {
@@ -60,12 +60,14 @@ export class Scatter {
         lists.tuft.push([x - x0, h - 0.02, z - z0, sc, rot, tall, shade]);
       }
     }
-    const g = new THREE.Group(), pr = this.props; let count = 0;
+    const g = new THREE.Group(), pr = this.props, tint = c.tint; let count = 0;
     const fill = (geom, mat, arr, jitter) => {
       const im = new THREE.InstancedMesh(geom, mat, arr.length);
       arr.forEach((a, n) => {
         P.set(a[0], a[1], a[2]); q.setFromEuler(e.set(0, a[4], 0)); S.set(a[3], a[3] * a[5], a[3]); im.setMatrixAt(n, M.compose(P, q, S));
-        const v = 0.80 + a[6] * 0.4; im.setColorAt(n, jitter ? col.setRGB(v, v * (0.94 + a[6] * 0.12), v * (0.92 + a[6] * 0.1)) : col.setRGB(1, 1, 1));
+        const v = 0.80 + a[6] * 0.4; if (jitter) col.setRGB(v, v * (0.94 + a[6] * 0.12), v * (0.92 + a[6] * 0.1)); else col.setRGB(1, 1, 1);
+        if (jitter && tint && mat !== pr.solid) col.setRGB(col.r * tint[0], col.g * tint[1], col.b * tint[2]);            // a place's leaves lean greener, yellower or drier
+        im.setColorAt(n, col);
       });
       im.castShadow = true; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
     };
