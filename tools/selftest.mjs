@@ -22,6 +22,7 @@ import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
 import * as tuning from '../src/core/tuning.js';
 import { explain, DOCS } from '../src/core/tuning-docs.js';
 import worker from '../cloudflare/worker.js';
+import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -383,6 +384,52 @@ test('tuner help: every vehicle, surface and world setting has an explanation an
   const missing = tuning.describe().filter(f => !explain(f.path)).map(f => f.path);
   assert.deepEqual(missing, [], 'no help written for: ' + missing.join(', '));
   for (const [k, v] of Object.entries(DOCS)) { assert.ok(Array.isArray(v) && v.length === 2 && v[0].length > 10 && v[1].length > 1, k); }
+});
+
+/* ---- N7: runtime, events, handles, pools ---- */
+test('runtime: systems run in a fixed order (order, then adding order) through every phase, and dispose in reverse', () => {
+  const log = [], mk = (name, order) => ({ name, order, init: () => log.push('init ' + name), fixedUpdate: () => log.push('fixed ' + name), update: () => log.push('update ' + name), render: () => log.push('render ' + name), dispose: () => log.push('dispose ' + name) });
+  const rt = new GameRuntime({ fixedStep: 0.01, maxFrame: 0.05 }); rt.add(mk('b', 5)); rt.add(mk('a', 1)); rt.add(mk('c', 5)); assert.deepEqual(rt.names(), ['a', 'b', 'c']); rt.start(); rt.frame(1000); log.length = 0; rt.frame(1010);
+  assert.deepEqual(log, ['fixed a', 'fixed b', 'fixed c', 'update a', 'update b', 'update c', 'render a', 'render b', 'render c']); log.length = 0; rt.dispose(); assert.deepEqual(log, ['dispose c', 'dispose b', 'dispose a']);
+  assert.throws(() => { const r2 = new GameRuntime(); r2.add({ name: 'x' }); r2.add({ name: 'x' }); }, /duplicate/);
+});
+test('runtime: a long stall or hidden tab never gives more than maxFrame, and no burst of catch-up steps', () => {
+  let steps = 0, dts = []; const rt = new GameRuntime({ fixedStep: 1 / 60, maxFrame: 0.05, maxSteps: 4 }); rt.add({ name: 's', fixedUpdate: () => steps++, update: dt => dts.push(dt) }); rt.start(); rt.frame(0);
+  const r = rt.frame(60000);                                                      // one minute later (tab was hidden)
+  assert.ok(r.dt <= 0.05 + 1e-12 && r.steps <= 3, `dt ${r.dt} steps ${r.steps}`); assert.ok(Math.max(...dts) <= 0.05 + 1e-12);
+  rt.resetClock(); const r2 = rt.frame(120000); assert.equal(r2.dt, 0); assert.equal(r2.steps, 0);      // after resetClock the next frame is dt 0, not a spike
+  const st = new FixedStepper({ step: 0.01, maxFrame: 1, maxSteps: 4 }); assert.equal(st.advance(1), 4); assert.ok(st.acc < 0.01); assert.ok(st.dropped > 0.9);
+  const sum = new FixedStepper({ step: 1 / 60 }); let n = 0; for (let i = 0; i < 600; i++) n += sum.advance(1 / 60 + (i % 2 ? 0.001 : -0.001)); assert.ok(Math.abs(n - 600) <= 1, 'steps over 10 s: ' + n);
+});
+test('events: conventions, unsubscribe, isolation of failing handlers, no leaked listeners after dispose', () => {
+  const errs = []; const bus = new EventBus({ onError: e => errs.push(e) }); const seen = [];
+  const off = bus.on('region:changed', p => seen.push(['a', p.to])); bus.on('region:changed', () => { throw new Error('boom'); }); bus.on('region:changed', p => seen.push(['c', p.to]));
+  assert.equal(bus.emit('region:changed', { from: 'x', to: 'y' }), 3); assert.deepEqual(seen, [['a', 'y'], ['c', 'y']]); assert.equal(errs.length, 1);
+  off(); bus.emit('region:changed', { to: 'z' }); assert.deepEqual(seen.map(s => s[0]), ['a', 'c', 'c']); assert.throws(() => bus.emit('region:chnaged', {}), /unknown event/); assert.throws(() => bus.on('nope', () => {}), /unknown event/);
+  let once = 0; bus.once('mode:changed', () => once++); bus.emit('mode:changed', {}); bus.emit('mode:changed', {}); assert.equal(once, 1);
+  const rt = new GameRuntime({ bus: new EventBus() }); rt.add({ name: 'l', init: r => { this_off = r.bus.on('world:rebuilt', () => {}); }, dispose: () => this_off() }); let this_off; rt.start(); assert.equal(rt.bus.listenerCount(), 1); rt.remove('l'); assert.equal(rt.bus.listenerCount(), 0);
+  for (const e of EVENTS) assert.match(e, /^[a-z]+:[a-z]+$/);
+});
+test('registry: typed, bounded, and a stale handle never resolves to a reused slot', () => {
+  const bus = new EventBus(), removed = []; bus.on('entity:removed', p => removed.push(p.type)); const reg = new Registry({ car: 3, ped: 2 }, bus);
+  const a = reg.create('car', { n: 'a' }), b2 = reg.create('car', { n: 'b' }), c = reg.create('car', { n: 'c' }); assert.ok(a && b2 && c && new Set([a, b2, c]).size === 3); assert.equal(reg.create('car', {}), 0, 'full is a hard bound');
+  assert.equal(reg.get(b2).n, 'b'); assert.equal(handleType(a), 0); assert.equal(handleType(reg.create('ped', {})), 1); assert.equal(reg.destroy(b2).n, 'b'); assert.equal(reg.get(b2), null); assert.equal(reg.destroy(b2), null, 'double destroy is harmless');
+  const d = reg.create('car', { n: 'd' }); assert.equal(handleSlot(d), handleSlot(b2), 'the slot is reused'); assert.notEqual(handleGen(d), handleGen(b2)); assert.equal(reg.get(b2), null, 'the old handle must not see the new entity'); assert.equal(reg.get(d).n, 'd');
+  assert.equal(reg.get(0), null); assert.equal(reg.get(0x7fffffff), null); assert.equal(reg.count('car'), 3); reg.clear('car'); assert.equal(reg.count('car'), 0); assert.equal(reg.get(a), null); assert.equal(removed.filter(t => t === 'car').length, 4);
+  for (let i = 0; i < 5000; i++) { const h = reg.create('ped', {}); reg.destroy(h); assert.equal(reg.get(h), null); }                        // generations wrap without ever making a live handle resolve wrongly
+});
+test('pool: bounded, complete reset on release, stale and double release are harmless', () => {
+  const pool = new Pool({ cap: 4, make: () => ({ x: 0, tag: '', list: [] }), reset: o => { o.x = 0; o.tag = ''; o.list.length = 0; } }); const got = [];
+  for (let i = 0; i < 4; i++) { const g = pool.acquire(); g.obj.x = 10 + i; g.obj.tag = 't' + i; g.obj.list.push(i); got.push(g); } assert.equal(pool.acquire(), null, 'pool is bounded'); assert.equal(pool.live, 4);
+  const h0 = got[0].handle; assert.equal(pool.release(h0), true); assert.equal(pool.release(h0), false); assert.equal(pool.get(h0), null);
+  const g2 = pool.acquire(); assert.equal(g2.obj, got[0].obj, 'the object is reused'); assert.deepEqual(g2.obj, { x: 0, tag: '', list: [] }, 'and it is blank'); assert.notEqual(g2.handle, h0); assert.equal(pool.get(h0), null, 'the old handle does not see the reused object');
+  pool.releaseAll(); assert.equal(pool.live, 0); assert.equal(pool.stats().created, 4); assert.ok(pool.stats().reused >= 1); assert.equal(pool.get(g2.handle), null);
+});
+test('traffic: the car pool is bounded and cars come back blank after removal, with the world unchanged', () => {
+  const cfg = locationConfig('california', 'pooltest'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-3000, 3000); t.attachRoad(r);
+  const run = () => { const sim = new TrafficSim(r, { seed: 'pool', mode: 'high' }); const out = []; for (let k = 0; k < 600; k++) { const ps = 200 + k * 1.5; sim.update(1 / 20, { x: 0, z: 0, s: ps, u: 25, yaw: 0 }); if (k % 100 === 99) out.push(sim.cars.map(c => [c.id, Math.round(c.s), c.kind].join(':')).join(',')); assert.ok(sim.cars.length <= MODES.high); assert.equal(sim.pool.live, sim.cars.length, 'every car is a live pool object'); } return { out, stats: sim.pool.stats() }; };
+  const a = run(), b = run(); assert.deepEqual(a.out, b.out, 'pooled cars give the same traffic every time'); assert.ok(a.stats.reused > 0 && a.stats.created <= MODES.high + 8, JSON.stringify(a.stats));
+  const sim = new TrafficSim(r, { seed: 'pool', mode: 'low' }); sim.update(0.05, { x: 0, z: 0, s: 400, u: 0, yaw: 0 }); const live = sim.cars.length; sim.setMode('off'); assert.equal(sim.pool.live, 0); assert.equal(sim.cars.length, 0); assert.ok(live >= 0);
 });
 
 console.log(`\n${passed} checks passed`);

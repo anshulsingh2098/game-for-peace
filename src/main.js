@@ -16,6 +16,7 @@ import { WIND } from './world/props.js';
 import { grassTex, waterNormalTex } from './world/textures.js';
 import { makeGroundMaterial } from './world/groundmat.js';
 import { installTunnelHoles } from './world/tunnel_holes.js';
+import { GameRuntime, EventBus } from './core/runtime.js';
 import { WALL, ARCH } from './world/tunnels.js';
 import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
@@ -130,7 +131,7 @@ let rapier = false; const rapierReady = q.get('phys') === 'old' ? Promise.resolv
 /* put the vehicle in the left lane at road distance s, facing along the road */
 function placeOnRoad(s) { const p = road.at(s, {}); phys.reset(p.x + p.tz * 2, p.z - p.tx * 2, p.th); view.camYaw = null; }
 async function setVehicle(i) {
-  const def = VEHICLES[i], model = await loadModel(def), old = phys; vehicle = i; await rapierReady;
+  const def = VEHICLES[i], model = await loadModel(def), old = phys; vehicle = i; await rapierReady; bus.emit('vehicle:changed', { id: def.id });
   const par = vehicleParams(def.body, def.stats);
   if (old && old.free) old.free();
   phys = rapier ? new RapierVehicle(par, def.id, world) : new VehiclePhysics(par, world);                       // Rapier ray-cast vehicle; the old bicycle model remains as a fallback (?phys=old)
@@ -157,6 +158,7 @@ function useBuff() {
 }
 function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 function setMode(m) {
+  if (m !== mode) bus.emit('mode:changed', { from: mode, to: m });
   if (m !== 'drive' && autodrive.enabled) { autodrive.toggle(false); $('#autoBtn').classList.remove('on'); }
   if (m === 'fly' && phys) { cam.x = phys.x - Math.cos(phys.yaw) * 14; cam.z = phys.z - Math.sin(phys.yaw) * 14; cam.y = phys.y + 7; cam.yaw = -Math.PI / 2 - phys.yaw; cam.pitch = -0.25; }
   if (m === 'ride') { roadS = road.closestS(phys ? phys.x : cam.x, phys ? phys.z : cam.z, roadS); rideYaw = phys ? -Math.PI / 2 - phys.yaw : cam.yaw; cam.speed = Math.min(cam.speed, 40); }
@@ -165,8 +167,10 @@ function setMode(m) {
   $('#fly').classList.toggle('on', m === 'fly'); $('#ride').classList.toggle('on', m === 'ride');
 }
 function regenerate(seed, locId) {
+  const fromLoc = config.location;
   if (locId) config = { ...locationConfig(locId, seed), view: config.view }; else config = makeConfig({ ...config, seed }); applyWorld(config); makeWorld(); grid.reset(terrain, config.view); far.reset(terrain.far, farView()); makeScenery(); applyView();
   if (phys) placeOnRoad(0); setMode('drive');
+  if (config.location !== fromLoc) bus.emit('region:changed', { from: fromLoc, to: config.location }); bus.emit('world:rebuilt', { seed: config.seed, location: config.location });
   $('#seed').value = seed; history.replaceState(null, '', '?seed=' + encodeURIComponent(seed) + '&loc=' + config.location + '&q=' + quality + (q.has('debug') ? '&debug' : ''));
 }
 let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
@@ -263,10 +267,17 @@ function orbitCam(dt) {
   camera.updateProjectionMatrix();
 }
 
-/* ---------- one frame of the world: move, keep road and tiles built around the player, draw ---------- */
-const rp = {}; let last = performance.now();
-function frame(now) { requestAnimationFrame(frame); step(Math.min(0.05, (now - last) / 1000), now); last = now; }
-function step(dt, now) {
+/* ---------- one frame of the world: move, keep road and tiles built around the player, draw ----------
+   The runtime (core/runtime.js) owns the clock: it clamps the frame time to 0.05 s (a hidden tab or a stall gives no time spike), runs the systems in a fixed order and offers a
+   fixed step and an event bus to systems that need them. Today there are two systems: 'world' (the whole update, still being split up) and 'render'. */
+const rp = {};
+const bus = new EventBus(), runtime = new GameRuntime({ maxFrame: 0.05, bus });
+function frame(now) { requestAnimationFrame(frame); runtime.frame(now); }
+function step(dt, now) { update(dt, now); draw(now); }                                    // one whole frame (also used by the headless checks through __next.step)
+function draw(now) { if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
+runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'render', order: 100, render: now => draw(now) }); runtime.start();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) runtime.resetClock(); });          // no time spike when the tab comes back
+function update(dt, now) {
   WIND.t.value = now / 1000; let px, pz;
   if (mode === 'drive' && phys) {
     if (!frozen()) {
@@ -308,7 +319,6 @@ function step(dt, now) {
   if (mode === 'drive' && phys && S.rumble !== 'off' && !frozen()) { const r = rumbleFor({ ...(phys.telemetry ? phys.telemetry() : { speed: Math.abs(phys.u), surface: phys.surface, slip: phys.slip }), impact: phys.impact }, 1); if (r) controls.rumble(r.strong, r.weak, r.ms); }
   if (mode === 'drive' && phys && sound.ctx) { const tel = phys.telemetry ? phys.telemetry() : { rpm01: null, gear: null }; sound.update({ tunnel: tunnelAmt, v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
     id: VEHICLES[vehicle].id, rpm01: tel.rpm01 === null ? undefined : tel.rpm01, gear: tel.gear === null ? undefined : tel.gear, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view }); }
-  if (fx) fx.render(); else renderer.render(scene, camera); stats(now);
   if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label;
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }
 }
@@ -343,6 +353,6 @@ addEventListener('message', async e => {
 });
 if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
-window.__next = { fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
+window.__next = { bus, runtime, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };

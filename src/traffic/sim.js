@@ -10,6 +10,7 @@
    - `circles(x, z, r)` gives the player's physics the cars as obstacle circles ({ x, z, r }, the same contract trees and rails use).
    Usage: const sim = new TrafficSim(road, { seed, mode: 'low', drive: 'right' }); each frame sim.update(dt, { x, z, s, u, yaw }); read sim.cars. */
 import { alea } from '../core/rng.js';
+import { Pool } from '../core/runtime.js';
 
 export const MODES = { off: 0, low: 6, mid: 12, high: 20 };                    // cars alive inside the window at most, per level
 export const MODE_ALIAS = { light: 'low', busy: 'high' };                      // older saved names
@@ -17,6 +18,9 @@ export const SLOT = 60, LIMIT = { 'two-lane': 22, highway: 30, boulevard: 16, di
 export const KINDS = { sedan: { len: 4.4, w: 1.85 }, van: { len: 5.2, w: 2.0 }, truck: { len: 8.5, w: 2.5 } };
 /* the mix of vehicles: name, length, width, height (m) and how common it is. This plain set is used until the real models load (traffic_pack.json replaces it, see traffic.js). */
 export const DEFAULT_KINDS = [{ name: 'sedan', len: 4.4, w: 1.85, h: 1.45, weight: 70 }, { name: 'van', len: 5.2, w: 2.0, h: 2.0, weight: 18 }, { name: 'truck', len: 8.5, w: 2.5, h: 3.0, weight: 12 }];
+/* the cars are a bounded reusable pool (core/runtime.js Pool): a car that is removed is reset completely and handed back, so spawning and removing cars does not allocate */
+const blankCar = () => ({ handle: 0, id: 0, s: 0, dir: 1, lane: 0, kind: '', len: 0, w: 0, h: 0, v0: 0, speed: 0, colour: 0, lat: 0, stuck: 0, bump: 0, born: 0, bornDist: 0, x: 0, z: 0, y: 0, yaw: 0, brake: 0 });
+const resetCar = c => { for (const k in c) c[k] = typeof c[k] === 'string' ? '' : 0; c.dir = 1; };
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 const pickKind = (list, t) => { for (const k of list) { t -= k.weight; if (t < 0) return k; } return list[0]; };       // the vehicle a random number t (0..total weight) lands on
 
@@ -28,11 +32,12 @@ export function laneOffsets(style) {
 export class TrafficSim {
   constructor(road, { seed = 'traffic', mode = 'low', drive = 'right', ahead = 700, behind = 350, minSpawnGap = 150 } = {}) {
     this.road = road; this.seed = String(seed); this.drive = drive; this.ahead = ahead; this.behind = behind; this.minSpawnGap = minSpawnGap;
-    this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
+    this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.pool = new Pool({ cap: MODES.high + 8, make: blankCar, reset: resetCar }); this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
     this.setMode(mode);
   }
-  setKinds(list) { this.kinds = list && list.length ? list : DEFAULT_KINDS; this.cars.length = 0; this.seen.clear(); }
-  setMode(mode) { mode = MODE_ALIAS[mode] || mode; this.mode = MODES[mode] !== undefined ? mode : 'off'; this.cap = MODES[this.mode]; this.cars.length = 0; this.seen.clear(); }
+  setKinds(list) { this.kinds = list && list.length ? list : DEFAULT_KINDS; this.clearCars(); }
+  clearCars() { this.pool.releaseAll(); this.cars.length = 0; this.seen.clear(); }
+  setMode(mode) { mode = MODE_ALIAS[mode] || mode; this.mode = MODES[mode] !== undefined ? mode : 'off'; this.cap = MODES[this.mode]; this.clearCars(); }
   /* the signed offset from the centre line along the left normal for a car going `dir` (+1 with increasing s) in lane index k */
   lateral(dir, k) { const off = this.lanes[k], right = this.drive === 'right'; return (dir > 0) === right ? -off : off; }
 
@@ -40,7 +45,7 @@ export class TrafficSim {
     this.time += dt; if (!this.cap) return;
     const ps = player.s, lo = Math.floor((ps - this.behind) / SLOT), hi = Math.floor((ps + this.ahead) / SLOT);
     for (const k of this.seen) if (k < lo || k > hi) this.seen.delete(k);                                       // slots that left the window may fill again if the player comes back
-    this.cars = this.cars.filter(c => c.s > ps - this.behind - SLOT && c.s < ps + this.ahead + SLOT && c.s > this.road.sMin + 30 && c.s < this.road.sMax - 30 && c.stuck < 12);
+    const keep = []; for (const c of this.cars) { if (c.s > ps - this.behind - SLOT && c.s < ps + this.ahead + SLOT && c.s > this.road.sMin + 30 && c.s < this.road.sMax - 30 && c.stuck < 12) keep.push(c); else this.pool.release(c.handle); } this.cars = keep;
     const chance = Math.min(1, this.cap / (((this.ahead + this.behind) / SLOT) * 0.9));
     for (let k = lo; k <= hi; k++) if (!this.seen.has(k)) { this.seen.add(k); this.spawn(k, chance, player); }
     this.step(dt, player);
@@ -52,7 +57,8 @@ export class TrafficSim {
     const s = (slot + 0.15 + R() * 0.7) * SLOT, dir = R() < 0.5 ? 1 : -1, lane = Math.floor(R() * this.lanes.length), kt = R() * this.kinds.reduce((a, k) => a + k.weight, 0), K = pickKind(this.kinds, kt), kind = K.name, v0 = this.limit * (0.7 + R() * 0.28) * (K.len > 6.5 ? 0.8 : 1), colour = Math.floor(R() * 64);
     if (s < this.road.sMin + 60 || s > this.road.sMax - 60 || Math.abs(s - player.s) < this.minSpawnGap) return;
     for (const c of this.cars) if (c.dir === dir && c.lane === lane && Math.abs(c.s - s) < 30) return;          // never on top of another car
-    const car = { id: this.nextId++, s, dir, lane, kind, len: K.len, w: K.w, h: K.h || 1.5, v0, speed: v0 * 0.9, colour, lat: this.lateral(dir, lane), stuck: 0, bump: 0, born: this.time, bornDist: Math.abs(s - player.s), x: 0, z: 0, y: 0, yaw: 0, brake: 0 };
+    const got = this.pool.acquire(); if (!got) return; const car = got.obj;                                       // the pool is full: no spawn (the cap is lower than the pool, so this is a safety net)
+    Object.assign(car, { handle: got.handle, id: this.nextId++, s, dir, lane, kind, len: K.len, w: K.w, h: K.h || 1.5, v0, speed: v0 * 0.9, colour, lat: this.lateral(dir, lane), stuck: 0, bump: 0, born: this.time, bornDist: Math.abs(s - player.s), x: 0, z: 0, y: 0, yaw: 0, brake: 0 });
     this.place(car); this.cars.push(car);
   }
 
