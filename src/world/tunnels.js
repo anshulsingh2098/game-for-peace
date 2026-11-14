@@ -10,8 +10,8 @@ export class Tunnels {
   constructor(scene, road, style, origin, rows) {
     this.road = road; this.style = style; this.origin = origin; this.rows = rows; this.len = rows * road.ds; this.pieces = new Map(); this.range = 1800;
     const m = (color, rough = 0.95) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0, envMapIntensity: 0.3, side: THREE.DoubleSide });
-    this.wall = m(0x8f8b83); this.portal = m(0xb9b4aa); this.lamp = new THREE.MeshBasicMaterial({ color: 0xfff0c0 });
-    this.lampGeo = new THREE.BoxGeometry(0.5, 0.14, 1.1);
+    this.wall = m(0x8f8b83); this.wall.emissive = new THREE.Color(0x2a2c34); this.wall.emissiveIntensity = 0.55;       // tunnels are lit: never pitch black, even at night this.portal = m(0xb9b4aa); this.lamp = new THREE.MeshBasicMaterial({ color: 0xfff0c0 });
+    this.lampGeo = new THREE.BoxGeometry(0.7, 0.18, 1.8);
     this.group = new THREE.Group(); scene.add(this.group); this._p = {};
     const W = style.shoulder + 0.8; this.W = W;                                     // inside half-width of the tube
     this.section = [[-W, -0.4], [-W, WALL]]; for (let i = 1; i <= ARC_N; i++) { const a = Math.PI - Math.PI * i / ARC_N; this.section.push([Math.cos(a) * W, WALL + Math.sin(a) * ARCH]); } this.section.push([W, -0.4]);
@@ -37,7 +37,10 @@ export class Tunnels {
           I.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
         }
       }
-      for (const q of fr) if (Math.floor(q.s / LAMP_EVERY) !== Math.floor((q.s - ds) / LAMP_EVERY)) lamps.push([q.x, q.y + WALL + ARCH - 0.25, q.z, Math.atan2(q.tx, q.tz)]);
+      for (const q of fr) if (Math.floor(q.s / LAMP_EVERY) !== Math.floor((q.s - ds) / LAMP_EVERY)) {          // a lamp in the middle of the roof and one low on each wall
+        const th = Math.atan2(q.tx, q.tz); lamps.push([q.x, q.y + WALL + ARCH - 0.25, q.z, th]);
+        for (const side of [-1, 1]) lamps.push([q.x + q.nx * side * (W - 0.15), q.y + 3.4, q.z + q.nz * side * (W - 0.15), th]);
+      }
       for (const [idx, atStart] of [[0, true], [rows.length - 1, false]]) {                          // a portal wall where the tube really begins or ends (not at a piece edge)
         const row = rows[idx], edge = atStart ? row === 0 : row === n; if (edge) continue;
         const q = fr[idx], th = Math.atan2(q.tx, q.tz), shape = new THREE.Shape(), hole = new THREE.Path();
