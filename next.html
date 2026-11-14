@@ -25,6 +25,16 @@
   .keys { color: #8f9bb0; font-size: 12px; margin-top: 8px; }
   #bar { right: 10px; top: 10px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 130px); }
   #vehicles { display: flex; gap: 6px; }
+  #paint { display: flex; gap: 5px; align-items: center; }
+  .sw { width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); }
+  .sw[aria-pressed=true] { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+  #buff { position: fixed; right: 14px; bottom: 14px; width: 78px; height: 78px; border-radius: 50%; background: rgba(8, 12, 20, .62); border: 2px solid var(--accent); font-weight: 700; display: grid; place-items: center; align-content: center; touch-action: none; }
+  #buff.active { background: var(--accent); color: #0b1020; }
+  #buff.cooling { border-color: rgba(255, 255, 255, .25); color: #8f9bb0; }
+  #buffCd { display: block; font-size: 11px; font-weight: 500; min-height: 1em; }
+  body.touch #buff { bottom: 104px; }
+  body:not([data-mode=drive]) #buff, body.bare #buff { display: none; }
+  body.debug #buff { bottom: 200px; }
 
   /* driving read-out */
   #hud { left: 12px; bottom: 12px; display: flex; align-items: baseline; gap: 8px; padding: 8px 14px; pointer-events: none; }
@@ -66,11 +76,12 @@
   </form>
   <div class="row"><label>Time <select id="time"><option value="dawn">Dawn</option><option value="day">Day</option><option value="dusk">Dusk</option><option value="night">Night</option><option value="auto">Cycle</option></select></label>
     <label>Weather <select id="weather"><option value="clear">Clear</option><option value="overcast">Overcast</option><option value="fog">Fog</option><option value="rain">Rain</option><option value="storm">Storm</option><option value="snow">Snow</option><option value="auto">Changing</option></select></label></div>
-  <div class="keys">Arrows or W A S D drive · C camera · B back to the road · L headlights · M sound · F free camera · T ride along the road · R new world · H hide panels</div>
+  <div class="keys">Arrows or W A S D drive · Space buff · C camera · B back to the road · L headlights · M sound · F free camera · T ride along the road · R new world · H hide panels</div>
 </details>
 
 <nav class="panel" id="bar" aria-label="Vehicle and view">
   <div id="vehicles"><button type="button">Car</button><button type="button">Truck</button><button type="button">Bike</button></div>
+  <div id="paint" role="group"></div>
   <button type="button" id="viewBtn" title="Switch camera (C)">Camera</button>
   <button type="button" id="reset" title="Back to the road (B)">To road</button>
   <button type="button" id="fly" title="Free camera (F)">Fly</button>
@@ -82,6 +93,7 @@
   <div><span class="pad" data-k="left" role="button" aria-label="Steer left">◀</span><span class="pad" data-k="right" role="button" aria-label="Steer right">▶</span></div>
   <div><span class="pad" data-k="down" role="button" aria-label="Brake and reverse">▼</span><span class="pad" data-k="up" role="button" aria-label="Accelerate">▲</span></div>
 </div>
+<button type="button" id="buff">Boost<span id="buffCd"></span></button>
 <pre class="panel" id="stats"></pre>
 <div id="toast" role="status"></div>
 

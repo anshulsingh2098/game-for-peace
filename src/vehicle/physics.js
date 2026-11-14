@@ -30,8 +30,13 @@ export function vehicleParams(body, stats) {
   };
 }
 
+/* temporary multipliers (buffs): top speed, acceleration, pull of slopes, surface drag, steering lock, grip */
+export const NO_MOD = { top: 1, accel: 1, slope: 1, drag: 1, steer: 1, grip: 1 };
+
 export class VehiclePhysics {
-  constructor(params, world) { this.p = params; this.world = world; this.acc = 0; this.reset(0, 0, 0); }
+  constructor(params, world) { this.p = params; this.world = world; this.acc = 0; this.mod = NO_MOD; this.reset(0, 0, 0); }
+  /* apply a buff's multipliers, or clear them with no argument */
+  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; }
   reset(x, z, yaw) {
     Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0 });
     this.y = this.world.height(x, z); this.ground(1);
@@ -54,23 +59,23 @@ export class VehiclePhysics {
     this.y += (y - this.y) * k; this.pitch += (this.gPitch - this.pitch) * k; this.roll += (this.gRoll - this.roll) * k; this.groundY = y;
   }
   sub(input) {
-    const p = this.p, W = this.world, h = H, m = p.mass;
+    const p = this.p, W = this.world, h = H, m = p.mass, M = this.mod, top = p.top * M.top;
     this.steer += (clamp(input.steer, -1, 1) - this.steer) * Math.min(1, h * 7);
-    this.delta = this.steer * Math.min(p.steerMax, 1.35 * p.mu * G * p.L / Math.max(this.u * this.u, 1));     // full lock when slow; at speed only as much as dry tyres could use
+    this.delta = this.steer * Math.min(p.steerMax, 1.35 * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));     // full lock when slow; at speed only as much as dry tyres could use
     this.ground(Math.min(1, h * 14));
     const key = W.surface(this.x, this.z); this.surface = key; const S = SURFACES[key] || SURFACES.grass;
     const depth = W.seaLevel - this.groundY; this.wet = depth > 0 ? depth : 0;
-    const mu = p.mu * S.grip * (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(key) : 1) /* weather on the tyres; 1 when dry */, N = m * G * Math.cos(this.gPitch);
+    const mu = p.mu * S.grip * (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(key) : 1) /* weather on the tyres; 1 when dry */ * M.grip, N = m * G * Math.cos(this.gPitch);
 
     /* forward force: engine, brakes, reverse */
     let Fx = 0; const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), flooded = depth > 1.1;
-    if (thr > 0 && !flooded) Fx = this.u < -0.4 ? m * p.brake * thr : m * p.accel * thr * Math.max(0, 1 - (this.u / p.top) ** 2);
+    if (thr > 0 && !flooded) Fx = this.u < -0.4 ? m * p.brake * thr : m * p.accel * M.accel * thr * Math.max(0, 1 - (this.u / top) ** 2);
     else if (brk > 0) Fx = this.u > 0.5 ? -m * p.brake * brk : flooded ? 0 : -m * p.revAccel * brk * Math.max(0, 1 - (this.u / p.revTop) ** 2);
     else Fx = -m * 0.55 * clamp(this.u, -1, 1);                                     // engine braking when coasting
     Fx = clamp(Fx, -mu * N, mu * N);                                                // the tyres can only push so hard
-    const roll = -m * G * (S.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(this.u / 0.5, -1, 1);
+    const roll = -m * G * (S.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(this.u / 0.5, -1, 1);
     const air = -p.aero * this.u * Math.abs(this.u);
-    const Fg = -m * G * Math.sin(this.gPitch), Fside = m * G * Math.sin(this.gRoll);          // slopes pull the car back and sideways
+    const Fg = -m * G * Math.sin(this.gPitch) * M.slope, Fside = m * G * Math.sin(this.gRoll);          // slopes pull the car back and sideways
 
     /* sideways forces from the tyres (above walking pace); below it the car simply follows its front wheels */
     const blend = sstep(3, 6, this.u); let dv = 0, dr = 0;
@@ -87,7 +92,7 @@ export class VehiclePhysics {
     const vDyn = this.v + dv * h, rDyn = this.r + dr * h;
     const rKin = this.u * Math.tan(this.delta) / p.L, vKin = this.v * (1 - Math.min(1, h * 8)) + (Math.abs(this.gRoll) > 0.5 ? Fside / m * h : 0);     // very steep side slopes still slide you
     this.v = vKin + (vDyn - vKin) * blend; this.r = rKin + (rDyn - rKin) * blend;
-    this.u = clamp(this.u, -p.revTop * 1.1, p.top * 1.08);
+    this.u = clamp(this.u, -p.revTop * 1.1, Math.max(top * 1.08, this.u - 6 * h));          // when a speed buff ends, the extra speed bleeds off instead of vanishing
 
     /* parked: with no input, on a slope the tyres can hold, stay put */
     if (!thr && !brk && Math.abs(this.u) < 0.25 && Math.abs(Fg) < mu * N * 0.9 && Math.abs(this.gRoll) < 0.5) { this.u = 0; this.v = 0; this.r = 0; }
