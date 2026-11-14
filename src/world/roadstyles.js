@@ -50,17 +50,17 @@ export const HIGHWAY = finish({
 /* a city street: two lanes each way, a flush median, kerbs and pavements */
 export const BOULEVARD = finish({
   id: 'boulevard', name: 'Boulevard', half: 8, shoulder: 11.6,
-  ...symmetric([[0, 0, 'median', 0.5], [1.2, 0, 'median', 0.5], [1.2, 0, 'asphalt', 0.2], [8, 0, 'asphalt', 0.8], [8, -0.14, 'kerb', 0.8], [8.3, -0.14, 'kerb', 0.8], [11.5, -0.14, 'pave', 0.5], [11.5, 0.5, 'gravel', 1], [13.5, 0.9, 'gravel', 1]],
+  ...symmetric([[0, 0, 'median', 0.3], [1.2, 0, 'median', 0.7], [1.2, 0, 'asphalt', 0.2], [8, 0, 'asphalt', 0.8], [8, -0.14, 'kerb', 0.8], [8.3, -0.14, 'kerb', 0.8], [11.5, -0.14, 'pave', 0.5], [11.5, 0.5, 'gravel', 1], [13.5, 0.9, 'gravel', 1]],
     [true, false, true, true, true, true, true, true]),
   lines: [{ t: -1.45, w: 0.14 }, { t: 1.45, w: 0.14 }, { t: -4.7, w: 0.14, dash: [4, 6] }, { t: 4.7, w: 0.14, dash: [4, 6] }, { t: -7.6, w: 0.16 }, { t: 7.6, w: 0.16 }],
-  colour: { asphalt: [0.62, 0.62, 0.65], median: [0.52, 0.55, 0.5], kerb: [0.86, 0.85, 0.82], pave: [0.78, 0.74, 0.68], gravel: [0.7, 0.66, 0.56], line: [0.9, 0.9, 0.84] },
+  colour: { asphalt: [0.62, 0.62, 0.65], median: [0.5, 0.62, 0.46], kerb: [0.86, 0.85, 0.82], pave: [0.78, 0.74, 0.68], gravel: [0.7, 0.66, 0.56], line: [0.9, 0.9, 0.84] },
   surfaces: [[11.6, 'asphalt']]
 });
 
 /* a narrow dirt track with two worn ruts and a grassy middle */
 export const DIRT = finish({
   id: 'dirt', name: 'Dirt trail', half: 2.6, shoulder: 3.4,
-  ...symmetric([[0, 0, 'mid', 0.5], [0.9, 0.06, 'rut', 0.5], [1.8, 0, 'dirt', 0.7], [2.6, 0.04, 'dirt', 0.87], [3.4, 0.1, 'verge', 1], [5, 0.7, 'verge', 1]], [true, true, true, true, true]),
+  ...symmetric([[0, 0, 'mid', 0.3], [0.9, 0.06, 'rut', 0.42], [1.8, 0, 'dirt', 0.58], [2.6, 0.04, 'dirt', 0.75], [3.4, 0.1, 'verge', 1], [5, 0.7, 'verge', 1]], [true, true, true, true, true]),
   lines: [],
   colour: { dirt: [0.62, 0.46, 0.3], mid: [0.5, 0.5, 0.3], rut: [0.4, 0.3, 0.2], verge: [0.46, 0.5, 0.26] },
   surfaces: [[2.8, 'gravel'], [3.6, 'grass']]
@@ -69,7 +69,7 @@ export const DIRT = finish({
 /* a rally gravel stage: loose pale surface, darker driven lines, berms either side */
 export const GRAVEL = finish({
   id: 'gravel', name: 'Gravel stage', half: 3.8, shoulder: 5,
-  ...symmetric([[0, 0, 'mid', 0.5], [1, 0.04, 'rut', 0.5], [2, 0, 'loose', 0.6], [3.8, 0.05, 'loose', 0.87], [4.3, -0.3, 'berm', 0.9], [5, 0.1, 'berm', 1], [6, 0.9, 'verge', 1]], [true, true, true, true, true, true]),
+  ...symmetric([[0, 0, 'mid', 0.3], [1, 0.04, 'rut', 0.42], [2, 0, 'loose', 0.55], [3.8, 0.05, 'loose', 0.75], [4.3, -0.3, 'berm', 0.9], [5, 0.1, 'berm', 1], [6, 0.9, 'verge', 1]], [true, true, true, true, true, true]),
   lines: [],
   colour: { loose: [0.86, 0.82, 0.74], mid: [0.8, 0.76, 0.68], rut: [0.62, 0.58, 0.5], berm: [0.8, 0.76, 0.66], verge: [0.5, 0.52, 0.3] },
   surfaces: [[5.2, 'gravel']]
