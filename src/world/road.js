@@ -3,14 +3,7 @@
 import * as THREE from 'three';
 import { asphaltTex } from './textures.js';
 
-/* a style is a cross-section: `cols` are [offset from centre (m), height below the crown (m), surface, texture u] */
-export const TWO_LANE = {
-  name: 'Two-lane road', half: 4, shoulder: 5.4,
-  cols: [[-6.9, 0.75, 'gravel', 0], [-5.4, 0.06, 'gravel', 0], [-4, 0.02, 'gravel', 0.13], [-4, 0, 'asphalt', 0.13], [4, 0, 'asphalt', 0.87], [4, 0.02, 'gravel', 0.87], [5.4, 0.06, 'gravel', 1], [6.9, 0.75, 'gravel', 1]],
-  strips: [[0, 1], [1, 2], [3, 4], [5, 6], [6, 7]],            // which neighbouring columns are joined into surface
-  lines: [{ t: 0, w: 0.16, dash: [6, 6] }, { t: -3.6, w: 0.16 }, { t: 3.6, w: 0.16 }],
-  colour: { asphalt: [0.78, 0.78, 0.80], gravel: [0.74, 0.70, 0.60], line: [0.88, 0.86, 0.78] }
-};
+export { TWO_LANE } from './roadstyles.js';          // styles are data in roadstyles.js: see there for the cross-section format
 
 const ROWS = 40;                                                // rows per piece; a row every road.ds metres
 

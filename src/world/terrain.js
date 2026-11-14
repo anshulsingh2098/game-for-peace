@@ -7,6 +7,7 @@
      surface(x, z) what the wheels are on there: asphalt, gravel, grass, sand, rock or snow */
 import { createNoise } from '../core/noise.js';
 import { alea } from '../core/rng.js';
+import { roadSurfaceAt } from './roadstyles.js';
 
 const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
 const sstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
@@ -45,7 +46,7 @@ export function createTerrain(config) {
 
   /* what the wheels are on at a point: a key of SURFACES in vehicle/physics.js */
   function surface(x, z) {
-    if (road && road.nearest(x, z)) { const d = road.hit.d; if (d < 4.05) return 'asphalt'; if (d < 5.7) return 'gravel'; }
+    if (road && road.nearest(x, z)) { const k = roadSurfaceAt(road.style, road.hit.d); if (k) return k; }
     const up = base(x, z) - sea; return up < 3.2 ? 'sand' : up > P.snowline + 10 ? 'snow' : up > P.treeline + 60 ? 'rock' : 'grass';
   }
 
