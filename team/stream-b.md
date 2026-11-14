@@ -2,6 +2,17 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  Fixed: vehicles slid and spun for no reason on hills and dips
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: `src/vehicle/rapier-vehicle.js` only. Found by driving all five vehicles along real roads headlessly (Alps, California, others). Causes and fixes:
+- Crests launched the car (all four wheels off the ground), it drifted in the air and landed sideways, then spun. Fix: the body weighs 1.3x (GRAV; tyre grip divided to compensate), extra downforce with speed (PUSH), strong spin damping while airborne.
+- Deep V-shaped dips (California road s about 1960, 160 km/h) bottomed the suspension, the chassis box hit the ground and stopped the car dead. Fix: more suspension travel and stiffer springs for all vehicles, chassis box friction 0.
+- The bike's anti-flip springs aimed for LEVEL, so on a 7 degree hill they lifted its rear wheel and it wobbled into a spin. Fix: they now aim for the slope of the ground.
+- The turn assist is now always on (stability control): with no steering it drives the yaw rate to zero, so wobbles die out.
+Result: unwanted slip went from up to 3.2% of frames (side speed up to 29 m/s) to at most 0.5% (about 4 m/s) over ten world/vehicle runs; most are zero. 24 checks pass. Deployed.
+For the other stream: nothing. FYI the road in California around s 1960 is a deep, short V-dip (7 degrees down then up in about 30 m); cars take it fine now, but it is the sharpest vertical curve I saw. `terrain.drive` was not changed.
+Status: open
+
 ## 2026-11-14  Steering turns much tighter (turn assist, more grip, cornering scrub)
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed: `src/vehicle/rapier-vehicle.js` only. Holding the throttle in a corner used to make the car turn 3 to 4 times wider; now a turn assist nudges the body toward the yaw rate the steering asks for (capped at what the tyres hold), tyres bite harder (GRIP 1.15 -> 1.35), and hard cornering scrubs a little speed (SCRUB 0.12). About 35% tighter radius under full throttle (car, 60 km/h: 56 m -> 37 m); rally car sharpest. All five vehicles still follow the road at speed. Deployed (live version `a9295923`). **Follow-up:** at high speed the steering barely moved (lock shrank with 1/speed^2, so 3 to 4 degrees at 200 km/h). Added aerodynamic grip (DOWNFORCE 0.8 at 60 m/s and above) and a minimum lock of a fifth of full lock: at 200 km/h the wheels now turn about 7 degrees and the car 26 degrees per second (was 16). Slalom at top speed is stable. **Second follow-up:** the changes above were too small to feel, so GRIP went 1.35 -> 2.2 and SCRUB 0.12 -> 0.06: cornering is now arcade-level (2.6 to 4 g); the car at 100 km/h under full throttle turns on a 29 m radius (was 65 m, originally 93 m). Deployed (see the next entry or `git log`).
