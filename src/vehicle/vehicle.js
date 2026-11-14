@@ -23,7 +23,7 @@ export class VehicleView {
     this.def = def; this.model = model.clone(true); this.root.add(this.model);
     this.wheels = []; this.riders = []; this.cockpit = null; this.wheel = null;
     this.model.traverse(o => {
-      if (/^Wheel_/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, front: /^Wheel_F/.test(o.name) }); }
+      if (/^Wheel_[A-Z]{1,2}$/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, front: /^Wheel_F/.test(o.name) }); }
       if (/^Rider/.test(o.name)) this.riders.push(o);
       if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; }); }
     });

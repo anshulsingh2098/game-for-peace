@@ -56,7 +56,7 @@ export class VehiclePhysics {
     const fl = W.height(fx + s * ht, fz - c * ht), fr = W.height(fx - s * ht, fz + c * ht), bl = W.height(bx + s * ht, bz - c * ht), br = W.height(bx - s * ht, bz + c * ht);
     this.gPitch = Math.atan2((fl + fr - bl - br) / 2, p.L); this.gRoll = Math.atan2((fl + bl - fr - br) / 2, p.track);
     const y = (fl + fr) / 2 * (p.rear / p.L) + (bl + br) / 2 * (p.front / p.L);
-    this.y += (y - this.y) * k; this.pitch += (this.gPitch - this.pitch) * k; this.roll += (this.gRoll - this.roll) * k; this.groundY = y;
+    this.y += (y - this.y) * Math.max(k, 0.85); this.pitch += (this.gPitch - this.pitch) * Math.max(k, 0.35); this.roll += (this.gRoll - this.roll) * Math.max(k, 0.35); this.groundY = y;   // the body stays on the ground (no lag, so it never sinks into a climb); tilt eases a little
   }
   sub(input) {
     const p = this.p, W = this.world, h = H, m = p.mass, M = this.mod, top = p.top * M.top;
