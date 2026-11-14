@@ -1,3 +1,0 @@
-Road textures from ambientCG (https://ambientcg.com), licensed CC0 1.0 (public domain).
-asphalt = Asphalt033, gravel = Gravel023, dirt = Ground081, pavement = PavingStones138.
-Resized to 512 px; colour, normal (OpenGL) and roughness maps only.
