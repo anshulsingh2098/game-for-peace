@@ -6,6 +6,7 @@ import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 import { locationConfig } from '../src/world/locations.js';
 import { createTerrain } from '../src/world/terrain.js';
 import { Road } from '../src/world/router.js';
+import { PORTAL_W } from '../src/world/router.js';
 import { createRails } from '../src/world/bridge_rails.js';
 await initRapier();
 const problems = [], check = process.argv.includes('--check');
@@ -14,6 +15,12 @@ for (const [loc, seed] of [['himalayas', 'hill'], ['alps', 'alps']]) {
   const rails = createRails(r, r.style.shoulder);
   const world = { height: (x, z) => t.drive(x, z), surface: (x, z) => t.surface(x, z), near: (x, z, rr) => rails(x, z, rr), seaLevel: t.seaLevel };
   const find = (pred) => { for (let s = r.sMin + 200; s < r.sMax - 200; s += 10) if (pred(s)) return s; return null; };
+  // the doorway: at the first row of the tube the land over the road must not stand in the opening (the hill face is a few metres behind it), and well inside it must stand above the roof
+  for (let s = r.sMin + 300; s < r.sMax - 100; s += 1) if (r.tunnelW(s) >= PORTAL_W && r.tunnelW(s - 1) < PORTAL_W) {
+    const p = r.at(s, {}), q = r.at(s + 14, {}), at0 = t.height(p.x, p.z) - p.y, in14 = t.height(q.x, q.z) - q.y;
+    console.log(`${loc} doorway at s ${s}: land over the road ${at0.toFixed(1)} m at the portal, ${in14.toFixed(1)} m 14 m inside`);
+    if (at0 > 3) problems.push(`${loc}: land stands ${at0.toFixed(1)} m over the road at the portal (doorway blocked)`); if (in14 < 9) problems.push(`${loc}: land is only ${in14.toFixed(1)} m over the road 14 m inside the tunnel (tube would show)`); break;
+  }
   const tests = [['tunnel', find(s => r.tunnelW(s) === 1 && r.tunnelW(s - 60) === 1 && r.tunnelW(s + 60) === 1 && r.tunnelRise(s) > 6)], ['bridge', find(s => r.bridgeW(s) === 1 && r.bridgeW(s - 40) === 1 && r.bridgeW(s + 40) === 1)]];
   for (const [kind, s] of tests) {
     if (s === null) { console.log(loc, kind, 'none found'); continue; }

@@ -2,7 +2,8 @@
    that come and go around the player. Lane markings are a second mesh just above the surface. */
 import * as THREE from 'three';
 import { Bridges } from './bridges.js';
-import { Tunnels, COVER } from './tunnels.js';
+import { Tunnels } from './tunnels.js';
+import { PORTAL_W } from './router.js';
 
 export { TWO_LANE } from './roadstyles.js';          // styles are data in roadstyles.js: see there for the cross-section format
 
@@ -48,7 +49,7 @@ export class RoadMesh {
   build(k) {
     const r = this.road, st = this.style, p = this._p, s0 = k * this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, nc = st.cols.length;
     const pos = [], col = [], uv = [], idxBy = {}, mk = k => (st.mats || {})[k] || 'asphalt', lp = [], lc = [], li = [];
-    const bridged = []; for (let row = 0; row <= ROWS; row++) bridged.push(r.bridgeW(s0 + row * r.ds) === 1 || r.tunnelRise(s0 + row * r.ds) >= COVER);       // rows on a bridge (see bridges.js)
+    const bridged = []; for (let row = 0; row <= ROWS; row++) bridged.push(r.bridgeW(s0 + row * r.ds) === 1 || r.tunnelW(s0 + row * r.ds) >= PORTAL_W);       // rows on a bridge (see bridges.js)
     for (let row = 0; row <= ROWS; row++) {
       const s = s0 + row * r.ds; r.at(s, p); const nx = -p.tz, nz = p.tx;          // nx, nz: unit vector pointing to the right of travel
       for (const [t, drop, kind, u] of st.cols) { pos.push(p.x + nx * t - ox, p.y - drop, p.z + nz * t - oz); col.push(...st.colour[kind]); uv.push(t, s); }

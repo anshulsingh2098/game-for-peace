@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-16 16:00  Tunnel doorways were blocked by the hill (fixed)
+Branch: feat/collision-audit
+What changed: (1) a real bug in `src/world/router.js` `deep()`: it read the road point into an object that `bridgeW()` overwrites, so tunnels were detected from a point a few metres off and began where the hill was only 2 to 3 m high; fixed (own object). All tunnels move a little because of this (share codes keep working; tunnel places differ slightly). (2) The land over the tube now stands at least `TUBE_ROOF` (9.6 m) above the road from `FACE_W` inward, and the way is cut clear in front of the portal. The tube and portal wall start at `PORTAL_W` (`tunnelW`), a few metres before the hill face, because the terrain mesh is coarser than the road. (3) New `src/world/tunnel_holes.js`: the terrain is not drawn inside the tube's arch for 30 m behind the 4 nearest portals (a fragment-shader discard chained onto the ground material, works with `?ground=flat`); `tunnels.js` lists its portals (`portals()`), `main.js` feeds them each frame. `road.js` and `tunnels.js` use `tunnelW >= PORTAL_W` instead of the old cover rule. `tools/collision_audit.mjs` now also checks the doorway numbers (land over the road at the portal at most 3 m, at least 9 m 14 m inside). Checked by eye entering and leaving in the Himalayas at low and high tier and `ground=flat`: open arch, interior visible, no console errors. Self-test 33, daily check 0 failed, all locations build a road.
+For the other stream: nothing. The photographic ground shader is in `groundmat.js` (not edited; the holes chain after it).
+Status: done
+
 ## 2026-11-16 14:00  Collision audit: tunnel walls and bridge rails hold; asset job recorded
 Branch: feat/collision-audit
 What changed: new `tools/collision_audit.mjs` drives the real vehicle physics on the real graded ground (`terrain.drive`, with the bridge rails) sideways into a tunnel wall and a bridge edge, Alps and Himalayas. Result: in a tunnel the car stops at 4.2 to 4.4 m from the centre line (the mountain, left whole over the road, is the wall); on the Alps bridge it stops at the rail, 3.1 m. No fix needed. Bridge piers are below the deck and not reachable while the rails hold. `PARALLEL_PLAN.md` now records the owner's instruction that Claude sources or builds all assets for N11 to N14 (write `docs/ASSET_PLAN.md` first).

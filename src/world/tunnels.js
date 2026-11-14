@@ -5,9 +5,10 @@
    The name on the board is road.c.tunnelName (set per location in locations.js). Same flat materials as the bridges and landmarks. */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { PORTAL_W } from './router.js';
 
-export const COVER = 0.8;                                       // metres of earth over the road before the tube (and its portal wall) starts
-const WALL = 4.3, ARCH = 4.3, ARC_N = 10;                       // straight wall height, arch rise (so 8.6 m clear in the middle)
+export const COVER = 0.8;                                       // (older rule, kept for reference: the tube now starts where Road.tunnelW reaches PORTAL_W)
+export const WALL = 4.3, ARCH = 4.3, ARC_N = 10;                       // straight wall height, arch rise (so 8.6 m clear in the middle)
 const LAMP_EVERY = 14, STRIP_EVERY = 3, CONE_EVERY = 6, EXIT_EVERY = 60, SOS_EVERY = 120, LIMIT_EVERY = 200;         // roof lamps, wall light strips, cones along the lane edges (m)
 const GATE_OUT = 7;                                             // how far in front of the portal wall the gate stands (m)
 
@@ -99,10 +100,10 @@ export class Tunnels {
   }
   build(k) {
     const r = this.road, ds = r.ds, s0 = k * this.len, p = this._p, n = this.rows, sec = this.section, W = this.W, o = r.at(s0, {}), ox = o.x, oz = o.z;
-    const inTube = s => r.tunnelRise(s) >= COVER, runs = []; let run = null;
+    const inTube = s => r.tunnelW(s) >= PORTAL_W, runs = []; let run = null;
     for (let row = 0; row <= n; row++) { if (inTube(s0 + row * ds)) { if (!run) runs.push(run = []); run.push(row); } else run = null; }
     if (!runs.length) return null;
-    const grp = new THREE.Group(), P = [], U = [], I = [], lamps = [], strips = [], cones = [], exits = [], soss = [], limits = [], LP = [], LI = [];
+    const portals = [], grp = new THREE.Group(), P = [], U = [], I = [], lamps = [], strips = [], cones = [], exits = [], soss = [], limits = [], LP = [], LI = [];
     const frame = s => { r.at(s, p); return { s, x: p.x - ox, y: p.y, z: p.z - oz, nx: -p.tz, nz: p.tx, tx: p.tx, tz: p.tz }; };
     const edge = this.style.shoulder - 0.45;                                                          // cones stand just outside the lane edge lines
     for (const rows of runs) {
@@ -136,7 +137,7 @@ export class Tunnels {
         hole.moveTo(-W, -0.4); hole.lineTo(-W, WALL); hole.absellipse(0, WALL, W, ARCH, Math.PI, 0, true); hole.lineTo(W, -0.4); hole.lineTo(-W, -0.4); shape.holes.push(hole);
         const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.2, bevelEnabled: false, curveSegments: 14 }), m = new THREE.Mesh(geo, this.portal);
         m.rotation.y = th; m.position.set(q.x - Math.sin(th) * (atStart ? 0 : 1.2), q.y, q.z - Math.cos(th) * (atStart ? 0 : 1.2)); m.castShadow = true; m.receiveShadow = true; grp.add(m);
-        const gq = frame(q.s + (atStart ? -GATE_OUT : GATE_OUT)); this.gate(grp, gq.x, gq.y, gq.z, th);
+        const gq = frame(q.s + (atStart ? -GATE_OUT : GATE_OUT)); this.gate(grp, gq.x, gq.y, gq.z, th); portals.push({ x: ox + q.x, y: q.y, z: oz + q.z, dx: atStart ? q.tx : -q.tx, dz: atStart ? q.tz : -q.tz });
       }
     }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); geo.setIndex(I); geo.computeVertexNormals();
@@ -148,8 +149,10 @@ export class Tunnels {
     if (LP.length) { const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(LP, 3)); lg.setIndex(LI); lg.computeVertexNormals(); const lm = new THREE.Mesh(lg, this.ledge); lm.receiveShadow = true; grp.add(lm); }
     inst(this.exitGeo, this.exitMat, exits); inst(this.sosGeo, this.sosMat, soss); inst(this.limitGeo, this.limitMat, limits);
     inst(this.lampGeo, this.lamp, lamps); inst(this.stripGeo, this.lamp, strips); inst(this.coneGeo, this.cone, cones);
-    grp.userData = { x: ox, z: oz }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
+    grp.userData = { x: ox, z: oz, portals }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
   }
+  /* the portals of the built pieces: [{ x, y, z, dx, dz }] in world coordinates, dx/dz pointing into the tube (for tunnel_holes.js) */
+  portals() { const out = []; for (const g of this.pieces.values()) if (g && g.userData.portals) out.push(...g.userData.portals); return out; }
   drop(grp) { if (!grp) return; this.group.remove(grp); grp.traverse(o => { if (o.isInstancedMesh) o.dispose(); else if (o.geometry) o.geometry.dispose(); }); }
   reposition() { for (const g of this.pieces.values()) if (g) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); }
   dispose() {
