@@ -14,6 +14,8 @@ export class Scatter {
     this.tiles = new Map(); this.queue = []; this.ptx = NaN; this.ptz = NaN; this.dirty = true; this.count = 0;
     this.group = new THREE.Group(); scene.add(this.group);
   }
+  /* swap in the real-scan models (world/nature.js) and rebuild every tile with them */
+  setProps(patch) { this.nature = patch; for (const t of this.tiles.values()) this.drop(t); this.tiles.clear(); this.queue.length = 0; this.dirty = true; }
   update(px, pz) {
     const Sz = this.size, ptx = Math.floor(px / Sz), ptz = Math.floor(pz / Sz), v = this.config.view.scenery;
     if (ptx !== this.ptx || ptz !== this.ptz || this.dirty) {
@@ -72,9 +74,11 @@ export class Scatter {
       });
       im.castShadow = true; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
     };
-    for (const k of ['pine', 'round']) if (lists[k].length) { fill(pr[k].trunk, pr.solid, lists[k], false); fill(pr[k].foliage, pr[k].mat, lists[k], true); count -= lists[k].length; }
-    for (const k of ['bush', 'tuft']) if (lists[k].length) fill(pr[k].foliage, pr[k].mat, lists[k], true);
-    if (lists.rock.length) fill(pr.rock, pr.solid, lists.rock, true);
+    const nat = this.nature, defs = k => nat && nat[k] && nat[k].length ? nat[k] : [pr[k]];                   // real-scan variants when loaded, else the drawn model
+    const variants = (k, f) => defs(k).forEach((d, vi, all) => { const sub = all.length > 1 ? lists[k].filter((_, i) => i % all.length === vi) : lists[k]; if (sub.length) f(d, sub); });
+    for (const k of ['pine', 'round']) if (lists[k].length) variants(k, (d, sub) => { if (d.trunk) { fill(d.trunk, pr.solid, sub, false); fill(d.foliage, d.mat, sub, true); count -= sub.length; } else fill(d.foliage, d.mat, sub, true); });
+    for (const k of ['bush', 'tuft']) if (lists[k].length) variants(k, (d, sub) => fill(d.foliage, d.mat, sub, true));
+    if (lists.rock.length) { if (nat && nat.rock && nat.rock.length) nat.rock.forEach((d, vi) => { const sub = lists.rock.filter((_, i) => i % nat.rock.length === vi); if (sub.length) fill(d.geom, d.mat, sub, true); }); else fill(pr.rock, pr.solid, lists.rock, true); }
     g.position.set(x0 - this.origin.x, 0, z0 - this.origin.z); this.group.add(g); this.count += count;
     return { tx, tz, full, g, hits, count };
   }

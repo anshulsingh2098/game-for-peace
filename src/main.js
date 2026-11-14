@@ -15,6 +15,7 @@ import { Scatter } from './world/scatter.js';
 import { WIND } from './world/props.js';
 import { grassTex, waterNormalTex } from './world/textures.js';
 import { makeGroundMaterial } from './world/groundmat.js';
+import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from './vehicle/physics.js';
 import { RapierVehicle, initRapier } from './vehicle/rapier-vehicle.js';
@@ -58,6 +59,7 @@ const saved = (() => { try { return JSON.parse(localStorage.getItem('gfp-next') 
 const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, ...saved }, save = () => { try { localStorage.setItem('gfp-next', JSON.stringify(S)); } catch (e) { /* storage unavailable */ } };
 env.setTime(S.time); env.setWeather(S.weather);
 
+let nature = null; if (q.get('nature') !== 'flat') loadNature().then(p => { nature = p; if (p && typeof scatter !== 'undefined' && scatter) scatter.setProps(p); });       // real-scan trees, plants and rocks (src/world/nature.js); ?nature=flat keeps the drawn ones
 const photoGround = q.get('ground') !== 'flat', groundMat = photoGround ? makeGroundMaterial() : null;                // photographic ground (src/world/groundmat.js); ?ground=flat for the old drawn texture
 const ground = groundMat ? groundMat.material : new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
 const ripples = waterNormalTex(), RIP = 0.07;
@@ -79,7 +81,7 @@ function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
   if (landmarks) landmarks.dispose(); landmarks = new Landmarks(scene, terrain, road, config, grid.origin, locationById(config.location).landmarks);       // sights beside the road; they also level the land under them
-  roadMesh = new RoadMesh(scene, road, road.style, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin);
+  roadMesh = new RoadMesh(scene, road, road.style, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
   env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); } waterMat.color.set(config.water.color);
 }
 makeScenery();
