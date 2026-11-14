@@ -8,6 +8,12 @@ What changed: nothing in code. Tried two-plane tree cards on far scenery tiles: 
 For the other stream: bridge rails are drawn but the car drives through them. The physics ground is one heightfield (`rapier-vehicle.js`), which is your file. Ask: add thin cuboid colliders along the bridge edges (use `Road.bridgeW === 1` stretches and `road.carriedW` for the half width), or tell me the hook you want and I will expose a list of rail segments from `world/bridges.js`.
 Status: open
 
+## 2026-11-15 11:00  Mountain roads are too steep (open, N3)
+Branch: feat/n3-grade-check
+What changed: `tools/locations_check.mjs` now also prints the share of the road above the hard grade limit. Finding: Alps 7-24% and Himalayas 10-21% of the road is over the hard limit (14-15%), peaking near 21%; Mumbai 0%, default 3.7%. Allowing deeper cuts and a lower fallback grade (`maxCut`, `lastGrade`) helped some seeds and made others worse (Himalayas coast 21% to 47%), so I kept the config as it was. The cause is the route choice in `router.js`, not the limits. Next: make the router prefer gentler lines in the mountains (switchbacks) and re-measure with this check.
+For the other stream: nothing. Expect the climb to feel steep in the Alps and Himalayas until this is fixed.
+Status: open
+
 ## 2026-11-14 19:00  Far rocks are cheap now (N3/N4 speed)
 Branch: feat/n3-world-polish
 What changed: `src/world/scatter.js`: real-scan rocks (about 650 triangles each) only in the near tiles; far tiles use the drawn rock. On the medium tier, triangles per frame go from 527k to 419k (-20%); rocks were about 45% of the scenery triangles. Next biggest: terrain tiles (about 184k).
