@@ -177,10 +177,12 @@ export class RapierVehicle {
     stabilise(b, car.T);
     vc.updateVehicle(h); this.R.step();
     if (this.patchNew) this.patchNew = false;
-    const du = (this.u - u) / h; this.axL += (du - this.axL) * Math.min(1, h * 6);
-    this.dPitch += (this.axL * 0.012 * p.cg - this.dPitch) * Math.min(1, h * 7); this.dRoll += (this.ay * 0.014 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);
+    /* body pitch and lean are worked out after read() below, once the new speed is known (they used to compare the old speed with itself, so the body never moved) */
     this.stuck = flooded ? this.stuck + h : 0;
     this.read(); this.collide();
+    const du = (this.u - u) / h; this.axL += (clamp(du, -14, 14) - this.axL) * Math.min(1, h * 6);                       // longitudinal acceleration, smoothed
+    this.dPitch += (clamp(this.axL, -12, 12) * (this.axL < 0 ? 0.013 : 0.02) * p.cg - this.dPitch) * Math.min(1, h * 7);                          // nose dips under braking, squats under power
+    this.dRoll += (-clamp(this.ay, -12, 12) * 0.022 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);   // body leans in corners (a bike leans by its own model)
     if (this.u > Math.max(top * 1.08, 1)) { const lv = b.linvel(), k = Math.max(top * 1.08, this.u - 6 * h) / this.u; b.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); }          // hard speed ceiling (a buff's extra speed bleeds off)
   }
 

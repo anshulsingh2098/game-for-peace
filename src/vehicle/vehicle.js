@@ -77,6 +77,9 @@ export class VehicleView {
     if (rb) {                                                                                                   // rigid-body physics: use the body's real orientation, then a touch of pitch and lean for the look
       const q = ph.quat; r.position.set(ph.x - origin.x, ph.bodyY, ph.z - origin.z); r.quaternion.set(q.x, q.y, q.z, q.w); r.translateY(-ph.hCom); r.rotateX(-ph.dPitch); r.rotateZ(ph.dRoll + ph.lean);
     } else { r.position.set(ph.x - origin.x, ph.y, ph.z - origin.z); r.rotation.set(-(ph.pitch + ph.dPitch), Math.PI / 2 - ph.yaw, ph.roll + ph.dRoll + ph.lean); }
+    /* a little road feel: the body trembles with speed, more on gravel and grass than on asphalt (the road itself is perfectly smooth) */
+    { const t = performance.now() / 1000, sp = Math.min(Math.abs(ph.u) / 30, 1), rough = ph.surface === 'asphalt' ? 1 : ph.surface === 'gravel' ? 3.5 : 2.5;
+      r.position.y += (Math.sin(t * 23.1) * 0.5 + Math.sin(t * 37.7 + 1.3) * 0.5) * 0.006 * sp * rough; r.rotateZ(Math.sin(t * 17.3) * 0.0012 * sp * rough); r.rotateX(Math.sin(t * 29.9 + 2.1) * 0.0008 * sp * rough); }
     /* front wheels follow the real road-wheel angle, with Ackermann geometry: the inner wheel turns more than the outer */
     const L = ph.p.L, T = ph.p.track, tn = Math.tan(ph.delta), R = Math.abs(tn) > 1e-4 ? L / tn : 1e6;
     for (const w of this.wheels) {
