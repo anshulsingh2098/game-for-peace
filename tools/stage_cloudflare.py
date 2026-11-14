@@ -8,7 +8,7 @@ import os, sys, shutil, filecmp
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FILES = ['index.html', 'next.html', 'game.js', 'audio.js']                      # single files, if present
 TREES = {                                                                      # folder -> allowed extensions
-    'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', ''}, 'assets': {'.glb', '.png', '.jpg', '.webp'},
+    'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', ''}, 'assets': {'.glb', '.png', '.jpg', '.webp', '.hdr'},
     'music': {'.json', '.mp3', '.m4a', '.ogg'},
 }
 

@@ -7,6 +7,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+
+/* a real photographed sky, as image-based light and reflections (resolves to a PMREM texture, or null if it cannot load) */
+export function loadSkyLight(renderer, url) {
+  return new Promise(res => new HDRLoader().load(url, tex => { tex.mapping = THREE.EquirectangularReflectionMapping; const rt = new THREE.PMREMGenerator(renderer).fromEquirectangular(tex); tex.dispose(); res(rt.texture); }, undefined, () => res(null)));
+}
 
 export function createFx(renderer, scene, camera, mode = '1') {
   const size = renderer.getSize(new THREE.Vector2()), pr = renderer.getPixelRatio(), w = Math.max(2, size.x * pr), h = Math.max(2, size.y * pr);

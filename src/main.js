@@ -30,7 +30,7 @@ import { LOCATIONS, locationConfig, locationById } from './world/locations.js';
 import { Landmarks } from './world/landmarks.js';
 import { FlyCam } from './debug/flycam.js';
 import { statsPanel } from './debug/stats.js';
-import { createFx } from './fx/pipeline.js';
+import { createFx, loadSkyLight } from './fx/pipeline.js';
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], q = new URLSearchParams(location.search);
 const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
@@ -47,7 +47,8 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(58, 1, 0.3, 14000);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;      // first-frame reflections; the sky replaces them
 const env = new Environment(renderer, scene); let reach = 900;
-const fx = q.get('fx') ? createFx(renderer, scene, camera, q.get('fx')) : null;                       // ?fx=1 realism pipeline (src/fx/pipeline.js), ?fx=lite without ambient occlusion
+let skyLight = null; const fx = q.get('fx') ? createFx(renderer, scene, camera, q.get('fx')) : null;                       // ?fx=1 realism pipeline (src/fx/pipeline.js), ?fx=lite without ambient occlusion
+if (fx) loadSkyLight(renderer, 'assets/sky/drakensberg_puresky_1k.hdr').then(t => { skyLight = t; });                     // a photographed sky for light and reflections, dimmed by the sun's height below
 /* real sun shadows (trees, rocks, the vehicle) on the nearby ground and road; off on the low preset unless ?shadows=on */
 const shadowsOn = q.get('shadows') ? q.get('shadows') !== 'off' : quality !== 'low';
 renderer.shadowMap.enabled = shadowsOn; renderer.shadowMap.type = THREE.PCFShadowMap; env.setShadows(shadowsOn ? (quality === 'high' ? 4096 : 2048) : 0, quality === 'high' ? 90 : 70);
@@ -253,6 +254,7 @@ function step(dt, now) {
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   ripples.offset.set(((camera.position.x + grid.origin.x) * RIP + now * 0.000011) % 1, (-(camera.position.z + grid.origin.z) * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
   env.update(dt, now, camera, reach);
+  if (skyLight) { scene.environment = skyLight; scene.environmentIntensity = Math.min(1, Math.max(0.06, 0.12 + env.sunDir.y * 1.1)); }
   if (mode !== 'fly') { const cx = camera.position.x + grid.origin.x, cz = camera.position.z + grid.origin.z; if (terrain.height(cx, cz) - terrain.drive(cx, cz) > 4) { env.rain.visible = false; env.snowfall.visible = false; } }        // inside a mountain (a tunnel): no rain or snow indoors
   landmarks.update(grid.origin, env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && sound.ctx) sound.update({ v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
