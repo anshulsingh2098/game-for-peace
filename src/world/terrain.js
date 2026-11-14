@@ -31,8 +31,16 @@ export function createTerrain(config) {
     h += N.fbm(x / T.detail.scale + oD[0], z / T.detail.scale + oD[1], T.detail.octaves, 2, 0.5) * T.detail.amp * land;
     return h;
   }
-  function height(x, z) { const h = base(x, z); return road ? road.grade(x, z, h) : h; }
-  function drive(x, z) { const h = base(x, z); return road ? road.drive(x, z, h) : h; }                  // what wheels roll on: the road surface itself
+  /* flat zones: ground levelled for a landmark. The land eases from `y` to its natural height between r and r + blend metres out. They affect what is built and driven on, not the road routing. */
+  const zones = [];
+  function natural(x, z) {
+    let h = base(x, z);
+    for (let i = 0; i < zones.length; i++) { const q = zones[i], d = Math.hypot(x - q.x, z - q.z); if (d < q.r + q.blend) h = q.y + (h - q.y) * sstep(q.r, q.r + q.blend, d); }
+    return h;
+  }
+  function height(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.grade(x, z, h) : h; }
+  function drive(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.drive(x, z, h) : h; }                  // what wheels roll on: the road surface itself
+  function inZone(x, z, margin = 0) { for (let i = 0; i < zones.length; i++) if (Math.hypot(x - zones[i].x, z - zones[i].z) < zones[i].r + margin) return true; return false; }                  // what wheels roll on: the road surface itself
   function forest(x, z) { return sstep(-0.18, 0.32, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
 
   /* what the wheels are on at a point: a key of SURFACES in vehicle/physics.js */
@@ -81,7 +89,7 @@ export function createTerrain(config) {
     return { x: 0, z: 0, y: Math.max(sea, base(0, 0)) };
   }
 
-  const terrain = { base, height, drive, surface, colour, forest, findSpawn, seaLevel: sea, config,
+  const terrain = { base, height, drive, surface, inZone, addZone: (x, z, r, y, blend = 40) => { zones.push({ x, z, r, y, blend }); }, colour, forest, findSpawn, seaLevel: sea, config,
     attachRoad(r) { road = r; }, get road() { return road; },
     /* the same land without the road, for the coarse horizon tiles */
     far: { height: base, colour: (x, z, h, ny, out) => colour(x, z, h, ny, out, false) } };

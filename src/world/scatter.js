@@ -32,7 +32,7 @@ export class Scatter {
   build({ tx, tz, full }) {
     const T = this.terrain, c = this.config.scatter, pal = this.config.palette, Sz = this.size, x0 = tx * Sz, z0 = tz * Sz, sea = T.seaLevel, dens = this.config.view.scenery.density, road = T.road;
     const lists = { pine: [], round: [], rock: [], bush: [], tuft: [] }, hits = [];
-    const clear = (x, z, m) => !(road && road.nearest(x, z) && road.hit.d < m);
+    const clear = (x, z, m) => !(road && road.nearest(x, z) && road.hit.d < m) && !T.inZone(x, z, 3);
     const R = alea(this.config.seed, 'trees', tx, tz);
     for (let n = Math.round(c.trees * Sz * Sz * dens); n > 0; n--) {
       const x = x0 + R() * Sz, z = z0 + R() * Sz, keep = R(), kind = R(), sc = 0.75 + R() * 0.85, rot = R() * 6.28, tall = 0.9 + R() * 0.3, shade = R();
