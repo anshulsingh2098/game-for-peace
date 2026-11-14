@@ -67,7 +67,7 @@ export class VehicleView {
   setView(v) {
     this.view = v; const fp = v === 'first'; if (!this.model) return;
     this.model.traverse(o => {                                  // the models' glass is opaque, so from inside the cabin and glass are hidden
-      if (o.name === 'Cab' || o.name === 'Cabin') o.visible = !fp;
+      if (o.name === 'Cab' || o.name === 'Cabin' || o.name === 'Interior') o.visible = !fp;
       if (o.isMesh) [].concat(o.material).forEach(m => { if (m.name === 'Glass') { m.colorWrite = !fp; m.depthWrite = !fp; } });
     });
     if (this.cockpit) this.cockpit.visible = fp; for (const o of this.riders) o.visible = !fp;

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  All three cars rebuilt with a production-car look
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: new shared Blender kit `dev/carkit.py`; `dev/build_car1.py`, `build_car2_sport.py`, `build_car3_rally.py` rewritten on it. Each car is now one smooth lofted body (shoulder line, tumblehome, glasshouse with pillars), cut wheel arches with liners, headlight units, grille/intakes, mirrors, door handles, shut lines, plates, exhausts, diffuser, a simple interior and detailed wheels with tyre profile, spokes, discs and calipers. New models are in `assets/car_0{1,2,3}_*.glb` (same wheel pivots, `Cabin`, `Paint_*` materials and livery mask, so recolouring and physics are unchanged). `src/vehicle/vehicle.js` also hides the new `Interior` mesh in first person. Previews in `dev/previews/`.
+For the other stream: nothing. Not deployed.
+Status: open
+
 ## 2026-11-14  Fixed: vehicles slid and spun for no reason on hills and dips
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed: `src/vehicle/rapier-vehicle.js` only. Found by driving all five vehicles along real roads headlessly (Alps, California, others). Causes and fixes:
