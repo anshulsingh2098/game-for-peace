@@ -36,14 +36,21 @@ function build() {
   const tops = new Map();
   for (const [g, list] of groups) {
     const parts = g.split(' / '), top = parts[0];
-    if (!tops.has(top)) { const d = document.createElement('details'); d.className = 'top'; d.innerHTML = `<summary>${top[0].toUpperCase() + top.slice(1)}</summary><div class="in"></div>`; tree.append(d); tops.set(top, d); }
-    const box = document.createElement('details'); box.dataset.q = g.toLowerCase(); box.innerHTML = `<summary>${parts.slice(1).join(' › ') || 'General'}</summary><div class="in"></div>`;
+    if (!tops.has(top)) { const d = document.createElement('details'); d.className = 'top'; d.innerHTML = `<summary>${top[0].toUpperCase() + top.slice(1)}<button class="sreset" title="Put every setting in this section back to its default" hidden>Reset section</button></summary><div class="in"></div>`; tree.append(d); tops.set(top, d); }
+    const box = document.createElement('details'); box.dataset.q = g.toLowerCase(); box.innerHTML = `<summary>${parts.slice(1).join(' › ') || 'General'}<button class="sreset" title="Put every setting in this section back to its default" hidden>Reset section</button></summary><div class="in"></div>`;
     const inner = box.querySelector('.in');
     for (const f of list) inner.append(row(f));
     tops.get(top).querySelector('.in').append(box);
   }
-  filter();
+  for (const d of tree.querySelectorAll('details')) d.querySelector('summary .sreset').onclick = e => {      // a section's own button: its settings go back to default
+    e.preventDefault(); e.stopPropagation(); const rows = [...d.querySelectorAll('.field')].filter(x => x._changed()); if (!rows.length) return;
+    if (!confirm(`Put ${rows.length} changed setting${rows.length > 1 ? 's' : ''} in "${d.querySelector('summary').firstChild.textContent}" back to default?`)) return;
+    for (const x of rows) x._reset(); marks(); push();
+  };
+  filter(); marks();
 }
+/* show each section's reset button only while something inside it differs from the default */
+function marks() { for (const d of tree.querySelectorAll('details')) d.querySelector('summary .sreset').hidden = !d.querySelector('.field .row.changed'); }
 
 function row(f) {
   const doc = explain(f.path), field = document.createElement('div'); field.className = 'field'; field.dataset.q = (f.path + ' ' + f.label + ' ' + (doc ? doc.text : '')).toLowerCase();
@@ -55,7 +62,7 @@ function row(f) {
     + `<p><b>Default:</b> ${fmt(f.def)}${f.type === 'number' ? ` &nbsp; <b>Slider:</b> ${fmt(f.min)} to ${fmt(f.max)}` : ''}</p><p class="path">${f.path}</p>`;
   info.onclick = () => { help.hidden = !help.hidden; info.classList.toggle('on', !help.hidden); };
   const label = document.createElement('label'); label.textContent = f.label; const dot = document.createElement('span'); dot.className = 'dot'; dot.title = 'Reset to default';
-  const set = v => { f.value = v; if (same(v, f.def)) delete overrides[f.path]; else overrides[f.path] = v; r.classList.toggle('changed', f.path in overrides); push(); };
+  const set = v => { f.value = v; if (same(v, f.def)) delete overrides[f.path]; else overrides[f.path] = v; r.classList.toggle('changed', f.path in overrides); marks(); push(); };
   let rng, num, col;
   if (f.type === 'number') {
     rng = Object.assign(document.createElement('input'), { type: 'range', min: f.min, max: f.max, step: f.step, value: f.value });
@@ -67,6 +74,8 @@ function row(f) {
     col = Object.assign(document.createElement('input'), { type: 'color', value: f.value }); col.oninput = () => set(col.value); r.append(label, col, dot, info);
   }
   dot.onclick = () => { if (!(f.path in overrides)) return; if (rng) { rng.value = f.def; num.value = f.def; } else col.value = f.def; set(f.def); };
+  field._changed = () => f.path in overrides;
+  field._reset = () => { if (!(f.path in overrides)) return; if (rng) { rng.value = f.def; num.value = f.def; } else col.value = f.def; f.value = f.def; delete overrides[f.path]; r.classList.remove('changed'); };
   r.classList.toggle('changed', f.path in overrides); field.append(r, help);
   return field;
 }
