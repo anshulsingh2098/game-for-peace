@@ -2,6 +2,7 @@
    Built from boxes and flat strips in the same plain materials as the landmarks, so they match the rest of the game, and they follow
    the road's curve. Pieces come and go around the player like the road mesh (same 200 m pieces). */
 import * as THREE from 'three';
+import { createRails } from './bridge_rails.js';
 
 const DECK = 0.9;                                               // thickness of the deck slab (m)
 const PIER_EVERY = 26, PIER_W = 1.5, POST_EVERY = 4;            // pier spacing, pier thickness along the road, rail post spacing (m)
@@ -13,6 +14,7 @@ export class Bridges {
     this.concrete = m(0xb9b4aa); this.rail = m(0xd4cfc4); this.pier = m(0xa49f95);
     this.postGeo = new THREE.BoxGeometry(0.2, 1, 0.2); this.pierGeo = new THREE.BoxGeometry(1, 1, 1);
     this.group = new THREE.Group(); scene.add(this.group); this._p = {};
+    this.near = createRails(road, style.shoulder);                                                // collision circles along the rails (bridge_rails.js), same contract as Scatter.near
   }
   update(s) {
     const r = this.road, L = this.len, lo = Math.floor(Math.max(r.sMin + L, s - this.range) / L), hi = Math.floor(Math.min(r.sMax - L, s + this.range) / L) - 1;

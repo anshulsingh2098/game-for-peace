@@ -7,6 +7,7 @@ import { makeConfig, encodeConfig, decodeConfig, DEFAULT_CONFIG } from '../src/c
 import { createTerrain } from '../src/world/terrain.js';
 import { fillTile, tileIndex, vertexCount, skirtDepth } from '../src/world/tiledata.js';
 import { Road } from '../src/world/router.js';
+import { createRails, RAIL_R } from '../src/world/bridge_rails.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier, ARCADE } from '../src/vehicle/rapier-vehicle.js';
@@ -166,6 +167,14 @@ await atest('rapier: each vehicle rests level on its wheels, reaches about its t
     ph.free();
   }
 });
+await atest('rapier: bridge rails stop every vehicle (none gets through, physics stays finite)', () => {
+  const rail = []; for (let x = -50; x < 1200; x++) rail.push({ x, z: 5.33, r: RAIL_R, slide: true }, { x, z: -5.33, r: RAIL_R, slide: true });
+  for (const [id, kmh] of [['car', 130], ['car', 220], ['truck', 80], ['bike', 70]]) {
+    const i = VEHICLES.findIndex(v => v.id === id), V = VEHICLES[i], p = vehicleParams(V.body, V.stats), ph = new RapierVehicle(p, V.id, flat({ near: (x, z, r) => [rail.filter(c => Math.abs(c.x - x) < r + 2)] }));
+    let worst = 0; for (let k = 0; k < 60 * 12; k++) { ph.step(1 / 60, { steer: k > 200 && k < 330 ? 0.3 : 0, throttle: ph.kmh < kmh ? 1 : 0.3, brake: 0 }); worst = Math.max(worst, Math.abs(ph.z)); assert.ok(Number.isFinite(ph.x + ph.z + ph.u), id + ' physics blew up at the rail'); }
+    assert.ok(worst < 5.2, id + ' got through the rail: ' + worst.toFixed(2) + ' m from the centre line'); ph.free();
+  }
+});
 await atest('rapier: cornering is grip-limited and stable; steering is Ackermann and the lock shrinks with speed', () => {
   for (let i = 0; i < VEHICLES.length; i++) {
     const V = VEHICLES[i], ph = rv(i); drive(ph, 14, GO); let slip = 0, hi = 0; drive(ph, 4, q => { slip = Math.max(slip, q.slip); if (hi === 0 && q.steer > 0.99) hi = Math.abs(q.delta); return { steer: 1, throttle: 0, brake: 0 }; });
@@ -197,6 +206,23 @@ test('bridges: over water the deck carries the road and the land is left alone; 
     }
   }
   assert.ok(bridged > 0 && land > bridged, 'some bridge, mostly land: ' + bridged + ' / ' + land);
+});
+test('bridge rails: rail circles sit on the drawn rail of a bridge, and only there', () => {
+  let onRail = 0, offBridge = 0;
+  for (const seed of ['peace', 'coast', 'alps', 'kilo']) {
+    const { r } = world(seed); r.ensure(-4000, 4000); const W = r.style.shoulder, near = createRails(r, W), p = {};
+    for (let s = r.sMin + 80; s < r.sMax - 80; s += 7) {
+      r.at(s, p); const w = r.bridgeW(s), nx = -p.tz, nz = p.tx, off = W - 0.07;
+      if (w === 1) {                                                                                       // a car beside the rail of a bridge: circles right where the rail is
+        const list = near(p.x + nx * (off - 1.2), p.z + nz * (off - 1.2), 6)[0]; assert.ok(list.length > 0, 'no rail circles beside a bridge rail at s=' + s);
+        for (const c of list) { const q = {}; r.at(r.closestS(c.x, c.z, s), q); assert.ok(Math.abs(Math.hypot(c.x - q.x, c.z - q.z) - off) < 0.35, 'rail circle is not on the rail line: ' + Math.hypot(c.x - q.x, c.z - q.z).toFixed(2)); assert.equal(c.r, RAIL_R); }
+        onRail++;
+      } else if (w === 0 && [-60, -30, 0, 30, 60].every(d => r.bridgeW(s + d) === 0)) {                    // well away from any bridge: nothing
+        assert.equal(near(p.x + nx * 2, p.z + nz * 2, 6)[0].length, 0, 'rail circles on plain road at s=' + s); offBridge++;
+      }
+    }
+  }
+  assert.ok(onRail > 0 && offBridge > 0, 'saw bridge and land: ' + onRail + ' / ' + offBridge);
 });
 test('tunnels: a deep cutting becomes a tunnel (mountain left whole, wheels on the deck) and no canyon is left', () => {
   const cfg = locationConfig('alps', 'alps'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-4000, 4000); t.attachRoad(r);
