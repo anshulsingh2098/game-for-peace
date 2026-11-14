@@ -8,6 +8,9 @@ What changed: nothing in code. Tried two-plane tree cards on far scenery tiles: 
 For the other stream: bridge rails are drawn but the car drives through them. The physics ground is one heightfield (`rapier-vehicle.js`), which is your file. Ask: add thin cuboid colliders along the bridge edges (use `Road.bridgeW === 1` stretches and `road.carriedW` for the half width), or tell me the hook you want and I will expose a list of rail segments from `world/bridges.js`.
 Status: open
 
+## 2026-11-15 10:00  Marine Drive fixed and placed near the start (N3)
+Branch: feat/n3-marine-drive
+What changed: `src/world/landmarks.js`: the Marine Drive strip was never rotated into its own frame, so the sea wall, lamps and tetrapods drifted 100+ m off the road; fixed. It now carves its own bay in front of the sea wall, and the sea-side parts sit 7 m further from the road. Landmark search now prefers spots near the requested distance (Mumbai's three landmarks were 1.1 km behind the start). `src/world/locations.js`: Marine Drive no longer needs natural sea and starts the search at s=250.
 ## 2026-11-14 20:00  Coarser outer terrain ring on med and high (speed)
 Branch: feat/n3-terrain-lod
 What changed: `src/core/config.js` (shared): the med and high tiers get one more, coarser terrain ring (8 cells per tile at the far edge). Medium: 310k to 282k triangles per frame (-9%), same scene. Not checked by eye on hills; look at distant ridges in the Alps and Himalayas.
