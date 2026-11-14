@@ -2,6 +2,8 @@
    It can be saved, shared as text and edited live (the world config tool is built on this). Distances are metres. */
 export const DEFAULT_CONFIG = {
   seed: 'peace',
+  location: 'default',          // id of the location profile this world was made from (see world/locations.js)
+  water: { color: '#1d4a5a' },
   terrain: {
     seaLevel: 0,
     seabed: -38,                 // depth far out at sea
@@ -25,7 +27,7 @@ export const DEFAULT_CONFIG = {
     flat: 9, blend: 46, sink: 0.3,                              // grading: level out to 'flat' metres from the centre line, natural again by 'blend'
     wTurn: 8, wJerk: 14, wWander: 5, wBearing: 12, wGrade: 90, wSteep: 4000, wWater: 80, wHigh: 3, wCross: 5    // router cost weights
   },
-  scatter: { trees: 0.0075, rocks: 0.0005, bushes: 0.0012, tufts: 0.009, clearRoad: 10 },      // scenery per square metre, and the strip kept clear beside the road
+  scatter: { trees: 0.0075, rocks: 0.0005, bushes: 0.0012, tufts: 0.009, clearRoad: 10, pineBias: 0, tint: null },      // scenery per square metre, and the strip kept clear beside the road
   view: {
     tile: 128,                                                  // tile edge
     rings: [{ r: 1, res: 64 }, { r: 3, res: 32 }, { r: 8, res: 16 }],   // level-of-detail rings: tiles out to r (in tiles) use res cells per edge

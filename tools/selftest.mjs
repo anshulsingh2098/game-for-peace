@@ -10,6 +10,7 @@ import { Road } from '../src/world/router.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
+import { LOCATIONS, locationConfig } from '../src/world/locations.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -107,6 +108,16 @@ test('road: the land is graded to it and untouched far away', () => {
 const flat = (over = {}) => ({ height: () => 0, surface: () => 'asphalt', near: () => [], seaLevel: -100, ...over });
 const drive = (ph, secs, input) => { for (let t = 0; t < secs; t += 1 / 60) { ph.step(1 / 60, typeof input === 'function' ? input(ph) : input); assert.ok(Number.isFinite(ph.x + ph.z + ph.u + ph.v + ph.r + ph.yaw), 'physics blew up'); } };
 const GO = { steer: 0, throttle: 1, brake: 0 }, COAST = { steer: 0, throttle: 0, brake: 0 }, STOP = { steer: 0, throttle: 0, brake: 1 };
+test('locations: every profile makes a world with a valid road, and the same seed gives the same world', () => {
+  assert.ok(LOCATIONS.length >= 5 && new Set(LOCATIONS.map(l => l.id)).size === LOCATIONS.length);
+  for (const L of LOCATIONS) {
+    const cfg = locationConfig(L.id, 'peace'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-3000, 3000); t.attachRoad(r); let maxG = 0, low = Infinity;
+    for (let sd = r.sMin + 40; sd < r.sMax - 40; sd += 5) { const p = r.at(sd, {}); maxG = Math.max(maxG, Math.abs(p.slope)); low = Math.min(low, p.y); }
+    assert.ok(r.sMax - r.sMin > 5000 && maxG < cfg.road.lastGrade * 1.3, L.id + ' road: ' + (r.sMax - r.sMin).toFixed(0) + ' m, grade ' + (maxG * 100).toFixed(1) + '%'); assert.ok(low >= cfg.terrain.seaLevel + cfg.road.clearance - 0.6, L.id + ' road dips under water');
+    const t2 = createTerrain(locationConfig(L.id, 'peace')); for (let i = 0; i < 50; i++) assert.equal(t.base(i * 331 - 7000, i * 197 - 5000), t2.base(i * 331 - 7000, i * 197 - 5000));
+    assert.ok(cfg.location === L.id && L.sky && L.name && L.blurb);
+  }
+});
 test('driving: each vehicle accelerates straight to about its top speed, coasts down and brakes', () => {
   for (const V of VEHICLES) {
     const p = vehicleParams(V.body, V.stats), ph = new VehiclePhysics(p, flat()); drive(ph, 90, GO);

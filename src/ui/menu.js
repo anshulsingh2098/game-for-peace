@@ -23,7 +23,7 @@ export class Menu {
   get open() { return this.screen !== null; }
   show(screen) {
     const was = this.screen; this.screen = screen; this.root.hidden = false; this.root.dataset.screen = screen; this.root.textContent = '';
-    ({ title: () => this.title(), garage: () => this.garage(), settings: () => this.settings(), pause: () => this.pause() })[screen]();
+    ({ title: () => this.title(), garage: () => this.garage(), locations: () => this.locations(), settings: () => this.settings(), pause: () => this.pause() })[screen]();
     if (!was) this.api.onOpen(screen); else this.api.onScreen && this.api.onScreen(screen);
   }
   hide() { if (!this.screen) return; this.screen = null; this.root.hidden = true; this.api.onClose(); }
@@ -41,7 +41,7 @@ export class Menu {
     mk('div', 'm-kicker', p, 'A drive through an endless, generated world');
     mk('h1', '', p, 'Game for Peace');
     const col = mk('div', 'm-col', p);
-    btn(col, 'Play', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title'));
+    btn(col, 'Play', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Location', () => this.open2('locations', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title'));
     mk('div', 'm-hint', p, 'Pick a car, truck or bike, then roam. Hold Q at any time to tune a live radio station from around the world, including India.');
   }
 
@@ -59,6 +59,15 @@ export class Menu {
     mk('h3', '', p, def.paint.label + ' colour'); const sw = mk('div', 'm-sw', p), cur = st.paint[def.id] || def.paint.colors[0];
     for (const c of def.paint.colors) { const b = mk('button', 'sw', sw); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'Colour ' + c); b.setAttribute('aria-pressed', c === cur);
       b.onclick = e => { e.stopPropagation(); api.paint(st.vehicle, c); for (const x of sw.children) x.setAttribute('aria-pressed', x === b); }; }
+    const row = mk('div', 'm-row', p); btn(row, 'Drive', () => this.hide(), 'primary'); btn(row, 'Back', () => this.show(this.from || 'title'));
+  }
+
+  locations() {
+    const api = this.api, st = api.state(), p = mk('div', 'm-panel m-side', this.root); mk('h2', '', p, 'Location');
+    mk('p', 'm-desc', p, 'Each place has its own land, colours, plants and light. The world is made fresh when you pick one.');
+    const list = mk('div', 'm-locs', p);
+    for (const L of api.locations) { const b = mk('button', 'm-loc' + (L.id === st.location ? ' on' : ''), list); b.type = 'button'; b.style.setProperty('--c', L.accent); mk('b', '', b, L.name); mk('small', '', b, L.blurb);
+      b.onclick = e => { e.stopPropagation(); api.setLocation(L.id); this.show('locations'); }; }
     const row = mk('div', 'm-row', p); btn(row, 'Drive', () => this.hide(), 'primary'); btn(row, 'Back', () => this.show(this.from || 'title'));
   }
 
@@ -81,7 +90,7 @@ export class Menu {
   pause() {
     const api = this.api, p = mk('div', 'm-panel m-title', this.root); mk('h2', '', p, 'Paused');
     const col = mk('div', 'm-col', p);
-    btn(col, 'Resume', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'pause')); btn(col, 'Settings', () => this.open2('settings', 'pause'));
+    btn(col, 'Resume', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'pause')); btn(col, 'Location', () => this.open2('locations', 'pause')); btn(col, 'Settings', () => this.open2('settings', 'pause'));
     btn(col, 'Back to the road', () => { api.toRoad(); this.hide(); }); btn(col, 'New world', () => { api.newWorld(); this.hide(); }); btn(col, 'Title screen', () => this.show('title'));
   }
 }
