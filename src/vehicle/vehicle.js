@@ -125,7 +125,7 @@ export class VehicleView {
     };
     if (mode === 'cockpit') body(d.eye[0], d.eye[1], d.eye[2], 70);
     else if (mode === 'hood') body(0, d.eye[1] - 0.18, d.eye[2] + 1.7, 68);
-    else if (mode === 'bumper') body(0, d.body.wheelR + 0.32, d.body.front + (d.id === 'car' ? 0.95 : 0.45), 76);
+    else if (mode === 'bumper') body(0, d.body.wheelR + 0.32, d.body.front + (d.id === 'car' || d.id === 'concept' ? 0.95 : 0.45), 76);
     else if (mode === 'cinematic') {                                                                                                         // like a TV camera: fixed beside or ahead of the road, turning to follow the car, then a cut
       const now = performance.now() / 1000, c = Math.cos(ph.yaw), sn = Math.sin(ph.yaw), C = this.cine;
       const behind = C ? (ph.x - C.x) * c + (ph.z - C.z) * sn : 0, far = C ? Math.hypot(ph.x - C.x, ph.z - C.z) : 0;

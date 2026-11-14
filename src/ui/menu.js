@@ -13,7 +13,7 @@ const OPTIONS = {
   lights: [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']],
   sound: [['on', 'On'], ['off', 'Off']],
   rumble: [['on', 'On'], ['off', 'Off']],
-  traffic: [['off', 'Off'], ['light', 'Light'], ['busy', 'Busy']]
+  traffic: [['off', 'Off'], ['low', 'Low'], ['mid', 'Mid'], ['high', 'High']]
 };
 const KEYS = [['W A S D / arrows', 'Drive (S reverses)'], ['Space', 'Brake'], ['X', 'Handbrake'], ['Shift', 'Use your vehicle\'s boost'], ['E', 'Autodrive'], ['V', 'Change camera view'], ['C', 'Driver\'s seat and back'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
 
@@ -82,7 +82,7 @@ export class Menu {
     seg('Time of day', 'time', s.time); seg('Weather', 'weather', s.weather); seg('Headlights', 'lights', s.lights);
     seg('Graphics quality', 'quality', s.quality, 'Changing this reloads the world.'); seg('Shadows', 'shadows', s.shadows ? 'on' : 'off', 'Changing this reloads the world.');
     seg('Engine and weather sounds', 'sfx', s.muted ? 'off' : 'on');
-    seg('Traffic', 'traffic', s.traffic || 'light', 'Other cars on the road. Off on phones to start with; turn it on if it runs smoothly.');
+    seg('Traffic', 'traffic', s.traffic || 'low', 'Other cars on the road: Off, Low (6 cars), Mid (12) or High (20). Off on phones to start with; turn it on if it runs smoothly.');
     seg('Controller rumble', 'rumble', s.rumble === 'off' ? 'off' : 'on', 'Only does anything with a gamepad that can vibrate.');
     const g = mk('div', 'm-group', p); mk('h3', '', g, 'Radio volume'); const v = mk('input', 'm-range', g); v.type = 'range'; v.min = 0; v.max = 100; v.value = Math.round(s.radioVol * 100); v.oninput = () => api.set('radioVol', v.value / 100);
     const rb = mk('div', 'm-row', g); btn(rb, 'Open radio', () => api.radio());

@@ -305,6 +305,7 @@ test('saved choices: rubbish in storage never gets into the game (null, text, wr
   const good = sanitiseSaved({ time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 3, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C', truck: 'red', ghost: '#ffffff', bike: '#12' }, extra: 'ignored' }, ctx);
   assert.deepEqual(good, { time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 1, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C' } });
   assert.equal(sanitiseSaved({ location: 'atlantis' }, ctx).location, undefined);
+  assert.equal(sanitiseSaved({ traffic: 'mid' }, ctx).traffic, 'mid'); assert.equal(sanitiseSaved({ traffic: 'light' }, ctx).traffic, 'low'); assert.equal(sanitiseSaved({ traffic: 'busy' }, ctx).traffic, 'high'); assert.equal(sanitiseSaved({ traffic: 'lots' }, ctx).traffic, undefined);
 });
 test('traffic: cars keep to their lanes and the right side, keep a safe gap, appear far from the player, are bounded and deterministic', () => {
   const run = (seed, mode, drive, secs = 140) => {
@@ -322,22 +323,22 @@ test('traffic: cars keep to their lanes and the right side, keep a safe gap, app
     }
     return { sim, maxCars, bridge, minGap, bornNear };
   };
-  const light = run('peace', 'light', 'right'), busy = run('peace', 'busy', 'right'), left = run('peace', 'busy', 'left');
-  assert.ok(light.maxCars > 0 && light.maxCars <= MODES.light, 'light traffic is bounded: ' + light.maxCars); assert.ok(busy.maxCars > light.maxCars && busy.maxCars <= MODES.busy, 'busy has more but is bounded: ' + busy.maxCars);
-  for (const x of [light, busy, left]) { assert.ok(x.minGap > -0.01, 'cars never overlap (smallest gap ' + x.minGap.toFixed(2) + ' m)'); assert.ok(x.bornNear >= 150 - 1e-6, 'nothing appears near the player: ' + x.bornNear.toFixed(0) + ' m'); }
+  const light = run('peace', 'low', 'right'), mid = run('peace', 'mid', 'right'), busy = run('peace', 'high', 'right'), left = run('peace', 'high', 'left');
+  assert.ok(light.maxCars > 0 && light.maxCars <= MODES.low, 'low traffic is bounded: ' + light.maxCars); assert.ok(mid.maxCars > light.maxCars && mid.maxCars <= MODES.mid, 'mid has more but is bounded: ' + mid.maxCars); assert.ok(busy.maxCars > mid.maxCars && busy.maxCars <= MODES.high, 'high has the most but is bounded: ' + busy.maxCars);
+  for (const x of [light, mid, busy, left]) { assert.ok(x.minGap > -0.01, 'cars never overlap (smallest gap ' + x.minGap.toFixed(2) + ' m)'); assert.ok(x.bornNear >= 150 - 1e-6, 'nothing appears near the player: ' + x.bornNear.toFixed(0) + ' m'); }
   assert.equal(run('peace', 'off', 'right', 20).maxCars, 0, 'off means no cars');
-  const again = run('peace', 'busy', 'right'); assert.deepEqual(again.sim.cars.map(c => [c.id, +c.s.toFixed(3), c.lane, c.kind]), busy.sim.cars.map(c => [c.id, +c.s.toFixed(3), c.lane, c.kind]), 'the same world and path give the same traffic');
-  const alps = run('alps', 'busy', 'right', 200); assert.ok(alps.bridge > 0, 'some cars cross a bridge on their lane');
-  const { r } = world('peace'), sim = new TrafficSim(r, { seed: 'x', mode: 'busy' }), p = {}; r.at(0, p); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th });
-  const n0 = sim.cars.length; assert.ok(n0 > 0); sim.setMode('light'); assert.equal(sim.cars.length, 0, 'changing mode clears the cars'); sim.setMode('off'); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); assert.equal(sim.cars.length, 0);
-  sim.setMode('busy'); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); const far = { x: p.x, z: p.z, s: 3000, u: 0, yaw: p.th }; r.at(3000, p); far.x = p.x; far.z = p.z; sim.update(0.1, far); assert.ok(sim.cars.every(c => c.s > 3000 - 350 - SLOT && c.s < 3000 + 700 + SLOT), 'after a jump along the road, only cars in the new window remain');
-  const blocked = new TrafficSim(r, { seed: 'b', mode: 'busy', drive: 'right' }); r.at(0, p); blocked.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); const c0 = blocked.cars.find(c => c.dir > 0 && c.s > 150); assert.ok(c0, 'a car ahead in our direction');
+  const again = run('peace', 'high', 'right'); assert.deepEqual(again.sim.cars.map(c => [c.id, +c.s.toFixed(3), c.lane, c.kind]), busy.sim.cars.map(c => [c.id, +c.s.toFixed(3), c.lane, c.kind]), 'the same world and path give the same traffic');
+  const alps = run('alps', 'high', 'right', 200); assert.ok(alps.bridge > 0, 'some cars cross a bridge on their lane');
+  const { r } = world('peace'), sim = new TrafficSim(r, { seed: 'x', mode: 'high' }), p = {}; r.at(0, p); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th });
+  const n0 = sim.cars.length; assert.ok(n0 > 0); sim.setMode('low'); assert.equal(sim.cars.length, 0, 'changing mode clears the cars'); sim.setMode('light'); assert.equal(sim.mode, 'low', 'an old saved name still works'); sim.setMode('off'); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); assert.equal(sim.cars.length, 0);
+  sim.setMode('high'); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); const far = { x: p.x, z: p.z, s: 3000, u: 0, yaw: p.th }; r.at(3000, p); far.x = p.x; far.z = p.z; sim.update(0.1, far); assert.ok(sim.cars.every(c => c.s > 3000 - 350 - SLOT && c.s < 3000 + 700 + SLOT), 'after a jump along the road, only cars in the new window remain');
+  const blocked = new TrafficSim(r, { seed: 'b', mode: 'high', drive: 'right' }); r.at(0, p); blocked.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); const c0 = blocked.cars.find(c => c.dir > 0 && c.s > 150); assert.ok(c0, 'a car ahead in our direction');
   const stop = { s: c0.s + 80, u: 0, yaw: 0 }; for (let t = 0; t < 10; t += 0.1) { const q = {}; r.at(stop.s, q); stop.x = q.x - q.tz * c0.lat; stop.z = q.z + q.tx * c0.lat; stop.yaw = q.th; blocked.update(0.1, stop); }
   const cc = blocked.cars.find(c => c.id === c0.id); assert.ok(cc && cc.s < stop.s - 2 && cc.speed < 0.5, 'a car stops before a stationary obstacle in its lane (stopped ' + (cc ? (stop.s - cc.s).toFixed(1) : '?') + ' m short)');
-  const hits = blocked.circles(cc.x, cc.z, 6)[0]; assert.ok(hits.length >= 3 && hits.every(h => h.r > 0.9 && Math.hypot(h.x - cc.x, h.z - cc.z) < cc.len), 'cars give the physics obstacle circles'); assert.equal(blocked.circles(cc.x + 500, cc.z, 6)[0].length, 0, 'none far away');
+  const hits = blocked.circles(cc.x, cc.z, 6)[0].filter(h => h.traffic === cc.id); assert.ok(hits.length >= 3 && hits.every(h => h.r > 0.9 && Math.hypot(h.x - cc.x, h.z - cc.z) < cc.len), 'cars give the physics obstacle circles'); assert.equal(blocked.circles(cc.x + 500, cc.z, 6)[0].length, 0, 'none far away');
 });
 await atest('traffic: a traffic car is solid: the player hits it and does not pass through', () => {
-  const { r } = world('peace'), sim = new TrafficSim(r, { seed: 'solid', mode: 'busy' });
+  const { r } = world('peace'), sim = new TrafficSim(r, { seed: 'solid', mode: 'high' });
   for (const id of ['car', 'truck']) {
     sim.cars = [{ id: 1, x: 90, z: 0, yaw: 0, len: 4.4, w: 1.85 }];                                         // a stopped car 90 m ahead, across the player's path
     const i = VEHICLES.findIndex(v => v.id === id), V = VEHICLES[i], p = vehicleParams(V.body, V.stats), ph = new RapierVehicle(p, V.id, flat({ near: (x, z, rr) => sim.circles(x, z, rr) }));
@@ -346,7 +347,7 @@ await atest('traffic: a traffic car is solid: the player hits it and does not pa
   }
 });
 await atest('autodrive among traffic: it keeps to its lane, follows slower cars at a gap and never hits one over a long run', () => {
-  for (const [seed, mode, drive] of [['peace', 'busy', 'right'], ['coast', 'busy', 'left']]) {
+  for (const [seed, mode, drive] of [['peace', 'high', 'right'], ['coast', 'high', 'left']]) {
     const { t, r } = world(seed), sim = new TrafficSim(r, { seed: 'ad' + seed, mode, drive }), V = VEHICLES[0], p = vehicleParams(V.body, V.stats);
     const ph = new RapierVehicle(p, V.id, { height: (x, z) => t.drive(x, z), surface: (x, z) => t.surface(x, z), near: (x, z, rr) => sim.circles(x, z, rr), seaLevel: t.seaLevel });
     const q = r.at(40, {}), dir = 1; ph.reset(q.x - q.tz * sim.lateral(dir, 0) * -1, q.z + q.tx * sim.lateral(dir, 0), q.th);                  // in the lane the traffic uses for this direction

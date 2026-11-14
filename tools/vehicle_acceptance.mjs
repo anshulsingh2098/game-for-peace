@@ -6,7 +6,7 @@ import { VEHICLES } from '../src/vehicle/defs.js';
 import { vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 
-const only = process.argv.find(a => ['car', 'truck', 'bike'].includes(a)), check = process.argv.includes('--check');
+const only = process.argv.find(a => ['car', 'truck', 'bike', 'concept'].includes(a)), check = process.argv.includes('--check');
 await initRapier();
 const world = (surface = 'asphalt', slope = 0) => ({ height: x => slope * x, surface: () => surface, near: () => [], seaLevel: -1e4 });
 const make = (i, w) => { const V = VEHICLES[i], p = vehicleParams(V.body, V.stats); return new RapierVehicle(p, V.id, w || world()); };

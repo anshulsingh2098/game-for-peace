@@ -8,13 +8,17 @@
      style's speed limit, slows for bends, keeps a safe gap behind the car in front of it and behind the player, stops for an obstacle in its lane, and is removed if it is
      stuck for 12 s or leaves the window or the generated road. No path search: just the road lookup `road.at(s)`, a few times per car per frame.
    - `circles(x, z, r)` gives the player's physics the cars as obstacle circles ({ x, z, r }, the same contract trees and rails use).
-   Usage: const sim = new TrafficSim(road, { seed, mode: 'light', drive: 'right' }); each frame sim.update(dt, { x, z, s, u, yaw }); read sim.cars. */
+   Usage: const sim = new TrafficSim(road, { seed, mode: 'low', drive: 'right' }); each frame sim.update(dt, { x, z, s, u, yaw }); read sim.cars. */
 import { alea } from '../core/rng.js';
 
-export const MODES = { off: 0, light: 6, busy: 16 };                       // cars alive inside the window at most, per mode
+export const MODES = { off: 0, low: 6, mid: 12, high: 20 };                    // cars alive inside the window at most, per level
+export const MODE_ALIAS = { light: 'low', busy: 'high' };                      // older saved names
 export const SLOT = 60, LIMIT = { 'two-lane': 22, highway: 30, boulevard: 16, dirt: 12, gravel: 14 };       // slot length (m); speed limit by road style (m/s)
 export const KINDS = { sedan: { len: 4.4, w: 1.85 }, van: { len: 5.2, w: 2.0 }, truck: { len: 8.5, w: 2.5 } };
+/* the mix of vehicles: name, length, width, height (m) and how common it is. This plain set is used until the real models load (traffic_pack.json replaces it, see traffic.js). */
+export const DEFAULT_KINDS = [{ name: 'sedan', len: 4.4, w: 1.85, h: 1.45, weight: 70 }, { name: 'van', len: 5.2, w: 2.0, h: 2.0, weight: 18 }, { name: 'truck', len: 8.5, w: 2.5, h: 3.0, weight: 12 }];
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+const pickKind = (list, t) => { for (const k of list) { t -= k.weight; if (t < 0) return k; } return list[0]; };       // the vehicle a random number t (0..total weight) lands on
 
 /* lane centre offsets (m from the centre line, on one side) for a road style */
 export function laneOffsets(style) {
@@ -22,12 +26,13 @@ export function laneOffsets(style) {
 }
 
 export class TrafficSim {
-  constructor(road, { seed = 'traffic', mode = 'light', drive = 'right', ahead = 700, behind = 350, minSpawnGap = 150 } = {}) {
+  constructor(road, { seed = 'traffic', mode = 'low', drive = 'right', ahead = 700, behind = 350, minSpawnGap = 150 } = {}) {
     this.road = road; this.seed = String(seed); this.drive = drive; this.ahead = ahead; this.behind = behind; this.minSpawnGap = minSpawnGap;
-    this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.cars = []; this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
+    this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
     this.setMode(mode);
   }
-  setMode(mode) { this.mode = MODES[mode] !== undefined ? mode : 'off'; this.cap = MODES[this.mode]; this.cars.length = 0; this.seen.clear(); }
+  setKinds(list) { this.kinds = list && list.length ? list : DEFAULT_KINDS; this.cars.length = 0; this.seen.clear(); }
+  setMode(mode) { mode = MODE_ALIAS[mode] || mode; this.mode = MODES[mode] !== undefined ? mode : 'off'; this.cap = MODES[this.mode]; this.cars.length = 0; this.seen.clear(); }
   /* the signed offset from the centre line along the left normal for a car going `dir` (+1 with increasing s) in lane index k */
   lateral(dir, k) { const off = this.lanes[k], right = this.drive === 'right'; return (dir > 0) === right ? -off : off; }
 
@@ -44,10 +49,10 @@ export class TrafficSim {
   spawn(slot, chance, player) {
     if (this.cars.length >= this.cap) return;
     const R = alea(this.seed, 'traffic', slot); if (R() > chance) return;
-    const s = (slot + 0.15 + R() * 0.7) * SLOT, dir = R() < 0.5 ? 1 : -1, lane = Math.floor(R() * this.lanes.length), t = R(), kind = t < 0.12 ? 'truck' : t < 0.3 ? 'van' : 'sedan', v0 = this.limit * (0.7 + R() * 0.28) * (kind === 'truck' ? 0.8 : 1), colour = Math.floor(R() * 8);
+    const s = (slot + 0.15 + R() * 0.7) * SLOT, dir = R() < 0.5 ? 1 : -1, lane = Math.floor(R() * this.lanes.length), kt = R() * this.kinds.reduce((a, k) => a + k.weight, 0), K = pickKind(this.kinds, kt), kind = K.name, v0 = this.limit * (0.7 + R() * 0.28) * (K.len > 6.5 ? 0.8 : 1), colour = Math.floor(R() * 64);
     if (s < this.road.sMin + 60 || s > this.road.sMax - 60 || Math.abs(s - player.s) < this.minSpawnGap) return;
     for (const c of this.cars) if (c.dir === dir && c.lane === lane && Math.abs(c.s - s) < 30) return;          // never on top of another car
-    const car = { id: this.nextId++, s, dir, lane, kind, len: KINDS[kind].len, w: KINDS[kind].w, v0, speed: v0 * 0.9, colour, lat: this.lateral(dir, lane), stuck: 0, bump: 0, born: this.time, bornDist: Math.abs(s - player.s), x: 0, z: 0, y: 0, yaw: 0, brake: 0 };
+    const car = { id: this.nextId++, s, dir, lane, kind, len: K.len, w: K.w, h: K.h || 1.5, v0, speed: v0 * 0.9, colour, lat: this.lateral(dir, lane), stuck: 0, bump: 0, born: this.time, bornDist: Math.abs(s - player.s), x: 0, z: 0, y: 0, yaw: 0, brake: 0 };
     this.place(car); this.cars.push(car);
   }
 
