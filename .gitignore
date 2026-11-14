@@ -16,7 +16,8 @@ dev/viewer.html
 .wrangler/
 
 # Local tooling / OS noise
-.claude/
+.claude/*
+!.claude/commands/
 __pycache__/
 *.pyc
 *.blend1
