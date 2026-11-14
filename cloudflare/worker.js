@@ -4,15 +4,15 @@
      GET  /api/history    the last published versions; needs the password
    Settings live in a KV namespace bound as SETTINGS; the password is a secret named TUNER_PASSWORD. Both are set up once
    (see team/stream-a.md). Without them the API answers 503 and the site works as before. Everything else goes to the static files. */
-const MAX_BYTES = 64 * 1024, MAX_SETTINGS = 2000, HISTORY = 15;
-const reply = (body, status = 200, cache = 'no-store') => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': cache } });
+const MAX_BYTES = 64 * 1024, MAX_SETTINGS = 2000, HISTORY = 15, MAX_ABS = 1e7;            // MAX_ABS: no setting is ever a bigger number than this (they are metres, kilograms, seconds, 0..1 mixes)
+const reply = (body, status = 200, cache = 'no-store') => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': cache, 'x-content-type-options': 'nosniff' } });
 
 export function validate(body) {
   if (!body || typeof body !== 'object' || !body.overrides || typeof body.overrides !== 'object' || Array.isArray(body.overrides)) return 'overrides must be an object';
   const e = Object.entries(body.overrides); if (e.length > MAX_SETTINGS) return 'too many settings';
   for (const [k, v] of e) {
     if (!/^[A-Za-z0-9_.-]{1,120}$/.test(k)) return 'bad setting path: ' + k.slice(0, 40);
-    if (!(typeof v === 'number' && Number.isFinite(v)) && !(typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v))) return 'bad value for ' + k;
+    if (!(typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= MAX_ABS) && !(typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v))) return 'bad value for ' + k;
   }
   return null;
 }
@@ -36,8 +36,9 @@ export async function handleApi(request, env, url) {
   }
   const auth = await authorised(request, env);
   if (auth === 'not-set-up') return reply({ error: 'password is not set up' }, 503);
-  if (auth !== 'yes') return reply({ error: 'wrong password' }, 401);
+  if (auth !== 'yes') { await new Promise(r => setTimeout(r, +(env.AUTH_DELAY_MS ?? 400))); return reply({ error: 'wrong password' }, 401); }          // a short wait on every wrong guess makes guessing the password slow
   if (url.pathname === '/api/settings' && request.method === 'PUT') {
+    if (+request.headers.get('content-length') > MAX_BYTES) return reply({ error: 'too large' }, 413);                        // refuse before reading a huge body
     const text = await request.text(); if (text.length > MAX_BYTES) return reply({ error: 'too large' }, 413);
     let body; try { body = JSON.parse(text); } catch (e) { return reply({ error: 'not JSON' }, 400); }
     const bad = validate(body); if (bad) return reply({ error: bad }, 400);

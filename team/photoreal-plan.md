@@ -41,7 +41,7 @@ HDRI sky and lighting from real photos (PMREM), tone mapping tuned per time of d
 | R3 | Not started (vehicles: Stream B). The white paint glares under the lighting. |
 | R4 | Partly: Atal Tunnel gate (Blender) and tiled interior done. Not done: truss bridge, retaining walls, interior signs, the other landmarks. |
 | R5 | Done: real-scan trees, plants and rocks (`nature.js`). Cards face one way; no levels of detail yet. |
-| R6 | Started: quality tiers `?q=low|med|high`. Not done: the high tier is too slow (about 24 ms on an M4), texture and mesh compression, streaming, phone measurements. |
+| R6 | Started: quality tiers `?q=low|med|high`. Not done: high tier measured 9.1 ms on a desktop, see `PERFORMANCE.md`; phones not measured, texture and mesh compression, streaming, phone measurements. |
 | Sound (new) | The car's engine is a recording of Rajul's own car (`assets/audio`). Not heard by a person yet; a cleaner recording is the next step. |
 
 These phases are scheduled as N0 to N6 in `PARALLEL_PLAN.md` ("Phases from here").

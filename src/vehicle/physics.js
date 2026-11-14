@@ -30,6 +30,24 @@ export function vehicleParams(body, stats) {
   };
 }
 
+/* The one definition of what a vehicle reports about itself (HUD, sound, tests and tools all read this; see VEHICLE_CONTRACT.md for the full table).
+   Works for both physics classes; fields the physics does not have are null. Units: m/s, radians, rpm, 0..1 as marked. */
+export function makeTelemetry(ph, id) {
+  const inp = ph.input || {}, pt = ph.p && ph.p.pt, wheels = ph.wheelStates, contact = wheels ? wheels.filter(w => w.contact).length / wheels.length : 1;
+  let wheelSlip = null; if (ph.alpha && ph.alpha.length) { wheelSlip = 0; for (const a of ph.alpha) if (Math.abs(a) > wheelSlip) wheelSlip = Math.abs(a); }
+  return {
+    id, x: ph.x, z: ph.z, yaw: ph.yaw,
+    speed: Math.hypot(ph.u, ph.v), u: ph.u, v: ph.v, kmh: ph.u * 3.6,                  // speed m/s (never negative); u signed forward speed m/s (negative reversing); v sideways m/s
+    throttle: inp.throttle || 0, brake: inp.brake || 0, hand: inp.hand || 0, steerInput: inp.steer || 0,       // what the driver asked for: 0..1, 0..1, 0..1, -1..1 (right +)
+    steerAngle: ph.delta, yawRate: ph.r,                                                    // front road-wheel angle rad; yaw rate rad/s
+    gear: pt && ph.gear !== undefined ? ph.gear : null, gearCount: pt ? pt.gears.length : null,   // gear: 0 = first; null when the vehicle has no gearbox model
+    rpm: pt && ph.rpm !== undefined ? ph.rpm : null, rpm01: pt && ph.rpm !== undefined ? Math.max(0, Math.min(1, (ph.rpm - pt.idle) / (pt.redline - pt.idle))) : null,   // engine rpm; and 0..1 between idle and the rev limiter
+    slip: ph.slip, wheelSlip,                                                               // body sideslip angle rad; the largest wheel slip angle rad (null on the old physics)
+    surface: ph.surface, grounded: contact,                                                // surface key; share of wheels touching the ground 0..1
+    buff: !!ph.mod && ph.mod !== NO_MOD                                                    // a buff (boost, haul, lean) is active
+  };
+}
+
 /* temporary multipliers (buffs): top speed, acceleration, pull of slopes, surface drag, steering lock, grip */
 export const NO_MOD = { top: 1, accel: 1, slope: 1, drag: 1, steer: 1, grip: 1 };
 

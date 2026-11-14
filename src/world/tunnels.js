@@ -8,8 +8,18 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export const COVER = 0.8;                                       // metres of earth over the road before the tube (and its portal wall) starts
 const WALL = 4.3, ARCH = 4.3, ARC_N = 10;                       // straight wall height, arch rise (so 8.6 m clear in the middle)
-const LAMP_EVERY = 14, STRIP_EVERY = 3, CONE_EVERY = 6;         // roof lamps, wall light strips, cones along the lane edges (m)
+const LAMP_EVERY = 14, STRIP_EVERY = 3, CONE_EVERY = 6, EXIT_EVERY = 60, SOS_EVERY = 120, LIMIT_EVERY = 200;         // roof lamps, wall light strips, cones along the lane edges (m)
 const GATE_OUT = 7;                                             // how far in front of the portal wall the gate stands (m)
+
+/* small wall signs of a real road tunnel, drawn to a texture: 'exit' (green, running figure and EXIT), 'sos' (orange call box with SOS) and 'limit' (red ring, 60) */
+function wallSign(kind) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = kind === 'limit' ? 256 : 90; const x = c.getContext('2d'), w = c.width, h = c.height; x.textAlign = 'center'; x.textBaseline = 'middle';
+  if (kind === 'exit') { x.fillStyle = '#0c8a4a'; x.fillRect(0, 0, w, h); x.strokeStyle = '#fff'; x.lineWidth = 4; x.strokeRect(5, 5, w - 10, h - 10); x.fillStyle = '#fff'; x.font = 'bold 44px sans-serif'; x.fillText('EXIT', 150, h / 2 + 2);
+    x.beginPath(); x.arc(52, 24, 8, 0, 6.3); x.fill(); x.lineWidth = 7; x.lineCap = 'round'; x.strokeStyle = '#fff'; x.beginPath(); x.moveTo(52, 34); x.lineTo(46, 56); x.lineTo(32, 66); x.moveTo(46, 56); x.lineTo(60, 66); x.moveTo(52, 38); x.lineTo(72, 46); x.stroke(); }
+  else if (kind === 'sos') { x.fillStyle = '#e8590c'; x.fillRect(0, 0, w, h); x.strokeStyle = '#fff'; x.lineWidth = 4; x.strokeRect(5, 5, w - 10, h - 10); x.fillStyle = '#fff'; x.font = 'bold 54px sans-serif'; x.fillText('SOS', w / 2, h / 2 + 3); }
+  else { x.fillStyle = '#fff'; x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 6, 0, 6.3); x.fill(); x.strokeStyle = '#d4181e'; x.lineWidth = 24; x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 22, 0, 6.3); x.stroke(); x.fillStyle = '#111'; x.font = 'bold 100px sans-serif'; x.fillText('60', w / 2, h / 2 + 6); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
 
 /* the name board: dark panel, small red-and-white peak, a small line above and the name large */
 function signTexture(name) {
@@ -42,6 +52,8 @@ export class Tunnels {
     this.stone = m(0xffffff); this.stone.map = stoneTexture(); this.roof = m(0x3d4650); this.brown = m(0x5b2e22); this.dark = m(0x222831); this.hutWall = m(0xe9e3d4); this.green = m(0x2f7a45);
     this.sign = new THREE.MeshBasicMaterial({ map: signTexture(road.c.tunnelName || 'TUNNEL'), side: THREE.DoubleSide });
     const gt = this.sign.map.clone(); gt.flipY = false; gt.needsUpdate = true; this.signGlb = new THREE.MeshBasicMaterial({ map: gt, side: THREE.DoubleSide });      // glTF models put the texture's origin at the top-left
+    this.ledge = m(0xb9b3a6, 0.9); this.exitMat = new THREE.MeshBasicMaterial({ map: wallSign('exit') }); this.sosMat = new THREE.MeshBasicMaterial({ map: wallSign('sos') }); this.limitMat = new THREE.MeshBasicMaterial({ map: wallSign('limit') });
+    this.exitGeo = new THREE.BoxGeometry(1.3, 0.46, 0.06); this.sosGeo = new THREE.BoxGeometry(0.7, 0.26, 0.06); this.limitGeo = new THREE.BoxGeometry(0.9, 0.9, 0.06);
     this.lampGeo = new THREE.BoxGeometry(0.7, 0.18, 1.8); this.stripGeo = new THREE.BoxGeometry(0.14, 0.14, 1.5); this.coneGeo = new THREE.ConeGeometry(0.17, 0.75, 7);
     this.group = new THREE.Group(); scene.add(this.group); this._p = {};
     gateReady.then(m => { if (m) { for (const p of this.pieces.values()) this.drop(p); this.pieces.clear(); } });          // rebuild what was drawn with the box gate
@@ -90,13 +102,18 @@ export class Tunnels {
     const inTube = s => r.tunnelRise(s) >= COVER, runs = []; let run = null;
     for (let row = 0; row <= n; row++) { if (inTube(s0 + row * ds)) { if (!run) runs.push(run = []); run.push(row); } else run = null; }
     if (!runs.length) return null;
-    const grp = new THREE.Group(), P = [], U = [], I = [], lamps = [], strips = [], cones = [];
+    const grp = new THREE.Group(), P = [], U = [], I = [], lamps = [], strips = [], cones = [], exits = [], soss = [], limits = [], LP = [], LI = [];
     const frame = s => { r.at(s, p); return { s, x: p.x - ox, y: p.y, z: p.z - oz, nx: -p.tz, nz: p.tx, tx: p.tx, tz: p.tz }; };
     const edge = this.style.shoulder - 0.45;                                                          // cones stand just outside the lane edge lines
     for (const rows of runs) {
       const fr = rows.map(row => frame(s0 + row * ds));
       for (let i = 0; i + 1 < fr.length; i++) {
         const A = fr[i], B = fr[i + 1];
+        for (const side of [-1, 1]) {                                                                 // a raised walkway along each wall: its top and its inner face
+          const t0 = side * (W - 0.7), t1 = side * W, at2 = (q, t, h) => [q.x + q.nx * t, q.y + h, q.z + q.nz * t], v = LP.length / 3, h = 0.32;
+          for (const pt of [at2(A, t0, h), at2(A, t1, h), at2(B, t0, h), at2(B, t1, h), at2(A, t0, -0.02), at2(B, t0, -0.02)]) LP.push(...pt);
+          LI.push(v, v + 1, v + 2, v + 1, v + 3, v + 2, v + 4, v, v + 5, v, v + 2, v + 5);
+        }
         for (let j = 0; j + 1 < sec.length; j++) {
           const v = P.length / 3; for (const [q, jj] of [[A, j], [A, j + 1], [B, j], [B, j + 1]]) { const [t, y] = sec[jj]; P.push(q.x + q.nx * t, q.y + y, q.z + q.nz * t); U.push(this.secLen[jj] / 2.4, q.s / 2.4); }
           I.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
@@ -107,6 +124,10 @@ export class Tunnels {
         at(q, LAMP_EVERY, (q, th) => lamps.push([q.x, q.y + WALL + ARCH - 0.25, q.z, th]));
         at(q, STRIP_EVERY, (q, th) => { for (const side of [-1, 1]) strips.push([q.x + q.nx * side * (W - 0.1), q.y + 4.1, q.z + q.nz * side * (W - 0.1), th]); });
         at(q, CONE_EVERY, (q) => { for (const side of [-1, 1]) cones.push([q.x + q.nx * side * edge, q.y + 0.37, q.z + q.nz * side * edge]); });
+        const wallSpot = (q, side, h, back) => [q.x + q.nx * side * (W - 0.08), q.y + h, q.z + q.nz * side * (W - 0.08), Math.atan2(-side * q.nx, -side * q.nz)];            // a spot on the wall, turned to face the road
+        at(q, EXIT_EVERY, q => { for (const side of [-1, 1]) exits.push(wallSpot(q, side, 2.4)); });
+        at(q, SOS_EVERY, q => { for (const side of [-1, 1]) soss.push(wallSpot(q, side, 1.3)); });
+        at(q, LIMIT_EVERY, q => { for (const side of [-1, 1]) limits.push(wallSpot(q, side, 3.0)); });
       }
       for (const [idx, atStart] of [[0, true], [rows.length - 1, false]]) {                          // a portal wall and a gate where the tube really begins or ends (not at a piece edge)
         const row = rows[idx], edgeRow = atStart ? row === 0 : row === n; if (edgeRow) continue;
@@ -124,6 +145,8 @@ export class Tunnels {
       if (!list.length) return; const im = new THREE.InstancedMesh(g, mat, list.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), pos = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1);
       list.forEach((it, i) => { pos.set(it[0], it[1], it[2]); e.set(0, it[3] || 0, 0); q.setFromEuler(e); m4.compose(pos, q, sc); im.setMatrixAt(i, m4); }); grp.add(im);
     };
+    if (LP.length) { const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(LP, 3)); lg.setIndex(LI); lg.computeVertexNormals(); const lm = new THREE.Mesh(lg, this.ledge); lm.receiveShadow = true; grp.add(lm); }
+    inst(this.exitGeo, this.exitMat, exits); inst(this.sosGeo, this.sosMat, soss); inst(this.limitGeo, this.limitMat, limits);
     inst(this.lampGeo, this.lamp, lamps); inst(this.stripGeo, this.lamp, strips); inst(this.coneGeo, this.cone, cones);
     grp.userData = { x: ox, z: oz }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
   }
@@ -131,7 +154,7 @@ export class Tunnels {
   reposition() { for (const g of this.pieces.values()) if (g) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); }
   dispose() {
     for (const g of this.pieces.values()) this.drop(g); this.pieces.clear(); this.group.parent && this.group.parent.remove(this.group);
-    for (const m of [this.wall, this.portal, this.lamp, this.cone, this.stone, this.roof, this.brown, this.dark, this.hutWall, this.green, this.sign, this.signGlb]) { if (m.map) m.map.dispose(); m.dispose(); }
-    this.lampGeo.dispose(); this.stripGeo.dispose(); this.coneGeo.dispose();
+    for (const m of [this.wall, this.portal, this.lamp, this.cone, this.stone, this.roof, this.brown, this.dark, this.hutWall, this.green, this.sign, this.signGlb, this.ledge, this.exitMat, this.sosMat, this.limitMat]) { if (m.map) m.map.dispose(); m.dispose(); }
+    this.lampGeo.dispose(); this.stripGeo.dispose(); this.coneGeo.dispose(); this.exitGeo.dispose(); this.sosGeo.dispose(); this.limitGeo.dispose();
   }
 }

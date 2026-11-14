@@ -8,6 +8,10 @@ import { createTerrain } from '../src/world/terrain.js';
 import { fillTile, tileIndex, vertexCount, skirtDepth } from '../src/world/tiledata.js';
 import { Road } from '../src/world/router.js';
 import { createRails, RAIL_R } from '../src/world/bridge_rails.js';
+import { rumbleFor } from '../src/input/rumble.js';
+import { sanitiseSaved } from '../src/core/saved.js';
+import { TrafficSim, MODES, SLOT } from '../src/traffic/sim.js';
+import { Autodrive } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier, ARCADE } from '../src/vehicle/rapier-vehicle.js';
@@ -177,7 +181,7 @@ await atest('rapier: bridge rails stop every vehicle (none gets through, physics
 });
 await atest('rapier: cornering is grip-limited and stable; steering is Ackermann and the lock shrinks with speed', () => {
   for (let i = 0; i < VEHICLES.length; i++) {
-    const V = VEHICLES[i], ph = rv(i); drive(ph, 14, GO); let slip = 0, hi = 0; drive(ph, 4, q => { slip = Math.max(slip, q.slip); if (hi === 0 && q.steer > 0.99) hi = Math.abs(q.delta); return { steer: 1, throttle: 0, brake: 0 }; });
+    const V = VEHICLES[i], ph = rv(i); for (let t = 0; t < 90 && ph.kmh < V.stats.Top * 0.93; t += 1 / 60) ph.step(1 / 60, GO); let slip = 0, hi = 0;       // up to near its own top speed (a truck needs far longer than a car) drive(ph, 4, q => { slip = Math.max(slip, q.slip); if (hi === 0 && q.steer > 0.99) hi = Math.abs(q.delta); return { steer: 1, throttle: 0, brake: 0 }; });
     assert.ok(ph.u > 5 && slip < 0.8 && Math.abs(ph.roll) < 0.4, V.id + ' lost it at full lock: slip ' + slip.toFixed(2));
     const lowLock = rv(i); drive(lowLock, 0.8, { steer: 1, throttle: 0.2, brake: 0 }); const lo = Math.abs(lowLock.delta); assert.ok(lo > hi + 0.01, V.id + ' lock does not shrink with speed: ' + lo.toFixed(3) + ' vs ' + hi.toFixed(3));
     ph.free(); lowLock.free();
@@ -260,7 +264,7 @@ test('tuning: settings are found by path, applied, replaced as a whole and reset
 });
 
 await atest('worker: anyone reads the published settings; only the password publishes; bad data is refused; history keeps versions', async () => {
-  const kv = new Map(), env = { SETTINGS: { get: async (k, t) => kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null, put: async (k, v) => { kv.set(k, v); } }, TUNER_PASSWORD: 'pw', ASSETS: { fetch: async () => new Response('static') } };
+  const kv = new Map(), env = { SETTINGS: { get: async (k, t) => kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null, put: async (k, v) => { kv.set(k, v); } }, TUNER_PASSWORD: 'pw', AUTH_DELAY_MS: 0, ASSETS: { fetch: async () => new Response('static') } };
   const call = (path, method = 'GET', body, pw) => worker.fetch(new Request('https://x.test' + path, { method, body: body && JSON.stringify(body), headers: pw ? { authorization: 'Bearer ' + pw } : {} }), env);
   assert.equal((await call('/api/settings')).status, 200); assert.deepEqual((await (await call('/api/settings')).json()).overrides, {});
   assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 1 } })).status, 401); assert.equal((await call('/api/settings', 'PUT', { overrides: { 'a.b': 1 } }, 'nope')).status, 401);
@@ -269,11 +273,111 @@ await atest('worker: anyone reads the published settings; only the password publ
   assert.equal((await (await call('/api/settings')).json()).overrides['vehicles.car.body.mass'], 2000);
   await call('/api/settings', 'PUT', { overrides: { 'a.b': 2 }, note: 'second' }, 'pw');
   assert.equal((await call('/api/history')).status, 401); const h = (await (await call('/api/history', 'GET', null, 'pw')).json()).history; assert.equal(h.length, 2); assert.equal(h[0].note, 'second');
+  const raw = (body, headers) => worker.fetch(new Request('https://x.test/api/settings', { method: 'PUT', body, headers: { authorization: 'Bearer pw', ...headers } }), env);
+  assert.equal((await raw('{not json')).status, 400); assert.equal((await raw('[1,2]')).status, 400); assert.equal((await raw(JSON.stringify({ overrides: { 'a.b': 1e12 } }))).status, 400, 'absurd number refused'); assert.equal((await raw(JSON.stringify({ overrides: { 'a.b': -1e12 } }))).status, 400);
+  assert.equal((await raw(JSON.stringify({ overrides: { 'a.b': 1e6 } }))).status, 200, 'a big but sane number is fine');
+  assert.equal((await raw('x'.repeat(70000))).status, 413, 'a body over 64 KB is refused'); assert.equal((await raw('{}', { 'content-length': '999999' })).status, 413, 'refused from the declared size, before reading');
+  assert.equal((await call('/api/settings')).headers.get('x-content-type-options'), 'nosniff');
+  const t0 = Date.now(); const slow = await worker.fetch(new Request('https://x.test/api/settings', { method: 'PUT', body: '{}', headers: { authorization: 'Bearer nope' } }), { ...env, AUTH_DELAY_MS: 250 }); assert.equal(slow.status, 401); assert.ok(Date.now() - t0 >= 240, 'a wrong password waits before it answers');
+  assert.equal((await worker.fetch(new Request('https://x.test/api/settings', { method: 'PUT', body: '{}', headers: { authorization: 'Bearer pw' } }), { ...env, TUNER_PASSWORD: undefined })).status, 503, 'no password set up: the API says so');
   assert.equal(await (await call('/index.html')).text(), 'static');
   const bare = { ASSETS: env.ASSETS }; assert.equal((await worker.fetch(new Request('https://x.test/api/settings'), bare)).status, 503);        // not set up: API says so, nothing else breaks
   assert.equal((await worker.fetch(new Request('https://x.test/next.html'), bare)).status, 200);
 });
 
+test('rumble: quiet on smooth road, thumps on a hit, buzzes on loose ground, and the level and the off switch work', () => {
+  const calm = { speed: 30, surface: 'asphalt', slip: 0.02, impact: 0, buff: false, throttle: 0.5, hand: 0 };
+  assert.equal(rumbleFor(calm, 1), null); assert.equal(rumbleFor({ ...calm, impact: 9 }, 0), null, 'off means off'); assert.equal(rumbleFor(null, 1), null);
+  const hit = rumbleFor({ ...calm, impact: 10 }, 1); assert.ok(hit.strong > 0.7 && hit.ms >= 150, 'a hard hit is a heavy thump');
+  assert.ok(rumbleFor({ ...calm, impact: 4 }, 1).strong < hit.strong, 'a softer hit is a softer thump');
+  const grass = rumbleFor({ ...calm, surface: 'grass' }, 1); assert.ok(grass.weak > 0.05 && grass.strong === 0, 'grass is a light buzz');
+  assert.equal(rumbleFor({ ...calm, surface: 'grass', speed: 1 }, 1), null, 'no buzz when almost stopped');
+  const slide = rumbleFor({ ...calm, slip: 0.5 }, 1); assert.ok(slide.weak >= 0.4, 'a slide is felt');
+  const half = rumbleFor({ ...calm, impact: 10 }, 0.5); assert.ok(Math.abs(half.strong - hit.strong / 2) < 1e-9, 'level scales the strength');
+  for (const t of [hit, grass, slide]) assert.ok(t.strong >= 0 && t.strong <= 1 && t.weak >= 0 && t.weak <= 1, 'magnitudes stay in 0..1');
+});
+test('saved choices: rubbish in storage never gets into the game (null, text, wrong types, bad colours, unknown ids)', () => {
+  const ctx = { vehicles: 3, vehicleIds: ['car', 'truck', 'bike'], locations: ['default', 'alps'] };
+  for (const bad of [null, undefined, 'text', 42, [1, 2], true, { paint: null }, { paint: 'x' }, { paint: [] }, { radioVol: 'loud' }, { radioVol: NaN }, { vehicle: 'x' }, { vehicle: -1 }, { vehicle: 99 }, { vehicle: 1.5 }, { time: 'midnight' }, { weather: {} }, { lights: 7 }, { muted: 'yes' }]) {
+    const s = sanitiseSaved(bad, ctx); assert.equal(typeof s.paint, 'object'); assert.ok(s.paint && !Array.isArray(s.paint), 'paint is always an object');
+    for (const k of ['radioVol', 'vehicle', 'time', 'weather', 'lights', 'muted']) assert.ok(!(k in s), k + ' dropped for ' + JSON.stringify(bad));
+  }
+  const good = sanitiseSaved({ time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 3, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C', truck: 'red', ghost: '#ffffff', bike: '#12' }, extra: 'ignored' }, ctx);
+  assert.deepEqual(good, { time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 1, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C' } });
+  assert.equal(sanitiseSaved({ location: 'atlantis' }, ctx).location, undefined);
+  assert.equal(sanitiseSaved({ traffic: 'mid' }, ctx).traffic, 'mid'); assert.equal(sanitiseSaved({ traffic: 'light' }, ctx).traffic, 'low'); assert.equal(sanitiseSaved({ traffic: 'busy' }, ctx).traffic, 'high'); assert.equal(sanitiseSaved({ traffic: 'lots' }, ctx).traffic, undefined);
+});
+test('traffic: cars keep to their lanes and the right side, keep a safe gap, appear far from the player, are bounded and deterministic', () => {
+  const run = (seed, mode, drive, secs = 140) => {
+    const { r } = world(seed), sim = new TrafficSim(r, { seed, mode, drive }), p = {}; let ps = 0, maxCars = 0, bridge = 0, minGap = 1e9, bornNear = 1e9; const half = r.style.half;
+    for (let t = 0; t < secs && ps + 3 < r.sMax - 200; t += 0.1) {
+      ps += 25 * 0.1; r.at(ps, p); sim.update(0.1, { x: p.x, z: p.z, s: ps, u: 25, yaw: p.th });
+      maxCars = Math.max(maxCars, sim.cars.length);
+      for (const c of sim.cars) {
+        assert.ok(Math.abs(c.lat) < half, 'a car left the asphalt: lateral ' + c.lat.toFixed(2) + ' of ' + half); assert.ok(c.speed >= 0 && c.speed <= 33, 'speed ' + c.speed.toFixed(1));
+        assert.equal(c.lat < 0, (c.dir > 0) === (drive === 'right'), 'car on the wrong side of the road');
+        if (r.bridgeW(c.s) === 1) bridge++; bornNear = Math.min(bornNear, c.bornDist);
+        const q = {}; r.at(c.s, q); assert.ok(Math.hypot(c.x - (q.x - q.tz * c.lat), c.z - (q.z + q.tx * c.lat)) < 1e-6, 'the car is on its lane line');
+      }
+      for (const a of sim.cars) for (const b of sim.cars) if (a !== b && a.dir === b.dir && a.lane === b.lane && (b.s - a.s) * a.dir > 0) minGap = Math.min(minGap, (b.s - a.s) * a.dir - (a.len + b.len) / 2);
+    }
+    return { sim, maxCars, bridge, minGap, bornNear };
+  };
+  const light = run('peace', 'low', 'right'), mid = run('peace', 'mid', 'right'), busy = run('peace', 'high', 'right'), left = run('peace', 'high', 'left');
+  assert.ok(light.maxCars > 0 && light.maxCars <= MODES.low, 'low traffic is bounded: ' + light.maxCars); assert.ok(mid.maxCars > light.maxCars && mid.maxCars <= MODES.mid, 'mid has more but is bounded: ' + mid.maxCars); assert.ok(busy.maxCars > mid.maxCars && busy.maxCars <= MODES.high, 'high has the most but is bounded: ' + busy.maxCars);
+  for (const x of [light, mid, busy, left]) { assert.ok(x.minGap > -0.01, 'cars never overlap (smallest gap ' + x.minGap.toFixed(2) + ' m)'); assert.ok(x.bornNear >= 150 - 1e-6, 'nothing appears near the player: ' + x.bornNear.toFixed(0) + ' m'); }
+  assert.equal(run('peace', 'off', 'right', 20).maxCars, 0, 'off means no cars');
+  const again = run('peace', 'high', 'right'); assert.deepEqual(again.sim.cars.map(c => [c.id, +c.s.toFixed(3), c.lane, c.kind]), busy.sim.cars.map(c => [c.id, +c.s.toFixed(3), c.lane, c.kind]), 'the same world and path give the same traffic');
+  const alps = run('alps', 'high', 'right', 200); assert.ok(alps.bridge > 0, 'some cars cross a bridge on their lane');
+  const { r } = world('peace'), sim = new TrafficSim(r, { seed: 'x', mode: 'high' }), p = {}; r.at(0, p); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th });
+  const n0 = sim.cars.length; assert.ok(n0 > 0); sim.setMode('low'); assert.equal(sim.cars.length, 0, 'changing mode clears the cars'); sim.setMode('light'); assert.equal(sim.mode, 'low', 'an old saved name still works'); sim.setMode('off'); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); assert.equal(sim.cars.length, 0);
+  sim.setMode('high'); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); const far = { x: p.x, z: p.z, s: 3000, u: 0, yaw: p.th }; r.at(3000, p); far.x = p.x; far.z = p.z; sim.update(0.1, far); assert.ok(sim.cars.every(c => c.s > 3000 - 350 - SLOT && c.s < 3000 + 700 + SLOT), 'after a jump along the road, only cars in the new window remain');
+  const blocked = new TrafficSim(r, { seed: 'b', mode: 'high', drive: 'right' }); r.at(0, p); blocked.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); const c0 = blocked.cars.find(c => c.dir > 0 && c.s > 150); assert.ok(c0, 'a car ahead in our direction');
+  const stop = { s: c0.s + 80, u: 0, yaw: 0 }; for (let t = 0; t < 10; t += 0.1) { const q = {}; r.at(stop.s, q); stop.x = q.x - q.tz * c0.lat; stop.z = q.z + q.tx * c0.lat; stop.yaw = q.th; blocked.update(0.1, stop); }
+  const cc = blocked.cars.find(c => c.id === c0.id); assert.ok(cc && cc.s < stop.s - 2 && cc.speed < 0.5, 'a car stops before a stationary obstacle in its lane (stopped ' + (cc ? (stop.s - cc.s).toFixed(1) : '?') + ' m short)');
+  const hits = blocked.circles(cc.x, cc.z, 6)[0].filter(h => h.traffic === cc.id); assert.ok(hits.length >= 3 && hits.every(h => h.r > 0.9 && Math.hypot(h.x - cc.x, h.z - cc.z) < cc.len), 'cars give the physics obstacle circles'); assert.equal(blocked.circles(cc.x + 500, cc.z, 6)[0].length, 0, 'none far away');
+});
+await atest('traffic: a traffic car is solid: the player hits it and does not pass through', () => {
+  const { r } = world('peace'), sim = new TrafficSim(r, { seed: 'solid', mode: 'high' });
+  for (const id of ['car', 'truck']) {
+    sim.cars = [{ id: 1, x: 90, z: 0, yaw: 0, len: 4.4, w: 1.85 }];                                         // a stopped car 90 m ahead, across the player's path
+    const i = VEHICLES.findIndex(v => v.id === id), V = VEHICLES[i], p = vehicleParams(V.body, V.stats), ph = new RapierVehicle(p, V.id, flat({ near: (x, z, rr) => sim.circles(x, z, rr) }));
+    let hit = false, worst = 0, maxX = -1e9; for (let k = 0; k < 60 * 14; k++) { ph.step(1 / 60, { steer: 0, throttle: ph.kmh < (id === 'car' ? 100 : 60) ? 1 : 0.3, brake: 0 }); if (ph.impact > 2) hit = true; maxX = Math.max(maxX, ph.x); assert.ok(Number.isFinite(ph.x + ph.z + ph.u), id + ' physics blew up at the traffic car'); }
+    assert.ok(hit, id + ' felt the traffic car'); assert.ok(maxX < 90 - 1.5, id + ' went through the traffic car (reached x = ' + maxX.toFixed(1) + ')'); ph.free();
+  }
+});
+await atest('autodrive among traffic: it keeps to its lane, follows slower cars at a gap and never hits one over a long run', () => {
+  for (const [seed, mode, drive] of [['peace', 'high', 'right'], ['coast', 'high', 'left']]) {
+    const { t, r } = world(seed), sim = new TrafficSim(r, { seed: 'ad' + seed, mode, drive }), V = VEHICLES[0], p = vehicleParams(V.body, V.stats);
+    const ph = new RapierVehicle(p, V.id, { height: (x, z) => t.drive(x, z), surface: (x, z) => t.surface(x, z), near: (x, z, rr) => sim.circles(x, z, rr), seaLevel: t.seaLevel });
+    const q = r.at(40, {}), dir = 1; ph.reset(q.x - q.tz * sim.lateral(dir, 0) * -1, q.z + q.tx * sim.lateral(dir, 0), q.th);                  // in the lane the traffic uses for this direction
+    const ad = new Autodrive(); ad.lane = d => sim.lateral(d, 0); ad.leader = (pp, s) => sim.leaderAhead({ x: pp.x, z: pp.z, s, yaw: pp.yaw, u: pp.u }); ad.toggle(true); ad.s = 40;
+    let s = 40, hits = 0, off = 0, closest = 1e9, follow = 0, slowest = 99, truck = null; const lat = {};      // a slow truck is put 150 m ahead in the lane, so there is always something to follow
+    for (let k = 0; k < 60 * 90; k++) {
+      const inp = ad.update(ph, r); ph.step(1 / 60, { steer: inp.steer, throttle: inp.throttle, brake: inp.brake, hand: 0, rev: 0 }); s = ad.s;
+      sim.update(1 / 60, { x: ph.x, z: ph.z, s, u: ph.u, yaw: ph.yaw }); if (ph.impact > 1) hits++;
+      if (k === 0) { truck = { id: 9999, s: s + 150, dir: 1, lane: 0, kind: 'truck', len: 8.5, w: 2.5, v0: 7, speed: 7, colour: 0, lat: sim.lateral(1, 0), stuck: 0, bump: 0, born: 0, bornDist: 150, x: 0, z: 0, y: 0, yaw: 0, brake: 0 }; sim.place(truck); sim.cars.push(truck); }
+      r.at(s, lat); const pl = (ph.x - lat.x) * -lat.tz + (ph.z - lat.z) * lat.tx; if (Math.abs(pl - sim.lateral(dir, 0)) > 1.6) off++;
+      const L = sim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, 30); if (L) { closest = Math.min(closest, L.gap); follow++; if (L.gap < 20) slowest = Math.min(slowest, ph.u); }
+    }
+    assert.ok(follow > 60, seed + ': it met the slow truck (' + (follow / 60).toFixed(1) + ' s)'); assert.ok(slowest < 12, seed + ': it slowed down behind the truck (slowest ' + slowest.toFixed(1) + ' m/s)'); assert.equal(hits, 0, seed + ': the autodrive hit a traffic car ' + hits + ' times'); assert.ok(s - 40 > 500, seed + ': it made progress (' + (s - 40).toFixed(0) + ' m)');
+    console.log('     autodrive+traffic', seed, drive, 'progress', (s - 40).toFixed(0), 'm, met traffic for', (follow / 60).toFixed(1), 's, closest', closest > 1e8 ? 'none' : closest.toFixed(1) + ' m, off lane', (off / 60).toFixed(1), 's'); assert.ok(off < 60 * 90 * 0.04, seed + ': it kept its lane (off the lane for ' + (off / 60).toFixed(1) + ' s)'); assert.ok(closest > 1.5, seed + ': it kept a gap behind cars (closest ' + closest.toFixed(1) + ' m)'); ph.free();
+  }
+});
+await atest('my music: only audio files within limits are kept, songs play in turn and are freed again (nothing leaves the device)', async () => {
+  const fake = new Map(); class FakeAudio { constructor() { this.attrs = {}; this.ev = {}; this.volume = 1; this.paused = true; } addEventListener(n, f) { this.ev[n] = f; } set src(v) { this.attrs.src = v; } get src() { return this.attrs.src; } getAttribute(k) { return this.attrs[k] || null; } removeAttribute(k) { delete this.attrs[k]; } load() {} pause() { this.paused = true; } play() { this.paused = false; return Promise.resolve(); } error = null; }
+  globalThis.Audio = FakeAudio; const { Radio } = await import('../src/audio/radio.js'); const { classify, cleanName, MAX_BYTES, MAX_TRACKS } = await import('../src/audio/localmusic.js');
+  assert.equal(cleanName('03 - Night Drive (Official Video).mp3'), 'Night Drive'); assert.equal(cleanName('my_song.flac'), 'my song');
+  const c = classify([{ name: 'a.mp3', type: 'audio/mpeg', size: 10 }, { name: 'b.txt', type: 'text/plain', size: 10 }, { name: 'c.wav', type: '', size: 10 }, { name: 'huge.mp3', type: 'audio/mpeg', size: MAX_BYTES + 1 }, { name: 'e.mp3', type: 'audio/mpeg', size: 0 }], 0);
+  assert.deepEqual(c.ok.map(f => f.name), ['a.mp3', 'c.wav']); assert.deepEqual(c.skipped.map(f => f.reason), ['not an audio file', 'too big (over 80 MB)', 'empty file']);
+  assert.equal(classify([{ name: 'x.mp3', type: 'audio/mpeg', size: 5 }], MAX_TRACKS).skipped.length, 1);
+  const r = new Radio(), before = r.stations.length, revoked = [], realRevoke = URL.revokeObjectURL; URL.revokeObjectURL = u => { revoked.push(u); realRevoke.call(URL, u); };
+  const res = r.addLocal([new File(['aaa'], '01 One.mp3', { type: 'audio/mpeg' }), new File(['bbb'], 'Two.ogg', { type: 'audio/ogg' }), new File(['x'], 'notes.txt', { type: 'text/plain' })]);
+  assert.equal(res.added, 2); assert.equal(res.skipped.length, 1); assert.equal(r.stations.length, before + 1); assert.equal(r.stations[before].name, 'My music'); assert.equal(r.stations[before].genre, '2 songs');
+  r.tune(before); assert.equal(r.state().track, 'One'); const first = r.audio.src; r.audio.ev.ended(); assert.equal(r.state().track, 'Two'); assert.notEqual(r.audio.src, first); r.audio.ev.ended(); assert.equal(r.state().track, 'One');    // round and round
+  r.skipTrack(-1); assert.equal(r.state().track, 'Two');
+  r.clearLocal(); assert.equal(r.stations.length, before); assert.equal(r.index, -1); assert.equal(revoked.length, 2); URL.revokeObjectURL = realRevoke; delete globalThis.Audio;
+});
 test('tuner help: every vehicle, surface and world setting has an explanation and a range', () => {
   tuning.registerRoot('vehicles', VEHICLES); tuning.registerRoot('surfaces', SURFACES); tuning.registerRoot('world', DEFAULT_CONFIG); tuning.registerRoot('handling', ARCADE); tuning.registerRoot('camera', CAMFX); tuning.registerRoot('look', LOOK);
   const missing = tuning.describe().filter(f => !explain(f.path)).map(f => f.path);

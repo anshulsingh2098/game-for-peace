@@ -8,6 +8,18 @@ What changed: nothing in code. Tried two-plane tree cards on far scenery tiles: 
 For the other stream: bridge rails are drawn but the car drives through them. The physics ground is one heightfield (`rapier-vehicle.js`), which is your file. Ask: add thin cuboid colliders along the bridge edges (use `Road.bridgeW === 1` stretches and `road.carriedW` for the half width), or tell me the hook you want and I will expose a list of rail segments from `world/bridges.js`.
 Status: done (Rajul's Claude built the rail collision on the world side, see the 2026-11-15 23:00 entry; no change needed from Anshul)
 
+## 2026-11-16 10:00  Steel truss on long bridges (N3 A2)
+Branch: feat/plan-n0-n1 (stacked on PR 22)
+What changed: `src/world/bridges.js`: on bridges of at least 90 m (`TRUSS_MIN`) a steel pony truss is drawn along both sides: top chord, an upright and a diagonal per 6 m bay (`TRUSS_BAY`), 3.3 m above the deck (`TRUSS_H`), one merged mesh per 200 m piece; bays sit at fixed road distances so pieces line up and each bay is built by the piece holding its first upright; new `steel` material, freed in `dispose()`. Checked on the 726 m Alps lake bridge (seed `alps`): continuous, no gaps, no console errors. Visual only; the rails (bridge_rails.js) still stop the car. Self-test 33 checks.
+For the other stream: nothing. The chase camera can sit close to the near truss member on a bridge; tell me if it bothers you.
+Status: done
+
+## 2026-11-16 09:00  Tunnel interior: walkway, speed-limit, exit and SOS signs (N3 A3)
+Branch: feat/plan-n0-n1 (stacked on PR 22)
+What changed: `src/world/tunnels.js`: a raised walkway (a 0.7 m wide, 0.32 m high ledge with its inner face) along both walls of every tunnel stretch, and instanced wall signs drawn to canvas textures: a red-ringed 60 every 200 m, a green EXIT every 60 m and an orange SOS box every 120 m, facing the road, all freed in `dispose()`. Checked in the Himalayas (seed `hill`): ledge and all three signs visible, no console errors. The walkway is visual only (the car can drive over its edge at the very side; it is outside the 5.4 m shoulder). Self-test 33 checks.
+For the other stream: nothing.
+Status: done
+
 ## 2026-11-15 23:00  Master Plan N0 done on the real clone; bridge rail collision built (N3 A1, A2)
 Branch: feat/n0-n3-docs-and-rails
 What changed: all five open PRs (16 to 20) were merged into `main` in order (log files conflicted each time; both entries kept, newest first). New `src/world/bridge_rails.js` (pure, tested): collision circles along both rails of every bridge, wired in as `roadMesh.bridges.near` and `world.near` in `src/main.js`; `collide()` in `src/vehicle/rapier-vehicle.js` (Stream B) treats circles with `slide: true` as a wall to scrape along (little speed lost, small bounce, nose turned parallel) instead of a tree. New `WORLD_CONTRACT.md` documents the road, terrain and obstacle interfaces as the code is. `HANDOFF.md` and `PARALLEL_PLAN.md` refreshed, with an ordered defect list. Self-test 27 checks (new: rail circles sit on the drawn rail and nowhere else; no car, truck or bike gets through a rail at up to 220 km/h, physics stays finite). In the real game a car at about 100 km/h was stopped by a bridge rail and stayed on the deck.

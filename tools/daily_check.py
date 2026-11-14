@@ -34,6 +34,10 @@ code, out = run('node', 'tools/selftest.mjs')
 m = re.search(r'(\d+) checks passed', out)
 note('PASS' if code == 0 and m else 'FAIL', 'self-test', (m.group(1) + ' checks passed') if m else out.splitlines()[-1][:120] if out else 'no output')
 
+# 2b. vehicle acceptance numbers (acceleration, braking, cornering, handbrake, surfaces, hill, repeatability, telemetry) for car, truck and bike
+code, out = run('node', 'tools/vehicle_acceptance.mjs', '--check', timeout=900)
+note('PASS' if code == 0 and 'no problems found' in out else 'FAIL', 'vehicle acceptance (car, truck, bike)', 'no problems found' if 'no problems found' in out else ' | '.join(l.strip() for l in out.splitlines() if l.strip() and not l.startswith('{'))[:140])
+
 # 3. every location still builds a road (and report bridge and tunnel share)
 code, out = run('node', 'tools/locations_check.mjs', timeout=600)
 bad = [l for l in out.splitlines() if 'ROAD FAILED' in l]
