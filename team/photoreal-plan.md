@@ -31,17 +31,20 @@ HDRI sky and lighting from real photos (PMREM), tone mapping tuned per time of d
 | R5 | Vegetation and rocks: scanned or Blender models with LODs, grass cards, wind | Stream A |
 | R6 | Packaging and speed: compress assets, stream on demand, phone defaults to low, loading screen, frame-time budget per tier | both |
 
-## Status (14 Nov 2026)
+## Status (14 Nov 2026, end of day)
 
 | Phase | State |
 |---|---|
-| R0 | Done: three.js r187 vendored with the addons; `?fx=1` pipeline built and tuned but gives little visible gain for 3.5x the cost, so it is off by default. HDRI sky (Poly Haven, 1 MB) lights the scene under `?fx=1` only. Cascaded shadows and quality tiers not done. |
-| R1 | Done: photographic ground (`groundmat.js`) and roads. Normal maps are not used on the ground yet. |
-| R2 | Not started (sky, weather, light: Stream B). |
-| R3 | Not started (vehicles: Stream B). |
-| R4 | Partly: Atal Tunnel gate (Blender) and tiled interior done. Truss bridge, retaining walls, interior signs, other landmarks not done. |
-| R5 | Done: real-scan trees, plants and rocks (`nature.js`). Cards are flat images facing one way; no LODs. |
-| R6 | Started: quality tiers (`?q=low`, `med`, `high`): low = old ground and fewer scenery variants, med = lite photographic ground, high = full. Not done: the high tier is too slow (about 24 ms on an M4), compression (KTX2), streaming, phone measurements. |
+| R0 | Done: three.js r187 vendored with the addons; `?fx=1` pipeline built and tuned but gives little visible gain for 3.5x the cost, so it is off by default. Not done: cascaded shadows. |
+| R1 | Done: photographic ground (`groundmat.js`, full and lite) and roads. Not done: normal maps on the ground, a tall-grass look. |
+| R2 | Not started (sky, weather, light: Stream B). One HDRI is in the repo and used only under `?fx=1`. |
+| R3 | Not started (vehicles: Stream B). The white paint glares under the lighting. |
+| R4 | Partly: Atal Tunnel gate (Blender) and tiled interior done. Not done: truss bridge, retaining walls, interior signs, the other landmarks. |
+| R5 | Done: real-scan trees, plants and rocks (`nature.js`). Cards face one way; no levels of detail yet. |
+| R6 | Started: quality tiers `?q=low|med|high`. Not done: the high tier is too slow (about 24 ms on an M4), texture and mesh compression, streaming, phone measurements. |
+| Sound (new) | The car's engine is a recording of Rajul's own car (`assets/audio`). Not heard by a person yet; a cleaner recording is the next step. |
+
+These phases are scheduled as N0 to N6 in `PARALLEL_PLAN.md` ("Phases from here").
 
 ## Risks to accept knowingly
 
