@@ -8,7 +8,8 @@ import { makeConfig, decodeConfig, encodeConfig, VIEW_PRESETS } from './core/con
 import { randomSeed } from './core/rng.js';
 import { createTerrain } from './world/terrain.js';
 import { Road } from './world/router.js';
-import { RoadMesh, TWO_LANE } from './world/road.js';
+import { RoadMesh } from './world/road.js';
+import { roadStyleById } from './world/roadstyles.js';
 import { TileGrid } from './world/chunks.js';
 import { Scatter } from './world/scatter.js';
 import { WIND } from './world/props.js';
@@ -35,6 +36,7 @@ const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let savedLoc = null; try { savedLoc = JSON.parse(localStorage.getItem('gfp-next') || '{}').location || null; } catch (e) { /* no saved choice */ }
 let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || savedLoc || 'default', q.get('seed') || 'peace');
+if (q.get('road')) config.road.style = roadStyleById(q.get('road')).id;                  // ?road=highway|boulevard|dirt|gravel
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };
 document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('dev', q.has('dev') || q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches);
 
@@ -72,7 +74,7 @@ function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
   if (landmarks) landmarks.dispose(); landmarks = new Landmarks(scene, terrain, road, config, grid.origin, locationById(config.location).landmarks);       // sights beside the road; they also level the land under them
-  roadMesh = new RoadMesh(scene, road, TWO_LANE, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin);
+  roadMesh = new RoadMesh(scene, road, road.style, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin);
   env.attach({ ground, road: roadMesh.surface }); waterMat.color.set(config.water.color);
 }
 makeScenery();

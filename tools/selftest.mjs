@@ -11,6 +11,7 @@ import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 import { LOCATIONS, locationConfig } from '../src/world/locations.js';
+import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -177,6 +178,20 @@ await atest('rapier: slopes, water, obstacles and buffs', () => {
   assert.ok(bang > 5, 'no impact felt'); for (const off of p.circles) assert.ok(Math.hypot(hit.x + Math.cos(hit.yaw) * off - tree.x, hit.z + Math.sin(hit.yaw) * off - tree.z) >= p.radius + tree.r - 0.05, 'drove through the tree');
   const boost = new RapierVehicle(p, V.id, flat()); boost.setMod({ top: 1.3, accel: 1.6 }); drive(boost, 40, GO); const norm = new RapierVehicle(p, V.id, flat()); drive(norm, 40, GO); assert.ok(boost.u > norm.u * 1.1, 'speed buff does nothing');
   for (const v of [hill, climb, sea, hit, boost, norm]) v.free();
+});
+
+test('road styles: columns and strips are valid, surfaces are physics keys, two-lane keeps its old widths', () => {
+  for (const st of Object.values(ROAD_STYLES)) {
+    assert.ok(st.cols.length > 1 && st.strips.length > 0, st.id);
+    for (const [a, b] of st.strips) { assert.ok(a >= 0 && b < st.cols.length && b === a + 1, st.id + ' strip'); assert.ok(st.cols[b][0] >= st.cols[a][0], st.id + ' columns run left to right'); }
+    for (const c of st.cols) assert.ok(st.colour[c[2]], st.id + ' colour ' + c[2]);
+    for (const [d, k] of st.surfaces) { assert.ok(SURFACES[k], st.id + ' surface ' + k); assert.ok(d <= st.grade.flat, st.id + ' surface within the flat band'); }
+    assert.ok(st.grade.lift[0] < st.grade.flat, st.id + ' lift ends inside the flat band');
+  }
+  for (const st of Object.values(ROAD_STYLES)) { const sorted = st.strips.map(x => x[0]).sort((a, b) => a - b); if (st.id !== 'two-lane') for (let i = 0; i < st.cols.length; i++) assert.ok(st.cols[i][0] === -st.cols[st.cols.length - 1 - i][0], st.id + ' symmetric'); }
+  const t = ROAD_STYLES['two-lane'];
+  assert.deepEqual([t.grade.flat, t.grade.blend, t.clear, t.grade.lift[0]], [9, 46, 10, 5.4]);
+  assert.equal(roadSurfaceAt(t, 3), 'asphalt'); assert.equal(roadSurfaceAt(t, 5), 'gravel'); assert.equal(roadSurfaceAt(t, 8), null);
 });
 
 console.log(`\n${passed} checks passed`);
