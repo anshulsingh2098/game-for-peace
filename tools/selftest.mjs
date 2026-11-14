@@ -10,6 +10,7 @@ import { Road } from '../src/world/router.js';
 import { createRails, RAIL_R } from '../src/world/bridge_rails.js';
 import { rumbleFor } from '../src/input/rumble.js';
 import { sanitiseSaved } from '../src/core/saved.js';
+import { TrafficSim, MODES, SLOT } from '../src/traffic/sim.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier, ARCADE } from '../src/vehicle/rapier-vehicle.js';
@@ -303,6 +304,45 @@ test('saved choices: rubbish in storage never gets into the game (null, text, wr
   const good = sanitiseSaved({ time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 3, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C', truck: 'red', ghost: '#ffffff', bike: '#12' }, extra: 'ignored' }, ctx);
   assert.deepEqual(good, { time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 1, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C' } });
   assert.equal(sanitiseSaved({ location: 'atlantis' }, ctx).location, undefined);
+});
+test('traffic: cars keep to their lanes and the right side, keep a safe gap, appear far from the player, are bounded and deterministic', () => {
+  const run = (seed, mode, drive, secs = 140) => {
+    const { r } = world(seed), sim = new TrafficSim(r, { seed, mode, drive }), p = {}; let ps = 0, maxCars = 0, bridge = 0, minGap = 1e9, bornNear = 1e9; const half = r.style.half;
+    for (let t = 0; t < secs && ps + 3 < r.sMax - 200; t += 0.1) {
+      ps += 25 * 0.1; r.at(ps, p); sim.update(0.1, { x: p.x, z: p.z, s: ps, u: 25, yaw: p.th });
+      maxCars = Math.max(maxCars, sim.cars.length);
+      for (const c of sim.cars) {
+        assert.ok(Math.abs(c.lat) < half, 'a car left the asphalt: lateral ' + c.lat.toFixed(2) + ' of ' + half); assert.ok(c.speed >= 0 && c.speed <= 33, 'speed ' + c.speed.toFixed(1));
+        assert.equal(c.lat < 0, (c.dir > 0) === (drive === 'right'), 'car on the wrong side of the road');
+        if (r.bridgeW(c.s) === 1) bridge++; bornNear = Math.min(bornNear, c.bornDist);
+        const q = {}; r.at(c.s, q); assert.ok(Math.hypot(c.x - (q.x - q.tz * c.lat), c.z - (q.z + q.tx * c.lat)) < 1e-6, 'the car is on its lane line');
+      }
+      for (const a of sim.cars) for (const b of sim.cars) if (a !== b && a.dir === b.dir && a.lane === b.lane && (b.s - a.s) * a.dir > 0) minGap = Math.min(minGap, (b.s - a.s) * a.dir - (a.len + b.len) / 2);
+    }
+    return { sim, maxCars, bridge, minGap, bornNear };
+  };
+  const light = run('peace', 'light', 'right'), busy = run('peace', 'busy', 'right'), left = run('peace', 'busy', 'left');
+  assert.ok(light.maxCars > 0 && light.maxCars <= MODES.light, 'light traffic is bounded: ' + light.maxCars); assert.ok(busy.maxCars > light.maxCars && busy.maxCars <= MODES.busy, 'busy has more but is bounded: ' + busy.maxCars);
+  for (const x of [light, busy, left]) { assert.ok(x.minGap > -0.01, 'cars never overlap (smallest gap ' + x.minGap.toFixed(2) + ' m)'); assert.ok(x.bornNear >= 150 - 1e-6, 'nothing appears near the player: ' + x.bornNear.toFixed(0) + ' m'); }
+  assert.equal(run('peace', 'off', 'right', 20).maxCars, 0, 'off means no cars');
+  const again = run('peace', 'busy', 'right'); assert.deepEqual(again.sim.cars.map(c => [c.id, +c.s.toFixed(3), c.lane, c.kind]), busy.sim.cars.map(c => [c.id, +c.s.toFixed(3), c.lane, c.kind]), 'the same world and path give the same traffic');
+  const alps = run('alps', 'busy', 'right', 200); assert.ok(alps.bridge > 0, 'some cars cross a bridge on their lane');
+  const { r } = world('peace'), sim = new TrafficSim(r, { seed: 'x', mode: 'busy' }), p = {}; r.at(0, p); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th });
+  const n0 = sim.cars.length; assert.ok(n0 > 0); sim.setMode('light'); assert.equal(sim.cars.length, 0, 'changing mode clears the cars'); sim.setMode('off'); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); assert.equal(sim.cars.length, 0);
+  sim.setMode('busy'); sim.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); const far = { x: p.x, z: p.z, s: 3000, u: 0, yaw: p.th }; r.at(3000, p); far.x = p.x; far.z = p.z; sim.update(0.1, far); assert.ok(sim.cars.every(c => c.s > 3000 - 350 - SLOT && c.s < 3000 + 700 + SLOT), 'after a jump along the road, only cars in the new window remain');
+  const blocked = new TrafficSim(r, { seed: 'b', mode: 'busy', drive: 'right' }); r.at(0, p); blocked.update(0.1, { x: p.x, z: p.z, s: 0, u: 0, yaw: p.th }); const c0 = blocked.cars.find(c => c.dir > 0 && c.s > 150); assert.ok(c0, 'a car ahead in our direction');
+  const stop = { s: c0.s + 80, u: 0, yaw: 0 }; for (let t = 0; t < 10; t += 0.1) { const q = {}; r.at(stop.s, q); stop.x = q.x - q.tz * c0.lat; stop.z = q.z + q.tx * c0.lat; stop.yaw = q.th; blocked.update(0.1, stop); }
+  const cc = blocked.cars.find(c => c.id === c0.id); assert.ok(cc && cc.s < stop.s - 2 && cc.speed < 0.5, 'a car stops before a stationary obstacle in its lane (stopped ' + (cc ? (stop.s - cc.s).toFixed(1) : '?') + ' m short)');
+  const hits = blocked.circles(cc.x, cc.z, 6)[0]; assert.ok(hits.length >= 3 && hits.every(h => h.r > 0.9 && Math.hypot(h.x - cc.x, h.z - cc.z) < cc.len), 'cars give the physics obstacle circles'); assert.equal(blocked.circles(cc.x + 500, cc.z, 6)[0].length, 0, 'none far away');
+});
+await atest('traffic: a traffic car is solid: the player hits it and does not pass through', () => {
+  const { r } = world('peace'), sim = new TrafficSim(r, { seed: 'solid', mode: 'busy' });
+  for (const id of ['car', 'truck']) {
+    sim.cars = [{ id: 1, x: 90, z: 0, yaw: 0, len: 4.4, w: 1.85 }];                                         // a stopped car 90 m ahead, across the player's path
+    const i = VEHICLES.findIndex(v => v.id === id), V = VEHICLES[i], p = vehicleParams(V.body, V.stats), ph = new RapierVehicle(p, V.id, flat({ near: (x, z, rr) => sim.circles(x, z, rr) }));
+    let hit = false, worst = 0, maxX = -1e9; for (let k = 0; k < 60 * 14; k++) { ph.step(1 / 60, { steer: 0, throttle: ph.kmh < (id === 'car' ? 100 : 60) ? 1 : 0.3, brake: 0 }); if (ph.impact > 2) hit = true; maxX = Math.max(maxX, ph.x); assert.ok(Number.isFinite(ph.x + ph.z + ph.u), id + ' physics blew up at the traffic car'); }
+    assert.ok(hit, id + ' felt the traffic car'); assert.ok(maxX < 90 - 1.5, id + ' went through the traffic car (reached x = ' + maxX.toFixed(1) + ')'); ph.free();
+  }
 });
 await atest('my music: only audio files within limits are kept, songs play in turn and are freed again (nothing leaves the device)', async () => {
   const fake = new Map(); class FakeAudio { constructor() { this.attrs = {}; this.ev = {}; this.volume = 1; this.paused = true; } addEventListener(n, f) { this.ev[n] = f; } set src(v) { this.attrs.src = v; } get src() { return this.attrs.src; } getAttribute(k) { return this.attrs[k] || null; } removeAttribute(k) { delete this.attrs[k]; } load() {} pause() { this.paused = true; } play() { this.paused = false; return Promise.resolve(); } error = null; }

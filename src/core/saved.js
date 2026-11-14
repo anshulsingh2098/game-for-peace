@@ -12,6 +12,7 @@ export function sanitiseSaved(raw, ctx = {}) {
   if (Number.isInteger(raw.vehicle) && raw.vehicle >= 0 && raw.vehicle < (ctx.vehicles || 1)) out.vehicle = raw.vehicle;
   if (typeof raw.muted === 'boolean') out.muted = raw.muted;
   if (raw.rumble === 'on' || raw.rumble === 'off') out.rumble = raw.rumble;
+  if (raw.traffic === 'off' || raw.traffic === 'light' || raw.traffic === 'busy') out.traffic = raw.traffic;
   if (typeof raw.radioVol === 'number' && Number.isFinite(raw.radioVol)) out.radioVol = Math.max(0, Math.min(1, raw.radioVol));
   if (typeof raw.station === 'string' && raw.station.length < 80) out.station = raw.station; else if (raw.station === null) out.station = null;
   if (CAMS.includes(raw.camBefore)) out.camBefore = raw.camBefore;

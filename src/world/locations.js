@@ -2,6 +2,7 @@
    Picking one regenerates the world from the same seed with these numbers laid over DEFAULT_CONFIG. They are stylised impressions of a
    place (its land, light and plants), not maps. `landmarks` (city sights) come in a later step.
      id, name, blurb     shown in the location picker
+     drive               'left' where traffic keeps to the left (India); otherwise right
      config              overrides for makeConfig(): terrain, palette, scatter, road, water
      sky                 { time, weather } the place starts with
      accent              a colour for its card */
@@ -45,7 +46,7 @@ export const LOCATIONS = [
       road: { maxAlt: 150 } },
     sky: { time: 'day', weather: 'clear' } },
   /* ---- India's cities: flat ground, warm dry light, and the sights beside the road. `landmarks` are placed by world/landmarks.js ---- */
-  { id: 'mumbai', name: 'Mumbai', blurb: 'the art-deco curve of Marine Drive, the Gateway of India and the Taj Mahal Palace hotel, at golden hour by the Arabian Sea.', accent: '#ff9d5c',
+  { id: 'mumbai', drive: 'left', name: 'Mumbai', blurb: 'the art-deco curve of Marine Drive, the Gateway of India and the Taj Mahal Palace hotel, at golden hour by the Arabian Sea.', accent: '#ff9d5c',
     config: {
       terrain: { seaLevel: 0, lowland: 7, continent: { scale: 3800, rise: 20 }, coast: { lo: -0.3, hi: -0.1 }, warp: { scale: 1000, amp: 150 },
         hills: { scale: 520, amp: 9, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.6, full: 0.95, scale: 3400, amp: 120, octaves: 4, gain: 0.4, sharp: 1.5 } },
@@ -54,7 +55,7 @@ export const LOCATIONS = [
     sky: { time: 'dusk', weather: 'clear' },
     landmarks: [{ kind: 'marine', s: 250, off: 40 }, { kind: 'gateway', s: 650, off: 70, sea: true }, { kind: 'tajHotel', after: 'gateway', gap: 130, range: 500, off: 95, sea: true }] },
 
-  { id: 'delhi', name: 'Delhi', blurb: 'India Gate rising over wide lawns, in the warm haze of the plains.', accent: '#e0a070',
+  { id: 'delhi', drive: 'left', name: 'Delhi', blurb: 'India Gate rising over wide lawns, in the warm haze of the plains.', accent: '#e0a070',
     config: {
       terrain: { seaLevel: 0, seabed: -20, lowland: 24, continent: { scale: 6000, rise: 14 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1200, amp: 120 },
         hills: { scale: 600, amp: 8, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.9, full: 1.4, scale: 3400, amp: 60, octaves: 3, gain: 0.4, sharp: 1.5 } },
@@ -63,7 +64,7 @@ export const LOCATIONS = [
     sky: { time: 'day', weather: 'clear' },
     landmarks: [{ kind: 'indiaGate', s: 500, off: 95 }] },
 
-  { id: 'agra', name: 'Agra', blurb: 'The Taj Mahal at sunrise: white marble, four minarets and a long reflecting pool.', accent: '#f4e9d8',
+  { id: 'agra', drive: 'left', name: 'Agra', blurb: 'The Taj Mahal at sunrise: white marble, four minarets and a long reflecting pool.', accent: '#f4e9d8',
     config: {
       terrain: { seaLevel: 0, seabed: -20, lowland: 26, continent: { scale: 6000, rise: 12 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1200, amp: 110 },
         hills: { scale: 620, amp: 7, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.9, full: 1.4, scale: 3400, amp: 50, octaves: 3, gain: 0.4, sharp: 1.5 } },
