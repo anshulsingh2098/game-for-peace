@@ -63,10 +63,42 @@ The owner supplied a second plan on 15 Nov 2026, kept in full in `docs/post-n6-o
 **Review notes (16 Nov 2026), what to know before N7 starts**
 1. **Gate:** nothing in N7 to N15 is begun. The N7 kickoff report the document asks for (current `main.js` update order, lifecycle conventions, who allocates and disposes entities, the physics timestep, the smallest change, files and tests) is Stream B's first task when the gate opens.
 2. **Missing companion document:** the plan refers to `Game_for_Peace_Asset_Acquisition_Brief.md`. It was not supplied and is not in the repo. It is needed before N11 to N14, because the assets are the hard part: the current free packs have cars and trucks only. Two-wheelers, auto-rickshaws, rigged pedestrians and an Indian building kit have to be found (free and properly licensed, or built in Blender) or bought with the owner's approval. Scripted downloads from Kenney's site and OpenGameArt are refused, so the owner downloads packs by hand (as was done for the traffic cars). Realistic free cars of GTA quality do not exist as licensed downloads.
+   **Owner instruction (16 Nov 2026): Claude finds, buys-with-approval or builds all of these assets, as a later job (before N11).** First task of that job: write `docs/ASSET_PLAN.md` (the asset acquisition brief this plan refers to): for each asset (two-wheelers, auto-rickshaws, more cars and trucks, rigged pedestrians, Indian building kit, street furniture, signs, props, audio), the source options (CC0 or properly licensed free packs the owner downloads by hand; Blender builds by script like `tools/blender/make_traffic_pack.py`; paid packs only with the owner's approval), the licence, the polygon and texture budget, and the credit row for `assets/ASSETS.md`.
 3. **Product direction change:** the Master Plan said the game stays a calm endless driving game with no missions or pursuits unless the owner decides otherwise. This document is that decision. Record it; N17 (police and emergency services) stays out of scope until chosen.
 4. **Real risks:** (a) phone performance is unmeasured, and the N8 budgets depend on it, so the phone benchmark (N4) should come first; (b) N7 to N15 is a very large programme, so the documents's own advice stands: do N7 to N10 as foundations, then one small Mumbai district, not a city; (c) a capsule character controller on the vendored Rapier (0.19.3) needs its API checked before N14 is promised; (d) OpenStreetMap use needs an owner decision on ODbL attribution and share-alike before any data is used.
 5. **Ownership:** the document says each agent edits only its own files and log. The owner has so far asked one Claude to do both streams' parts, all logged; that continues until Anshul takes over his stream.
 6. **Decisions needed from the owner before N9 and N11:** hand-made versus OpenStreetMap-derived geography; which Mumbai district; how two-wheelers, auto-rickshaws, pedestrians and the building kit are sourced and what may be spent; whether on-foot play is wanted on phones.
+
+### Addendum: open-world core architecture (supplied 16 Nov 2026)
+
+Kept in full in `docs/open-world-core-architecture-addendum.md`. It does not renumber or replace N7 to N20; it says what kind of engine N7 onward should become and how to design it (principles, not code to copy). Same gate: no implementation until N0 to N6 are accepted. Where it adds to this plan:
+
+| Addendum area | Where it lands | Already in the code | Gap or note |
+|---|---|---|---|
+| 2.1 continuous world, sectors, world coordinates | N8, N9 | floating-origin tiles, `ChunkGrid`, seeded roads | sector metadata, region directory, safe unload |
+| 2.2 streaming and resources | N8 | tile pools, traffic pack and scenery loaders | one request queue with priorities, pinning, budgets, disposal audit |
+| 2.3 entities and handles | N7 | traffic car list only | typed registries, stable handles, reset behaviour |
+| 2.4 on foot | N14 | none | needs a capsule controller check on Rapier 0.19.3 and a character asset |
+| 2.5 vehicles | N1 (done), N12, N14 | `RapierVehicle`, three classes plus Concept | one shared vehicle representation for player and AI; occupants; horns, lights |
+| 2.6 traffic | N10, N12 | `TrafficSim` | lane graph, intersections, signals |
+| 2.7 pedestrians | N13 | none | assets first |
+| 2.8 AI behaviours | N12, N13 | autodrive hooks (`lane`, `leader`) | shared perception, destination and behaviour concepts |
+| 2.9 interaction contract | N14 | none | one contract (detect, prompt, activate) before any activity |
+| 2.10 activities and progression | N15 | none | data-driven; start with point-to-point driving |
+| 2.11 police, factions | N17, out of scope | none | do not couple to traffic or missions |
+| 2.12 interiors | N14, N19 | tunnels only | a few meaningful interiors |
+| 2.13 time, weather | N2 (done for visuals) | `env`, `grade`, weather sound | one shared world-state and event interface so visuals, physics, sound and AI agree |
+| 2.14 camera, HUD, audio, feedback | N14, N15 | seven camera views, wheel UI, audio | **not a phase today**: HUD, map or route guidance, prompts, accessibility. Proposed sub-phase below |
+| 2.15 persistence | N15 | `sanitiseSaved`, share codes | persistence categories (transient, rebuildable, player, progress, world changes) |
+
+Ten cross-system principles in section 3 of the addendum become review criteria for every N7 to N15 design note (central orchestration, explicit lifecycle, data-driven regions, separate spatial concepts, bounded simulation, distance-aware detail, events, ownership and cleanup, profile first, build vertically).
+
+**Change requests this addendum asks us to raise (as proposals, not rewrites):**
+1. **N7a Core contracts note (design only, joint A and B, after the gate opens):** one short document, `docs/CORE_CONTRACTS.md`, agreeing world coordinates, entity identity, sector activation, navigation, events, simulation ticks and resource ownership. Both streams sign it off in their logs before any cross-stream code. This is the addendum's "joint responsibility".
+2. **N14a Player-facing layer (HUD, map and route guidance, prompts, accessibility):** the plan has no home for it. Proposed between N13 and N14, or inside N14; the owner decides.
+3. Shared world state for weather and time (N7 or N8): visuals already exist, the event interface does not.
+
+Rules unchanged: `/` stays untouched, work on `/next`, stream file ownership, PR workflow, self-test and daily check, no deploys, no edits to `cloudflare/public/`.
 
 ## File ownership (the anti-collision rule)
 

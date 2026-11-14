@@ -12,6 +12,7 @@
    Everything is a pure function of the seed, generated on demand as far as it is asked for. */
 import { createNoise } from '../core/noise.js';
 
+export const PORTAL_W = 0.12, FACE_W = 0.55, TUBE_ROOF = 9.6;      // the tube (and its portal wall) starts where tunnelW first reaches PORTAL_W, and the hillside face stands a few metres further in (FACE_W; the terrain mesh is coarser than the road, so the face must not start before the wall); over it the land stands at least TUBE_ROOF m above the road
 const TUNNEL_DEPTH = 18, TUNNEL_MIN = 40, TUNNEL_RAMP = 14;      // a cutting deeper than this (m) for this long (m) becomes a tunnel; the hill rises over this many metres (steeply: the portal wall stands here)
 const SUB = 4;                                                  // spline samples per node step, used for distance queries
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -167,7 +168,13 @@ export class Road {
     if (!this.nearest(x, z)) return natural;
     const c = this.c, g = this.g, h = this.hit, bed = h.y - c.sink * (1 - sstep(g.flat - 2.5, g.flat, h.d));
     const gv = bed + (natural - bed) * sstep(g.flat, g.blend, h.d), w = this.carriedW(h.s);
-    return w ? gv + (natural - gv) * w : gv;                    // on a bridge or in a tunnel the land is left alone: the deck carries the road
+    if (!w) return gv;                                          // on a bridge or in a tunnel the land is left alone: the deck carries the road
+    let land = gv + (natural - gv) * w; const tw = this.tunnelW(h.s);
+    if (tw > 0 && this.bridgeW(h.s) < 0.5) {                    // over the tube the mountain stands above its roof, and in front of the portal the way is cut clear (no hill in the doorway)
+      const inside = sstep(FACE_W, FACE_W + 0.2, tw), cw = 1 - sstep(this.style.outer + 1.5, this.style.outer + 4, h.d), roofed = Math.max(land, h.y + TUBE_ROOF);
+      land += (gv + (roofed - gv) * inside - land) * cw;
+    }
+    return land;
   }
   /* height a vehicle drives on: the graded land, lifted back up to the road surface (the land is cut `sink` below the road so the ribbon sits on top) */
   drive(x, z, natural) {
@@ -190,7 +197,7 @@ export class Road {
   deep(k) {
     let v = this.dc.get(k); if (v !== undefined) return v;
     const s = k * this.ds; if (s < this.sMin + 2 || s > this.sMax - 2) return false;
-    const p = this.at(s, this._bp || (this._bp = {})); v = !this.bridgeW(s) && this.t.base(p.x, p.z) - p.y > TUNNEL_DEPTH; this.dc.set(k, v); return v;
+    const wet = this.bridgeW(s), p = this.at(s, this._dp || (this._dp = {})); v = !wet && this.t.base(p.x, p.z) - p.y > TUNNEL_DEPTH; this.dc.set(k, v); return v;      // (bridgeW reuses _bp, so p is read into its own object)
   }
   tunnel(k) {                                                   // is sample k inside a deep run that is long enough?
     let v = this.tc.get(k); if (v !== undefined) return v;
