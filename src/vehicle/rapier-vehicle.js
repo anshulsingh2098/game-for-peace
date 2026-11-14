@@ -19,8 +19,8 @@ import { Drivetrain } from './drivetrain.js';
 let ready = null;
 export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIER));
 
-const SCRUB = 0.12, DOWNFORCE = 0.8, V_DF = 60;                // DOWNFORCE: extra grip (as a fraction) at V_DF m/s and above, growing with speed squared, so fast corners still bite
-const G = 9.81, H = 1 / 120, GRIP = 1.35;                    // GRIP: tyres bite harder than the stats say, which keeps the cars lively and quick to turn; SCRUB: speed lost per unit of sideways acceleration
+const SCRUB = 0.06, DOWNFORCE = 0.8, V_DF = 60;                // DOWNFORCE: extra grip (as a fraction) at V_DF m/s and above, growing with speed squared, so fast corners still bite
+const G = 9.81, H = 1 / 120, GRIP = 2.2;                     // GRIP: tyres bite harder than the stats say, which keeps the cars lively and quick to turn; SCRUB: speed lost per unit of sideways acceleration
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
