@@ -22,10 +22,10 @@ export function createFx(renderer, scene, camera, mode = '1') {
   let ao = null;
   if (mode !== 'lite') {
     ao = new GTAOPass(scene, camera, size.x, size.y); ao.output = GTAOPass.OUTPUT.Default;
-    ao.updateGtaoMaterial({ radius: 4, distanceExponent: 1.4, thickness: 2, scale: 1.1, samples: 12, distanceFallOff: 1, screenSpaceRadius: false });
-    ao.blendIntensity = 0.9; composer.addPass(ao);
+    ao.updateGtaoMaterial({ radius: 1.6, distanceExponent: 1.6, thickness: 1, scale: 0.8, samples: 12, distanceFallOff: 1, screenSpaceRadius: false });
+    ao.blendIntensity = 0.5; composer.addPass(ao);
   }
-  const bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.14, 0.5, 1.4); composer.addPass(bloom);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.05, 0.4, 2.5); composer.addPass(bloom);
   composer.addPass(new OutputPass());
   return {
     composer, ao, bloom,

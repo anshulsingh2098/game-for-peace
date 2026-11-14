@@ -254,7 +254,7 @@ function step(dt, now) {
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   ripples.offset.set(((camera.position.x + grid.origin.x) * RIP + now * 0.000011) % 1, (-(camera.position.z + grid.origin.z) * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
   env.update(dt, now, camera, reach);
-  if (skyLight) { scene.environment = skyLight; scene.environmentIntensity = Math.min(1, Math.max(0.06, 0.12 + env.sunDir.y * 1.1)); }
+  if (skyLight) { scene.environment = skyLight; scene.environmentIntensity = 0.4 * Math.min(1, Math.max(0.06, 0.12 + env.sunDir.y * 1.1)); }
   if (mode !== 'fly') { const cx = camera.position.x + grid.origin.x, cz = camera.position.z + grid.origin.z; if (terrain.height(cx, cz) - terrain.drive(cx, cz) > 4) { env.rain.visible = false; env.snowfall.visible = false; } }        // inside a mountain (a tunnel): no rain or snow indoors
   landmarks.update(grid.origin, env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && sound.ctx) sound.update({ v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
