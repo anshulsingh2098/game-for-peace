@@ -6,6 +6,9 @@ import * as THREE from 'three';
 import { alea } from '../core/rng.js';
 import { propGeometry } from './props.js';
 
+/* plant cards cast leaf-shaped shadows: the depth material used for shadows must cut out the transparent parts of the card, or every card casts a solid rectangle */
+const depthCache = new WeakMap();
+const shadowMat = mat => { if (!mat.map || !mat.alphaTest) return null; let d = depthCache.get(mat); if (!d) { d = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: mat.map, alphaTest: mat.alphaTest }); depthCache.set(mat, d); } return d; };
 const q = new THREE.Quaternion(), e = new THREE.Euler(), M = new THREE.Matrix4(), P = new THREE.Vector3(), S = new THREE.Vector3(), col = new THREE.Color();
 
 export class Scatter {
@@ -72,7 +75,7 @@ export class Scatter {
         if (jitter && tint && mat !== pr.solid) col.setRGB(col.r * tint[0], col.g * tint[1], col.b * tint[2]);            // a place's leaves lean greener, yellower or drier
         im.setColorAt(n, col);
       });
-      im.castShadow = true; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
+      im.castShadow = true; const sm = shadowMat(mat); if (sm) im.customDepthMaterial = sm; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
     };
     const nat = this.nature, defs = k => nat && nat[k] && nat[k].length ? nat[k] : [pr[k]];                   // real-scan variants when loaded, else the drawn model
     const variants = (k, f) => defs(k).forEach((d, vi, all) => { const sub = all.length > 1 ? lists[k].filter((_, i) => i % all.length === vi) : lists[k]; if (sub.length) f(d, sub); });

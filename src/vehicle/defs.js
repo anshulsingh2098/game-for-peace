@@ -1,14 +1,16 @@
 /* The vehicles: garage data (carried over from the current game) plus the body measurements the new physics needs.
    Model space: front is +Z, up is +Y, so +X is the vehicle's left. Distances in metres. */
 export const VEHICLES = [
-  { id: 'car', file: 'assets/car_01_gt.glb', name: 'Dusk GT', tag: 'Fast', color: '#6f9bff',
+  { id: 'car', file: 'assets/car_04_concept.glb', interior: true, name: 'Dusk GT', tag: 'Fast', color: '#6f9bff',
     desc: 'Low, wide and quick. Stretch it out on the long straights.',
-    stats: { Speed: 92, Accel: 86, Handling: 72, Grip: 64, Top: 240 },
-    body: { mass: 1350, front: 1.62, rear: 1.34, track: 1.64, wheelR: 0.35, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 9, aero: 0.25, lean: 0.06, cg: 0.5, radius: 0.95, circles: [1.5, 0, -1.4] },
-    cam: { back: 7.5, up: 3.0, look: 2.5 }, eye: [-0.32, 1.22, 0.14], shadow: [3.4, 6],
-    lights: { tail: [[-0.68, 0.84, -2.27], [0.68, 0.84, -2.27]], head: [[-0.66, 0.74, 2.14], [0.66, 0.74, 2.14]], tailSize: 0.8, headSize: 1.1, beam: [0.7, 2.3] },
-    buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 4, cooldown: 14, mod: { top: 1.3, accel: 1.6 } },
-    paint: { label: 'Stripe', mask: 'assets/car_01_livery_mask.png', colors: ['#2846a4', '#d62828', '#f08a24', '#2a9d5b', '#16181d', '#f2f2f2'] } },
+    stats: { Speed: 92, Accel: 86, Handling: 72, Grip: 64, Top: 270 },
+    body: { mass: 1450, front: 1.49, rear: 1.31, track: 1.96, wheelR: 0.384, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 9, aero: 0.25,
+      /* a real sports coupe, from published data: 330 kW (450 hp) at 6500 rpm, 7600 rpm redline, 6-speed box, 4.4 final drive (set for 0.384 m wheels), Cd 0.33 x 2.0 m2 frontal area, 88% driveline efficiency */
+      pt: { kw: 330, peak: 6500, redline: 7600, idle: 900, launch: 4200, gears: [3.3, 2.2, 1.6, 1.25, 1.05, 0.93], final: 4.4, eff: 0.88, cdA: 0.66, upshift: 0.97, shiftTime: 0.16, tcs: 0.85 }, lean: 0.06, cg: 0.5, radius: 1.0, circles: [1.6, 0, -1.45] },
+    cam: { back: 8.4, up: 3.3, look: 2.7 }, eye: [0, 1.02, 0.3], shadow: [3.8, 6.6],
+    lights: { tail: [[-0.5, 0.96, -1.6], [0.5, 0.96, -1.6]], head: [[-0.62, 0.66, 2.2], [0.62, 0.66, 2.2]], tailSize: 0.8, headSize: 1.1, beam: [0.66, 2.2] },
+    buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 5, cooldown: 9, mod: { top: 1.25, accel: 2.1 } },
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#c8101c', '#2846a4', '#f08a24', '#2a9d5b', '#16181d', '#e9ecef'] } },
   { id: 'truck', file: 'assets/truck_01.glb', name: 'Freight Hauler', tag: 'Heavy', color: '#ff9a3d',
     desc: 'A big rig. Steady, planted and calm.',
     stats: { Speed: 34, Accel: 28, Handling: 30, Grip: 84, Top: 110 },

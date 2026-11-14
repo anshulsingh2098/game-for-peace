@@ -136,9 +136,9 @@ export class Sound {
       v.out.gain.setTargetAtTime(cfg.vol * (0.07 + 0.14 * th + 0.1 * r) * regen * loud, t, 0.08);
       if (s.buff && !P.buff) this.whoosh();
     } else {                                                                              // ---- combustion engines
-      const gp = Math.min(r * cfg.G, cfg.G - 0.001), gear = Math.floor(gp), frac = gp - gear;
-      const rpm01 = s.v < 0.6 ? th * 0.22 : clamp(gear === 0 ? 0.12 + 0.8 * frac : 0.36 + 0.62 * frac + th * 0.04, 0, 1);       // each gear starts mid-range and climbs; a shift drops the revs
-      this.rpmSm += (rpm01 - this.rpmSm) * Math.min(1, dt * (rpm01 > this.rpmSm ? 8 + th * 4 : 3.2)); const rr = this.rpmSm;       // revs rise briskly under power and fall away slowly when you lift
+      const real = s.rpm01 !== undefined, gp = Math.min(r * cfg.G, cfg.G - 0.001), gear = real ? s.gear : Math.floor(gp), frac = gp - Math.floor(gp);        // real: the car's own revs and gear (powertrain in rapier-vehicle.js); otherwise they are guessed from speed
+      const rpm01 = real ? clamp(s.rpm01, 0, 1) : s.v < 0.6 ? th * 0.22 : clamp(gear === 0 ? 0.12 + 0.8 * frac : 0.36 + 0.62 * frac + th * 0.04, 0, 1);       // each gear starts mid-range and climbs; a shift drops the revs
+      this.rpmSm += (rpm01 - this.rpmSm) * Math.min(1, dt * (real ? (rpm01 > this.rpmSm ? 16 : 10) : rpm01 > this.rpmSm ? 8 + th * 4 : 3.2)); const rr = this.rpmSm;       // revs rise briskly under power and fall away slowly when you lift
       const rpm = cfg.idle + (cfg.max - cfg.idle) * rr, f = cfg.pulse(rpm) * (1 + (Math.random() - 0.5) * (cfg.kind === 'v8' ? 0.008 : 0.004)), tc = 0.05;    // a hair of cycle-to-cycle unevenness
       v.a.frequency.setTargetAtTime(f, t, tc); v.sub.frequency.setTargetAtTime(f * 0.5, t, tc); v.gr.frequency.setTargetAtTime(f * 2, t, tc); v.wh.frequency.setTargetAtTime(f * 6.5, t, tc);
       v.lp.frequency.setTargetAtTime(cfg.cutLo + (cfg.cutHi - cfg.cutLo) * (0.1 + 0.55 * rr + 0.45 * th * (0.5 + 0.5 * rr)), t, 0.08);
