@@ -9,7 +9,7 @@ import { fillTile, tileIndex, vertexCount, skirtDepth } from '../src/world/tiled
 import { Road } from '../src/world/router.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
-import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
+import { RapierVehicle, initRapier, ARCADE } from '../src/vehicle/rapier-vehicle.js';
 import { LOCATIONS, locationConfig } from '../src/world/locations.js';
 import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
 import * as tuning from '../src/core/tuning.js';
@@ -247,7 +247,7 @@ await atest('worker: anyone reads the published settings; only the password publ
 });
 
 test('tuner help: every vehicle, surface and world setting has an explanation and a range', () => {
-  tuning.registerRoot('vehicles', VEHICLES); tuning.registerRoot('surfaces', SURFACES); tuning.registerRoot('world', DEFAULT_CONFIG);
+  tuning.registerRoot('vehicles', VEHICLES); tuning.registerRoot('surfaces', SURFACES); tuning.registerRoot('world', DEFAULT_CONFIG); tuning.registerRoot('handling', ARCADE);
   const missing = tuning.describe().filter(f => !explain(f.path)).map(f => f.path);
   assert.deepEqual(missing, [], 'no help written for: ' + missing.join(', '));
   for (const [k, v] of Object.entries(DOCS)) { assert.ok(Array.isArray(v) && v.length === 2 && v[0].length > 10 && v[1].length > 1, k); }
