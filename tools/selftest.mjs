@@ -13,6 +13,7 @@ import { RapierVehicle, initRapier } from '../src/vehicle/rapier-vehicle.js';
 import { LOCATIONS, locationConfig } from '../src/world/locations.js';
 import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
 import * as tuning from '../src/core/tuning.js';
+import { explain, DOCS } from '../src/core/tuning-docs.js';
 import worker from '../cloudflare/worker.js';
 
 let passed = 0;
@@ -220,6 +221,13 @@ await atest('worker: anyone reads the published settings; only the password publ
   assert.equal(await (await call('/index.html')).text(), 'static');
   const bare = { ASSETS: env.ASSETS }; assert.equal((await worker.fetch(new Request('https://x.test/api/settings'), bare)).status, 503);        // not set up: API says so, nothing else breaks
   assert.equal((await worker.fetch(new Request('https://x.test/next.html'), bare)).status, 200);
+});
+
+test('tuner help: every vehicle, surface and world setting has an explanation and a range', () => {
+  tuning.registerRoot('vehicles', VEHICLES); tuning.registerRoot('surfaces', SURFACES); tuning.registerRoot('world', DEFAULT_CONFIG);
+  const missing = tuning.describe().filter(f => !explain(f.path)).map(f => f.path);
+  assert.deepEqual(missing, [], 'no help written for: ' + missing.join(', '));
+  for (const [k, v] of Object.entries(DOCS)) { assert.ok(Array.isArray(v) && v.length === 2 && v[0].length > 10 && v[1].length > 1, k); }
 });
 
 console.log(`\n${passed} checks passed`);

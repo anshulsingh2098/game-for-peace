@@ -1,0 +1,146 @@
+/* Plain-English help for the tuner dashboard's "i" buttons: what a setting does, and the range that works well.
+   Keyed by setting path with the varying names replaced: vehicles.*.body.mass (any vehicle), times.*.li (any time of day),
+   weather.*.rain, surfaces.*.grip; world settings keep their path; a trailing array index is dropped (a colour or direction is one entry).
+   Each entry is [what it does and what raising / lowering it does, the range that works well]. Pure data, no imports. */
+export const DOCS = {
+  /* ---- vehicles ---- */
+  'vehicles.*.color': ['The accent colour on this vehicle\'s card in the garage and menus. Looks only; nothing in the driving changes.', 'any colour'],
+  'vehicles.*.stats.Speed': ['The "Speed" bar in the garage. Display only: the real top speed comes from Top.', '0 to 100, for show'],
+  'vehicles.*.stats.Accel': ['How hard it pulls away from standstill (acceleration = 0.8 + Accel x 0.05 m/s2). Higher is a quicker getaway. Also the garage bar.', 'Car 70 to 95, bike 80 to 95, truck 20 to 40'],
+  'vehicles.*.stats.Handling': ['The "Handling" bar. With the new Rapier physics it is display only (it only changes the old physics, ?phys=old).', '0 to 100, for show'],
+  'vehicles.*.stats.Grip': ['How much the tyres hold on dry road (friction = 0.72 + Grip x 0.005). Lower slides sooner in corners. Also the garage bar.', 'Car 55 to 75, bike 40 to 55, truck 70 to 90'],
+  'vehicles.*.stats.Top': ['Top speed in km/h on flat road. The vehicle reaches about this and no more.', 'Car 200 to 260, bike 160 to 220, truck 90 to 130'],
+  'vehicles.*.body.mass': ['Weight in kilograms. Heavier vehicles accelerate and stop more slowly, roll more in corners and are harder to push around; lighter ones feel quick and twitchy.', 'Car 1000 to 2000, bike 150 to 300, truck 8000 to 20000'],
+  'vehicles.*.body.front': ['Distance from the middle of the vehicle to the front axle, in metres. Longer front = a longer nose, and more weight pushing the front tyres.', 'Car 1.2 to 1.9, bike 0.6 to 0.9, truck 3 to 6'],
+  'vehicles.*.body.rear': ['Distance from the middle to the rear axle, in metres. Longer rear = a longer tail. Together with Front it sets the wheelbase (long = stable, short = nimble).', 'Car 1.1 to 1.6, bike 0.6 to 0.8, truck 0.7 to 3'],
+  'vehicles.*.body.track': ['Width between the left and right wheels, in metres. Wider is steadier in corners and less likely to roll.', 'Car 1.5 to 1.8, bike 0.4 to 0.6, truck 1.9 to 2.4'],
+  'vehicles.*.body.wheelR': ['Wheel radius in metres. Bigger wheels ride higher and roll over bumps more easily. Match the model, or the wheels will float or sink.', 'Car 0.3 to 0.4, bike 0.3 to 0.38, truck 0.5 to 0.6'],
+  'vehicles.*.body.steerMax': ['The most the front wheels turn, in radians (0.5 is about 29 degrees). It shrinks with speed automatically. Higher = tighter turning circle at low speed.', 'Car 0.4 to 0.6, bike 0.5 to 0.7, truck 0.3 to 0.45'],
+  'vehicles.*.body.brake': ['Braking strength in m/s2 (10 stops a car from 100 km/h in about 4 s). Higher stops sooner, but is limited by grip.', '6 to 12 (truck about 6)'],
+  'vehicles.*.body.revAccel': ['How fast it picks up speed in reverse. Higher backs out quicker.', '1.5 to 3'],
+  'vehicles.*.body.revTop': ['Top speed in reverse, in m/s (7 is about 25 km/h).', '4 to 10'],
+  'vehicles.*.body.aero': ['Air drag. The higher it is, the more the top speed is held back and the more speed bleeds off at the top end. Heavy trucks need a high value to stop at a sensible top speed.', 'Car 0.15 to 0.4, bike 0.08 to 0.2, truck 2 to 4'],
+  'vehicles.*.body.lean': ['How far the vehicle leans into corners (0 = not at all, 1 = a bike\'s full lean). Mostly looks, with a small effect on feel.', 'Car 0.03 to 0.1, truck 0.02 to 0.05, bike 0.8 to 1'],
+  'vehicles.*.body.cg': ['Height of the centre of gravity, in metres. Higher tips and rolls more, and noses down harder under braking; lower is planted and stable.', 'Car 0.4 to 0.6, bike 0.55 to 0.7, truck 1 to 1.5'],
+  'vehicles.*.body.radius': ['Size of the collision circle used for trees, rocks and landmarks, in metres. Larger = you hit things sooner.', 'Car 0.8 to 1.1, bike 0.4 to 0.6, truck 1.2 to 1.5'],
+  'vehicles.*.cam.back': ['How far behind the vehicle the chase camera sits, in metres.', 'Car 6 to 9, bike 4 to 6, truck 14 to 20'],
+  'vehicles.*.cam.up': ['How high the chase camera sits above the vehicle, in metres. Higher shows more of the road ahead.', 'Car 2 to 4, bike 1.5 to 3, truck 5 to 8'],
+  'vehicles.*.cam.look': ['How far in front of the vehicle the camera aims, in metres. Larger looks further down the road.', '2 to 5 (truck up to 8)'],
+  'vehicles.*.buff.secs': ['How long the vehicle\'s boost button lasts, in seconds.', '3 to 8'],
+  'vehicles.*.buff.cooldown': ['How long before the boost can be used again, in seconds, counted from the start of the boost.', '8 to 25'],
+  'vehicles.*.buff.mod.top': ['While boosted, top speed is multiplied by this (1 = no change).', '1.15 to 1.5'],
+  'vehicles.*.buff.mod.accel': ['While boosted, acceleration is multiplied by this (1 = no change).', '1.2 to 2'],
+  'vehicles.*.buff.mod.slope': ['While boosted, the pull of hills is multiplied by this: 0 means hills do not slow you at all, 1 is normal.', '0 to 1'],
+  'vehicles.*.buff.mod.drag': ['While boosted, the drag from soft ground like grass and sand is multiplied by this (0.15 means soft ground barely slows you).', '0.1 to 1'],
+  'vehicles.*.buff.mod.steer': ['While boosted, the steering lock is multiplied by this. Higher = tighter turns.', '1 to 1.6'],
+  'vehicles.*.buff.mod.grip': ['While boosted, tyre grip is multiplied by this. Higher = holds corners harder.', '1 to 1.4'],
+
+  /* ---- sky: one entry per time of day (day, dawn, dusk, night) ---- */
+  'times.*.top': ['Colour of the sky at the top of the dome, straight up.', 'any colour; day blue, night near black'],
+  'times.*.mid': ['Colour of the sky halfway up. The sky blends top, mid and bottom.', 'any colour'],
+  'times.*.bot': ['Colour of the sky at the horizon. Fog takes this colour too, so it changes how far hills fade out.', 'any colour'],
+  'times.*.sun': ['Direction the sunlight comes from, as x, y, z (y is height). A low y gives long shadows; the sun disc is drawn in the sky there.', 'y between 0.05 (sunset) and 0.9 (noon); x and z between -1 and 1'],
+  'times.*.sunCol': ['Colour of the sun disc as red, green, blue. Above 1 makes it glow.', '0 to 1.2 each'],
+  'times.*.light': ['Colour of the main (sun) light on the world.', 'any colour; warm at dawn and dusk, pale blue at night'],
+  'times.*.li': ['Strength of the main light. Higher = brighter, stronger shadows, more contrast.', 'day 2.5 to 4, dawn and dusk 2 to 3, night 0.3 to 1'],
+  'times.*.hs': ['Colour of the soft sky light that lights surfaces facing up.', 'any colour'],
+  'times.*.hg': ['Colour of the bounced ground light that lights surfaces facing down.', 'any colour'],
+  'times.*.hi': ['Strength of the soft sky and ground light. Higher = fewer dark shadows.', '0.8 to 1.4'],
+  'times.*.stars': ['How visible the stars are (0 none, 1 full).', 'day 0, dusk 0.3 to 0.6, night 0.8 to 1'],
+  'times.*.cc': ['Colour of the clouds as red, green, blue. Lower = darker clouds.', 'day 0.9 to 1, night 0.05 to 0.2'],
+  'times.*.ca': ['How solid the clouds are (opacity).', '0.3 to 0.9'],
+
+  /* ---- weather: one entry per weather (clear, overcast, fog, rain, storm, snow) ---- */
+  'weather.*.cloud': ['How much cloud covers the sky (0 clear, 1 solid).', 'clear 0.3 to 0.6, bad weather 0.9 to 1'],
+  'weather.*.dark': ['How much the sky and world are darkened (0 none, 1 gloomy).', 'clear 0, overcast 0.4 to 0.6, storm 0.9 to 1'],
+  'weather.*.fogMul': ['How far you can see, as a fraction of the normal draw distance. Lower = thicker fog. 1 is normal; 0.2 is dense fog.', '0.2 (dense) to 1 (clear)'],
+  'weather.*.light': ['How much of the sunlight gets through. Lower = dull, flat light and softer shadows.', 'clear 1, overcast 0.5, storm 0.2'],
+  'weather.*.rain': ['How hard it rains: how many drops, and the rain sound (0 none, 1 downpour).', '0 to 1 (rain about 0.75)'],
+  'weather.*.snow': ['How hard it snows, and how much snow lies on the ground (0 none, 1 heavy).', '0 to 1'],
+  'weather.*.wet': ['How wet the road looks and feels: shine, darker colour, and less grip (0 dry, 1 soaked).', 'dry 0, rain 0.8, storm 1'],
+
+  /* ---- ground surfaces ---- */
+  'surfaces.*.grip': ['How well tyres hold on this surface (1 is dry asphalt). Lower slides more. The weather lowers it further when it is wet.', 'snow 0.3 to 0.45, sand 0.45 to 0.6, grass 0.55 to 0.7, gravel 0.7 to 0.85, asphalt 1'],
+  'surfaces.*.drag': ['How much this surface slows you down by itself, like rolling resistance. Higher = sticky and heavy going.', 'asphalt 0.01, gravel 0.03, grass 0.06, sand 0.14'],
+
+  /* ---- world: land shape ---- */
+  'world.terrain.seaLevel': ['Height of the sea surface, in metres. Raise it to flood more land, lower it for a drier world. Some locations set this very high on purpose (the Alps), because their land sits high.', 'default world 0; follow the location\'s own value'],
+  'world.terrain.seabed': ['How deep the sea floor is far from the coast, in metres (negative = below sea level).', '-60 to -20'],
+  'world.terrain.lowland': ['Height of the flat inland ground, in metres above the world\'s zero. Raise it to lift the whole landscape.', '5 to 30 (near the coast), higher in mountain locations'],
+  'world.terrain.continent.scale': ['Size of the biggest land and sea shapes, in metres. Larger = fewer, bigger continents and seas; smaller = more islands and bays.', '3000 to 8000'],
+  'world.terrain.continent.rise': ['How much the land climbs toward the middle of a continent, in metres.', '20 to 100'],
+  'world.terrain.coast.lo': ['Where the coast starts on the large-scale land noise (below this is sea). Lower = more land.', '-0.5 to -0.1 (keep it below Coast hi)'],
+  'world.terrain.coast.hi': ['Where the coast ends (above this is full land). The gap between lo and hi is how gently the beach slopes.', '-0.3 to 0 (keep it above Coast lo)'],
+  'world.terrain.warp.scale': ['Size of the swirls that bend the whole landscape so coasts and valleys are not round blobs, in metres.', '1000 to 2000'],
+  'world.terrain.warp.amp': ['How strongly the landscape is bent, in metres. Higher = twistier coasts and valleys.', '100 to 300'],
+  'world.terrain.hills.scale': ['Distance between hill tops, in metres. Larger = broad, slow hills; smaller = busy, bumpy ground.', '500 to 1300'],
+  'world.terrain.hills.amp': ['Height of the hills, in metres. Raise for rolling country, lower for flat plains.', '20 to 120'],
+  'world.terrain.hills.octaves': ['How many layers of detail the hills have. More = finer bumps, but slower to build.', '3 to 6'],
+  'world.terrain.hills.lacunarity': ['How much smaller each extra layer of hill detail is (2 is half size each).', '1.8 to 2.4'],
+  'world.terrain.hills.gain': ['How strong each extra detail layer is compared to the one before. Higher = rougher ground.', '0.35 to 0.55'],
+  'world.terrain.mountains.maskScale': ['Size of the regions where mountains can appear, in metres. Larger = fewer, broader ranges.', '3000 to 5000'],
+  'world.terrain.mountains.start': ['How far into a mountain region the first slopes appear. Lower = mountains start sooner and cover more land.', '-0.3 to 0.7'],
+  'world.terrain.mountains.full': ['How far in the mountains reach full height. Keep it above Start.', '0.2 to 1'],
+  'world.terrain.mountains.scale': ['Distance between peaks, in metres. Larger = broad massifs; smaller = many sharp peaks.', '3500 to 11000'],
+  'world.terrain.mountains.amp': ['Height of the mountains, in metres. Very large values make cliffs the road cannot climb.', '300 to 1000 (Himalayas use about 2000)'],
+  'world.terrain.mountains.octaves': ['How many layers of detail the mountains have. More = finer crags, slower to build.', '4 to 6'],
+  'world.terrain.mountains.gain': ['How strong the fine detail on mountains is. Below 0.5 avoids spiky cliffs.', '0.3 to 0.45'],
+  'world.terrain.mountains.sharp': ['How pointed the ridges are. Higher = sharper peaks, lower = rounder mountains.', '1.2 to 2'],
+  'world.terrain.detail.scale': ['Size of the small ground bumps, in metres.', '40 to 100'],
+  'world.terrain.detail.amp': ['Height of the small ground bumps, in metres. Raise for rough ground, lower for smooth.', '0.5 to 3'],
+  'world.terrain.detail.octaves': ['Layers of small-bump detail.', '1 to 3'],
+
+  /* ---- world: colours ---- */
+  'world.water.color': ['Colour of lakes and sea.', 'any colour'],
+  'world.palette.grass': ['Colour of the bright grass, as red, green, blue multiplied by the ground texture. Above 1 makes it brighter than the texture.', '0.3 to 1 each'],
+  'world.palette.grass2': ['Colour of the darker grass patches.', '0.15 to 0.7 each'],
+  'world.palette.dry': ['Colour of dry, yellowish ground.', '0.4 to 0.9 each'],
+  'world.palette.alpine': ['Colour of high mountain meadow above the trees.', '0.3 to 0.7 each'],
+  'world.palette.rock': ['Colour of bare rock and steep slopes.', '0.35 to 0.7 each'],
+  'world.palette.sand': ['Colour of beaches.', '0.6 to 1 each'],
+  'world.palette.seabed': ['Colour of the sea floor you see through shallow water.', '0.15 to 0.4 each'],
+  'world.palette.snow': ['Colour of snow on high ground. Above 1 makes it glow white.', '1.3 to 1.8 each'],
+  'world.palette.treeline': ['Height above sea level where the trees stop and the ground turns to alpine meadow, in metres. Follow the location: low in the default world, thousands of metres in the Himalayas.', 'default world 150 to 450'],
+  'world.palette.snowline': ['Height above sea level where permanent snow starts, in metres.', 'default world 300 to 3000'],
+
+  /* ---- world: the road ---- */
+  'world.road.step': ['Distance between the points the road is built from, in metres. Smaller = finer routing but slower to build.', '15 to 30'],
+  'world.road.minRadius': ['The tightest bend the road may make, in metres. Higher gives gentler curves. The measured result is a bit under this value, so aim higher than the curve you want.', '100 to 200 for smooth roads; 60 to 90 for twisty ones'],
+  'world.road.look': ['How many road steps the router checks ahead when it picks each next point.', '8 to 16'],
+  'world.road.scout': ['How far ahead the long-range scout looks to pick a general direction, in units of 100 metres. Further = turns away from the sea and mountains earlier.', '10 to 20'],
+  'world.road.spread': ['How wide a cone of directions the router tries at each step, in radians.', '0.6 to 1.2'],
+  'world.road.swing': ['The most (in radians) the road may swing away from its first direction. Higher allows big loops.', '1 to 3'],
+  'world.road.maxGrade': ['The steepest slope the router aims for, as a fraction (0.08 is 8%, 8 m up per 100 m). Higher allows steeper hills.', '0.05 to 0.12'],
+  'world.road.hardGrade': ['A slope the road is never allowed to exceed. Keep it above Max grade.', '0.1 to 0.2'],
+  'world.road.lastGrade': ['The steepest slope allowed where the road has to cut or fill to recover (as a fraction).', '0.15 to 0.3'],
+  'world.road.maxCut': ['How far (in metres) the road may sit above or below the natural land before it is forced to slope back. Larger = deeper cuttings and higher embankments.', '8 to 20'],
+  'world.road.smooth': ['How many neighbouring points are averaged to smooth the road height. Higher = gentler dips and rises.', '2 to 5'],
+  'world.road.clearance': ['How many metres the road stays above sea level, so it does not run through water.', '1.5 to 4'],
+  'world.road.maxAlt': ['The highest altitude the router will build the road, in metres above the world\'s zero. Follow the location.', 'default world 100 to 200'],
+  'world.road.sink': ['How far (metres) the land under the road is cut below the road surface so the road sits on top without gaps.', '0.1 to 0.5'],
+  'world.road.wTurn': ['Router preference: how much it dislikes turning. Higher = straighter roads.', '4 to 14'],
+  'world.road.wJerk': ['Router preference: how much it dislikes changing how sharply it turns. Higher = smoother curves.', '8 to 20'],
+  'world.road.wWander': ['Router preference: how much it dislikes drifting away from its long-range heading.', '2 to 10'],
+  'world.road.wBearing': ['Router preference: how strongly it follows the scout\'s long-range heading.', '6 to 18'],
+  'world.road.wGrade': ['Router preference: how much it dislikes slopes. Higher = flatter roads that wander more.', '50 to 140'],
+  'world.road.wSteep': ['Router preference: penalty for crossing steep side slopes. Very high on purpose.', '2000 to 6000'],
+  'world.road.wWater': ['Router preference: how much it dislikes getting near water.', '40 to 140'],
+  'world.road.wHigh': ['Router preference: how much it dislikes climbing high.', '1 to 6'],
+  'world.road.wCross': ['Router preference: how much it dislikes crossing its own earlier road.', '2 to 10'],
+
+  /* ---- world: scenery ---- */
+  'world.scatter.trees': ['How many trees per square metre where the land is wooded (0.004 is about 1 per 250 m2). Raise for forest, lower for open country. High values slow the game down.', '0.002 to 0.012'],
+  'world.scatter.rocks': ['Rocks per square metre.', '0.0002 to 0.0015'],
+  'world.scatter.bushes': ['Bushes per square metre.', '0.0008 to 0.004'],
+  'world.scatter.tufts': ['Grass tufts per square metre near the player.', '0.004 to 0.015'],
+  'world.scatter.clearRoad': ['Width kept free of scenery on each side of the road, in metres. Wider road styles add to this automatically.', '8 to 14'],
+  'world.scatter.pineBias': ['Tree mix: positive adds pines, negative makes round trees. -0.95 is nearly all round trees; 0.35 is mostly pines.', '-1 to 0.7'],
+  'world.scatter.tint': ['Colour tint applied to all trees as red, green, blue (1, 1, 1 = no tint). Warm tints (yellow) look dry, cool tints (green-blue) look lush.', '0.8 to 1.2 each']
+};
+
+/* the help for one setting path, or null */
+export function explain(path) {
+  const parts = path.split('.'); if (/^\d+$/.test(parts[parts.length - 1])) parts.pop();
+  if (['vehicles', 'times', 'weather', 'surfaces'].includes(parts[0]) && parts.length > 2) parts[1] = '*';
+  const d = DOCS[parts.join('.')]; return d ? { text: d[0], range: d[1] } : null;
+}

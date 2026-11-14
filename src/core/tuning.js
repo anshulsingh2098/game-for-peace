@@ -12,7 +12,7 @@ const clone = v => JSON.parse(JSON.stringify(v));
 /* `ref` is an object, or a function returning the current object (the world config is replaced on every regenerate) */
 export function registerRoot(name, ref) { const get = typeof ref === 'function' ? ref : () => ref; roots.set(name, { get, defaults: clone(get()) }); }
 
-const SKIP = new Set(['file', 'name', 'tag', 'desc', 'mask', 'label', 'names', 'id', 'seed', 'location', 'view', 'paint', 'lights', 'eye', 'shadow', 'circles']);
+const SKIP = new Set(['flat', 'blend', 'style', 'file', 'name', 'tag', 'desc', 'mask', 'label', 'names', 'id', 'seed', 'location', 'view', 'paint', 'lights', 'eye', 'shadow', 'circles']);
 const isObj = v => v && typeof v === 'object';
 const isColour = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
 const key = (o, i) => Array.isArray(o) ? (isObj(o[i]) && o[i].id ? o[i].id : String(i)) : i;

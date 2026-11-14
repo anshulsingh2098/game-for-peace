@@ -2,6 +2,7 @@
    The game describes its own settings (core/tuning.js), this page builds sliders for them and sends the changed values back.
    Export writes settings.json; Publish sends the settings to the site's worker (cloudflare/worker.js), which every player's game reads at start.
    The draft is also kept in this browser. */
+import { explain } from '../core/tuning-docs.js';
 const $ = s => document.querySelector(s), frame = $('#game'), tree = $('#tree');
 const DRAFT = 'gfp-tuner-draft';
 let fields = [], overrides = {}, timer = 0, ready = false;
@@ -45,7 +46,14 @@ function build() {
 }
 
 function row(f) {
-  const r = document.createElement('div'); r.className = 'row'; r.dataset.q = (f.path + ' ' + f.label).toLowerCase(); r.title = f.path + (f.type === 'number' ? '  (default ' + f.def + ')' : '');
+  const doc = explain(f.path), field = document.createElement('div'); field.className = 'field'; field.dataset.q = (f.path + ' ' + f.label + ' ' + (doc ? doc.text : '')).toLowerCase();
+  const r = document.createElement('div'); r.className = 'row'; r.title = f.path + (f.type === 'number' ? '  (default ' + f.def + ')' : '');
+  const info = document.createElement('button'); info.className = 'info'; info.textContent = 'i'; info.title = 'What does this do?';
+  const help = document.createElement('div'); help.className = 'help'; help.hidden = true;
+  const fmt = v => typeof v === 'number' ? +v.toPrecision(6) : v;
+  help.innerHTML = (doc ? `<p>${doc.text}</p><p><b>Works well:</b> ${doc.range}</p>` : '<p>No description written for this setting yet.</p>')
+    + `<p><b>Default:</b> ${fmt(f.def)}${f.type === 'number' ? ` &nbsp; <b>Slider:</b> ${fmt(f.min)} to ${fmt(f.max)}` : ''}</p><p class="path">${f.path}</p>`;
+  info.onclick = () => { help.hidden = !help.hidden; info.classList.toggle('on', !help.hidden); };
   const label = document.createElement('label'); label.textContent = f.label; const dot = document.createElement('span'); dot.className = 'dot'; dot.title = 'Reset to default';
   const set = v => { f.value = v; if (same(v, f.def)) delete overrides[f.path]; else overrides[f.path] = v; r.classList.toggle('changed', f.path in overrides); push(); };
   let rng, num, col;
@@ -54,20 +62,20 @@ function row(f) {
     num = Object.assign(document.createElement('input'), { type: 'number', step: f.step, value: f.value });
     rng.oninput = () => { num.value = rng.value; set(+rng.value); };
     num.onchange = () => { const v = +num.value; if (Number.isFinite(v)) { if (v < +rng.min) rng.min = v; if (v > +rng.max) rng.max = v; rng.value = v; set(v); } };
-    r.append(label, rng, num, dot);
+    r.append(label, rng, num, dot, info);
   } else {
-    col = Object.assign(document.createElement('input'), { type: 'color', value: f.value }); col.oninput = () => set(col.value); r.append(label, col, dot);
+    col = Object.assign(document.createElement('input'), { type: 'color', value: f.value }); col.oninput = () => set(col.value); r.append(label, col, dot, info);
   }
   dot.onclick = () => { if (!(f.path in overrides)) return; if (rng) { rng.value = f.def; num.value = f.def; } else col.value = f.def; set(f.def); };
-  r.classList.toggle('changed', f.path in overrides);
-  return r;
+  r.classList.toggle('changed', f.path in overrides); field.append(r, help);
+  return field;
 }
 
 function filter() {
   const q = $('#search').value.trim().toLowerCase();
-  for (const r of tree.querySelectorAll('.row')) r.hidden = !!q && !r.dataset.q.includes(q);
-  for (const d of tree.querySelectorAll('details:not(.top)')) { const any = !!d.querySelector('.row:not([hidden])'); d.hidden = !any; if (q) d.open = any; }
-  for (const d of tree.querySelectorAll('details.top')) { d.hidden = !d.querySelector('.row:not([hidden])'); if (q) d.open = !d.hidden; }
+  for (const r of tree.querySelectorAll('.field')) r.hidden = !!q && !r.dataset.q.includes(q);
+  for (const d of tree.querySelectorAll('details:not(.top)')) { const any = !!d.querySelector('.field:not([hidden])'); d.hidden = !any; if (q) d.open = any; }
+  for (const d of tree.querySelectorAll('details.top')) { d.hidden = !d.querySelector('.field:not([hidden])'); if (q) d.open = !d.hidden; }
 }
 $('#search').oninput = filter;
 
