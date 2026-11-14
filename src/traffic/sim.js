@@ -30,14 +30,14 @@ export function laneOffsets(style) {
 }
 
 export class TrafficSim {
-  constructor(road, { seed = 'traffic', mode = 'low', drive = 'right', ahead = 700, behind = 350, minSpawnGap = 150 } = {}) {
-    this.road = road; this.seed = String(seed); this.drive = drive; this.ahead = ahead; this.behind = behind; this.minSpawnGap = minSpawnGap;
+  constructor(road, { seed = 'traffic', mode = 'low', drive = 'right', ahead = 700, behind = 350, minSpawnGap = 150, scale = 1 } = {}) {
+    this.scale = scale; this.road = road; this.seed = String(seed); this.drive = drive; this.ahead = ahead; this.behind = behind; this.minSpawnGap = minSpawnGap;
     this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.pool = new Pool({ cap: MODES.high + 8, make: blankCar, reset: resetCar }); this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
     this.setMode(mode);
   }
   setKinds(list) { this.kinds = list && list.length ? list : DEFAULT_KINDS; this.clearCars(); }
   clearCars() { this.pool.releaseAll(); this.cars.length = 0; this.seen.clear(); }
-  setMode(mode) { mode = MODE_ALIAS[mode] || mode; this.mode = MODES[mode] !== undefined ? mode : 'off'; this.cap = MODES[this.mode]; this.clearCars(); }
+  setMode(mode) { mode = MODE_ALIAS[mode] || mode; this.mode = MODES[mode] !== undefined ? mode : 'off'; this.cap = MODES[this.mode] ? Math.max(1, Math.min(MODES.high + 4, Math.round(MODES[this.mode] * this.scale))) : 0; this.clearCars(); }          // `scale` is the region's traffic density multiplier (regions.js)
   /* the signed offset from the centre line along the left normal for a car going `dir` (+1 with increasing s) in lane index k */
   lateral(dir, k) { const off = this.lanes[k], right = this.drive === 'right'; return (dir > 0) === right ? -off : off; }
 

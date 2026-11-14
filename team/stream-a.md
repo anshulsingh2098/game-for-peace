@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 13:00  N9 region model built (Mumbai, Delhi, Agra, Bhopal as data)
+Branch: feat/n9-regions
+What changed: new `src/world/regions.js` (versioned schema, validator, migration hook, `regionToLocation`, `regionTransition`) with Mumbai, Delhi and Agra moved out of `locations.js` into region records (their worlds are byte-identical: config hash before and after matched) and a new procedural Bhopal profile (lakes, bridges, two-lane roads, lighter traffic); `locations.js` appends `REGIONS.map(regionToLocation)`; configs now carry `region: { id, version }` (share codes carry it; older codes still load); traffic density takes the region's `traffic.scale` (`sim.js` and `traffic.js` accept `scale`, `main.js` passes it). Three new self-tests (47 checks): validation and rejection of 15 kinds of bad data, two regions through the same code deterministically with share-code round trip and a legacy code, and traffic scale. Decisions (geography mapping, OSM policy, elevation, determinism, transitions) in `docs/REGIONS.md`. OSM is NOT used; the owner must decide on ODbL before it is.
+For the other stream: nothing to do; the data fields for vehicle mix, buildings and population are waiting for N11 to N13.
+Status: open
+
 ## 2026-11-17 11:00  N8 sectors and shared-asset streaming built
 Branch: feat/n8-sectors
 What changed: new `src/world/sectors.js` (sector manager: 512 m sectors, states, priority queue with look-ahead, concurrency and per-update budgets, hysteresis, cancel and abort, pins, failure retry, reset), new `src/core/assets.js` (ref-counted asset cache: one load for many askers, pinned while held, LRU eviction, abort when nobody waits); `src/main.js` runs the sector manager as a runtime system (focus is the player or camera), routes the traffic pack through the cache, rebuilds sectors on `world:rebuilt`, and shows a `sectors` line in the `?debug` panel. Six new self-tests (44 checks): lifecycle and budgets, hysteresis and pins, cancel/abort/late results/retry, a 1500-step stress with reversals, teleports and resets, twenty rebuilds in a row. Design note and measurements in `docs/STREAMING.md`. In the browser: 19 sectors loaded in 12 s of autodrive, pack loaded once, references equal sectors alive plus one after a region change, no errors. Terrain tiles and scenery are NOT moved behind sectors (deliberately).

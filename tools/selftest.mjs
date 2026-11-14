@@ -24,6 +24,8 @@ import { explain, DOCS } from '../src/core/tuning-docs.js';
 import worker from '../cloudflare/worker.js';
 import { AssetCache } from '../src/core/assets.js';
 import { SectorManager, SECTOR_SIZE, sectorId } from '../src/world/sectors.js';
+import { REGIONS, KNOWN_LANDMARKS, validateRegion, regionToLocation, regionTransition, migrateRegion } from '../src/world/regions.js';
+import { readFileSync } from 'node:fs';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -488,6 +490,33 @@ await atest('sectors: fast driving, reversing, teleports and repeated resets lea
   sm.reset(); await new Promise(r => setTimeout(r, 20)); assert.equal(rig.live.size, 0, 'after reset nothing is still loaded: ' + [...rig.live].slice(0, 3)); assert.equal(sm.list().length, 0);
   for (let c = 0; c < 20; c++) { sm.update(c * 4000, 0, null, c); await tick(); sm.reset(); } await new Promise(r => setTimeout(r, 20)); assert.equal(rig.live.size, 0, 'twenty rebuilds in a row leak nothing');
   assert.throws(() => new SectorManager({ loadRadius: 500, unloadRadius: 500, load: async () => {} }), /hysteresis/);
+});
+
+/* ---- N9: regions ---- */
+test('regions: every region validates and the schema rejects bad data', () => {
+  assert.ok(REGIONS.length >= 4); for (const r of REGIONS) assert.deepEqual(validateRegion(r), [], r.id); const good = REGIONS[0], c = o => JSON.parse(JSON.stringify(o));
+  const bad = [r => { r.schema = 2; }, r => { r.id = 'Bad Id'; }, r => { r.version = 0; }, r => { r.inspiration.lat = 51; }, r => { r.land.palette.grass = [2, 0, 0]; }, r => { r.roads.style = 'motorway'; }, r => { r.roads.drive = 'up'; }, r => { r.traffic.mix = { hovercraft: 5 }; }, r => { r.traffic.mix = { car: 0 }; }, r => { r.landmarks = [{ kind: 'eiffel' }]; }, r => { r.climate.weather = 'meteors'; }, r => { r.provenance = { geography: 'osm', sources: ['x'], osm: false }; }, r => { r.provenance.elevation = { dataset: 'x' }; }, r => { delete r.audio; }, r => { r.land.terrain.coast = { lo: 1, hi: 0 }; }];
+  for (const f of bad) { const r = c(good); f(r); assert.ok(validateRegion(r).length > 0, 'accepted: ' + f); } assert.ok(validateRegion(null).length > 0);
+  const osm = c(good); osm.provenance = { geography: 'osm', sources: ['OpenStreetMap contributors'], osm: { attribution: 'Data (c) OpenStreetMap contributors', licence: 'ODbL-1.0' }, elevation: { dataset: 'SRTM 1 arc-second', licence: 'public domain', resolutionM: 30, datum: 'EGM96', transform: 'bilinear resample' } }; assert.deepEqual(validateRegion(osm), []);
+  assert.throws(() => migrateRegion({ schema: 0 }), /no migration/); assert.equal(migrateRegion(good), good); assert.throws(() => regionToLocation({ ...good, id: 'BAD' }), /not valid/);
+  const src = readFileSync(new URL('../src/world/landmarks.js', import.meta.url), 'utf8'), line = src.split('\n').find(l => l.startsWith('const BUILDERS = {')), body = line.slice(line.indexOf('{') + 1, line.lastIndexOf('};')); const keys = []; let depth = 0, cur = '';       // the keys of BUILDERS at depth 0
+  for (const ch of body + ',') { if ('({['.includes(ch)) depth++; if (')}]'.includes(ch)) depth--; if (ch === ',' && depth === 0) { const k = cur.trim().match(/^(\w+)/); if (k) keys.push(k[1]); cur = ''; } else cur += ch; } assert.deepEqual(keys.sort(), [...KNOWN_LANDMARKS].sort(), 'KNOWN_LANDMARKS must match the landmark builders: ' + keys);
+});
+test('regions: two profiles load through the same code, deterministically, with the data version in the config and share code', () => {
+  for (const id of ['mumbai', 'bhopal']) {
+    const L = LOCATIONS.find(l => l.id === id); assert.ok(L && L.region, id + ' is a region'); const cfg = locationConfig(id, 'regtest'), cfg2 = locationConfig(id, 'regtest'); assert.deepEqual(cfg, cfg2); assert.deepEqual(cfg.region, { id, version: L.region.version });
+    const build = () => { const t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-1500, 1500); t.attachRoad(r); return { t, r }; }; const a = build(), b = build(); assert.ok(a.r.sMax - a.r.sMin > 2000, id + ' builds a road');
+    for (let i = 0; i < 40; i++) { const x = (i * 311) % 4000 - 2000, z = (i * 577) % 4000 - 2000; assert.equal(a.t.height(x, z), b.t.height(x, z)); }
+  }
+  const code = encodeConfig(locationConfig('bhopal', 'regtest')), back = decodeConfig(code); assert.deepEqual(back.region, { id: 'bhopal', version: 1 }); assert.equal(back.seed, 'regtest');
+  const legacy = decodeConfig(encodeConfig(makeConfig({ seed: 'old', location: 'mumbai' }))); assert.ok(legacy && legacy.seed === 'old' && legacy.region === undefined, 'a share code from before regions still loads (version 0, legacy)');
+  assert.deepEqual(regionTransition('mumbai', 'bhopal'), { from: 'mumbai', to: 'bhopal', kind: 'reload', loadingScreen: true }); assert.equal(regionTransition('mumbai', 'mumbai').kind, 'none'); assert.equal(regionTransition('mumbai', 'atlantis'), null);
+  assert.ok(LOCATIONS.map(l => l.id).includes('bhopal') && new Set(LOCATIONS.map(l => l.id)).size === LOCATIONS.length);
+});
+test('regions: traffic density comes from the region data, not from a place name', () => {
+  const cfg = locationConfig('california', 'scale'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-1000, 1000); t.attachRoad(r);
+  const full = new TrafficSim(r, { seed: 's', mode: 'high', scale: 1 }), part = new TrafficSim(r, { seed: 's', mode: 'high', scale: 0.6 }), none = new TrafficSim(r, { seed: 's', mode: 'off', scale: 0.6 });
+  assert.equal(full.cap, MODES.high); assert.equal(part.cap, Math.round(MODES.high * 0.6)); assert.equal(none.cap, 0); assert.ok(new TrafficSim(r, { mode: 'low', scale: 0.01 }).cap >= 1);
 });
 
 console.log(`\n${passed} checks passed`);
