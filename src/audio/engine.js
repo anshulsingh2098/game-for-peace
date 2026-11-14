@@ -125,7 +125,7 @@ export class Sound {
     if (this.vid !== s.id || !this.voice) this.setVehicle(s.id);
     const c = this.ctx, t = c.currentTime, now = performance.now(), dt = Math.min(0.1, (now - (this.lastT || now)) / 1000) || 0.016; this.lastT = now;
     const cfg = CFG[s.id] || CFG.car, v = this.voice, r = clamp(s.v / s.top, 0, 1), th = s.throttle, fp = s.view === 'first';
-    const P = this.prev; this.cabin.frequency.setTargetAtTime(fp ? 2300 : 18000, t, 0.15); this.wet.gain.setTargetAtTime(fp ? 0.04 : 0.16, t, 0.2);
+    const P = this.prev; this.cabin.frequency.setTargetAtTime(fp ? 2300 : 18000, t, 0.15); this.wet.gain.setTargetAtTime((fp ? 0.04 : 0.16) + 0.22 * (s.tunnel || 0), t, 0.2);
     const loud = (fp ? 1.25 : 1) * (s.buff ? 1.25 : 1), sampled = !!this.samples && cfg.kind === 'v8';
     if (this.samples && !sampled) this.samples.out.gain.setTargetAtTime(0, t, 0.1);
     if (cfg.kind === 'ev') {                                                                // ---- electric motor
@@ -159,14 +159,14 @@ export class Sound {
     }
     // ---- shared layers: wind, road, gravel, rain
     this.wind.g.gain.setTargetAtTime(r * r * 0.14 * (fp ? 1.2 : 1), t, 0.15); this.wind.f.frequency.setTargetAtTime(300 + r * 600, t, 0.2);
-    this.hum.g.gain.setTargetAtTime(r * 0.1, t, 0.2); this.squeal.g.gain.setTargetAtTime(s.off ? 0 : clamp((s.slip || 0) - 0.14, 0, 0.5) * 0.7 * r + (s.hand || 0) * r * 0.32, t, 0.06); this.squeal.f.frequency.setTargetAtTime(1300 + r * 900, t, 0.1); this.gravel.g.gain.setTargetAtTime(s.off ? Math.min(0.28, r * 0.5) : 0, t, 0.1); this.rainN.g.gain.setTargetAtTime(s.rain * 0.2, t, 0.4);
+    this.hum.g.gain.setTargetAtTime(r * 0.1, t, 0.2); this.squeal.g.gain.setTargetAtTime(s.off ? 0 : clamp((s.slip || 0) - 0.14, 0, 0.5) * 0.7 * r + (s.hand || 0) * r * 0.32, t, 0.06); this.squeal.f.frequency.setTargetAtTime(1300 + r * 900, t, 0.1); this.gravel.g.gain.setTargetAtTime(s.off ? Math.min(0.28, r * 0.5) : 0, t, 0.1); this.rainN.g.gain.setTargetAtTime(s.rain * 0.2 * (1 - (s.tunnel || 0)), t, 0.4); this.tunnel = s.tunnel || 0;          // no rain on the roof inside a tunnel
     if (s.rev && s.id === 'truck') { if (!this._beepAt || now > this._beepAt) { this._beepAt = now + 900; const o = c.createOscillator(), og = c.createGain(); o.type = 'sine'; o.frequency.value = 1050;       // reversing beeper
       og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.09, t + 0.01); og.gain.setValueAtTime(0.09, t + 0.3); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.34); o.connect(og); og.connect(this.fxIn); o.start(t); o.stop(t + 0.4); } }
     P.throttle = th; P.buff = s.buff; P.brake = s.brake;
-    if (s.flash > 0.9 && !this._thunder) { this._thunder = true; setTimeout(() => this.thunder(), 500 + Math.random() * 1500); } else if (s.flash < 0.2) this._thunder = false;
+    if (s.flash > 0.9 && !this._thunder && !(s.tunnel > 0.5)) { this._thunder = true; setTimeout(() => this.thunder(), 500 + Math.random() * 1500); } else if (s.flash < 0.2) this._thunder = false;
   }
   thunder() {
-    if (!this.ctx || !this.engineOn) return; const c = this.ctx, t = c.currentTime, src = c.createBufferSource(); src.buffer = this.noiseBuf;
+    if (!this.ctx || !this.engineOn || this.tunnel > 0.5) return; const c = this.ctx, t = c.currentTime, src = c.createBufferSource(); src.buffer = this.noiseBuf;
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220; const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.9, t + 0.15); g.gain.exponentialRampToValueAtTime(0.001, t + 3.2);
     src.connect(f); f.connect(g); g.connect(this.fxIn); src.start(t); src.stop(t + 3.5);
   }

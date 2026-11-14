@@ -28,13 +28,17 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] **Shadows**: trees, the car and rocks cast clean shadows: no black streaks, stripes or flicker on trees or the car (check the Alps at midday).
 - [ ] **Ground**: photographic grass, rock on cliffs, snow, sand. No seams at tile edges, no shimmering as you drive. Compare with `&ground=flat`.
 - [ ] **Scenery**: real trees, shrubs and rocks, no dark fringes or flicker. Compare with `&nature=flat`.
-- [ ] **Bridge**: drive onto one (default world, seed `peace`): deck, rails, piers; the car rides the deck. (Known: no rail collision.)
+- [ ] **Bridge**: drive onto one (Alps, seed `alps`, near road distance 340): deck, rails, piers; the car rides the deck. **Rails stop the car**: steer into one at speed, the car scrapes or stops and never goes over the edge (try the car, truck and bike). Rails sit just where they are drawn (not a metre away).
 - [ ] **Tunnel** (Himalayas, seed `hill`): gate with a readable "ATAL TUNNEL, ROHTANG" board, portal, tiled lit interior, cones, camera stays inside, no rain inside. Try the truck.
 - [ ] **Weather and time**: clear, overcast, fog, rain, storm, snow, each at day, dusk and night: nothing goes black or white, road looks wet in rain, tunnel and bridge look right at night.
 - [ ] **Driving controls**: W / Up gas, S / Down reverse (brakes first if still rolling forward, then reverses), **Space foot brake** (stops and holds the car, never reverses), **X handbrake** (the tail slides), **Shift boost**, E autodrive. On a phone: Brake, Hand, Rev and Boost circles. Lifting off the gas slows the car at a natural rate, on grass much faster than on the road (it must not glide). Measured: 100 km/h to a stop in about 3 s on the foot brake; reverse tops out at about 32 km/h for the car.
 - [ ] **Engine sound** is the real recording of Rajul's car (seven seamless loops in `assets/audio`, made by `tools/make_engine_loops.mjs`): deep and bold, no thin whine, smooth through the gears, no swirling or clicking at loop points, no sudden jumps when the revs change. `?engine=synth` plays the old synthesised engine for comparison. Nobody has listened to it yet: judge by ear and say what is off. If it still sounds unnatural the next step is a longer recording of steady revs at each speed (see the note in `team/stream-a.md`).
 - [ ] **Camera views**: V cycles Chase, Far chase, Close chase, Hood, Bumper, Driver seat, Cinematic (a TV-style cut beside the road) and back; C jumps to the driver's seat and back; the Camera button and the CAM circle on a phone do the same as V. Each view shows the road ahead, nothing clips through the car body, and the choice is remembered.
 - [ ] **Car feel** (drive by hand, any vehicle): the nose rises a little when you accelerate and dips when you brake hard; the body leans outward in a fast corner; a faint tremble at speed, stronger on gravel and grass. It should not feel like gliding on rails. (Measured on the car: about 3 degrees squat on launch, about 4 degrees dip under hard braking, about 4.5 degrees of lean at 0.5 g sideways.)
+- [ ] **The car** ("Dusk GT", Khronos CarConcept): glossy paint with reflections, dark glass, lit tail lights, plain licence plate; **no Khronos or 3D Commerce logo anywhere** (look at the tyre sidewalls and the plate up close); the four wheels turn and the front ones steer; the garage colour swatches recolour the body; driver's-seat view (V or C) shows a full interior with the steering wheel and dash.
+- [ ] **Handling** (car): steering reacts at once (not numb) at 50, 100 and 200 km/h; no spin at full lock at top speed; a handbrake flick at 100 km/h gives a slide you can hold and catch; gears change with a small power dip and the revs drop at each shift; the rev limiter holds at the top.
+- [ ] **Look**: richer colour and a soft dark edge (grade and vignette); trees are full and green with **no black rectangles** in sunlight; the car's paint shows a horizon and sky in its reflection.
+- [ ] **Camera effects**: the view stretches a little when you boost or launch hard; no camera shake by default.
 - [ ] **Autodrive** (press E, or the Auto button): the car follows the road by itself at about 70 km/h, slows for bends, goes through tunnels and over bridges; steering or braking by hand takes over. Try the Himalayas (seed `hill`) and the default world.
 - [ ] **Green Valley** looks like open meadow with tall grass and trees set back from the road, not a forest at the verge.
 - [ ] **Quality tiers**: add `&q=low`, `&q=med`, `&q=high`. Low: old cheap ground, fewer tree variants, no shadows; med: lighter photographic ground; high: full ground, bigger shadows and view. Each looks acceptable and none shows broken ground. Phones start on low. (Draw calls and triangles for the Alps at 1400x800: low 176 / 96k, med 523 / 430k, high 898 / 895k. High took about 24 ms on an M4: too slow, still to be tuned.)
@@ -45,7 +49,7 @@ Open the browser console (F12): nothing red except known favicon 404s.
 
 - [ ] Panel connects ("about 290 settings"). Move a weather fog slider: the game changes live.
 - [ ] A vehicle mass change rebuilds the car; a world setting regenerates the map.
-- [ ] "i" button shows text and a range for any setting you try. Reset all, Export, Import work.
+- [ ] "i" button shows text and a range for any setting you try. Reset all, Export, Import work. **Each section header has a "Reset section" button** that shows only while something in it has changed, and resets only that section. New groups: handling, camera, look.
 - [ ] Publish: only after the Cloudflare setup (see `HANDOFF.md`): wrong password is refused, right password publishes, Load live and History work.
 
 ## 5. Phone (do this at least weekly, and before any deploy)
@@ -55,11 +59,12 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] **Touch layout** (or on a computer: add `&touch` and use a phone-sized window): left, a vertical throttle lever (stays where you leave it) with BRAKE and BOOST; right, the steering handle on its arc (springs back to the middle) with AUTO, CAM and RESET; speed at the top left. Works held sideways and upright.
 - [ ] **Phone camera**: lower, closer and wider than on a computer (compare with the slowroads.io screenshots).
 - [ ] Frame rate feels smooth (note it); the phone does not heat up or crash after five minutes.
+- [ ] **The new car is heavy** (about 68,000 triangles, 41 draw calls on every tier): note the frame rate with the car next to the same drive with `?q=low`; tell the team if it is a problem.
 - [ ] Write down what you saw. Nothing so far has been measured on a phone.
 
 ## 6. Speed (when you changed rendering, scenery or textures)
 
-- [ ] In the console: `__next.renderer.info.render` shows calls and triangles; note them. Reference on an M4 at 1400x800: plain about 5 to 7 ms a frame, 460 draw calls, 730k triangles.
+- [ ] In the console: `__next.renderer.info.render` shows calls and triangles; note them (the car alone is about 41 calls and 68,000 triangles). Reference on an M4 at 1400x800: plain about 5 to 7 ms a frame, 460 draw calls, 730k triangles.
 - [ ] The assets folder stayed under 30 MB (script checks this).
 
 ## 7. Before and after a deploy
