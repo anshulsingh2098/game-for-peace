@@ -60,8 +60,8 @@ export const DOCS = {
   'weather.*.wet': ['How wet the road looks and feels: shine, darker colour, and less grip (0 dry, 1 soaked).', 'dry 0, rain 0.8, storm 1'],
 
   /* ---- ground surfaces ---- */
-  'surfaces.*.grip': ['How well tyres hold on this surface (1 is dry asphalt). Lower slides more. The weather lowers it further when it is wet.', 'snow 0.3 to 0.45, sand 0.45 to 0.6, grass 0.55 to 0.7, gravel 0.7 to 0.85, asphalt 1'],
-  'surfaces.*.drag': ['How much this surface slows you down by itself, like rolling resistance. Higher = sticky and heavy going.', 'asphalt 0.01, gravel 0.03, grass 0.06, sand 0.14'],
+  'surfaces.*.grip': ['How well tyres hold on this surface (1 is dry asphalt). Lower slides more. The weather lowers it further when it is wet.', 'snow 0.3 to 0.45, sand 0.4 to 0.55, grass 0.5 to 0.65, gravel 0.65 to 0.8, asphalt 1'],
+  'surfaces.*.drag': ['How much this surface slows you down by itself, like rolling resistance (0.15 is about 1.5 m/s2). Higher = sticky and heavy going; low = the car glides.', 'asphalt 0.012, gravel 0.05, grass 0.15, sand 0.3, snow 0.1'],
 
   /* ---- world: land shape ---- */
   'world.terrain.seaLevel': ['Height of the sea surface, in metres. Raise it to flood more land, lower it for a drier world. Some locations set this very high on purpose (the Alps), because their land sits high.', 'default world 0; follow the location\'s own value'],

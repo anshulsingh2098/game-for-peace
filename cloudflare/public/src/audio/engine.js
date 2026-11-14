@@ -5,7 +5,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 
 /* per-vehicle engine character */
 const CFG = {
-  car:   { kind: 'v8',     idle: 800, max: 6800, G: 6, pulse: r => r / 15, vol: 0.55, cutLo: 380, cutHi: 3000, lope: 0.30, growl: 0.16, whine: 0.025, hiss: 0.07 },
+  car:   { kind: 'v8',     idle: 750, max: 6200, G: 6, pulse: r => r / 19, vol: 0.64, cutLo: 240, cutHi: 1350, lope: 0.34, growl: 0.22, whine: 0.002, hiss: 0.018 },        // a modern six-cylinder: lower top note, dark and full, almost no whine
   truck: { kind: 'diesel', idle: 620, max: 2100, G: 8, pulse: r => r / 20, vol: 0.72, cutLo: 300, cutHi: 1700, lope: 0.28, growl: 0.28, whine: 0.04, hiss: 0.10 },
   bike:  { kind: 'ev',     idle: 0,   max: 1,    G: 1, pulse: () => 0,     vol: 0.95, cutLo: 900, cutHi: 6000, lope: 0,    growl: 0,    whine: 0,    hiss: 0.05 }
 };
@@ -29,14 +29,14 @@ export class Sound {
     const nb = this.noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     const mk = (type, freq, Q) => { const src = c.createBufferSource(); src.buffer = nb; src.loop = true; const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = Q;
       const g = c.createGain(); g.gain.value = 0; src.connect(f); f.connect(g); g.connect(this.fxIn); src.start(); return { g, f }; };
-    this.wind = mk('bandpass', 700, 0.5); this.rainN = mk('highpass', 2800, 0.5); this.hum = mk('lowpass', 180, 0.7); this.gravel = mk('bandpass', 1700, 0.9);
+    this.wind = mk('bandpass', 700, 0.5); this.rainN = mk('highpass', 2800, 0.5); this.hum = mk('lowpass', 180, 0.7); this.gravel = mk('bandpass', 1700, 0.9); this.squeal = mk('bandpass', 1500, 5);
     this.applyVolumes(); return c;
   }
   resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); }
   applyVolumes() { if (!this.ctx) return; const t = this.ctx.currentTime; this.musicBus.gain.setTargetAtTime(this.music, t, 0.05); this.sfxBus.gain.setTargetAtTime(this.sfx, t, 0.05); }
   setEngineOn(on) {
     this.engineOn = on; if (on || !this.ctx) return; const t = this.ctx.currentTime;
-    for (const g of [this.wind.g, this.rainN.g, this.hum.g, this.gravel.g, this.voice && this.voice.out, this.voice && this.voice.gtw]) if (g) g.gain.setTargetAtTime(0, t, 0.1);
+    for (const g of [this.wind.g, this.rainN.g, this.hum.g, this.gravel.g, this.squeal.g, this.voice && this.voice.out, this.voice && this.voice.gtw]) if (g) g.gain.setTargetAtTime(0, t, 0.1);
   }
   get eng() { return this.voice ? this.voice.out : { gain: { value: 0 } }; }
 
@@ -116,11 +116,11 @@ export class Sound {
       v.a.frequency.setTargetAtTime(f, t, tc); v.sub.frequency.setTargetAtTime(f * 0.5, t, tc); v.gr.frequency.setTargetAtTime(f * 2, t, tc); v.wh.frequency.setTargetAtTime(f * 6.5, t, tc);
       v.lp.frequency.setTargetAtTime(cfg.cutLo + (cfg.cutHi - cfg.cutLo) * (0.1 + 0.55 * rr + 0.45 * th * (0.5 + 0.5 * rr)), t, 0.08);
       v.grbp.frequency.setTargetAtTime(350 + rr * 1500, t, 0.07); v.gg.gain.setTargetAtTime(cfg.growl * (0.2 + 0.8 * th), t, 0.06);
-      v.gs.gain.setTargetAtTime(0.55 + 0.25 * (1 - rr), t, 0.08); v.whbp.frequency.setTargetAtTime(f * 6.5, t, 0.06); v.gw.gain.setTargetAtTime(cfg.whine * r * (0.4 + th), t, 0.08);
+      v.gs.gain.setTargetAtTime(cfg.kind === 'v8' ? 0.95 + 0.3 * (1 - rr) : 0.55 + 0.25 * (1 - rr), t, 0.08); v.whbp.frequency.setTargetAtTime(f * 6.5, t, 0.06); v.gw.gain.setTargetAtTime(cfg.whine * r * (0.4 + th), t, 0.08);
       v.gh.gain.setTargetAtTime(cfg.hiss * (0.1 + th * rr), t, 0.06); v.hbp.frequency.setTargetAtTime(700 + rr * 1500, t, 0.1);
       v.lfo.frequency.setTargetAtTime(f / 4, t, 0.1); v.lfoD.gain.setTargetAtTime(cfg.lope * (1 - rr) * (1 - th * 0.5), t, 0.1);             // idle "lope" fades as the revs rise
       if (v.clD) { v.cl.frequency.setTargetAtTime(f * 1.5, t, 0.08); v.clD.gain.setTargetAtTime(0.22, t, 0.1); v.cg.gain.value = 0.035 + 0.07 * (1 - rr) + 0.035 * th; }
-      const spool = clamp(th * rr * 1.2 + (s.buff ? 0.5 : 0), 0, 1); v.tw.frequency.setTargetAtTime(700 + spool * (cfg.kind === 'diesel' ? 1500 : 2600), t, 0.15); v.gtw.gain.setTargetAtTime(spool * spool * (cfg.kind === 'diesel' ? 0.02 : 0.03), t, 0.2);
+      const spool = clamp(th * rr * 1.2 + (s.buff ? 0.5 : 0), 0, 1); v.tw.frequency.setTargetAtTime(500 + spool * (cfg.kind === 'diesel' ? 1100 : 850), t, 0.15); v.gtw.gain.setTargetAtTime(spool * spool * (cfg.kind === 'diesel' ? 0.015 : 0.005), t, 0.2);
       const shiftDip = P.gear !== undefined && P.gear !== gear && s.v > 4 ? 1 : 0;                                              // gear change: brief throttle cut
       if (shiftDip) { v.out.gain.cancelScheduledValues(t); v.out.gain.setValueAtTime(v.out.gain.value * 0.35, t); if (cfg.kind === 'v8') this.pops(1, 0.08); else this.burst(0, 3800, 0.25, 0.1, 'highpass'); }
       v.out.gain.setTargetAtTime(cfg.vol * (0.11 + 0.14 * th + 0.07 * rr) * loud, t + (shiftDip ? 0.09 : 0), 0.07);
@@ -130,8 +130,8 @@ export class Sound {
       P.gear = gear;
     }
     // ---- shared layers: wind, road, gravel, rain
-    this.wind.g.gain.setTargetAtTime(r * r * 0.34 * (fp ? 1.2 : 1), t, 0.15); this.wind.f.frequency.setTargetAtTime(400 + r * 1300, t, 0.2);
-    this.hum.g.gain.setTargetAtTime(r * 0.1, t, 0.2); this.gravel.g.gain.setTargetAtTime(s.off ? Math.min(0.28, r * 0.5) : 0, t, 0.1); this.rainN.g.gain.setTargetAtTime(s.rain * 0.2, t, 0.4);
+    this.wind.g.gain.setTargetAtTime(r * r * 0.14 * (fp ? 1.2 : 1), t, 0.15); this.wind.f.frequency.setTargetAtTime(300 + r * 600, t, 0.2);
+    this.hum.g.gain.setTargetAtTime(r * 0.1, t, 0.2); this.squeal.g.gain.setTargetAtTime(s.off ? 0 : clamp((s.slip || 0) - 0.14, 0, 0.5) * 0.7 * r + (s.hand || 0) * r * 0.32, t, 0.06); this.squeal.f.frequency.setTargetAtTime(1300 + r * 900, t, 0.1); this.gravel.g.gain.setTargetAtTime(s.off ? Math.min(0.28, r * 0.5) : 0, t, 0.1); this.rainN.g.gain.setTargetAtTime(s.rain * 0.2, t, 0.4);
     if (s.rev && s.id === 'truck') { if (!this._beepAt || now > this._beepAt) { this._beepAt = now + 900; const o = c.createOscillator(), og = c.createGain(); o.type = 'sine'; o.frequency.value = 1050;       // reversing beeper
       og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.09, t + 0.01); og.gain.setValueAtTime(0.09, t + 0.3); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.34); o.connect(og); og.connect(this.fxIn); o.start(t); o.stop(t + 0.4); } }
     P.throttle = th; P.buff = s.buff; P.brake = s.brake;

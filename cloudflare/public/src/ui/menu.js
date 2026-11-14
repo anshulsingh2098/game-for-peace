@@ -13,7 +13,7 @@ const OPTIONS = {
   lights: [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']],
   sound: [['on', 'On'], ['off', 'Off']]
 };
-const KEYS = [['W A S D / arrows', 'Drive'], ['Space', 'Use your vehicle\'s boost'], ['C', 'Chase or driver camera'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
+const KEYS = [['W A S D / arrows', 'Drive (S reverses)'], ['Space', 'Brake'], ['X', 'Handbrake'], ['Shift', 'Use your vehicle\'s boost'], ['E', 'Autodrive'], ['C', 'Chase or driver camera'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
 
 export class Menu {
   constructor(api) {
@@ -55,7 +55,7 @@ export class Menu {
     const bars = mk('div', 'm-bars', p);
     for (const k of ['Speed', 'Accel', 'Handling', 'Grip']) { const r = mk('div', 'm-bar', bars); mk('span', '', r, k); const t = mk('i', '', r); mk('u', '', t).style.width = def.stats[k] + '%'; }
     mk('div', 'm-top', p, 'Top speed ' + def.stats.Top + ' km/h');
-    const buff = mk('div', 'm-buff', p); mk('b', '', buff, def.buff.name + ' (Space)'); mk('span', '', buff, def.buff.desc + ' ' + def.buff.secs + ' s, then ' + def.buff.cooldown + ' s to recharge.');
+    const buff = mk('div', 'm-buff', p); mk('b', '', buff, def.buff.name + ' (Shift)'); mk('span', '', buff, def.buff.desc + ' ' + def.buff.secs + ' s, then ' + def.buff.cooldown + ' s to recharge.');
     mk('h3', '', p, def.paint.label + ' colour'); const sw = mk('div', 'm-sw', p), cur = st.paint[def.id] || def.paint.colors[0];
     for (const c of def.paint.colors) { const b = mk('button', 'sw', sw); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'Colour ' + c); b.setAttribute('aria-pressed', c === cur);
       b.onclick = e => { e.stopPropagation(); api.paint(st.vehicle, c); for (const x of sw.children) x.setAttribute('aria-pressed', x === b); }; }

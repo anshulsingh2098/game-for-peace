@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-14  Brakes, handbrake, reverse, grass, engine sound (branch fix/driving-feel)
+Branch: fix/driving-feel
+What changed (Stream B's files, at Rajul's request): controls are now throttle (W/Up), reverse (S/Down), foot brake (Space), handbrake (X), boost (Shift), autodrive (E); the input is `{ steer, throttle, brake, hand, rev }` (`src/input/controls.js`); the touch controls gained Hand and Rev circles. `src/vehicle/rapier-vehicle.js`: the foot brake never reverses; reverse brakes first while rolling forward and is capped at `revTop`; the handbrake locks the rear wheels and cuts rear grip 50%; engine braking when coasting is now a body force (about 0.3 + 0.008 u m/s2) instead of a wheel brake, because wheel brakes work worse on low-grip surfaces: that is why the car glided on grass. `src/vehicle/physics.js`: grass drag 0.06 to 0.15, sand 0.14 to 0.3, gravel 0.03 to 0.05, grass grip 0.62 to 0.55; reverse tops raised (car 9 m/s). Found: the physics engine has about 1.3 m/s2 of built-in drag at speed on top of these. `src/audio/engine.js`: the car engine is a darker modern six (pulse rpm/19, cutoffs 240 to 1350 Hz, whine and turbo whistle almost removed, wind and hiss turned down), plus tyre squeal on slip and handbrake.
+Sound was compared with a recording of Rajul's own car (analysis in `tools/analyse_sound.mjs`; numbers in `CHECKLIST.md`). Honest limits: nobody has listened to the new sound; measuring our synth at speed in a hidden browser pane was too noisy to calibrate. A sample-based engine from the recording is the next step if the synthesis still does not sound like the real car.
+For the other stream: these constants are still hard-coded (candidates for the tuner).
+Status: open
+
 ## 2026-11-14  Car felt like it glided: body pitch and lean never moved (branch fix/car-feel)
 Branch: fix/car-feel
 What changed (in Stream B's files, at Rajul's request): `src/vehicle/rapier-vehicle.js`: the code that dips and squats the body (`axL`, `dPitch`, `dRoll`) ran before `this.read()` updated the speed, so it always compared the old speed with itself: acceleration read 0 and the body never pitched. It now runs after `read()`, with clamped inputs. Measured on the car: squat about 3 degrees on launch, dive about 4 degrees under hard braking, lean about 4.5 degrees outward at 0.5 g sideways (the roll sign was also flipped: the first version leaned into corners). `src/vehicle/vehicle.js`: a small speed-dependent tremble of the body (more on gravel and grass) because the road is perfectly smooth.

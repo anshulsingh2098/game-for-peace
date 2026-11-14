@@ -17,6 +17,8 @@ body:not([data-mode=drive]) #tui, body[data-menu] #tui { display: none !importan
 #tui #tSlide i { position: absolute; left: 31px; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, .35); }
 #tui #tKnob { position: absolute; left: 4px; width: 56px; height: 56px; bottom: 0; }
 #tui #tBrake { left: calc(max(16px, env(safe-area-inset-left)) + 84px); bottom: 20px; width: 76px; height: 76px; }
+#tui #tHand { left: calc(max(16px, env(safe-area-inset-left)) + 172px); bottom: 20px; width: 58px; height: 58px; font-size: 9px; }
+#tui #tRev { left: calc(max(16px, env(safe-area-inset-left)) + 172px); bottom: 90px; width: 52px; height: 52px; font-size: 10px; }
 #tui #tBoost { left: calc(max(16px, env(safe-area-inset-left)) + 96px); bottom: 112px; width: 62px; height: 62px; }
 #tui #tSteer { right: max(14px, env(safe-area-inset-right)); bottom: 14px; width: min(44vw, 300px); height: 120px; }
 #tui #tSteer svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -45,8 +47,12 @@ export class TouchUI {
 
     /* buttons on the left: brake (hold) cuts the lever to zero, boost fires the vehicle's buff */
     const brake = el('div', 'tBrake', 't circle', 'Brake');
-    brake.addEventListener('pointerdown', e => { e.preventDefault(); try { brake.setPointerCapture(e.pointerId); } catch (x) { /* synthetic pointers */ } brake.classList.add('down'); controls.touch.down = 1; setThrottle(0); });
-    for (const n of ['pointerup', 'pointercancel']) brake.addEventListener(n, () => { brake.classList.remove('down'); controls.touch.down = 0; });
+    brake.addEventListener('pointerdown', e => { e.preventDefault(); try { brake.setPointerCapture(e.pointerId); } catch (x) { /* synthetic pointers */ } brake.classList.add('down'); controls.touch.brake = 1; setThrottle(0); });
+    for (const n of ['pointerup', 'pointercancel']) brake.addEventListener(n, () => { brake.classList.remove('down'); controls.touch.brake = 0; });
+    const hold = (id, label, key, zeroThrottle) => { const b = el('div', id, 't circle', label);                       // hold-to-press circles: handbrake (X) and reverse (S)
+      b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (x) { /* synthetic pointers */ } b.classList.add('down'); controls.touch[key] = 1; if (zeroThrottle) setThrottle(0); });
+      for (const n of ['pointerup', 'pointercancel']) b.addEventListener(n, () => { b.classList.remove('down'); controls.touch[key] = 0; }); return b; };
+    hold('tHand', 'Hand', 'hand', false); hold('tRev', 'Rev', 'down', true);
     const boost = el('div', 'tBoost', 't circle', 'Boost'); boost.addEventListener('pointerdown', e => { e.preventDefault(); controls.fire('buff'); boost.classList.add('down'); setTimeout(() => boost.classList.remove('down'), 160); });
 
     /* steering handle on an arc */

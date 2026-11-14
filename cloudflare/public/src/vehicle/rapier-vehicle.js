@@ -148,39 +148,46 @@ export class RapierVehicle {
 
     const key = W.surface(this.x, this.z); this.surface = key; const S0 = SURFACES[key] || SURFACES.grass;
     const depth = W.seaLevel - this.groundY; this.wet = depth > 0 ? depth : 0; this.groundY = this.y; const flooded = depth > 1.1;
-    const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), u = this.u;
+    const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), hnd = clamp(input.hand || 0, 0, 1), rev = thr > 0 ? 0 : clamp(input.rev || 0, 0, 1), u = this.u;
 
-    /* forces on the wheels */
-    let engine = 0, brake = 0;
-    if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = m * p.accel * M.accel * thr * Math.max(0, 1 - (u / top) ** 2); }
-    else if (brk > 0) { if (u > 0.5) brake = m * p.brake * brk; else if (!flooded) engine = -m * p.revAccel * brk * Math.max(0, 1 - (u / p.revTop) ** 2); }
-    else if (Math.abs(u) < 0.25) brake = m * G * 0.9;                                                         // parked: hold still, even on a slope
-    else brake = m * 0.55 * clamp(Math.abs(u), 0, 1);                                                            // engine braking when coasting
+    /* forces on the wheels. Four separate controls: throttle, reverse, the foot brake (never reverses) and the handbrake (rear wheels only). */
+    let engine = 0, brake = 0, rearBrake = 0, coast = false;
+    if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = m * p.accel * M.accel * thr * Math.max(0, 1 - (u / top) ** 2); }                    // gas while rolling backwards brakes first
+    else if (rev > 0) { if (u > 1.2) brake = m * p.brake * 0.9 * rev; else if (!flooded) engine = -m * p.revAccel * 1.35 * rev * Math.max(0, 1 - (u / p.revTop) ** 2); }   // reverse: brakes while still rolling forward, then drives backwards
+    if (brk > 0) brake = Math.max(brake, m * p.brake * brk);                                                  // foot brake: all four wheels
+    if (hnd > 0) rearBrake = m * p.brake * 1.0 * hnd;                                                         // handbrake: the rear wheels lock
+    if (thr === 0 && rev === 0 && brk === 0 && hnd === 0) {
+      if (Math.abs(u) < 0.25) brake = m * G * 0.9;                                                            // parked: hold still, even on a slope
+      else coast = true;                                                                                       // lifting off: engine braking, applied to the body below so it works on any surface
+    }
     const nDrive = car.wheels.filter(w => w.drive).length, nF = car.wheels.filter(w => w.front).length, nR = car.wheels.length - nF;
     const fShare = this.id === 'bike' ? 0.55 : 0.62;
     car.wheels.forEach((w, i) => {
       const pos = vc.wheelContactPoint(i), wx = pos ? pos.x + this.ox : this.x, wz = pos ? pos.z + this.oz : this.z, S = SURFACES[W.surface(wx, wz)] || S0;
       const wet = (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(W.surface(wx, wz)) : 1);
-      vc.setWheelFrictionSlip(i, p.mu * S.grip * wet * M.grip);
+      vc.setWheelFrictionSlip(i, p.mu * S.grip * wet * M.grip * (!w.front && hnd > 0 ? 1 - 0.5 * hnd : 1));      // a locked rear wheel slides: the tail steps out
       let a = 0; if (w.front) a = w.side === 0 ? this.delta : Math.atan(p.L / (R + w.side * p.track / 2));       // Ackermann: the inner wheel turns more
       vc.setWheelSteering(i, w.front ? -a : 0);
       vc.setWheelEngineForce(i, w.drive ? engine / nDrive : 0);
-      const share = w.front ? fShare / nF : (1 - fShare) / nR; vc.setWheelBrake(i, brake * share * h);
+      const share = w.front ? fShare / nF : (1 - fShare) / nR; vc.setWheelBrake(i, (brake * share + (w.front ? 0 : rearBrake / nR)) * h);
     });
     /* rolling resistance by surface, water drag, air drag, and what a buff changes about slopes */
     const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
     const roll = -m * G * (S0.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(u / 0.5, -1, 1), air = -p.aero * u * Math.abs(u);
     let F = roll + air; const fwd = { x: c, z: s };
+    if (coast) F -= Math.sign(u) * m * (0.30 + 0.008 * Math.abs(u)) * clamp(Math.abs(u) / 0.5, 0, 1);                  // engine braking: not limited by tyre grip, so the car slows on grass as well as on tarmac
     if (M.slope < 1) F += m * G * Math.sin(this.pitch) * (1 - M.slope);                                           // Hill Hauler: climbs as if the slope were not there
     b.resetForces(true); b.addForce({ x: fwd.x * F, y: 0, z: fwd.z * F }, true);
     /* anti-roll: a spring and damper about the forward axis so tall vehicles lean but do not tip over (a bike is held upright) */
     stabilise(b, car.T);
     vc.updateVehicle(h); this.R.step();
     if (this.patchNew) this.patchNew = false;
-    const du = (this.u - u) / h; this.axL += (du - this.axL) * Math.min(1, h * 6);
-    this.dPitch += (this.axL * 0.012 * p.cg - this.dPitch) * Math.min(1, h * 7); this.dRoll += (this.ay * 0.014 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);
+    /* body pitch and lean are worked out after read() below, once the new speed is known (they used to compare the old speed with itself, so the body never moved) */
     this.stuck = flooded ? this.stuck + h : 0;
     this.read(); this.collide();
+    const du = (this.u - u) / h; this.axL += (clamp(du, -14, 14) - this.axL) * Math.min(1, h * 6);                       // longitudinal acceleration, smoothed
+    this.dPitch += (clamp(this.axL, -12, 12) * (this.axL < 0 ? 0.013 : 0.02) * p.cg - this.dPitch) * Math.min(1, h * 7);                          // nose dips under braking, squats under power
+    this.dRoll += (-clamp(this.ay, -12, 12) * 0.022 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);   // body leans in corners (a bike leans by its own model)
     if (this.u > Math.max(top * 1.08, 1)) { const lv = b.linvel(), k = Math.max(top * 1.08, this.u - 6 * h) / this.u; b.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); }          // hard speed ceiling (a buff's extra speed bleeds off)
   }
 

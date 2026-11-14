@@ -10,7 +10,10 @@ function tex(name, srgb = true) {
   const t = loader.load(`assets/ground/${name}.jpg`); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
-export function makeGroundMaterial() {
+/* level 'full': two grass scales plus a macro sample, triplanar cliffs (about a dozen texture reads per pixel).
+   level 'lite': one grass read, one rock read, one sand and one snow read: about 40% of the cost, for medium devices. */
+export function makeGroundMaterial(level = 'full') {
+  const lite = level === 'lite';
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.35 });
   const uniforms = {
     tGrass: { value: tex('grass_color') }, tRock: { value: tex('rock_color') }, tSnow: { value: tex('snow_color') }, tSand: { value: tex('sand_color') },
@@ -28,12 +31,12 @@ vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y 
 {
   vec3 vc = vColor.rgb; float lum = dot(vc, vec3(0.3, 0.59, 0.11)); vec3 n = normalize(vWN);
   float slope = 1.0 - n.y, rockW = smoothstep(0.30, 0.52, slope), sandW = 1.0 - smoothstep(uSea + 1.6, uSea + 4.5, vWP.y), snowW = smoothstep(1.08, 1.4, lum) * (1.0 - rockW * 0.6);
-  vec3 grass = texture2D(tGrass, vWP.xz / 2.0).rgb * 0.5 + texture2D(tGrass, vWP.xz / 8.0).rgb * 0.5; float gl = dot(grass, vec3(0.3, 0.59, 0.11)); grass *= pow(clamp(gl / 0.27, 0.25, 2.2), 0.9);       // finer grain, more contrast
-  float macro = dot(texture2D(tGrass, vWP.xz / 64.0).rgb, vec3(0.33)) / 0.27;
+  ${lite ? 'vec3 grass = texture2D(tGrass, vWP.xz / 2.0).rgb * 0.8; float macro = 1.0;' : `vec3 grass = texture2D(tGrass, vWP.xz / 2.0).rgb * 0.5 + texture2D(tGrass, vWP.xz / 8.0).rgb * 0.5; float gl = dot(grass, vec3(0.3, 0.59, 0.11)); grass *= pow(clamp(gl / 0.27, 0.25, 2.2), 0.9);       // finer grain, more contrast
+  float macro = dot(texture2D(tGrass, vWP.xz / 64.0).rgb, vec3(0.33)) / 0.27;`}
   vec3 tint = clamp(vc / 0.62, 0.35, 1.6);
   vec3 g = grass * mix(vec3(1.0), tint, 0.75) * mix(1.0, macro, 0.45) * 2.5;
   vec3 sand = texture2D(tSand, vWP.xz / 8.0).rgb * mix(vec3(1.0), tint, 0.4) * 1.15;
-  vec3 rock = triRock(vWP, n) * mix(vec3(1.0), tint, 0.3) * 1.7;
+  vec3 rock = ${lite ? 'texture2D(tRock, vec2(vWP.x + vWP.z * 0.7, vWP.y) / 8.0).rgb' : 'triRock(vWP, n)'} * mix(vec3(1.0), tint, 0.3) * 1.7;
   vec3 snow = texture2D(tSnow, vWP.xz / 8.0).rgb * 0.95;
   vec3 a = mix(g, sand, sandW); a = mix(a, rock, rockW); a = mix(a, snow, snowW);
   diffuseColor.rgb = a;
