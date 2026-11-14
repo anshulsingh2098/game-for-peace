@@ -13,7 +13,7 @@ The project is in the middle of an engine rebuild, so there are two entry pages.
 | Page | What it is | Code |
 |---|---|---|
 | `index.html` | **The current game.** One endless road with land shaped around it; the car is held to a 9 m strip. Menu, garage, paint, settings, weather, day and night, engine sounds, radio. This is what is live. | `index.html`, `game.js`, `audio.js` |
-| `next.html` | **The new engine.** An open world generated terrain-first, a road routed through it, scenery, and free-roam driving. Still a preview: no menu, sky, weather or sound yet. | `src/`, `vendor/three/` |
+| `next.html` | **The new engine.** An open world generated terrain-first, a road routed through it, scenery, free-roam driving, weather, time of day and engine sound. Still a preview: no menu, garage, paint or radio yet. | `src/`, `vendor/three/` |
 
 When the new engine can do everything the current game does, `index.html` switches to it and `game.js` is retired.
 
@@ -52,6 +52,8 @@ node tools/selftest.mjs
 | `vehicle/defs.js` | Car, truck and bike: stats and body measurements |
 | `vehicle/vehicle.js` | Model loading, wheels, cockpit, chase and driver cameras |
 | `input/controls.js` | Keyboard, touch pads and gamepad as one input |
+| `env/environment.js` | Sky dome, sun, clouds, stars, lights, fog, time of day, weather, rain, snow, lightning, wet roads |
+| `audio/engine.js` | Synthesised engine, wind, gravel, rain and thunder sounds |
 | `debug/flycam.js`, `stats.js` | Free camera and stats panel |
 
 Other folders: `vendor/three/` (three.js 0.160.0, local copy), `tools/` (dev server, self-test, Cloudflare staging script), `assets/` (vehicle models), `dev/` (Blender scripts that build the models, old patch scripts), `cloudflare/` (deploy folder), `music/` (radio playlist; song files are not in git).
@@ -63,7 +65,7 @@ Other folders: `vendor/three/` (three.js 0.160.0, local copy), `tools/` (dev ser
 | 0 | Groundwork: local three.js, dev server, self-test, staging script | Done |
 | 1 | Terrain engine: noise, config, tiles with levels of detail, floating origin | Done |
 | 2 | Road routing and grading, road mesh, scenery, water | Done |
-| 3 | Free-roam driving, then sky, weather, time, lights, sound, and the switch-over of `index.html` | Driving done; the rest in progress |
+| 3 | Free-roam driving, sky, weather, time, lights, sound, then menus and the switch-over of `index.html` | Driving, sky, weather, lights and engine sound done; buffs, paint, radio, menus and the switch-over remain |
 | 4 | Locations: California Coast, Mumbai (Marine Drive, Gateway of India, Taj Mahal Palace hotel), Delhi (India Gate), Agra (Taj Mahal), Himalayas, southern coast, Alps | Not started |
 | 5 | Road styles: multi-lane highway, boulevard, dirt trail, gravel stage; bridges and tunnels | Not started |
 | 6 | Real drivetrain with manual gears, new vehicles (sports car, rally hatchback), tuning, customisation, controller rumble | Models drafted by another session, not integrated |

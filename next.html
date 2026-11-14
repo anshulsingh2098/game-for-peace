@@ -31,6 +31,9 @@
   #spd { font-size: 34px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; min-width: 2.2ch; text-align: right; }
   #unit { color: #b9c3d3; font-size: 12px; }
   #surface { color: var(--accent); font-size: 12px; font-weight: 600; margin-left: 6px; }
+  #sky { color: #b9c3d3; font-size: 12px; margin-left: 6px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; color: #b9c3d3; }
+  select { background: #1a2130; border: 1px solid rgba(255, 255, 255, .18); border-radius: 6px; color: #eef2f8; padding: 5px 6px; font: inherit; }
   body:not([data-mode=drive]) #hud, body:not([data-mode=drive]) #pads { display: none; }
 
   /* touch pads (phones and tablets) */
@@ -55,13 +58,15 @@
 
 <details class="panel" id="info">
   <summary>World</summary>
-  <p>New engine preview: generated land, a routed road and free-roam driving. Sky, weather and sound come next.</p>
+  <p>New engine preview: generated land, a routed road, free-roam driving, weather and time of day.</p>
   <form id="seedForm">
     <input id="seed" aria-label="World seed" autocomplete="off" spellcheck="false" maxlength="40">
     <button type="submit">Go</button>
     <button type="button" id="newSeed">New world</button>
   </form>
-  <div class="keys">Arrows or W A S D drive · C camera · B back to the road · F free camera · T ride along the road · R new world · H hide panels</div>
+  <div class="row"><label>Time <select id="time"><option value="dawn">Dawn</option><option value="day">Day</option><option value="dusk">Dusk</option><option value="night">Night</option><option value="auto">Cycle</option></select></label>
+    <label>Weather <select id="weather"><option value="clear">Clear</option><option value="overcast">Overcast</option><option value="fog">Fog</option><option value="rain">Rain</option><option value="storm">Storm</option><option value="snow">Snow</option><option value="auto">Changing</option></select></label></div>
+  <div class="keys">Arrows or W A S D drive · C camera · B back to the road · L headlights · M sound · F free camera · T ride along the road · R new world · H hide panels</div>
 </details>
 
 <nav class="panel" id="bar" aria-label="Vehicle and view">
@@ -72,7 +77,7 @@
   <button type="button" id="ride" title="Ride along the road (T)">Ride</button>
 </nav>
 
-<section class="panel" id="hud" aria-label="Speed"><b id="spd">0</b><span id="unit">km/h</span><span id="surface">Road</span></section>
+<section class="panel" id="hud" aria-label="Speed"><b id="spd">0</b><span id="unit">km/h</span><span id="surface">Road</span><span id="sky"></span></section>
 <div id="pads" aria-label="Touch controls">
   <div><span class="pad" data-k="left" role="button" aria-label="Steer left">◀</span><span class="pad" data-k="right" role="button" aria-label="Steer right">▶</span></div>
   <div><span class="pad" data-k="down" role="button" aria-label="Brake and reverse">▼</span><span class="pad" data-k="up" role="button" aria-label="Accelerate">▲</span></div>

@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const loader = new GLTFLoader(), cache = new Map();
+const loader = new GLTFLoader(), cache = new Map(); let glowTex = null;
 export function loadModel(def) {
   if (!cache.has(def.id)) cache.set(def.id, new Promise((ok, no) => loader.load(def.file, g => ok(g.scene), undefined, no)));
   return cache.get(def.id);
@@ -27,7 +27,7 @@ export class VehicleView {
       if (/^Rider/.test(o.name)) this.riders.push(o);
       if (o.isMesh) [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; });
     });
-    this.buildCockpit(def.id); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
+    this.buildCockpit(def.id); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
   }
   /* dashboard and steering wheel for the driver view (the models have no interior) */
   buildCockpit(id) {
@@ -42,6 +42,24 @@ export class VehicleView {
     for (const [w, h] of [[R * 1.9, R * 0.16], [R * 0.16, R * 0.95]]) { const sp = new THREE.Mesh(new THREE.BoxGeometry(w, h, R * 0.1), mid); if (h > w) sp.position.y = -R * 0.47; inner.add(sp); }
     inner.add(new THREE.Mesh(new THREE.CylinderGeometry(R * 0.3, R * 0.3, R * 0.2, 12).rotateX(Math.PI / 2), dark));
     g.add(sw); this.model.add(g); this.cockpit = g; this.wheel = inner;
+  }
+  /* glow sprites at the lamps, the lamp materials, and a headlight beam */
+  buildLights(L) {
+    if (!glowTex) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 1, 32, 32, 32);
+      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); glowTex = new THREE.CanvasTexture(c); }
+    this.glows = []; this.tailMats = []; this.headMats = []; this.beamOn = 0;
+    const mk = (pos, col, size, kind) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false, opacity: 0 }));
+      sp.position.set(...pos); sp.scale.setScalar(size); this.model.add(sp); this.glows.push({ sp, kind }); };
+    for (const p of L.tail) mk(p, 0xff2a14, L.tailSize, 'tail'); for (const p of L.head) mk(p, 0xfff0d0, L.headSize, 'head');
+    this.model.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { if (m.name === 'Light_Tail' && !this.tailMats.includes(m)) this.tailMats.push(m); if (m.name === 'Light_Head' && !this.headMats.includes(m)) this.headMats.push(m); }); });
+    this.beam = new THREE.SpotLight(0xfff1d6, 0, 90, 0.5, 0.65, 1.2); this.beam.position.set(0, L.beam[0], L.beam[1]); this.beam.target.position.set(0, 0.1, L.beam[1] + 25); this.model.add(this.beam, this.beam.target);
+  }
+  /* lamps: on = headlights, brake = brake lights, reverse = white reversing lights */
+  lights(on, brake, reverse, dt) {
+    if (!this.glows) return;
+    for (const m of this.tailMats) m.emissiveIntensity = brake ? 8 : on ? 3 : 1.5; for (const m of this.headMats) m.emissiveIntensity = on ? 4 : 0.6;
+    for (const g of this.glows) { if (g.kind === 'tail') g.sp.material.color.setHex(reverse ? 0xffffff : 0xff2a14); g.sp.material.opacity = g.kind === 'tail' ? (reverse ? 0.95 : brake ? 1 : on ? 0.7 : 0.18) : (on ? 0.9 : 0.1); g.sp.visible = this.view !== 'first'; }
+    this.beamOn += ((on ? 1 : 0) - this.beamOn) * Math.min(1, dt * 4); this.beam.intensity = 260 * this.beamOn; this.beam.visible = this.beamOn > 0.02;
   }
   /* 'third' = chase camera, 'first' = driver's eyes */
   setView(v) {

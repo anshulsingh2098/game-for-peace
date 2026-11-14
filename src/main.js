@@ -1,7 +1,7 @@
 /* Entry point of the new engine (next.html). Phase 3: drive anywhere in the generated world.
    Address options: ?seed=word  ?q=low|med|high  ?c=<share code>  ?debug (stats panel)
-   Keys: arrows / W A S D drive, C camera, B back to the road, F free-fly camera, T ride along the road,
-         R new world, G wireframe, H hide panels. */
+   Keys: arrows / W A S D drive, C camera, B back to the road, L headlights, M sound, F free-fly camera,
+         T ride along the road, R new world, G wireframe, H hide panels. */
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { makeConfig, decodeConfig, encodeConfig, VIEW_PRESETS } from './core/config.js';
@@ -17,6 +17,8 @@ import { VEHICLES } from './vehicle/defs.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from './vehicle/physics.js';
 import { VehicleView, loadModel } from './vehicle/vehicle.js';
 import { Controls } from './input/controls.js';
+import { Environment } from './env/environment.js';
+import { Sound } from './audio/engine.js';
 import { FlyCam } from './debug/flycam.js';
 import { statsPanel } from './debug/stats.js';
 
@@ -31,10 +33,12 @@ const canvas = $('#view'), renderer = new THREE.WebGLRenderer({ canvas, antialia
 renderer.setPixelRatio(Math.min(devicePixelRatio, phone ? 1 : 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.25; renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(58, 1, 0.3, 14000);
-const SKY = 0xcfe6ff; scene.background = new THREE.Color(SKY); scene.fog = new THREE.Fog(SKY, 150, 900);
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;      // soft reflections until the real sky arrives
-const hemi = new THREE.HemisphereLight(0xcfe2ff, 0x7d7a6a, 1.15), sun = new THREE.DirectionalLight(0xfff2dc, 3.2);
-sun.position.set(-0.30, 0.85, -0.45).multiplyScalar(500); scene.add(hemi, sun);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;      // first-frame reflections; the sky replaces them
+const env = new Environment(renderer, scene); let reach = 900;
+/* saved choices for this preview */
+const saved = (() => { try { return JSON.parse(localStorage.getItem('gfp-next') || '{}'); } catch (e) { return {}; } })();
+const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, ...saved }, save = () => { try { localStorage.setItem('gfp-next', JSON.stringify(S)); } catch (e) { /* storage unavailable */ } };
+env.setTime(S.time); env.setWeather(S.weather);
 
 const ground = new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
 const ripples = waterNormalTex(), RIP = 0.07;
@@ -51,18 +55,23 @@ const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGr
 function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose();
   roadMesh = new RoadMesh(scene, road, TWO_LANE, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin);
+  env.attach({ ground, road: roadMesh.surface });
 }
 makeScenery();
 function applyView() {
-  const reach = (far.outer + 0.5) * far.size; scene.fog.near = reach * 0.1; scene.fog.far = reach * 0.96;
+  reach = (far.outer + 0.5) * far.size;
   water.scale.set(reach * 4, 1, reach * 4); water.position.y = terrain.seaLevel; ripples.repeat.set(reach * 4 * RIP, reach * 4 * RIP);
 }
 
 /* ---------- the vehicle ---------- */
 const cam = new FlyCam(canvas), controls = new Controls(), view = new VehicleView(scene);
-const world = { height: (x, z) => terrain.height(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => scatter.near(x, z, r), get seaLevel() { return terrain.seaLevel; } };
-let mode = 'drive', vehicle = 0, phys = null, rideYaw = 0, auto = null;      // mode: 'drive', 'fly' (free camera) or 'ride' (camera glides along the road)
-try { vehicle = Math.max(0, Math.min(VEHICLES.length - 1, +(localStorage.getItem('gfp-next-vehicle') || 0))); } catch (e) { /* storage unavailable */ }
+const world = { height: (x, z) => terrain.height(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => scatter.near(x, z, r), get seaLevel() { return terrain.seaLevel; },
+  grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
+const sound = new Sound();
+const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, unlockAudio, { passive: true });
+document.addEventListener('visibilitychange', () => { if (!sound.ctx) return; if (document.hidden) sound.ctx.suspend(); else sound.resume(); });
+let mode = 'drive', vehicle = Math.max(0, Math.min(VEHICLES.length - 1, S.vehicle | 0)), phys = null, rideYaw = 0, auto = null, input = { steer: 0, throttle: 0, brake: 0 };      // mode: 'drive', 'fly' (free camera) or 'ride' (camera glides along the road)
 /* put the vehicle in the left lane at road distance s, facing along the road */
 function placeOnRoad(s) { const p = road.at(s, {}); phys.reset(p.x + p.tz * 2, p.z - p.tx * 2, p.th); view.camYaw = null; }
 async function setVehicle(i) {
@@ -70,14 +79,14 @@ async function setVehicle(i) {
   phys = new VehiclePhysics(vehicleParams(def.body, def.stats), world);
   if (old) { phys.reset(old.x, old.z, old.yaw); } else placeOnRoad(0);
   view.setModel(def, model); $$('#vehicles button').forEach((b, k) => b.classList.toggle('on', k === i)); document.documentElement.style.setProperty('--accent', def.color);
-  try { localStorage.setItem('gfp-next-vehicle', i); } catch (e) { /* storage unavailable */ }
+  S.vehicle = i; save(); if (sound.ctx) sound.setVehicle(def.id);
 }
 function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 function setMode(m) {
   if (m === 'fly' && phys) { cam.x = phys.x - Math.cos(phys.yaw) * 14; cam.z = phys.z - Math.sin(phys.yaw) * 14; cam.y = phys.y + 7; cam.yaw = -Math.PI / 2 - phys.yaw; cam.pitch = -0.25; }
   if (m === 'ride') { roadS = road.closestS(phys ? phys.x : cam.x, phys ? phys.z : cam.z, roadS); rideYaw = phys ? -Math.PI / 2 - phys.yaw : cam.yaw; cam.speed = Math.min(cam.speed, 40); }
   if (m === 'drive' && mode === 'ride' && phys) placeOnRoad(roadS);
-  mode = m; controls.enabled = m === 'drive'; document.body.dataset.mode = m; view.root.visible = m !== 'ride';
+  mode = m; controls.enabled = m === 'drive'; document.body.dataset.mode = m; view.root.visible = m !== 'ride'; sound.setEngineOn(m === 'drive');
   $('#fly').classList.toggle('on', m === 'fly'); $('#ride').classList.toggle('on', m === 'ride');
 }
 function regenerate(seed) {
@@ -97,12 +106,19 @@ $('#viewBtn').addEventListener('click', toggleView); $('#reset').addEventListene
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
 controls.on('view', toggleView); controls.on('reset', backToRoad); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
+$('#time').value = S.time; $('#weather').value = S.weather;
+$('#time').addEventListener('change', e => { S.time = e.target.value; save(); env.setTime(S.time); e.target.blur(); });
+$('#weather').addEventListener('change', e => { S.weather = e.target.value; save(); env.setWeather(S.weather); e.target.blur(); });
+const cycleLights = () => { const o = ['auto', 'on', 'off']; S.lights = o[(o.indexOf(S.lights) + 1) % 3]; save(); toast('Headlights: ' + S.lights); };
+const toggleMute = () => { S.muted = !S.muted; save(); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } toast(S.muted ? 'Sound off' : 'Sound on'); };
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'KeyR') regenerate(randomSeed());
   if (e.code === 'KeyT') setMode(mode === 'ride' ? 'drive' : 'ride');
   if (e.code === 'KeyG') ground.wireframe = !ground.wireframe;
   if (e.code === 'KeyH') document.body.classList.toggle('bare');
+  if (e.code === 'KeyL') cycleLights();
+  if (e.code === 'KeyM') toggleMute();
 });
 function resize() { const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -115,7 +131,7 @@ const stats = statsPanel($('#stats'), renderer, () => {
     'origin      ' + grid.origin.x + ', ' + grid.origin.z + '   mode ' + mode,
     phys ? 'vehicle     u ' + phys.u.toFixed(1) + '  v ' + phys.v.toFixed(2) + '  r ' + phys.r.toFixed(2) + '  slip ' + phys.slip.toFixed(2) + '  ' + phys.surface : '', 'seed        ' + config.seed + '   quality ' + quality];
 });
-const hud = { spd: $('#spd'), unit: $('#unit'), surf: $('#surface') }; let hudT = 0;
+const hud = { spd: $('#spd'), unit: $('#unit'), surf: $('#surface'), sky: $('#sky') }; let hudT = 0;
 
 /* ---------- one frame of the world: move, keep road and tiles built around the player, draw ---------- */
 const rp = {}; let last = performance.now();
@@ -123,7 +139,7 @@ function frame(now) { requestAnimationFrame(frame); step(Math.min(0.05, (now - l
 function step(dt, now) {
   WIND.t.value = now / 1000; let px, pz;
   if (mode === 'drive' && phys) {
-    phys.step(dt, auto || controls.read());
+    input = auto || controls.read(); phys.step(dt, input);
     if (phys.stuck > 1.5) backToRoad();
     px = phys.x; pz = phys.z; roadS = road.closestS(px, pz, roadS);
   } else if (mode === 'ride') {
@@ -137,16 +153,20 @@ function step(dt, now) {
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
   if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz);
-  if (phys) view.update(phys, grid.origin);
+  if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
+    view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && input.brake > 0.1 && phys.u > 1, drive && phys.u < -0.3, dt); }
   if (mode === 'drive' && phys) view.aim(camera, phys, grid.origin, dt, (x, z) => Math.max(terrain.seaLevel, terrain.height(x, z)));
   else { cam.apply(camera, grid.origin); camera.fov = 58; camera.updateProjectionMatrix(); }
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   ripples.offset.set(((camera.position.x + grid.origin.x) * RIP + now * 0.000011) % 1, (-(camera.position.z + grid.origin.z) * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
+  env.update(dt, now, camera, reach);
+  if (mode === 'drive' && phys && sound.ctx) sound.update({ v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: false,
+    id: VEHICLES[vehicle].id, brake: input.brake > 0.1 && phys.u > 1, off: phys.surface !== 'asphalt', view: view.view });
   renderer.render(scene, camera); stats(now);
-  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; }
+  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label; }
 }
 setVehicle(vehicle).then(() => { setMode('drive'); requestAnimationFrame(frame); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); });
 
 window.__next = { get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
-  setMode, setVehicle, backToRoad, placeOnRoad, view, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
+  setMode, setVehicle, backToRoad, placeOnRoad, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };

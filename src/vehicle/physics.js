@@ -5,7 +5,7 @@
      u, v      speed forward and sideways (to the right), m/s      r   yaw rate
      y, pitch, roll    taken from the ground under the wheels
    The world object supplies height(x, z), surface(x, z) -> a key of SURFACES, near(x, z, radius) -> lists of
-   collision circles {x, z, r}, and seaLevel. */
+   collision circles {x, z, r}, seaLevel, and optionally grip(surface) -> a 0..1 factor for the weather. */
 
 export const SURFACES = {
   asphalt: { name: 'Road',   grip: 1.00, drag: 0.012 },
@@ -60,7 +60,7 @@ export class VehiclePhysics {
     this.ground(Math.min(1, h * 14));
     const key = W.surface(this.x, this.z); this.surface = key; const S = SURFACES[key] || SURFACES.grass;
     const depth = W.seaLevel - this.groundY; this.wet = depth > 0 ? depth : 0;
-    const mu = p.mu * S.grip * (depth > 0.3 ? 0.6 : 1), N = m * G * Math.cos(this.gPitch);
+    const mu = p.mu * S.grip * (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(key) : 1) /* weather on the tyres; 1 when dry */, N = m * G * Math.cos(this.gPitch);
 
     /* forward force: engine, brakes, reverse */
     let Fx = 0; const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), flooded = depth > 1.1;
