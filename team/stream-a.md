@@ -12,6 +12,7 @@ Status: open
 Branch: feat/nfs-handling
 What changed: `src/vehicle/rapier-vehicle.js`: new `ARCADE` constants and an `arcade()` step after the tyres: sideways speed is killed faster (planted grip), throttle plus hard steering above 14 m/s lets the tail step out (power slide), the handbrake gives a drift that holds, and the car is pulled toward the yaw rate the steering asks for (crisp turn-in). Off with `?arcade=0`. Not for the bike. Original code, not ported from any other game. Measured at 82 km/h with the handbrake held for 1 s: before, slip 1.47 and the car stopped dead; now slip 0.51 and it keeps 66 km/h.
 For the other stream (Anshul): the constants are plain numbers at the top of the file; please move them into the tuner (`core/tuning.js`, `tuning-docs.js`) and tune by feel on the car and the truck. The truck has not been tried.
+Second pass (after Rajul said it felt nothing like Most Wanted): the car was slow (0-100 km/h in 6.2 s, 140 km/h after 12 s). `ARCADE.power/curve/aero/brake/grip` now give a hard launch and a long pull (0-100 in about 3.7 s), harder brakes (x1.35) and more grip (x1.12); the car's Afterburn is stronger (accel x2.1, 5 s, 9 s cooldown, `defs.js`). All are numbers in `ARCADE` for the tuner.
 Status: open
 
 ## 2026-11-14 19:00  Far rocks are cheap now (N3/N4 speed)

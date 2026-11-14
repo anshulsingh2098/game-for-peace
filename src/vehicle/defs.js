@@ -7,7 +7,7 @@ export const VEHICLES = [
     body: { mass: 1350, front: 1.62, rear: 1.34, track: 1.64, wheelR: 0.35, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 9, aero: 0.25, lean: 0.06, cg: 0.5, radius: 0.95, circles: [1.5, 0, -1.4] },
     cam: { back: 7.5, up: 3.0, look: 2.5 }, eye: [-0.32, 1.22, 0.14], shadow: [3.4, 6],
     lights: { tail: [[-0.68, 0.84, -2.27], [0.68, 0.84, -2.27]], head: [[-0.66, 0.74, 2.14], [0.66, 0.74, 2.14]], tailSize: 0.8, headSize: 1.1, beam: [0.7, 2.3] },
-    buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 4, cooldown: 14, mod: { top: 1.3, accel: 1.6 } },
+    buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 5, cooldown: 9, mod: { top: 1.25, accel: 2.1 } },
     paint: { label: 'Stripe', mask: 'assets/car_01_livery_mask.png', colors: ['#2846a4', '#d62828', '#f08a24', '#2a9d5b', '#16181d', '#f2f2f2'] } },
   { id: 'truck', file: 'assets/truck_01.glb', name: 'Freight Hauler', tag: 'Heavy', color: '#ff9a3d',
     desc: 'A big rig. Steady, planted and calm.',

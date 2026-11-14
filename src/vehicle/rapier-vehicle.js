@@ -26,7 +26,8 @@ const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
    latHand   grip left while the handbrake is held: the car slides and keeps sliding
    yawAssist how hard the car is pulled toward the yaw rate the steering asks for (1/s): crisp turn-in, and it holds a drift
    maxYaw    the fastest turn rate (rad/s) the assist asks for.  Off with ?arcade=0 */
-export const ARCADE = { on: !/[?&]arcade=0/.test(typeof location !== 'undefined' ? location.search : ''), latGrip: 2.6, latPower: 0.3, latHand: 0.12, slideSpeed: 14, yawAssist: 3.2, maxYaw: 1.7 };
+export const ARCADE = { on: !/[?&]arcade=0/.test(typeof location !== 'undefined' ? location.search : ''), latGrip: 2.6, latPower: 0.3, latHand: 0.12, slideSpeed: 14, yawAssist: 3.2, maxYaw: 1.7,
+  power: { car: 1.45, truck: 1.3, bike: 1.2 }, curve: 3, aero: 0.55, brake: 1.35, grip: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* per-vehicle suspension and body tuning (stiffness is per unit mass, so it reads as a natural frequency) */
@@ -159,9 +160,9 @@ export class RapierVehicle {
 
     /* forces on the wheels. Four separate controls: throttle, reverse, the foot brake (never reverses) and the handbrake (rear wheels only). */
     let engine = 0, brake = 0, rearBrake = 0, coast = false;
-    if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = m * p.accel * M.accel * thr * Math.max(0, 1 - (u / top) ** 2); }                    // gas while rolling backwards brakes first
+    if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = m * p.accel * M.accel * (ARCADE.on ? ARCADE.power[this.id] || 1 : 1) * thr * Math.max(0, 1 - (Math.abs(u) / top) ** (ARCADE.on ? ARCADE.curve : 2)); }                    // gas while rolling backwards brakes first
     else if (rev > 0) { if (u > 1.2) brake = m * p.brake * 0.9 * rev; else if (!flooded) engine = -m * p.revAccel * 1.35 * rev * Math.max(0, 1 - (u / p.revTop) ** 2); }   // reverse: brakes while still rolling forward, then drives backwards
-    if (brk > 0) brake = Math.max(brake, m * p.brake * brk);                                                  // foot brake: all four wheels
+    if (brk > 0) brake = Math.max(brake, m * p.brake * (ARCADE.on ? ARCADE.brake : 1) * brk);                                                  // foot brake: all four wheels
     if (hnd > 0) rearBrake = m * p.brake * 1.0 * hnd;                                                         // handbrake: the rear wheels lock
     if (thr === 0 && rev === 0 && brk === 0 && hnd === 0) {
       if (Math.abs(u) < 0.25) brake = m * G * 0.9;                                                            // parked: hold still, even on a slope
@@ -172,7 +173,7 @@ export class RapierVehicle {
     car.wheels.forEach((w, i) => {
       const pos = vc.wheelContactPoint(i), wx = pos ? pos.x + this.ox : this.x, wz = pos ? pos.z + this.oz : this.z, S = SURFACES[W.surface(wx, wz)] || S0;
       const wet = (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(W.surface(wx, wz)) : 1);
-      vc.setWheelFrictionSlip(i, p.mu * S.grip * wet * M.grip * (!w.front && hnd > 0 ? 1 - 0.5 * hnd : 1));      // a locked rear wheel slides: the tail steps out
+      vc.setWheelFrictionSlip(i, p.mu * (ARCADE.on ? ARCADE.grip : 1) * S.grip * wet * M.grip * (!w.front && hnd > 0 ? 1 - 0.5 * hnd : 1));      // a locked rear wheel slides: the tail steps out
       let a = 0; if (w.front) a = w.side === 0 ? this.delta : Math.atan(p.L / (R + w.side * p.track / 2));       // Ackermann: the inner wheel turns more
       vc.setWheelSteering(i, w.front ? -a : 0);
       vc.setWheelEngineForce(i, w.drive ? engine / nDrive : 0);
@@ -180,7 +181,7 @@ export class RapierVehicle {
     });
     /* rolling resistance by surface, water drag, air drag, and what a buff changes about slopes */
     const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
-    const roll = -m * G * (S0.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(u / 0.5, -1, 1), air = -p.aero * u * Math.abs(u);
+    const roll = -m * G * (S0.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(u / 0.5, -1, 1), air = -p.aero * (ARCADE.on ? ARCADE.aero : 1) * u * Math.abs(u);
     let F = roll + air; const fwd = { x: c, z: s };
     if (coast) F -= Math.sign(u) * m * (0.30 + 0.008 * Math.abs(u)) * clamp(Math.abs(u) / 0.5, 0, 1);                  // engine braking: not limited by tyre grip, so the car slows on grass as well as on tarmac
     if (M.slope < 1) F += m * G * Math.sin(this.pitch) * (1 - M.slope);                                           // Hill Hauler: climbs as if the slope were not there
