@@ -37,6 +37,23 @@ Tuner: all handling numbers are now live in the tuner under "handling" (`ARCADE`
 Downforce added (`ARCADE.downforce`, tuner "handling"): the car is pressed into the road with 0.5 x 1.2 x ClA x speed squared, so grip rises with speed. At 211 km/h, peak cornering goes from 1.04 g to 1.13 g (+9%). Straight-line numbers unchanged.
 Tyre model (Pacejka Magic Formula, standard published curve): `tyres()` in `rapier-vehicle.js` replaces Rapier's hard-cap side friction on the car (above 2.5 to 6.5 m/s the wheel's side friction stiffness is faded to 0). Each wheel gets a slip angle, a sideways force = mu x load x MF(slip angle) applied at its contact patch, and grip falls past the peak, so the car breaks away progressively. Settings in the tuner under "handling": tyreB, tyreC, tyreE, lockGrip (handbrake), tyreAssist (how much of the turn-in help stays on; was 1, now 0.3 with the tyre model). Checked: load sums to the car's weight; front and rear slip angles agree in a steady turn; straight at 270 km/h with 0.00 m drift (the old model drifted 3.5 m); body slip grows smoothly 0.01 to 0.09 as steering rises (old: nothing, then a snap); handbrake now steps the tail out. Toggle `ARCADE.tyre` off to get the old behaviour. Car only; truck and bike unchanged.
 Status: open
+## 2026-11-15 12:00  Mountain roads fixed: grade now stays at 11-14% (N3)
+Branch: feat/n3-router-grade
+What changed: `src/world/locations.js`: the Alps and Himalayas set `maxCut: 1000` (never fall back to the steep stretch; tunnels and cuts absorb the height instead) and `hardGrade: 0.11`. Before: 7-24% (Alps) and 10-21% (Himalayas) of the road was over the hard limit, peaking near 21%. After: about 2% over, peak 14.4% (11.6% on one seed). Cost: more of the road is tunnel (Alps up to 35%, Himalayas up to 37% on one seed, 0-18% on the others). Checked by eye: the Himalayas road climbs a valley with a cut bank, and a 43 m cut turns into a tunnel. Re-run `node tools/locations_check.mjs` to see the numbers.
+For the other stream: nothing. Driving physics on 11-14% grades is worth a test with the car, truck and bike (the truck may struggle).
+## 2026-11-15 11:00  Mountain roads are too steep (open, N3)
+Branch: feat/n3-grade-check
+What changed: `tools/locations_check.mjs` now also prints the share of the road above the hard grade limit. Finding: Alps 7-24% and Himalayas 10-21% of the road is over the hard limit (14-15%), peaking near 21%; Mumbai 0%, default 3.7%. Allowing deeper cuts and a lower fallback grade (`maxCut`, `lastGrade`) helped some seeds and made others worse (Himalayas coast 21% to 47%), so I kept the config as it was. The cause is the route choice in `router.js`, not the limits. Next: make the router prefer gentler lines in the mountains (switchbacks) and re-measure with this check.
+For the other stream: nothing. Expect the climb to feel steep in the Alps and Himalayas until this is fixed.
+Status: open
+## 2026-11-15 10:00  Marine Drive fixed and placed near the start (N3)
+Branch: feat/n3-marine-drive
+What changed: `src/world/landmarks.js`: the Marine Drive strip was never rotated into its own frame, so the sea wall, lamps and tetrapods drifted 100+ m off the road; fixed. It now carves its own bay in front of the sea wall, and the sea-side parts sit 7 m further from the road. Landmark search now prefers spots near the requested distance (Mumbai's three landmarks were 1.1 km behind the start). `src/world/locations.js`: Marine Drive no longer needs natural sea and starts the search at s=250.
+## 2026-11-14 20:00  Coarser outer terrain ring on med and high (speed)
+Branch: feat/n3-terrain-lod
+What changed: `src/core/config.js` (shared): the med and high tiers get one more, coarser terrain ring (8 cells per tile at the far edge). Medium: 310k to 282k triangles per frame (-9%), same scene. Not checked by eye on hills; look at distant ridges in the Alps and Himalayas.
+For the other stream: nothing.
+Status: done
 
 ## 2026-11-14 19:00  Far rocks are cheap now (N3/N4 speed)
 Branch: feat/n3-world-polish
