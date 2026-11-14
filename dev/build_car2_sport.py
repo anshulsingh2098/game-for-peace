@@ -49,7 +49,11 @@ for sx in (-1, 1):
     ck.mirror(sx, 0.92, -0.78, 0.88, 'paint')
     xh = surf.x(sx, -0.10, 0.62); add('box', f'Handle_{sx}', (xh + sx * 0.012, -0.12, 0.64), (0.025, 0.16, 0.03), 'chrome', bevel=0.006)
     xi = surf.x(sx, -2.0, 0.50); add('box', f'Indicator_{sx}', (xi + sx * 0.004, -1.98, 0.50), (0.012, 0.09, 0.03), 'amber')
-    add('box', f'SideSkirt_{sx}', (sx * 0.935, -0.3, 0.19), (0.05, 2.1, 0.06), 'carbon', bevel=0.015)
+    xk = surf.x(sx, -0.3, 0.22); add('box', f'SideSkirt_{sx}', (xk - sx * 0.012, -0.3, 0.21), (0.06, 2.0, 0.09), 'carbon', bevel=0.02)
+    for dy in (-0.62, 0.42):                                                # door shut lines and a shoulder crease
+        xx = surf.x(sx, dy, 0.50); add('box', f'DoorLine_{sx}_{dy}', (xx + sx * 0.003, dy, 0.50), (0.012, 0.012, 0.52), 'trim')
+    xx = surf.x(sx, -0.1, 0.30); add('box', f'DoorSill_{sx}', (xx + sx * 0.003, -0.1, 0.30), (0.012, 1.04, 0.012), 'trim')
+    xc = surf.x(sx, 0.0, 0.76); add('box', f'Crease_{sx}', (xc + sx * 0.002, 0.2, 0.76), (0.010, 2.3, 0.010), 'chrome')
 add('box', 'Splitter', (0, -2.15, 0.17), (1.76, 0.24, 0.025), 'carbon', bevel=0.008)
 ck.plate('PlateF', 0, surf.y(0, 0.27) - 0.018, 0.27)
 add('box', 'FrontLip', (0, surf.y(0, 0.36) - 0.01, 0.36), (0.70, 0.05, 0.05), 'trim', bevel=0.015)

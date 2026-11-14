@@ -244,10 +244,10 @@ def arches(body, positions, radius, width, trim_key='trim'):
         apply_mod(body, bm); bpy.data.objects.remove(cut)
     for sx, wy, wz in positions:                                                  # liner: a half barrel behind the opening, open at the bottom
         o = lathe('Liner', [(radius - 0.015, -width * 0.30), (radius - 0.015, width * 0.30)], (sx - sx * 0.0, wy, wz), (0, math.pi / 2, 0), trim_key, segs=40)
-        o.location = (sx * 0.86, wy, wz)
+        o.location = (sx * (abs(sx) * 0.0 + 0.0) + sx * 0.0 + sx * (abs(sx) and 0.86), wy, wz); bpy.context.view_layer.update()
         # remove the lower half so the wheel and ground show through
         bm = bmesh.new(); bm.from_mesh(o.data)
-        kill = [f for f in bm.faces if f.calc_center_median().z < 0.0]
+        mw = o.matrix_world; kill = [f for f in bm.faces if (mw @ f.calc_center_median()).z < wz + 0.02]   # world z: keep only the upper half of the barrel
         bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(o.data); bm.free()
 
 class Surf:

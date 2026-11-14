@@ -118,7 +118,7 @@ ck.plate('PlateF', 0, ply - 0.018, 0.27)
 
 # ---------- sides: skirts, mirrors, handles, shut lines, fuel cap ----------
 for sx in (-1, 1):
-    add('box', f'SideSkirt_{sx}', (sx * 0.915, 0.0, 0.225), (0.05, 2.30, 0.07), 'silver', bevel=0.02)
+    xk = surf.x(sx, 0.0, 0.26); add('box', f'SideSkirt_{sx}', (xk - sx * 0.012, 0.0, 0.24), (0.06, 2.20, 0.10), 'silver', bevel=0.025)
     ck.mirror(sx, 0.86, -0.50, 1.05, 'silver')
     xh = surf.x(sx, 0.55, 0.92); add('box', f'Handle_{sx}', (xh + sx * 0.012, 0.55, 0.93), (0.025, 0.17, 0.03), 'chrome', bevel=0.006)
     xh2 = surf.x(sx, 1.06, 0.92)

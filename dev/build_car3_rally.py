@@ -47,10 +47,12 @@ for sx in (-1, 1):
     xh = surf.x(sx, 0.05, 1.00); add('box', f'Handle_{sx}', (xh + sx * 0.012, -0.05, 1.02), (0.025, 0.15, 0.03), 'chrome', bevel=0.006)
     ck.mirror(sx, 0.86, -0.78, 1.14, 'accent')
     xi = surf.x(sx, -1.80, 0.76); add('box', f'Indicator_{sx}', (xi + sx * 0.004, -1.80, 0.76), (0.012, 0.09, 0.03), 'amber')
-    add('box', f'SideSkirt_{sx}', (sx * 0.85, 0.0, 0.30), (0.05, 1.7, 0.07), 'skid', bevel=0.015)
+    xk = surf.x(sx, 0.0, 0.34); add('box', f'SideSkirt_{sx}', (xk - sx * 0.012, 0.0, 0.33), (0.06, 1.7, 0.10), 'skid', bevel=0.02)
+    for dy in (-0.05, 0.62):
+        xx = surf.x(sx, dy, 0.70); add('box', f'DoorLine_{sx}_{dy}', (xx + sx * 0.003, dy, 0.68), (0.012, 0.012, 0.72), 'trim')
+    xs2 = surf.x(sx, 0.3, 0.52); add('box', f'DoorStripe_{sx}', (xs2 + sx * 0.003, 0.06, 0.52), (0.010, 1.30, 0.06), 'accent')
     for wy, tag in ((WYF, 'F'), (WYR, 'R')):                                   # arch flares and mud flaps
         xa = surf.x(sx, wy, 0.72)
-        add('box', f'Flare_{tag}_{sx}', (xa + sx * 0.004, wy, 0.78), (0.045, 0.98, 0.07), 'accent', bevel=0.02)
         add('box', f'Mudflap_{tag}_{sx}', (sx * 0.80, wy + WR + 0.115, 0.235), (0.27, 0.022, 0.31), 'flap', rot=(-0.10, 0, 0), bevel=0.006)
 gy = surf.y(0, 0.66)
 add('box', 'GrilleFrame', (0, gy - 0.008, 0.66), (0.84, 0.05, 0.19), 'trim', bevel=0.02)
@@ -69,7 +71,7 @@ rz = surf.z(0, 0.30)
 add('box', 'RoofScoop', (0, -0.05, rz + 0.04), (0.32, 0.40, 0.08), 'accent', bevel=0.03)
 add('box', 'ScoopMouth', (0, -0.245, rz + 0.04), (0.24, 0.02, 0.05), 'trim', bevel=0.008)
 sz = surf.z(0, 1.88)
-add('box', 'RoofSpoiler', (0, 1.93, sz + 0.05), (1.22, 0.20, 0.025), 'accent', rot=(0.20, 0, 0), bevel=0.01)
+add('box', 'RoofSpoiler', (0, 1.93, sz + 0.05), (1.22, 0.24, 0.04), 'accent', rot=(0.20, 0, 0), bevel=0.01)
 for sx in (-1, 1):
     ty = surf.y(sx * 0.56, 0.84, rear=True)
     add('box', f'Taillight_{sx}', (sx * 0.56, ty - 0.004, 0.84), (0.20, 0.05, 0.34), 'tail', rot=(0, 0, 0), bevel=0.02)
