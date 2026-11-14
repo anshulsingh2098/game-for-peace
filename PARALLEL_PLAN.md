@@ -50,10 +50,10 @@ Two streams. Each person owns one stream and one set of files. Claude only edits
 - Done when: each style renders on a test seed, selftest passes, locations still load.
 
 **Stream B: cleanup and drivetrain**
-- Remove the music upload from the old game (`audio.js`, `index.html`) and stop `stage_cloudflare.py` copying `music/` (shared file: announce it).
+- **Keep** the old game's local music upload (players add their own songs; files stay in their browser, never uploaded to the server). Port it into the new engine's radio (`audio/radio.js`, `ui/radiowheel.js`) as a "My music" station next to the live stations. Stop `stage_cloudflare.py` copying the repo's `music/` mp3s into the deploy, since they are commercial tracks (shared file: announce it).
 - Integrate the sports car and rally hatchback (`assets/car_02_sport.glb`, `car_03_rally.glb`, `defs.js`, garage entries, paint).
 - Real drivetrain with manual gears in `rapier-vehicle.js`.
-- Done when: both new cars drive, gears work, selftest passes, old game has no upload.
+- Done when: both new cars drive, gears work, a local song uploaded in the new engine plays on the wheel, selftest passes, the deploy carries no `music/` files.
 
 **End of Phase 1:** A merges first, then B merges `A` into their branch, tests, merges. Deploy `/next` once.
 
@@ -99,4 +99,4 @@ Two streams. Each person owns one stream and one set of files. Claude only edits
 > You are Stream A (World). Do Phase 1 of `PARALLEL_PLAN.md`: the four road styles, then the `road.minRadius` fix. Branch `world/road-styles`.
 
 **Stream B, first task:**
-> You are Stream B (Vehicle & Game). Do Phase 1 of `PARALLEL_PLAN.md`: remove the old game's music upload, integrate the two new cars, then add manual gears. Branch `vehicle/cars-and-gears`.
+> You are Stream B (Vehicle & Game). Do Phase 1 of `PARALLEL_PLAN.md`: keep the local music upload and bring it into the new engine, integrate the two new cars, then add manual gears. Branch `vehicle/cars-and-gears`.
