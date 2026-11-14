@@ -6,7 +6,13 @@ Newest entries first. Format is in `CLAUDE.md`.
 Branch: main  Commit: 1ee42db
 What changed: nothing in code. Tried two-plane tree cards on far scenery tiles: saved 0.4% of triangles, so dropped it (trees are not where the cost is; N4 should measure the ground and road meshes first).
 For the other stream: bridge rails are drawn but the car drives through them. The physics ground is one heightfield (`rapier-vehicle.js`), which is your file. Ask: add thin cuboid colliders along the bridge edges (use `Road.bridgeW === 1` stretches and `road.carriedW` for the half width), or tell me the hook you want and I will expose a list of rail segments from `world/bridges.js`.
-Status: open
+Status: done (Rajul's Claude built the rail collision on the world side, see the 2026-11-15 23:00 entry; no change needed from Anshul)
+
+## 2026-11-15 23:00  Master Plan N0 done on the real clone; bridge rail collision built (N3 A1, A2)
+Branch: feat/n0-n3-docs-and-rails
+What changed: all five open PRs (16 to 20) were merged into `main` in order (log files conflicted each time; both entries kept, newest first). New `src/world/bridge_rails.js` (pure, tested): collision circles along both rails of every bridge, wired in as `roadMesh.bridges.near` and `world.near` in `src/main.js`; `collide()` in `src/vehicle/rapier-vehicle.js` (Stream B) treats circles with `slide: true` as a wall to scrape along (little speed lost, small bounce, nose turned parallel) instead of a tree. New `WORLD_CONTRACT.md` documents the road, terrain and obstacle interfaces as the code is. `HANDOFF.md` and `PARALLEL_PLAN.md` refreshed, with an ordered defect list. Self-test 27 checks (new: rail circles sit on the drawn rail and nowhere else; no car, truck or bike gets through a rail at up to 220 km/h, physics stays finite). In the real game a car at about 100 km/h was stopped by a bridge rail and stayed on the deck.
+For the other stream: read `WORLD_CONTRACT.md`; review the `collide()` change (two lines) and the `slide` flag; your 2026-11-14 request for rail colliders is done. Not tested: tunnel walls and bridge piers have no obstacle circles.
+Status: done
 
 ## 2026-11-15 22:00  New car model (Stream B files touched, please read)
 Branch: feat/nfs-handling (PR 20)
@@ -41,11 +47,11 @@ Status: open
 Branch: feat/n3-router-grade
 What changed: `src/world/locations.js`: the Alps and Himalayas set `maxCut: 1000` (never fall back to the steep stretch; tunnels and cuts absorb the height instead) and `hardGrade: 0.11`. Before: 7-24% (Alps) and 10-21% (Himalayas) of the road was over the hard limit, peaking near 21%. After: about 2% over, peak 14.4% (11.6% on one seed). Cost: more of the road is tunnel (Alps up to 35%, Himalayas up to 37% on one seed, 0-18% on the others). Checked by eye: the Himalayas road climbs a valley with a cut bank, and a 43 m cut turns into a tunnel. Re-run `node tools/locations_check.mjs` to see the numbers.
 For the other stream: nothing. Driving physics on 11-14% grades is worth a test with the car, truck and bike (the truck may struggle).
-## 2026-11-15 11:00  Mountain roads are too steep (open, N3)
+## 2026-11-15 11:00  Mountain roads are too steep (fixed, see the 12:00 entry)
 Branch: feat/n3-grade-check
 What changed: `tools/locations_check.mjs` now also prints the share of the road above the hard grade limit. Finding: Alps 7-24% and Himalayas 10-21% of the road is over the hard limit (14-15%), peaking near 21%; Mumbai 0%, default 3.7%. Allowing deeper cuts and a lower fallback grade (`maxCut`, `lastGrade`) helped some seeds and made others worse (Himalayas coast 21% to 47%), so I kept the config as it was. The cause is the route choice in `router.js`, not the limits. Next: make the router prefer gentler lines in the mountains (switchbacks) and re-measure with this check.
 For the other stream: nothing. Expect the climb to feel steep in the Alps and Himalayas until this is fixed.
-Status: open
+Status: done (fixed by the 12:00 entry: hardGrade 0.11, maxCut 1000)
 ## 2026-11-15 10:00  Marine Drive fixed and placed near the start (N3)
 Branch: feat/n3-marine-drive
 What changed: `src/world/landmarks.js`: the Marine Drive strip was never rotated into its own frame, so the sea wall, lamps and tetrapods drifted 100+ m off the road; fixed. It now carves its own bay in front of the sea wall, and the sea-side parts sit 7 m further from the road. Landmark search now prefers spots near the requested distance (Mumbai's three landmarks were 1.1 km behind the start). `src/world/locations.js`: Marine Drive no longer needs natural sea and starts the search at s=250.

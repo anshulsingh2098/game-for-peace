@@ -268,7 +268,7 @@ export class RapierVehicle {
         const o = list[i], dx = cx - o.x, dz = cz - o.z, rr = p.radius + o.r, d2 = dx * dx + dz * dz; if (d2 >= rr * rr || d2 === 0) continue;
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, pen = rr - d; px += nx * pen; pz += nz * pen; moved = true;
         const wx = u * c - v * s, wz = u * s + v * c, vn = wx * nx + wz * nz; if (vn >= 0) continue;
-        const ax = wx - 1.2 * vn * nx, az = wz - 1.2 * vn * nz; u = (ax * c + az * s) * 0.85; v = (-ax * s + az * c) * 0.6; dr += (-s * nx + c * nz) * off * -vn * 0.02;
+        const bounce = o.slide ? 1.05 : 1.2, ax = wx - bounce * vn * nx, az = wz - bounce * vn * nz; u = (ax * c + az * s) * (o.slide ? 0.997 : 0.85); v = (-ax * s + az * c) * (o.slide ? 0.9 : 0.6);          // a rail (slide) is a long wall to scrape along: a little bounce, hardly any speed lost; a tree stops you dr += (-s * nx + c * nz) * off * -vn * (o.slide ? 0.07 : 0.02);
         this.impact = Math.max(this.impact, -vn);
       }
     }

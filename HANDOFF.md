@@ -4,11 +4,13 @@ State of the work as of 14 November 2026, end of Rajul's session. Read `OVERVIEW
 
 ## Where things stand
 
-- **`main` has everything.** Pull requests 1 to 13 are merged and no branch is open; old branches (`world/*`, `tuner/dashboard`, `render/*`, `feature/*`, `fix/*`, `docs/*`, `plan/*`, `team/*`) can be deleted.
-- **Live site: NOT updated.** https://game-for-peace.anshul-rawat.workers.dev still serves the last deploy (version `4ab7b600`). `/` is the original game; `/next` is the new engine. **Waiting on Anshul** to deploy `main`: Rajul's PC is signed in to wrangler as his own account, and only `rawatanshul525@gmail.com` may be used. `cloudflare/public` is already staged from `main`.
-- **Checks:** `python tools/daily_check.py` runs every automatic check (self-test 25 checks, every location builds a road, deploy folder current, asset sizes and credits, open log entries). `CHECKLIST.md` lists what a person must look at.
+State as of 15 November 2026 (updated after pull requests 16 to 20 were merged and the Master Plan audit; the plan itself is not in the repo, it came from an outside review of a ZIP, so check its claims against the code).
+
+- **`main` has everything.** Pull requests 1 to 20 are merged. New since 14 November: coarser outer terrain ring and cheaper far rocks (-29% triangles on medium), Marine Drive fixed and placed near the start, gentler Alps and Himalayas roads, a real powertrain and Magic Formula tyre model for the car, the arcade handling layer, quicker steering, a colour grade with clearcoat paint, a new detailed car (Khronos CarConcept, CC BY 4.0, `assets/car_04_concept.glb`), tuner groups "handling", "camera" and "look" with a Reset button on every section, and bridge rail collision (`src/world/bridge_rails.js`, see `WORLD_CONTRACT.md`).
+- **Live site: NOT updated.** https://game-for-peace.anshul-rawat.workers.dev still serves the last deploy (version `4ab7b600`). `/` is the original game; `/next` is the new engine. **Waiting on Anshul** (account `rawatanshul525@gmail.com`; `wrangler whoami` on Rajul's PC says a different account, so Rajul did not deploy).
+- **Checks:** `python tools/daily_check.py` (self-test 27 checks, every location builds a road, deploy folder current, asset sizes and credits, open log entries). `CHECKLIST.md` lists the manual checks.
 - **Accounts:** Cloudflare and GitHub belong to rawatanshul525@gmail.com. Nobody else deploys.
-- **Stream B (Anshul) has not started:** `team/stream-b.md` is empty. Rajul's Claude has made some changes in Stream B's files at Rajul's request (all logged in `team/stream-a.md`).
+- **Stream B (Anshul) has not reviewed any of this.** Rajul's Claude changed many Stream B files at Rajul's request (`rapier-vehicle.js`, `defs.js`, `vehicle.js`, `engine.js`, `environment.js`, `main.js`, and the car asset); every change is logged in `team/stream-a.md`, and one entry in `team/stream-b.md` was written for Anshul. **Anshul should read both logs and review the handling and sound before N1 is called done.**
 
 ## What is in the game now (`/next`, `next.html`)
 
@@ -41,17 +43,21 @@ Full table with owners and "done when" is in `PARALLEL_PLAN.md`. In order:
 6. **N5 Features (Stream B).** Traffic with modes, "My music" station in the radio, controller rumble, vehicle customisation, tuner password and Publish setup.
 7. **N6 Switch-over and launch (both).** `index.html` becomes the new engine, `game.js` retired, final run of the checklist, deploy.
 
-## Known problems
+## Known problems (the N0 defect list, most serious first)
 
-- **Not verified by a person:** the new engine sound, driving feel (brake, handbrake, reverse, grass), touch controls on a real phone, camera views while driving, landmarks beyond screenshots. Nothing has been measured on a phone.
-- The engine sound recording has road and wind noise; the loops are good but not studio clean. See `team/stream-a.md` for what to record next.
-- Marine Drive's promenade and sea wall do not appear on the default Mumbai seed.
-- Bridge rails have no collision: a car can drive off the side.
-- Rain and thunder sound still play inside tunnels.
-- White car paint glares under the new lighting.
+1. **Nothing has been checked by a person on a real phone**, and nobody has listened to the engine sound with the real revs, or driven the new handling and car by hand. All numbers in the logs are from scripts. Do `CHECKLIST.md` sections 3 to 5.
+2. **Heavy car on phones:** the new car is 67,806 triangles and 41 draw calls on every tier (the old one was 16,000). Measure on a phone; if it costs too much, cut it or add a lower model for the low tier.
+3. **Live deploy is out of date** and the tuner Publish needs its one-time Cloudflare setup (below).
+4. **Rain and thunder sound still play inside tunnels** (Stream B, `audio/engine.js`).
+5. **Tunnel walls and bridge piers have no obstacle circles**; not tested whether the car can reach them.
+6. **Engine sound:** the car's loops (from the owner's own recording) have road and wind noise, and the sound now follows the car's real revs and gear, but nobody has listened to it. The truck and bike use the synthesised engine, the guessed gear and the old simple physics.
+7. **Inside the new car** the steering wheel model does not turn.
+8. **Rapier prints a warning** in the self-test ("using deprecated parameters for the initialization function"); check the right API before changing it.
+9. Handbrake drift at 100 km/h gives about 15 to 20 degrees of slide; whether that feels right is unknown.
+10. **Not done yet from the plan:** weather-aware sky and lighting (N2), tall grass and ground normal maps, tree levels of detail, steel truss bridge and retaining walls, southern coast landmark, better hotel model (N3); loading screen, compressed textures and meshes, phone budgets (N4); traffic, "My music", controller rumble, tuner password (N5); switch of `index.html` (N6).
 - The Poly Haven hero trees (958 MB, 487 MB) are unusable in a browser: do not download them.
-- Blender scripts in `tools/blender/` were run from a scratch folder; their paths need adjusting before reuse.
-- Line endings are mixed LF and CRLF: make surgical edits and check `git diff --stat`.
+- Blender scripts in `tools/blender/` that were run from a scratch folder need their paths adjusted before reuse (the new `make_car_concept.py` takes its paths as arguments).
+- Line endings are mixed LF and CRLF: make surgical edits and check `git diff --stat`. `git diff --check` flags CRLF files as trailing whitespace; that is a false alarm.
 - Worlds from earlier handoffs look different (sea, bend radius, bridges and tunnels changed the roads).
 
 ## How to test engine work

@@ -10,12 +10,12 @@ Two streams. Each person owns one stream and one set of files. Claude only edits
 | Works on | Roads, terrain, scenery, locations, landmarks, world tools | Driving, vehicles, traffic, sound, menus, radio, graphics, the old game |
 | Branch prefix | `world/...` | `vehicle/...` |
 
-## Status (14 Nov 2026, end of day)
+## Status (15 Nov 2026, evening)
 
-- **Done and merged:** Phase 0 (sync), Phase 1 for Stream A (road styles, bend fix, city roads), Phase 2 for Stream A (bridges, tunnels with the Atal-style gate), the tuner dashboard, the photoreal track R0, R1, R5 and part of R4/R6 (see `team/photoreal-plan.md`), autodrive, touch controls, seven camera views, the new brake / handbrake / reverse controls, and the engine sound from Rajul's recording. Pull requests 1 to 13 are merged.
-- **Waiting:** deploy to Cloudflare (Anshul's PC, project account only), the tuner Publish setup, and the first run of `CHECKLIST.md` by a person on a real phone.
-- **Stream B has not started** (`team/stream-b.md` is empty); Rajul's Claude has done some Stream B work at Rajul's request, all logged. The original Phase 1, 2 and 3 items for Stream B below are still open unless the log says otherwise.
-- **Direction change (14 Nov):** the whole game goes photorealistic, see `team/photoreal-plan.md`; it replaces "match the flat stylised look".
+- **Merged:** pull requests 1 to 20 (see `HANDOFF.md` "Where things stand" for what is new). `main` builds, the self-test passes 27 checks, the daily check has no failures.
+- **Waiting on people:** Anshul deploys `main` and reviews the handling, sound and car changes in his files (see `team/stream-a.md`); Rajul and Anshul run `CHECKLIST.md` on desktop and two real phones; the tuner Publish setup (KV and `TUNER_PASSWORD`).
+- **Stream B has not started on its own:** `team/stream-b.md` has one entry, written by Rajul's Claude for Anshul. N1, N2 and N5 below are Stream B's phases; Rajul's Claude did parts of N1 (powertrain, tyres, steering, sound telemetry) and N2 (grade, paint, car model) at Rajul's request, **unreviewed by Anshul**.
+- **Direction:** the whole game goes photorealistic, see `team/photoreal-plan.md`. It stays a calm endless driving game: no pursuits or missions without a product decision.
 
 ## Phases from here (the plan, replacing the original phase numbers below)
 

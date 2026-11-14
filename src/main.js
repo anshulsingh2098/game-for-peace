@@ -104,7 +104,7 @@ function applyView() {
 
 /* ---------- the vehicle ---------- */
 const cam = new FlyCam(canvas), controls = new Controls(), autodrive = new Autodrive(), view = new VehicleView(scene);
-const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r), get seaLevel() { return terrain.seaLevel; },
+const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => { const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r)) : l; }, get seaLevel() { return terrain.seaLevel; },
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
 const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
