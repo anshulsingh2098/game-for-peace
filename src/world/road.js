@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { Bridges } from './bridges.js';
 import { Tunnels } from './tunnels.js';
+import { Retaining } from './retaining.js';
 import { PORTAL_W } from './router.js';
 
 export { TWO_LANE } from './roadstyles.js';          // styles are data in roadstyles.js: see there for the cross-section format
@@ -33,11 +34,12 @@ export class RoadMesh {
     this.paint = new THREE.MeshBasicMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8 });
     this.group = new THREE.Group(); scene.add(this.group); this._p = {};
     this.bridges = new Bridges(scene, road, road.t, style, origin, ROWS);                     // decks, rails and piers where the road crosses water
+    this.retaining = new Retaining(scene, road, road.t, style, origin, ROWS);                  // stone walls where the road is cut into a steep hill or runs along a drop
     this.tunnels = new Tunnels(scene, road, style, origin, ROWS);                              // tubes and portals where the road goes through a mountain
   }
   /* keep pieces within range of road distance s; build at most a few per frame */
   update(s) {
-    this.bridges.update(s); this.tunnels.update(s);
+    this.bridges.update(s); this.tunnels.update(s); this.retaining.update(s);
     const r = this.road, L = this.len, lo = Math.floor(Math.max(r.sMin + L, s - this.range) / L), hi = Math.floor(Math.min(r.sMax - L, s + this.range) / L) - 1;
     for (const [k, p] of this.pieces) if (k < lo - 1 || k > hi + 1) { this.drop(p); this.pieces.delete(k); }
     const t0 = performance.now(), mid = Math.floor(s / L);
@@ -75,6 +77,6 @@ export class RoadMesh {
   }
   get solid() { return this.style.lines.filter(l => !l.dash).length; }
   drop(grp) { this.group.remove(grp); for (const m of grp.children) m.geometry.dispose(); }
-  reposition() { for (const g of this.pieces.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); this.bridges.reposition(); this.tunnels.reposition(); }
-  dispose() { this.bridges.dispose(); this.tunnels.dispose(); for (const g of this.pieces.values()) this.drop(g); this.pieces.clear(); this.group.parent && this.group.parent.remove(this.group); for (const mt of this.matList) { for (const t of [mt.map, mt.normalMap, mt.roughnessMap]) t && t.dispose(); mt.dispose(); } this.paint.dispose(); }
+  reposition() { for (const g of this.pieces.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); this.bridges.reposition(); this.tunnels.reposition(); this.retaining.reposition(); }
+  dispose() { this.bridges.dispose(); this.tunnels.dispose(); this.retaining.dispose(); for (const g of this.pieces.values()) this.drop(g); this.pieces.clear(); this.group.parent && this.group.parent.remove(this.group); for (const mt of this.matList) { for (const t of [mt.map, mt.normalMap, mt.roughnessMap]) t && t.dispose(); mt.dispose(); } this.paint.dispose(); }
 }
