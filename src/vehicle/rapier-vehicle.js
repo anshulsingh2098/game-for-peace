@@ -19,7 +19,7 @@ import { Drivetrain } from './drivetrain.js';
 let ready = null;
 export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIER));
 
-const SCRUB = 0.12;
+const SCRUB = 0.12, DOWNFORCE = 0.8, V_DF = 60;                // DOWNFORCE: extra grip (as a fraction) at V_DF m/s and above, growing with speed squared, so fast corners still bite
 const G = 9.81, H = 1 / 120, GRIP = 1.35;                    // GRIP: tyres bite harder than the stats say, which keeps the cars lively and quick to turn; SCRUB: speed lost per unit of sideways acceleration
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -116,6 +116,8 @@ export class RapierVehicle {
   get speed() { return Math.hypot(this.u, this.v); }
   get kmh() { return this.u * 3.6; }
   setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; this.drive.setMod(this.mod); }
+  /* aerodynamic grip: 1 at rest, 1 + DOWNFORCE at V_DF m/s and above */
+  down(u) { const k = Math.min(1, (u * u) / (V_DF * V_DF)); return 1 + DOWNFORCE * k; }
   /* the sensitivity setting also lends the tyres a little grip, so a sharper setting really does turn the car harder at speed (1 at Normal) */
   assist() { return 1 + 0.35 * (this.steerGain - 1); }
   /* manual gearbox: shift(+1) up, shift(-1) down (false if refused); setManual switches between automatic and manual */
@@ -158,7 +160,7 @@ export class RapierVehicle {
        makes small or analog inputs count for more than a straight line would. */
     const sg = this.steerGain, raw = clamp(input.steer, -1, 1), want = Math.sign(raw) * Math.pow(Math.abs(raw), 0.8), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = (back ? 11 : 9 / (1 + Math.abs(this.u) / 32)) * sg;
     this.steer += clamp(want - this.steer, -rate * h, rate * h);
-    this.delta = this.steer * Math.min(p.steerMax, 3.0 * sg * M.steer * p.mu * GRIP * this.assist() * G * p.L / Math.max(this.u * this.u, 1));
+    this.delta = this.steer * Math.min(p.steerMax, Math.max(3.0 * sg * M.steer * p.mu * GRIP * this.assist() * this.down(this.u) * G * p.L / Math.max(this.u * this.u, 1), 0.2 * p.steerMax * Math.min(1.4, sg)));      // lock shrinks with speed, but never below a fifth of full lock
     const tn = Math.tan(this.delta), R = Math.abs(tn) > 1e-4 ? p.L / tn : 1e6;
 
     const key = W.surface(this.x, this.z); this.surface = key; const S0 = SURFACES[key] || SURFACES.grass;
@@ -178,7 +180,7 @@ export class RapierVehicle {
     car.wheels.forEach((w, i) => {
       const pos = vc.wheelContactPoint(i), wx = pos ? pos.x + this.ox : this.x, wz = pos ? pos.z + this.oz : this.z, S = SURFACES[W.surface(wx, wz)] || S0;
       const wet = (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(W.surface(wx, wz)) : 1);
-      vc.setWheelFrictionSlip(i, p.mu * GRIP * this.assist() * S.grip * wet * M.grip);
+      vc.setWheelFrictionSlip(i, p.mu * GRIP * this.assist() * this.down(u) * S.grip * wet * M.grip);
       let a = 0; if (w.front) a = w.side === 0 ? this.delta : Math.atan(p.L / (R + w.side * p.track / 2));       // Ackermann: the inner wheel turns more
       vc.setWheelSteering(i, w.front ? -a : 0);
       vc.setWheelEngineForce(i, w.drive ? engine / nDrive : 0);
@@ -196,7 +198,7 @@ export class RapierVehicle {
        tyres can hold on this surface (grip x gravity / speed). Holding the throttle in a corner then no longer washes the car wide. It fades out at a
        crawl and with no steering, and follows the sensitivity setting. */
     if (Math.abs(this.delta) > 0.004) {
-      const au = Math.abs(u), muEff = p.mu * GRIP * this.assist() * S0.grip * (depth > 0.3 ? 0.6 : 1) * M.grip, rT = u * Math.tan(this.delta) / p.L, rMax = 1.0 * muEff * G / Math.max(au, 3), rTgt = clamp(rT, -rMax, rMax);
+      const au = Math.abs(u), muEff = p.mu * GRIP * this.assist() * this.down(au) * S0.grip * (depth > 0.3 ? 0.6 : 1) * M.grip, rT = u * Math.tan(this.delta) / p.L, rMax = 1.0 * muEff * G / Math.max(au, 3), rTgt = clamp(rT, -rMax, rMax);
       const fade = sstep(1.0, 5.0, au) * sstep(0, 0.25, Math.abs(this.steer)), alpha = clamp(7 * this.steerGain * (rTgt - this.r), -9, 9) * fade;          // wanted change of yaw rate per second, capped
       const t = b.rotation(), ty = -this.Iz * alpha;                                                                                                  // r is minus the body's world y spin, hence the sign
       b.addTorque({ x: 0, y: ty, z: 0 }, true);
