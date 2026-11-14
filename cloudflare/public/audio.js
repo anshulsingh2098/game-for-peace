@@ -144,34 +144,98 @@ export class Sound {
   }
 }
 
+/* Preset internet radio. Streams play through a plain <audio> element (not Web Audio), so stations without CORS headers are still audible. */
+const PRESETS = [
+  { title: 'Radio Paradise', artist: 'Live radio · eclectic mix', file: 'https://stream.radioparadise.com/mp3-128' },
+  { title: 'KEXP 90.3 Seattle', artist: 'Live radio · independent music', file: 'https://kexp-mp3-128.streamguys1.com/kexp128.mp3' },
+  { title: 'Radio Paradise Mellow', artist: 'Live radio · mellow mix', file: 'https://stream.radioparadise.com/mellow-128' },
+  { title: 'FIP', artist: 'Live radio · Radio France', file: 'https://icecast.radiofrance.fr/fip-midfi.mp3' },
+  { title: 'FIP Jazz', artist: 'Live radio · Radio France', file: 'https://icecast.radiofrance.fr/fipjazz-midfi.mp3' },
+  { title: 'WFMU', artist: 'Live radio · freeform', file: 'https://stream0.wfmu.org/freeform-128k' }
+];
+const AUDIO_EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|webm)$/i;
+/* file name -> { title, artist }, the same clean-up add_songs.py does */
+export function cleanName(name) {
+  let n = name.replace(AUDIO_EXT, '').replace(/^AudioTranscriberAI_/, '').replace(/✧/g, ' ').replace(/[\s_]+/g, ' ').trim()
+    .replace(/^\d{1,3}[\s.\-_)]+/, '').replace(/\s*[(\[](official|lyrics?|audio|video|hd|hq|music video)[^)\]]*[)\]]/ig, '');
+  n = n.replace(/\s+/g, ' ').replace(/^[ -]+|[ -]+$/g, '');
+  const k = n.indexOf(' - ');
+  return k < 0 ? { title: n, artist: '' } : { title: n.slice(k + 3).trim(), artist: n.slice(0, k).trim() };
+}
+
 export class Radio {
   constructor(sound) {
-    this.sound = sound; this.audio = new Audio(); this.audio.preload = 'none'; this.stations = []; this.si = 0; this.order = []; this.pos = 0; this.shuffle = true;
-    this.listeners = []; this.connected = false; this.cur = null; this.fails = 0;
-    this.audio.addEventListener('ended', () => this.next(true));
-    this.audio.addEventListener('timeupdate', () => this.emit()); this.audio.addEventListener('play', () => { this.fails = 0; this.emit(); }); this.audio.addEventListener('pause', () => this.emit());
-    this.audio.addEventListener('error', () => { if (++this.fails <= this.tracks.length) setTimeout(() => this.next(true), 600); this.emit(); });
+    this.sound = sound; this.main = new Audio(); this.main.preload = 'none';           // files: routed through Web Audio (musicBus)
+    this.direct = new Audio(); this.direct.preload = 'none';                             // streams: plain element with its own volume
+    this.local = { name: 'My music', kind: 'local', tracks: [] }; this.streams = { name: 'Streams', kind: 'streams', tracks: PRESETS.map(p => ({ ...p, stream: true })) };
+    this.stations = [this.local, this.streams]; this.si = 0; this.order = []; this.pos = 0; this.shuffle = true;
+    this.listeners = []; this.connected = false; this.cur = null; this.fails = 0; this.error = false; this.live = false; this.vol = 0.5;
+    for (const a of [this.main, this.direct]) {
+      const mine = fn => e => { if (a === this.audio) fn(e); };
+      a.addEventListener('ended', mine(() => { if (!this.live) this.next(true); }));
+      a.addEventListener('timeupdate', mine(() => this.emit())); a.addEventListener('pause', mine(() => this.emit()));
+      a.addEventListener('play', mine(() => { this.fails = 0; this.error = false; this.emit(); }));
+      a.addEventListener('error', mine(() => { if (!a.getAttribute('src')) return; this.error = true;
+        if (!this.live && ++this.fails <= this.tracks.length) setTimeout(() => this.next(true), 600); this.emit(); }));
+    }
+    this.buildOrder();
   }
+  get audio() { return this.live ? this.direct : this.main; }                            // whichever element carries the current track
   on(fn) { this.listeners.push(fn); }
   async load(url) {
-    try { const r = await fetch(url); const j = await r.json(); this.stations = (j.stations || []).filter(s => s.tracks && s.tracks.length); } catch (e) { this.stations = []; }
-    this.si = 0; this.buildOrder(); this.emit();
+    let list = []; try { const r = await fetch(url); const j = await r.json(); list = (j.stations || []).filter(s => s.tracks && s.tracks.length); } catch (e) { /* no playlist: local files and streams only */ }
+    const curSt = this.station; this.stations = [...list, this.local, this.streams];
+    if (this.audio.paused && !this.local.tracks.length) { this.si = 0; this.buildOrder(); } else this.si = this.stations.indexOf(curSt);
+    this.emit();
   }
-  get tracks() { return (this.stations[this.si] || {}).tracks || []; }
+  get station() { return this.stations[this.si] || {}; }
+  get tracks() { return this.station.tracks || []; }
   get track() { return this.tracks[this.order[this.pos]]; }
-  buildOrder() { const n = this.tracks.length; this.order = [...Array(n).keys()]; if (this.shuffle) for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.order[i], this.order[j]] = [this.order[j], this.order[i]]; } this.pos = 0; }
-  connect() { if (this.connected || !this.sound.ctx) return; try { this.sound.ctx.createMediaElementSource(this.audio).connect(this.sound.musicBus); this.connected = true; } catch (e) { /* already connected */ } }
+  buildOrder() { const n = this.tracks.length; this.order = [...Array(n).keys()]; if (this.shuffle && this.station.kind !== 'streams') for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.order[i], this.order[j]] = [this.order[j], this.order[i]]; } this.pos = 0; }
+  jump(k) { this.order = this.order.filter(x => x !== k); this.order.unshift(k); this.pos = 0; this.cur = null; }
+  connect() { if (this.connected || !this.sound.ctx) return; try { this.sound.ctx.createMediaElementSource(this.main).connect(this.sound.musicBus); this.connected = true; } catch (e) { /* already connected */ } }
+  setVolume(v) { this.vol = clamp(v, 0, 1); this.direct.volume = this.vol; }             // the music bus does not reach the stream element
+  silence(a) { a.pause(); if (a === this.direct && a.getAttribute('src')) { a.removeAttribute('src'); a.load(); } }   // drop the connection so a paused stream stops downloading
   async play() {
     const t = this.track; if (!t) return false; this.sound.init(); this.sound.resume(); this.sound.applyVolumes(); this.connect();
-    if (this.cur !== t.file) { this.audio.src = t.file; this.cur = t.file; }
-    try { await this.audio.play(); return true; } catch (e) { return false; }
+    const live = !!t.stream; if (live !== this.live) { this.silence(this.audio); this.live = live; this.cur = null; }
+    const a = this.audio; this.direct.volume = this.vol;
+    if (this.cur !== t.file) { a.src = t.file; this.cur = t.file; this.error = false; }
+    try { await a.play(); return true; } catch (e) { return false; }
   }
-  pause() { this.audio.pause(); }
+  pause() { if (this.live) { this.silence(this.direct); this.cur = null; this.emit(); } else this.main.pause(); }
   toggle() { return this.audio.paused ? this.play() : (this.pause(), false); }
   async next(auto) { if (!this.tracks.length) return; this.pos = (this.pos + 1) % this.tracks.length; if (this.pos === 0 && this.shuffle) this.buildOrder(); this.cur = null; await this.play(); this.emit(); }
-  async prev() { if (!this.tracks.length) return; if (this.audio.currentTime > 4) { this.audio.currentTime = 0; return; } this.pos = (this.pos - 1 + this.tracks.length) % this.tracks.length; this.cur = null; await this.play(); this.emit(); }
-  setStation(i) { const was = !this.audio.paused; this.si = clamp(i, 0, this.stations.length - 1); this.buildOrder(); this.cur = null; if (was) this.play(); this.emit(); }
+  async prev() { if (!this.tracks.length) return; if (!this.live && this.audio.currentTime > 4) { this.audio.currentTime = 0; return; } this.pos = (this.pos - 1 + this.tracks.length) % this.tracks.length; this.cur = null; await this.play(); this.emit(); }
+  setStation(i) { const was = !this.audio.paused; this.si = clamp(i, 0, this.stations.length - 1); this.buildOrder(); this.cur = null; if (was) { if (this.tracks.length) this.play(); else this.pause(); } this.emit(); }
   setShuffle(on) { this.shuffle = on; const cur = this.track; this.buildOrder(); if (cur) { const k = this.tracks.indexOf(cur); if (k >= 0) { this.order = this.order.filter(x => x !== k); this.order.unshift(k); this.pos = 0; } } this.emit(); }
-  state() { return { track: this.track, playing: !this.audio.paused, t: this.audio.currentTime || 0, d: this.audio.duration || 0, stations: this.stations, si: this.si, shuffle: this.shuffle, has: this.tracks.length > 0 }; }
+  async select(k) { if (!this.tracks[k]) return; this.jump(k); await this.play(); this.emit(); }
+  /* the user's own audio files, kept for this session as object URLs; returns how many were added */
+  addFiles(files) {
+    const st = this.local, first = st.tracks.length;
+    for (const f of files) {
+      if (!(f.type || '').startsWith('audio/') && !AUDIO_EXT.test(f.name)) continue;
+      const key = f.name + ':' + f.size; if (st.tracks.some(t => t.key === key)) continue;
+      st.tracks.push({ ...cleanName(f.name), file: URL.createObjectURL(f), key });
+    }
+    const n = st.tracks.length - first; if (!n) return 0;
+    this.si = this.stations.indexOf(st); this.buildOrder(); this.jump(first); this.emit(); return n;
+  }
+  /* custom stream addresses: [{ title, file }] */
+  setCustomStreams(list) { for (const s of list || []) if (s && s.file) this.addStream(s.file, s.title, true); this.emit(); }
+  customStreams() { return this.streams.tracks.filter(t => t.custom).map(t => ({ title: t.title, file: t.file })); }
+  addStream(url, title, quiet) {
+    let u; try { u = new URL(String(url).trim()); } catch (e) { return null; } if (!/^https?:$/.test(u.protocol)) return null;
+    const st = this.streams; let k = st.tracks.findIndex(t => t.file === u.href);
+    if (k < 0) { k = st.tracks.length; st.tracks.push({ title: title || u.hostname.replace(/^www\./, ''), artist: 'Live radio · your stream', file: u.href, stream: true, custom: true }); }
+    if (quiet) { if (this.station === st) { const cur = this.track; this.buildOrder(); if (cur) { const c = st.tracks.indexOf(cur), keep = this.cur; this.jump(c); this.cur = keep; } } return st.tracks[k]; }
+    this.si = this.stations.indexOf(st); this.buildOrder(); this.jump(k); this.emit(); return st.tracks[k];
+  }
+  removeStream(t) {
+    const st = this.streams, k = st.tracks.indexOf(t); if (k < 0 || !t.custom) return; const was = this.track === t;
+    st.tracks.splice(k, 1); if (this.station === st) { if (was) this.pause(); this.buildOrder(); this.cur = null; } this.emit();
+  }
+  state() { const d = this.audio.duration; return { track: this.track, playing: !this.audio.paused, t: this.audio.currentTime || 0, d: isFinite(d) ? d || 0 : 0, stations: this.stations, si: this.si, shuffle: this.shuffle, has: this.tracks.length > 0,
+    kind: this.station.kind || 'files', tracks: this.tracks, ti: this.order[this.pos], live: this.live, error: this.error }; }
   emit() { const s = this.state(); for (const f of this.listeners) f(s); }
 }
