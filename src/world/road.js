@@ -1,6 +1,7 @@
 /* The road you see: a ribbon mesh built from a RoadStyle along the routed centre line, in 200 m pieces
    that come and go around the player. Lane markings are a second mesh just above the surface. */
 import * as THREE from 'three';
+import { Bridges } from './bridges.js';
 import { asphaltTex } from './textures.js';
 
 export { TWO_LANE } from './roadstyles.js';          // styles are data in roadstyles.js: see there for the cross-section format
@@ -13,9 +14,11 @@ export class RoadMesh {
     this.surface = new THREE.MeshStandardMaterial({ vertexColors: true, map: asphaltTex(), roughness: 0.95, metalness: 0, envMapIntensity: 0.2, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
     this.paint = new THREE.MeshBasicMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8 });
     this.group = new THREE.Group(); scene.add(this.group); this._p = {};
+    this.bridges = new Bridges(scene, road, road.t, style, origin, ROWS);                     // decks, rails and piers where the road crosses water
   }
   /* keep pieces within range of road distance s; build at most a few per frame */
   update(s) {
+    this.bridges.update(s);
     const r = this.road, L = this.len, lo = Math.floor(Math.max(r.sMin + L, s - this.range) / L), hi = Math.floor(Math.min(r.sMax - L, s + this.range) / L) - 1;
     for (const [k, p] of this.pieces) if (k < lo - 1 || k > hi + 1) { this.drop(p); this.pieces.delete(k); }
     const t0 = performance.now(), mid = Math.floor(s / L);
@@ -27,10 +30,12 @@ export class RoadMesh {
   build(k) {
     const r = this.road, st = this.style, p = this._p, s0 = k * this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, nc = st.cols.length;
     const pos = [], col = [], uv = [], idx = [], lp = [], lc = [], li = [];
+    const bridged = []; for (let row = 0; row <= ROWS; row++) bridged.push(r.bridgeW(s0 + row * r.ds) === 1);       // rows on a bridge (see bridges.js)
     for (let row = 0; row <= ROWS; row++) {
       const s = s0 + row * r.ds; r.at(s, p); const nx = -p.tz, nz = p.tx;          // nx, nz: unit vector pointing to the right of travel
       for (const [t, drop, kind, u] of st.cols) { pos.push(p.x + nx * t - ox, p.y - drop, p.z + nz * t - oz); col.push(...st.colour[kind]); uv.push(u, s / 9); }
-      if (row < ROWS) for (const [a, b] of st.strips) { const A = row * nc + a, B = row * nc + b, C = A + nc, D = B + nc; idx.push(A, B, C, B, D, C); }
+      const onBridge = row < ROWS && bridged[row] && bridged[row + 1];                              // on a bridge the verge beyond the rails is left out
+      if (row < ROWS) for (const [a, b] of st.strips) { if (onBridge && (Math.abs(st.cols[a][0]) > st.shoulder + 0.01 || Math.abs(st.cols[b][0]) > st.shoulder + 0.01)) continue; const A = row * nc + a, B = row * nc + b, C = A + nc, D = B + nc; idx.push(A, B, C, B, D, C); }
       for (const ln of st.lines) if (!ln.dash) {
         const v = lp.length / 3; for (const tt of [ln.t - ln.w / 2, ln.t + ln.w / 2]) { lp.push(p.x + nx * tt - ox, p.y + 0.035, p.z + nz * tt - oz); lc.push(...st.colour.line); }
         if (row < ROWS) li.push(v, v + 1, v + 2 * this.solid, v + 1, v + 2 * this.solid + 1, v + 2 * this.solid);
@@ -50,6 +55,6 @@ export class RoadMesh {
   }
   get solid() { return this.style.lines.filter(l => !l.dash).length; }
   drop(grp) { this.group.remove(grp); for (const m of grp.children) m.geometry.dispose(); }
-  reposition() { for (const g of this.pieces.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); }
-  dispose() { for (const g of this.pieces.values()) this.drop(g); this.pieces.clear(); this.group.parent && this.group.parent.remove(this.group); this.surface.dispose(); this.paint.dispose(); }
+  reposition() { for (const g of this.pieces.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); this.bridges.reposition(); }
+  dispose() { this.bridges.dispose(); for (const g of this.pieces.values()) this.drop(g); this.pieces.clear(); this.group.parent && this.group.parent.remove(this.group); this.surface.dispose(); this.paint.dispose(); }
 }

@@ -99,6 +99,7 @@ test('road: the land is graded to it and untouched far away', () => {
   const { cfg, t, r } = world('peace'), R = cfg.road; let worst = 0;
   for (let s = -3500; s <= 3500; s += 37) {
     const p = r.at(s, {}), nx = -p.tz, nz = p.tx;
+    if (r.bridgeW(s)) continue;                                                                                                       // on a bridge the land is left alone (see the bridge test)
     for (const d of [0, 2, -3.5]) worst = Math.max(worst, Math.abs(t.height(p.x + nx * d, p.z + nz * d) - (p.y - R.sink)));          // under the carriageway: just below the surface
     for (const d of [70, -90]) assert.equal(t.height(p.x + nx * d, p.z + nz * d) === t.base(p.x + nx * d, p.z + nz * d) || r.nearest(p.x + nx * d, p.z + nz * d), true);
     assert.ok(r.nearest(p.x + nx * 20, p.z + nz * 20)); assert.ok(Math.abs(r.hit.d - 20) < 1.5, 'distance ' + r.hit.d.toFixed(2)); assert.ok(Math.abs(r.hit.s - s) < 12, 'road distance off by ' + (r.hit.s - s).toFixed(1));
@@ -180,6 +181,18 @@ await atest('rapier: slopes, water, obstacles and buffs', () => {
   for (const v of [hill, climb, sea, hit, boost, norm]) v.free();
 });
 
+test('bridges: over water the deck carries the road and the land is left alone; on land nothing changes', () => {
+  let bridged = 0, land = 0;
+  for (const seed of ['peace', 'coast', 'alps', 'kilo']) {
+    const { t, r } = world(seed); r.ensure(-4000, 4000);
+    for (let s = r.sMin + 80; s < r.sMax - 80; s += 5) {
+      const p = r.at(s, {}), w = r.bridgeW(s);
+      if (w === 1) { bridged++; assert.ok(Math.abs(t.drive(p.x, p.z) - p.y) < 0.05, 'wheels are on the deck'); assert.ok(Math.abs(t.height(p.x, p.z) - t.base(p.x, p.z)) < 0.05, 'land untouched under a bridge'); }
+      else if (w === 0) land++;
+    }
+  }
+  assert.ok(bridged > 0 && land > bridged, 'some bridge, mostly land: ' + bridged + ' / ' + land);
+});
 test('road styles: columns and strips are valid, surfaces are physics keys, two-lane keeps its old widths', () => {
   for (const st of Object.values(ROAD_STYLES)) {
     assert.ok(st.cols.length > 1 && st.strips.length > 0, st.id);

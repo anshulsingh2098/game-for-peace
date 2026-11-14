@@ -25,6 +25,7 @@ export class Road {
     this.t = terrain; this.c = config.road; this.sea = terrain.seaLevel; this.step = this.c.step; this.ds = this.step / SUB;
     this.maxTurn = this.step / this.c.minRadius; this.noise = createNoise(config.seed + ':road');
     this.style = roadStyleById(this.c.style); this.g = this.style.grade;       // widths come from the style
+    this.wc = new Map(); this.bw = new Map();                                    // bridge caches (see bridgeW)
     this.cell = 32; this.reach = this.g.blend + 2; this.cells = new Map(); this.hit = { d: 0, s: 0, y: 0 };
     const p = terrain.findSpawn(), h0 = terrain.base(p.x, p.z);
     let best = 0, bestCost = Infinity;                          // first bearing: the gentlest line through the start point
@@ -164,13 +165,31 @@ export class Road {
   grade(x, z, natural) {
     if (!this.nearest(x, z)) return natural;
     const c = this.c, g = this.g, h = this.hit, bed = h.y - c.sink * (1 - sstep(g.flat - 2.5, g.flat, h.d));
-    return bed + (natural - bed) * sstep(g.flat, g.blend, h.d);
+    const gv = bed + (natural - bed) * sstep(g.flat, g.blend, h.d), w = this.bridgeW(h.s);
+    return w ? gv + (natural - gv) * w : gv;                    // on a bridge the land is left alone: the deck carries the road
   }
   /* height a vehicle drives on: the graded land, lifted back up to the road surface (the land is cut `sink` below the road so the ribbon sits on top) */
   drive(x, z, natural) {
     if (!this.nearest(x, z)) return natural;
     const c = this.c, g = this.g, h = this.hit, bed = h.y - c.sink * (1 - sstep(g.flat - 2.5, g.flat, h.d));
-    return bed + (natural - bed) * sstep(g.flat, g.blend, h.d) + c.sink * (1 - sstep(g.lift[0], g.lift[1], h.d));
+    const dv = bed + (natural - bed) * sstep(g.flat, g.blend, h.d) + c.sink * (1 - sstep(g.lift[0], g.lift[1], h.d)), w = this.bridgeW(h.s);
+    if (!w) return dv;
+    const out = this.style.outer, deck = h.d <= out ? h.y : h.y + (natural - h.y) * sstep(out, out + 1.5, h.d);        // wheels roll on the deck, and fall off its edge
+    return dv + (deck - dv) * w;
+  }
+  /* bridges: where the centre line is over water the road is carried on a deck instead of a raised causeway.
+     bridgeW(s) is 1 on the bridge (water, plus 10 m either side), easing to 0 over the next 20 m of land, so the ground blends in at the ends. */
+  wet(k) {
+    let v = this.wc.get(k); if (v !== undefined) return v;
+    const s = k * this.ds; if (s < this.sMin + 2 || s > this.sMax - 2) return false;
+    const p = this.at(s, this._bp || (this._bp = {})); v = this.t.base(p.x, p.z) < this.sea - 0.4; this.wc.set(k, v); return v;
+  }
+  bridgeW(s) {
+    const k = Math.round(s / this.ds), c = this.bw.get(k); if (c !== undefined) return c;
+    let dmin = Infinity; for (let j = -6; j <= 6 && dmin; j++) if (this.wet(k + j)) dmin = Math.min(dmin, Math.abs(j));
+    const d = dmin * this.ds; let w = d <= 10 ? 1 : d >= 30 ? 0 : (30 - d) / 20; w = w * w * (3 - 2 * w);
+    if (k * this.ds > this.sMin + 60 && k * this.ds < this.sMax - 60) this.bw.set(k, w);                // near the growing ends the answer may still change
+    return w;
   }
   /* road distance of the point on the road closest to (x, z), searching outward from a hint */
   closestS(x, z, hint = 0) {
