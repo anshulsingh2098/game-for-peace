@@ -3,8 +3,10 @@
 export const VEHICLES = [
   { id: 'car', file: 'assets/car_01_gt.glb', name: 'Dusk GT', tag: 'Fast', color: '#6f9bff',
     desc: 'Low, wide and quick. Stretch it out on the long straights.',
-    stats: { Speed: 92, Accel: 86, Handling: 72, Grip: 64, Top: 240 },
-    body: { mass: 1350, front: 1.62, rear: 1.34, track: 1.64, wheelR: 0.35, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 9, aero: 0.25, lean: 0.06, cg: 0.5, radius: 0.95, circles: [1.5, 0, -1.4] },
+    stats: { Speed: 92, Accel: 86, Handling: 72, Grip: 64, Top: 270 },
+    body: { mass: 1450, front: 1.62, rear: 1.34, track: 1.64, wheelR: 0.35, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 9, aero: 0.25,
+      /* a real sports coupe, from published data: 330 kW (450 hp) at 6500 rpm, 7600 rpm redline, 6-speed box, 4.0 final drive, Cd 0.33 x 2.0 m2 frontal area, 88% driveline efficiency */
+      pt: { kw: 330, peak: 6500, redline: 7600, idle: 900, launch: 4200, gears: [3.3, 2.2, 1.6, 1.25, 1.05, 0.93], final: 4.0, eff: 0.88, cdA: 0.66, up: 0.97, shiftTime: 0.16, tcs: 0.85 }, lean: 0.06, cg: 0.5, radius: 0.95, circles: [1.5, 0, -1.4] },
     cam: { back: 7.5, up: 3.0, look: 2.5 }, eye: [-0.32, 1.22, 0.14], shadow: [3.4, 6],
     lights: { tail: [[-0.68, 0.84, -2.27], [0.68, 0.84, -2.27]], head: [[-0.66, 0.74, 2.14], [0.66, 0.74, 2.14]], tailSize: 0.8, headSize: 1.1, beam: [0.7, 2.3] },
     buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 5, cooldown: 9, mod: { top: 1.25, accel: 2.1 } },

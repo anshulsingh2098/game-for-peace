@@ -112,7 +112,7 @@ export class RapierVehicle {
     const q = qm(qm({ x: 0, y: Math.sin(th / 2), z: 0, w: Math.cos(th / 2) }, { x: Math.sin(-pitch / 2), y: 0, z: 0, w: Math.cos(pitch / 2) }), { x: 0, y: 0, z: Math.sin(rollA / 2), w: Math.cos(rollA / 2) });
     const b = this.body; b.setTranslation({ x: 0, y: gy + this.hCom + 0.02, z: 0 }, true); b.setRotation(q, true); b.setLinvel({ x: 0, y: 0, z: 0 }, true); b.setAngvel({ x: 0, y: 0, z: 0 }, true);
     for (let i = 0; i < this.car.wheels.length; i++) { this.vc.setWheelSteering(i, 0); this.vc.setWheelEngineForce(i, 0); this.vc.setWheelBrake(i, 0); }
-    Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0, dPitch: 0, dRoll: 0, afS: 0, arS: 0, axL: 0 });
+    Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0, dPitch: 0, dRoll: 0, afS: 0, arS: 0, axL: 0, gear: 0, shiftT: 0, rpm: 900 });
     this.y = gy; this.groundY = gy; this.quat = { x: q.x, y: q.y, z: q.z, w: q.w }; this.R.step(); this.read();
   }
   get speed() { return Math.hypot(this.u, this.v); }
@@ -160,7 +160,7 @@ export class RapierVehicle {
 
     /* forces on the wheels. Four separate controls: throttle, reverse, the foot brake (never reverses) and the handbrake (rear wheels only). */
     let engine = 0, brake = 0, rearBrake = 0, coast = false;
-    if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = m * p.accel * M.accel * (ARCADE.on ? ARCADE.power[this.id] || 1 : 1) * thr * Math.max(0, 1 - (Math.abs(u) / top) ** (ARCADE.on ? ARCADE.curve : 2)); }                    // gas while rolling backwards brakes first
+    if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = ARCADE.on && p.pt ? this.powertrain(thr, u, h, M, S0) : m * p.accel * M.accel * (ARCADE.on ? ARCADE.power[this.id] || 1 : 1) * thr * Math.max(0, 1 - (Math.abs(u) / top) ** (ARCADE.on ? ARCADE.curve : 2)); }                    // gas while rolling backwards brakes first
     else if (rev > 0) { if (u > 1.2) brake = m * p.brake * 0.9 * rev; else if (!flooded) engine = -m * p.revAccel * 1.35 * rev * Math.max(0, 1 - (u / p.revTop) ** 2); }   // reverse: brakes while still rolling forward, then drives backwards
     if (brk > 0) brake = Math.max(brake, m * p.brake * (ARCADE.on ? ARCADE.brake : 1) * brk);                                                  // foot brake: all four wheels
     if (hnd > 0) rearBrake = m * p.brake * 1.0 * hnd;                                                         // handbrake: the rear wheels lock
@@ -181,7 +181,7 @@ export class RapierVehicle {
     });
     /* rolling resistance by surface, water drag, air drag, and what a buff changes about slopes */
     const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
-    const roll = -m * G * (S0.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(u / 0.5, -1, 1), air = -p.aero * (ARCADE.on ? ARCADE.aero : 1) * u * Math.abs(u);
+    const roll = -m * G * (S0.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(u / 0.5, -1, 1), air = -(ARCADE.on && p.pt ? 0.6 * p.pt.cdA : p.aero * (ARCADE.on ? ARCADE.aero : 1)) * u * Math.abs(u);
     let F = roll + air; const fwd = { x: c, z: s };
     if (coast) F -= Math.sign(u) * m * (0.30 + 0.008 * Math.abs(u)) * clamp(Math.abs(u) / 0.5, 0, 1);                  // engine braking: not limited by tyre grip, so the car slows on grass as well as on tarmac
     if (M.slope < 1) F += m * G * Math.sin(this.pitch) * (1 - M.slope);                                           // Hill Hauler: climbs as if the slope were not there
@@ -198,6 +198,21 @@ export class RapierVehicle {
     this.dPitch += (clamp(this.axL, -12, 12) * (this.axL < 0 ? 0.013 : 0.02) * p.cg - this.dPitch) * Math.min(1, h * 7);                          // nose dips under braking, squats under power
     this.dRoll += (-clamp(this.ay, -12, 12) * 0.022 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);   // body leans in corners (a bike leans by its own model)
     if (this.u > Math.max(top * 1.08, 1)) { const lv = b.linvel(), k = Math.max(top * 1.08, this.u - 6 * h) / this.u; b.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); }          // hard speed ceiling (a buff's extra speed bleeds off)
+  }
+
+  /* A real powertrain from published car data (defs.js `pt`): engine power curve, gearbox with automatic shifts, final drive, drivetrain loss, a traction limit.
+     Returns the force at the wheels (N). Sets this.gear and this.rpm (the engine sound can use them). */
+  powertrain(thr, u, h, M, S0) {
+    const pt = this.p.pt, R = this.p.wheelR || 0.35, n = pt.gears.length, TAU = 60 / (2 * Math.PI), w = Math.max(u, 0) / R, ratio = g => pt.gears[g] * pt.final;
+    const rpmIn = g => w * ratio(g) * TAU / M.top; let g = this.gear;               // a buff's top-speed multiplier acts like taller gearing
+    if (this.shiftT > 0) this.shiftT -= h;
+    else if (g < n - 1 && rpmIn(g) > pt.up * pt.redline) { this.gear = ++g; this.shiftT = pt.shiftTime; }
+    else if (g > 0 && rpmIn(g) < (thr > 0.9 ? 0.6 : 0.42) * pt.redline && rpmIn(g - 1) < 0.92 * pt.redline) { this.gear = --g; this.shiftT = pt.shiftTime * 0.6; }
+    const rpm = Math.max(rpmIn(g), g === 0 ? pt.launch : pt.idle); this.rpm += (rpm - this.rpm) * Math.min(1, h * 25);
+    if (rpm >= pt.redline) return 0;                                                                              // rev limiter
+    const x = rpm / pt.peak, P = pt.kw * 1000 * clamp(x * (0.55 + 1.15 * x - 0.7 * x * x), 0, 1.05), T = P / (rpm / TAU);        // power curve (turbo-like shape, 1.0 at the peak), torque = power / angular speed
+    let F = T * ratio(g) / M.top * pt.eff / R * thr * M.accel * (this.shiftT > 0 ? 0.08 : 1);
+    return Math.min(F, pt.tcs * this.p.mu * ARCADE.grip * S0.grip * this.p.mass * G * Math.sqrt(M.accel));          // traction limit: the tyres cannot push harder than they grip
   }
 
   /* the arcade layer: runs once per physics step after the tyres have done their work */
