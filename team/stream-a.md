@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 11:00  N8 sectors and shared-asset streaming built
+Branch: feat/n8-sectors
+What changed: new `src/world/sectors.js` (sector manager: 512 m sectors, states, priority queue with look-ahead, concurrency and per-update budgets, hysteresis, cancel and abort, pins, failure retry, reset), new `src/core/assets.js` (ref-counted asset cache: one load for many askers, pinned while held, LRU eviction, abort when nobody waits); `src/main.js` runs the sector manager as a runtime system (focus is the player or camera), routes the traffic pack through the cache, rebuilds sectors on `world:rebuilt`, and shows a `sectors` line in the `?debug` panel. Six new self-tests (44 checks): lifecycle and budgets, hysteresis and pins, cancel/abort/late results/retry, a 1500-step stress with reversals, teleports and resets, twenty rebuilds in a row. Design note and measurements in `docs/STREAMING.md`. In the browser: 19 sectors loaded in 12 s of autodrive, pack loaded once, references equal sectors alive plus one after a region change, no errors. Terrain tiles and scenery are NOT moved behind sectors (deliberately).
+For the other stream: Stream A (world) review the sector boundary in `docs/STREAMING.md`; sector `meta` is the hook for spawn profiles (N9) and navigation chunks (N10).
+Status: open
+
 ## 2026-11-16 23:00  N6 switch-over done in the repo (owner request)
 Branch: feat/n6-switchover
 What changed: `index.html` is now the new engine (title "Game for Peace"); the original game moved to `classic.html` (still uses `game.js` and `audio.js`, which stay for rollback); `next.html` is a tiny redirect to `./` that keeps the query string and hash, so old links with `?loc=` and `?seed=` still work; `tuner.html` previews `index.html`; `tools/stage_cloudflare.py` copies `classic.html`; OVERVIEW, HANDOFF, CHECKLIST, PERFORMANCE and PARALLEL_PLAN updated. Checked locally: `/next.html?loc=mumbai&...` lands on `/?loc=mumbai&...` and loads the new game; `/classic.html` loads the old one; tuner opens. Self-test 33, vehicle acceptance, collision audit, all locations build a road, daily check 0 failed (one warning: `cloudflare/public` is out of date, as expected until staging). NOT done: the real-phone and driving acceptance the plan wanted before this switch (the owner asked to proceed); nothing deployed.
