@@ -26,8 +26,8 @@ const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
    latHand   grip left while the handbrake is held: the car slides and keeps sliding
    yawAssist how hard the car is pulled toward the yaw rate the steering asks for (1/s): crisp turn-in, and it holds a drift
    maxYaw    the fastest turn rate (rad/s) the assist asks for.  Off with ?arcade=0 */
-export const ARCADE = { on: !/[?&]arcade=0/.test(typeof location !== 'undefined' ? location.search : ''), latGrip: 2.6, latPower: 0.3, latHand: 0.12, slideSpeed: 14, yawAssist: 3.2, maxYaw: 1.7,
-  tyre: true, tyreAssist: 0.3, lockGrip: 1, combined: 0.6, steerLock: 3.5, tyreB: 10, tyreC: 1.9, tyreE: 0.9, downforce: 0.9, power: { car: 1.45, truck: 1.3, bike: 1.2 }, curve: 3, aeroMul: 0.55, brakeMul: 1.35, gripMul: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
+export const ARCADE = { on: !/[?&]arcade=0/.test(typeof location !== 'undefined' ? location.search : ''), latGrip: 2.6, latPower: 0.3, latHand: 0.12, slideSpeed: 14, yawAssist: 8, maxYaw: 1.2,
+  tyre: true, tyreAssist: 0.5, lockGrip: 1, combined: 0.6, steerLock: 3.5, steerRate: 2.5, tyreB: 10, tyreC: 1.9, tyreE: 0.9, downforce: 0.9, power: { car: 1.45, truck: 1.3, bike: 1.2 }, curve: 3, aeroMul: 0.55, brakeMul: 1.35, gripMul: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* per-vehicle suspension and body tuning (stiffness is per unit mass, so it reads as a natural frequency) */
@@ -149,9 +149,9 @@ export class RapierVehicle {
     else if (this.old) this.dropOld();
 
     /* steering: rate-limited, slower at speed, quick to centre; the lock shrinks with speed */
-    const want = clamp(input.steer, -1, 1), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = back ? 8 : 5.5 / (1 + Math.abs(this.u) / 14);
+    const want = clamp(input.steer, -1, 1), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = (back ? 8 : 5.5 / (1 + Math.abs(this.u) / 14)) * (ARCADE.on ? ARCADE.steerRate : 1);
     this.steer += clamp(want - this.steer, -rate * h, rate * h);
-    this.delta = this.steer * Math.min(p.steerMax, (ARCADE.on ? ARCADE.steerLock : 2.1) * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));
+    this.delta = this.steer * Math.min(p.steerMax, (ARCADE.on ? 2.1 + (ARCADE.steerLock - 2.1) * (1 - clamp((Math.abs(this.u) - 25) / 30, 0, 1)) : 2.1) * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));
     const tn = Math.tan(this.delta), R = Math.abs(tn) > 1e-4 ? p.L / tn : 1e6;
 
     const key = W.surface(this.x, this.z); this.surface = key; const S0 = SURFACES[key] || SURFACES.grass;
