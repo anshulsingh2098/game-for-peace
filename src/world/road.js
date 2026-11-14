@@ -52,7 +52,7 @@ export class RoadMesh {
       }
     }
     const geo = (P, C, I, U) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); if (U) g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setIndex(I); g.computeVertexNormals(); return g; };
-    const grp = new THREE.Group(); grp.add(new THREE.Mesh(geo(pos, col, idx, uv), this.surface), new THREE.Mesh(geo(lp, lc, li), this.paint));
+    const grp = new THREE.Group(); const rs = new THREE.Mesh(geo(pos, col, idx, uv), this.surface); rs.receiveShadow = true; grp.add(rs, new THREE.Mesh(geo(lp, lc, li), this.paint));
     grp.userData = { x: ox, z: oz }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
   }
   get solid() { return this.style.lines.filter(l => !l.dash).length; }

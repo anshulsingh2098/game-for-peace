@@ -25,7 +25,7 @@ export class VehicleView {
     this.model.traverse(o => {
       if (/^Wheel_/.test(o.name) && !o.isMesh) { o.rotation.order = 'YXZ'; this.wheels.push({ o, front: /^Wheel_F/.test(o.name) }); }
       if (/^Rider/.test(o.name)) this.riders.push(o);
-      if (o.isMesh) [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; });
+      if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; }); }
     });
     this.buildCockpit(def.id); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
   }
@@ -75,7 +75,7 @@ export class VehicleView {
     const r = this.root; r.position.set(ph.x - origin.x, ph.y, ph.z - origin.z); r.rotation.set(-ph.pitch, Math.PI / 2 - ph.yaw, ph.roll + ph.lean);
     for (const w of this.wheels) { w.o.rotation.x = ph.spin; w.o.rotation.y = w.front ? -ph.delta * 0.9 : 0; }
     if (this.wheel) this.wheel.rotation.z = -ph.steer * 1.3;
-    this.shadow.position.set(r.position.x, ph.y + 0.05, r.position.z); this.shadow.rotation.y = Math.PI / 2 - ph.yaw; this.shadow.visible = ph.wet < 0.3;
+    this.shadow.position.set(r.position.x, ph.y + 0.05, r.position.z); this.shadow.rotation.y = Math.PI / 2 - ph.yaw; this.shadow.visible = ph.wet < 0.3 && !this.realShadow;
   }
   /* aim the camera. floor(x, z) is the lowest height the camera may sit at. */
   aim(camera, ph, origin, dt, floor, boost = 0) {

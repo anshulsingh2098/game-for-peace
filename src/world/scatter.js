@@ -67,7 +67,7 @@ export class Scatter {
         P.set(a[0], a[1], a[2]); q.setFromEuler(e.set(0, a[4], 0)); S.set(a[3], a[3] * a[5], a[3]); im.setMatrixAt(n, M.compose(P, q, S));
         const v = 0.80 + a[6] * 0.4; im.setColorAt(n, jitter ? col.setRGB(v, v * (0.94 + a[6] * 0.12), v * (0.92 + a[6] * 0.1)) : col.setRGB(1, 1, 1));
       });
-      im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
+      im.castShadow = true; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
     };
     for (const k of ['pine', 'round']) if (lists[k].length) { fill(pr[k].trunk, pr.solid, lists[k], false); fill(pr[k].foliage, pr[k].mat, lists[k], true); count -= lists[k].length; }
     for (const k of ['bush', 'tuft']) if (lists[k].length) fill(pr[k].foliage, pr[k].mat, lists[k], true);

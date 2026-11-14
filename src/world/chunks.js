@@ -54,7 +54,7 @@ export class TileGrid {
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3)); g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(n * 2), 2));
     let idx = this.index.get(res); if (!idx) { idx = new THREE.BufferAttribute(tileIndex(res), 1); this.index.set(res, idx); }
     g.setIndex(idx); g.boundingSphere = new THREE.Sphere();
-    const mesh = new THREE.Mesh(g, this.material); mesh.userData.res = res; this.group.add(mesh); return mesh;
+    const mesh = new THREE.Mesh(g, this.material); mesh.receiveShadow = true; mesh.userData.res = res; this.group.add(mesh); return mesh;
   }
   release(mesh) { mesh.visible = false; const res = mesh.userData.res; let free = this.pool.get(res); if (!free) this.pool.set(res, free = []); free.push(mesh); }
 

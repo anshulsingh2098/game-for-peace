@@ -120,6 +120,20 @@ export class Environment {
   get timeName() { if (this.time !== 'auto') return TIME_NAME[this.time]; const t = this.tod; return t < 0.22 ? 'Night' : t < 0.33 ? 'Dawn' : t < 0.68 ? 'Day' : t < 0.78 ? 'Dusk' : 'Night'; }
   get label() { return WX_NAME[this.fixedWx || this.wxTarget] + ' · ' + this.timeName; }
 
+  /* sun shadows: one map that follows the camera. ext is the half-width in metres, size the map resolution; size 0 turns them off. */
+  setShadows(size, ext) {
+    const s = this.sun.shadow; this.sun.castShadow = size > 0; this.shadowExt = ext; this.shadowTexel = size > 0 ? 2 * ext / size : 0;
+    if (!size) return; s.mapSize.set(size, size); const c = s.camera; c.left = c.bottom = -ext; c.right = c.top = ext; c.near = 10; c.far = 700; c.updateProjectionMatrix();
+    s.bias = -0.0005; s.normalBias = 0.35;
+  }
+  /* centre of the shadow map: the camera position moved to a whole number of map texels, so shadows do not shimmer as you drive */
+  shadowSnap(p) {
+    const o = this._snap || (this._snap = { out: new THREE.Vector3(), m: new THREE.Matrix4(), v: new THREE.Vector3() }), t = this.shadowTexel; if (!t) return o.out.copy(p);
+    o.m.lookAt(o.v.set(0, 0, 0), this.sunDir, THREE.Object3D.DEFAULT_UP); const e = o.m.elements, rx = [e[0], e[1], e[2]], uy = [e[4], e[5], e[6]];
+    const a = Math.round((p.x * rx[0] + p.y * rx[1] + p.z * rx[2]) / t) * t, b = Math.round((p.x * uy[0] + p.y * uy[1] + p.z * uy[2]) / t) * t;
+    const da = (p.x * rx[0] + p.y * rx[1] + p.z * rx[2]) - a, db = (p.x * uy[0] + p.y * uy[1] + p.z * uy[2]) - b;
+    return o.out.set(p.x - da * rx[0] - db * uy[0], p.y - da * rx[1] - db * uy[1], p.z - da * rx[2] - db * uy[2]);
+  }
   update(dt, now, camera, reach) {
     if (this.time === 'auto') this.tod = (this.tod + dt / CYCLE) % 1;
     if (!this.fixedWx) { this.wxTimer -= dt; if (this.wxTimer <= 0) { let tot = 0, pick = 'clear'; for (const k in WX_AUTO) tot += WX_AUTO[k]; let r = Math.random() * tot; for (const k in WX_AUTO) { r -= WX_AUTO[k]; if (r <= 0) { pick = k; break; } } this.wxTarget = pick; this.wxTimer = 80 + Math.random() * 90; } }
@@ -139,7 +153,7 @@ export class Environment {
     if (m.road) { m.road.roughness = lerp(0.95, 0.3, W.wet); m.road.envMapIntensity = 0.2 + W.wet; m.road.color.setScalar(lerp(1, 0.62, W.wet)); }
     if (m.ground) m.ground.color.setScalar(lerp(1, 0.8, W.wet)); this.uSnow.value = W.snow;
     this.sky.position.copy(cam); this.stars.position.copy(cam);
-    this.sun.position.copy(cam).addScaledVector(this.sunDir, 300); this.sun.target.position.copy(cam);
+    const sp = this.shadowSnap(cam); this.sun.position.copy(sp).addScaledVector(this.sunDir, 300); this.sun.target.position.copy(sp);
     this.fill.position.set(cam.x - this.sunDir.x * 100, cam.y + 80, cam.z - this.sunDir.z * 100); this.fill.target.position.copy(cam);
     this.rain.visible = W.rain > 0.02; const ru = this.rain.material.uniforms; ru.time.value = t; ru.cam.value.copy(cam); ru.inten.value = W.rain; ru.wind.value.set(0.25 + W.rain * 0.25, 0);
     this.snowfall.visible = W.snow > 0.02; const su = this.snowfall.material.uniforms; su.time.value = t; su.cam.value.copy(cam); su.inten.value = W.snow;
