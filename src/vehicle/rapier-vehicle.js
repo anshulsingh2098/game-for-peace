@@ -18,7 +18,7 @@ import { SURFACES, NO_MOD } from './physics.js';
 let ready = null;
 export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIER));
 
-const G = 9.81, H = 1 / 120;
+const G = 9.81, H = 1 / 120, TYRE_SIGN = 1;       // checked by test: with this sign front and rear slip angles agree in a steady turn
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 /* Arcade handling layer (the "Most Wanted" feel): the tyre model alone is realistic and twitchy, so these steer the result.
    latGrip   how fast sideways speed is killed while gripping (1/s): high = planted, never floaty
@@ -27,7 +27,7 @@ const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
    yawAssist how hard the car is pulled toward the yaw rate the steering asks for (1/s): crisp turn-in, and it holds a drift
    maxYaw    the fastest turn rate (rad/s) the assist asks for.  Off with ?arcade=0 */
 export const ARCADE = { on: !/[?&]arcade=0/.test(typeof location !== 'undefined' ? location.search : ''), latGrip: 2.6, latPower: 0.3, latHand: 0.12, slideSpeed: 14, yawAssist: 3.2, maxYaw: 1.7,
-  downforce: 0.9, power: { car: 1.45, truck: 1.3, bike: 1.2 }, curve: 3, aeroMul: 0.55, brakeMul: 1.35, gripMul: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
+  tyre: true, tyreAssist: 0.3, lockGrip: 0.85, tyreB: 10, tyreC: 1.9, tyreE: 0.9, downforce: 0.9, power: { car: 1.45, truck: 1.3, bike: 1.2 }, curve: 3, aeroMul: 0.55, brakeMul: 1.35, gripMul: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* per-vehicle suspension and body tuning (stiffness is per unit mass, so it reads as a natural frequency) */
@@ -173,7 +173,8 @@ export class RapierVehicle {
     car.wheels.forEach((w, i) => {
       const pos = vc.wheelContactPoint(i), wx = pos ? pos.x + this.ox : this.x, wz = pos ? pos.z + this.oz : this.z, S = SURFACES[W.surface(wx, wz)] || S0;
       const wet = (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(W.surface(wx, wz)) : 1);
-      vc.setWheelFrictionSlip(i, p.mu * (ARCADE.on ? ARCADE.gripMul : 1) * S.grip * wet * M.grip * (!w.front && hnd > 0 ? 1 - 0.5 * hnd : 1));      // a locked rear wheel slides: the tail steps out
+      const muW = p.mu * (ARCADE.on ? ARCADE.gripMul : 1) * S.grip * wet * M.grip * (!w.front && hnd > 0 ? 1 - 0.5 * hnd : 1); (this.muW || (this.muW = []))[i] = muW; this.hnd = hnd;
+      vc.setWheelFrictionSlip(i, muW);      // a locked rear wheel slides: the tail steps out
       let a = 0; if (w.front) a = w.side === 0 ? this.delta : Math.atan(p.L / (R + w.side * p.track / 2));       // Ackermann: the inner wheel turns more
       vc.setWheelSteering(i, w.front ? -a : 0);
       vc.setWheelEngineForce(i, w.drive ? engine / nDrive : 0);
@@ -187,6 +188,7 @@ export class RapierVehicle {
     if (M.slope < 1) F += m * G * Math.sin(this.pitch) * (1 - M.slope);                                           // Hill Hauler: climbs as if the slope were not there
     b.resetForces(true); b.addForce({ x: fwd.x * F, y: -(ARCADE.on && p.pt ? 0.6 * ARCADE.downforce * u * u : 0), z: fwd.z * F }, true);          // downforce: the faster the car, the harder it is pressed into the road (force = 0.5 x air density x lift area x speed squared)
     /* anti-roll: a spring and damper about the forward axis so tall vehicles lean but do not tip over (a bike is held upright) */
+    if (ARCADE.on && ARCADE.tyre && p.pt) this.tyres(); else if (this.tyreOn) { for (let i = 0; i < car.wheels.length; i++) vc.setWheelSideFrictionStiffness(i, 1); this.tyreOn = false; }
     stabilise(b, car.T);
     vc.updateVehicle(h); this.R.step();
     this.read(); this.arcade(h, thr, want, hnd, tn, flooded);
@@ -215,15 +217,41 @@ export class RapierVehicle {
     return Math.min(F, pt.tcs * this.p.mu * ARCADE.gripMul * S0.grip * this.p.mass * G * Math.sqrt(M.accel));          // traction limit: the tyres cannot push harder than they grip
   }
 
+  /* Tyre sideways force from the Pacejka "Magic Formula" (the standard published tyre curve): force = mu x load x sin(C x atan(B a - E (B a - atan(B a)))), where a is the
+     slip angle, the angle between where the wheel points and where it is actually moving. It rises with slip angle, peaks (about 6 to 8 degrees), then falls: past the limit the
+     tyre slides with less grip than at the peak, so the car breaks away progressively instead of snapping. Rapier's own side friction (a hard cap) is faded out above walking pace
+     and this force is applied at each wheel's contact patch instead. B = stiffness, C = shape, E = curvature (all in the tuner). */
+  tyres() {
+    const A = ARCADE, b = this.body, vc = this.vc, n = this.car.wheels.length, lv = b.linvel(), av = b.angvel(), tr = b.translation(), q = b.rotation();
+    const sp = Math.hypot(lv.x, lv.z), blend = clamp((sp - 2.5) / 4, 0, 1); this.tyreOn = true;
+    for (let i = 0; i < n; i++) vc.setWheelSideFrictionStiffness(i, 1 - blend);
+    if (blend <= 0) return;
+    const mf = a => { const x = A.tyreB * a; return Math.sin(A.tyreC * Math.atan(x - A.tyreE * (x - Math.atan(x)))); };
+    let peak = 0; for (let a = 0.01; a < 0.6; a += 0.01) peak = Math.max(peak, mf(a));
+    const rot = (x, y, z) => { const tx = 2 * (q.y * z - q.z * y), ty = 2 * (q.z * x - q.x * z), tz = 2 * (q.x * y - q.y * x); return [x + q.w * tx + (q.y * tz - q.z * ty), y + q.w * ty + (q.z * tx - q.x * tz), z + q.w * tz + (q.x * ty - q.y * tx)]; };
+    const up = rot(0, 1, 0), f0 = rot(0, 0, 1), cr = [up[1] * f0[2] - up[2] * f0[1], up[2] * f0[0] - up[0] * f0[2], up[0] * f0[1] - up[1] * f0[0]];
+    for (let i = 0; i < n; i++) {
+      if (!vc.wheelIsInContact(i)) continue; const pt = vc.wheelContactPoint(i), fz = vc.wheelSuspensionForce(i); if (!pt || !(fz > 0)) continue;
+      const st = (vc.wheelSteering(i) || 0) * TYRE_SIGN, c = Math.cos(st), sn = Math.sin(st), wf = [f0[0] * c + cr[0] * sn, f0[1] * c + cr[1] * sn, f0[2] * c + cr[2] * sn];
+      const lat = [up[1] * wf[2] - up[2] * wf[1], up[2] * wf[0] - up[0] * wf[2], up[0] * wf[1] - up[1] * wf[0]];
+      const rx = pt.x - tr.x, ry = pt.y - tr.y, rz = pt.z - tr.z, vx = lv.x + av.y * rz - av.z * ry, vy = lv.y + av.z * rx - av.x * rz, vz = lv.z + av.x * ry - av.y * rx;
+      const vl = vx * lat[0] + vy * lat[1] + vz * lat[2], vf = vx * wf[0] + vy * wf[1] + vz * wf[2], alpha = Math.atan2(vl, Math.max(Math.abs(vf), 1));
+      this.alpha = this.alpha || []; this.alpha[i] = alpha;
+      const lock = !this.car.wheels[i].front && this.hnd > 0 ? (1 - A.lockGrip * this.hnd) / (1 - 0.5 * this.hnd) : 1;                        // a locked rear wheel slides: it keeps only a little sideways grip
+      const F = -(this.muW[i] || 1) * fz * mf(alpha) / peak * blend * lock;
+      b.addForceAtPoint({ x: lat[0] * F, y: lat[1] * F, z: lat[2] * F }, pt, true);
+    }
+  }
+
   /* the arcade layer: runs once per physics step after the tyres have done their work */
   arcade(h, thr, want, hnd, tn, flooded) {
     const A = ARCADE, p = this.p; if (!A.on || flooded || this.id === 'bike') return;
     const sp = Math.abs(this.u); if (sp < 3 || this.wheelStates.filter(w => w.contact).length < 2) return;
     const b = this.body, lv = b.linvel(), av = b.angvel(), c = Math.cos(this.yaw), s = Math.sin(this.yaw), S = SURFACES[this.surface] || SURFACES.grass;
-    let k = A.latGrip * Math.min(1, S.grip + 0.2);
+    let k = A.latGrip * Math.min(1, S.grip + 0.2) * (A.tyre && p.pt ? 0.25 : 1);                                // the tyre curve does the gripping now; this only adds a little help
     if (hnd > 0) k = A.latGrip * (1 - hnd) + A.latHand * hnd; else if (thr > 0.5 && Math.abs(want) > 0.5 && sp > A.slideSpeed) k *= A.latPower;      // power slide
     const dv = -this.v * (1 - Math.exp(-k * h));                                                                // kill some sideways speed along the car's own side axis
-    const target = clamp(this.u * tn / p.L, -A.maxYaw, A.maxYaw) * (hnd > 0 ? 1 - 0.55 * hnd : 1), yaw = (target - this.r) * A.yawAssist * h;
+    const target = clamp(this.u * tn / p.L, -A.maxYaw, A.maxYaw) * (hnd > 0 ? 1 - 0.55 * hnd : 1), yaw = (target - this.r) * A.yawAssist * (A.tyre && p.pt ? A.tyreAssist : 1) * h;
     b.setLinvel({ x: lv.x - s * dv, y: lv.y, z: lv.z + c * dv }, true); b.setAngvel({ x: av.x, y: av.y - yaw, z: av.z }, true);
   }
 
