@@ -10,7 +10,7 @@ import { Road } from '../src/world/router.js';
 import { createRails, RAIL_R } from '../src/world/bridge_rails.js';
 import { rumbleFor } from '../src/input/rumble.js';
 import { sanitiseSaved } from '../src/core/saved.js';
-import { TrafficSim, MODES, SLOT } from '../src/traffic/sim.js';
+import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL } from '../src/traffic/sim.js';
 import { Autodrive } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
@@ -590,6 +590,31 @@ test('district: regions turn it on with data (validated), nothing in the code na
   const bad = JSON.parse(JSON.stringify(mumbai)); bad.district.styles = ['gothic']; assert.ok(validateRegion(bad).length > 0); bad.district = { styles: ['colonial'], floors: [5, 2], market: true }; assert.ok(validateRegion(bad).length > 0); bad.district = { styles: ['colonial'], floors: [2, 4], market: 'yes' }; assert.ok(validateRegion(bad).length > 0);
   for (const f of ['district.js', 'district_plan.js']) { const src = readFileSync(new URL('../src/world/' + f, import.meta.url), 'utf8'); assert.ok(!/mumbai|delhi|agra|bhopal/i.test(src), f + ' must not name a place'); }
   assert.equal(REGIONS.filter(r => r.district).length, 1, 'only Mumbai has a district so far');
+});
+
+/* ---- N12: Indian traffic mix and signals ---- */
+test('traffic mix: the region mix adds two-wheelers and auto-rickshaws in proportion, a place without a mix keeps the pack as it is', () => {
+  const pack = [{ name: 'sedan', len: 4.5, w: 1.8, h: 1.4, weight: 60 }, { name: 'truck', len: 8, w: 2.5, h: 3, weight: 40 }]; assert.equal(trafficKinds(pack, null), pack);
+  const mix = { car: 62, 'two-wheeler': 20, 'auto-rickshaw': 14, truck: 4 }, k = trafficKinds(pack, mix), total = k.reduce((a, x) => a + x.weight, 0); const share = n => k.filter(x => x.name === n).reduce((a, x) => a + x.weight, 0) / total;
+  assert.deepEqual(k.map(x => x.name), ['sedan', 'truck', 'two-wheeler', 'auto-rickshaw']); assert.ok(Math.abs(share('two-wheeler') - 20 / 100) < 0.01 && Math.abs(share('auto-rickshaw') - 14 / 100) < 0.01, 'shares ' + share('two-wheeler') + ' ' + share('auto-rickshaw'));
+  assert.equal(k.find(x => x.name === 'two-wheeler').len, EXTRA_KINDS['two-wheeler'].len); assert.deepEqual(trafficKinds(pack, { car: 10 }).map(x => x.name), ['sedan', 'truck'], 'kinds not in the mix are not added'); assert.equal(trafficKinds(pack, {}), pack);
+  const r = REGIONS.find(x => x.id === 'mumbai'); assert.ok(r.traffic.mix['two-wheeler'] > 0 && r.traffic.mix['auto-rickshaw'] > 0);
+});
+test('traffic signals: vehicles stop at a red signalled crossing, go on green, pass the amber they cannot stop for; two-wheelers sit at a lane edge', () => {
+  assert.equal(signalState(0, 0), 'green'); assert.equal(signalState(0, SIGNAL.green + 0.1), 'amber'); assert.equal(signalState(0, SIGNAL.green + SIGNAL.amber + 0.1), 'red'); assert.equal(signalState(0, SIGNAL.cycle + 1), 'green');
+  const cfg = locationConfig('mumbai', 'signals'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-3000, 3000); t.attachRoad(r); assert.equal(r.style.id, 'boulevard');
+  const kinds = [{ name: 'sedan', len: 4.4, w: 1.85, h: 1.45, weight: 70 }, { name: 'two-wheeler', len: 2, w: 0.8, h: 1.5, weight: 30 }]; const sim = new TrafficSim(r, { seed: 'sig', mode: 'high', drive: 'left' }); sim.setKinds(kinds);
+  let stoppedAtRed = 0, violations = 0, bikes = 0; const lane = r.style.half / sim.lanes.length;
+  for (let k = 0; k < 4200; k++) {
+    sim.update(1 / 20, { x: 1e6, z: 1e6, s: 300 + k * 0.4, u: 0, yaw: 0 });                                                                  // the player is far off the road, so only signals and other cars matter
+    for (const c of sim.cars) { if (c.kind === 'two-wheeler') { bikes++; const off = Math.abs(Math.abs(c.lat) - sim.lanes[c.lane]); assert.ok(off > 0.2 && off <= lane * 0.3 + 1e-6, 'a two-wheeler sits at the edge of its lane: ' + off); }
+      const m = 6; const i = (c.dir > 0 ? Math.ceil(c.s / 25 / m) : Math.floor(c.s / 25 / m)) * m; if (!sim.isCrossing(i)) continue; const sline = i * 25 - c.dir * (6 + c.len / 2), dist = (sline - c.s) * c.dir; const st2 = signalState(i, sim.time);
+      if (st2 === 'red' && dist > -0.5 && dist < 4 && c.speed < 0.3) stoppedAtRed++; if (st2 === 'red' && dist > -4 && dist < -1 && c.speed > 3 && c.stuck === 0) violations++; }
+  }
+  assert.ok(stoppedAtRed > 20, 'cars wait at red lights: ' + stoppedAtRed); assert.ok(violations < stoppedAtRed * 0.15, 'cars rarely cross the line on red (only those already too close to stop): ' + violations + ' of ' + stoppedAtRed); assert.ok(bikes > 50, 'two-wheelers appear: ' + bikes);
+  const sim2 = new TrafficSim(r, { seed: 'sig', mode: 'high', drive: 'left' }); sim2.setKinds(kinds); for (let k = 0; k < 600; k++) sim2.update(1 / 20, { x: 1e6, z: 1e6, s: 300 + k * 0.4, u: 0, yaw: 0 }); const sim3 = new TrafficSim(r, { seed: 'sig', mode: 'high', drive: 'left' }); sim3.setKinds(kinds); for (let k = 0; k < 600; k++) sim3.update(1 / 20, { x: 1e6, z: 1e6, s: 300 + k * 0.4, u: 0, yaw: 0 });
+  assert.deepEqual(sim2.cars.map(c => [c.id, c.kind, Math.round(c.s * 100)]), sim3.cars.map(c => [c.id, c.kind, Math.round(c.s * 100)]), 'signals and mix keep the traffic deterministic');
+  const hwy = createTerrain(locationConfig('california', 'peace')), rr = new Road(hwy, locationConfig('california', 'peace')); rr.ensure(-1000, 1000); hwy.attachRoad(rr); assert.equal(new TrafficSim(rr, { mode: 'low' }).signalled, ['boulevard', 'highway'].includes(rr.style.id));
 });
 
 console.log(`\n${passed} checks passed`);
