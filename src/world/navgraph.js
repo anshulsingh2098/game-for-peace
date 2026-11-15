@@ -20,6 +20,12 @@ import { laneOffsets } from '../traffic/sim.js';
 export const STEP = 25, CROSS_EVERY = 150, SIGNAL_STYLES = ['boulevard', 'highway'], STOP_LINE_NODES = 1;
 const SPEED = { 'two-lane': 22, highway: 30, boulevard: 16, dirt: 12, gravel: 14 };       // m/s, the same table as the traffic sim's speed limits
 
+/* is there a pedestrian crossing at road sample i? every CROSS_EVERY metres, on a straight stretch that is not carried on a bridge or in a tunnel (shared with the district builder, so painted crossings and graph crossings are the same places) */
+export function crossingAt(road, i, p = {}) {
+  if (i % (CROSS_EVERY / STEP) !== 0) return false; const s = i * STEP; if (road.bridgeW(s) === 1 || road.tunnelW(s) >= 0.99) return false;
+  road.at(s - STEP, p); const th0 = p.th; road.at(s + STEP, p); return Math.abs(Math.atan2(Math.sin(p.th - th0), Math.cos(p.th - th0))) < 0.12;
+}
+
 /* ---------- generic graph ---------- */
 export class NavGraph {
   constructor({ cell = 64, cacheSize = 256 } = {}) {
@@ -120,9 +126,9 @@ export class RoadNav {
     }
     for (const side of ['L', 'R']) { const w0 = a('w', side), w1 = b('w', side); if (w0 && w1) { const wb = { cls: 'sidewalk', speed: 1.4, width: 1.6, surface: 'paved', grade: slope, curv, carried }; G.addEdge({ id: 'e:w' + side + '>' + i, a: w0.id, b: w1.id, kind: 'walk', ...wb }); G.addEdge({ id: 'e:w' + side + '<' + i, a: w1.id, b: w0.id, kind: 'walk', ...wb }); } }
     // crossing at i: straight, uncarried, every CROSS_EVERY metres
-    if (i % (CROSS_EVERY / STEP) === 0) {
-      const wl = a('w', 'L'), wr = a('w', 'R'); R.at((i - 1) * STEP, p); const th1 = p.th; R.at((i + 1) * STEP, p); const bend = Math.abs(Math.atan2(Math.sin(p.th - th1), Math.cos(p.th - th1)));
-      if (wl && wr && !wl.carried && bend < 0.12) {
+    if (crossingAt(R, i, p)) {
+      const wl = a('w', 'L'), wr = a('w', 'R');
+      if (wl && wr && !wl.carried) {
         const sig = SIGNAL_STYLES.includes(st.id) ? 'sig:' + i : null; wl.crossing = wr.crossing = true; const cb = { cls: 'crossing', speed: 1.4, width: 3, surface: 'paved', grade: 0, curv: 0, carried: null, signal: sig };
         G.addEdge({ id: 'e:xLR:' + i, a: wl.id, b: wr.id, kind: 'cross', ...cb }); G.addEdge({ id: 'e:xRL:' + i, a: wr.id, b: wl.id, kind: 'cross', ...cb });
         if (sig) { this.signals.set(sig, { id: sig, i, s: i * STEP, x: (wl.x + wr.x) / 2, z: (wl.z + wr.z) / 2 }); for (const key of ['f', 'b']) for (let k = 0; k < this.lanes.length; k++) { const j = key === 'f' ? i - STOP_LINE_NODES : i + STOP_LINE_NODES, n = G.node(this.nodeId('d', j, key + k)); if (n) n.stopFor = sig; } }

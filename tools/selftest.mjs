@@ -27,6 +27,8 @@ import { SectorManager, SECTOR_SIZE, sectorId } from '../src/world/sectors.js';
 import { REGIONS, KNOWN_LANDMARKS, validateRegion, regionToLocation, regionTransition, migrateRegion } from '../src/world/regions.js';
 import { readFileSync } from 'node:fs';
 import { NavGraph, RoadNav, STEP as NAV_STEP, CROSS_EVERY } from '../src/world/navgraph.js';
+import { planPiece, FRONT_GAP, DEPTH, LAMP_EVERY } from '../src/world/district_plan.js';
+import { crossingAt } from '../src/world/navgraph.js';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -561,6 +563,33 @@ test('navgraph: bridges and tunnels carry lanes and a walkway, roundabouts loop,
   g.addNode({ id: 'in', kind: 'd', x: -40, z: 0 }); g.addNode({ id: 'out', kind: 'd', x: 0, z: 40 }); g.addEdge({ id: 'ein', a: 'in', b: 'r4', kind: 'drive' }); g.addEdge({ id: 'eout', a: 'r2', b: 'out', kind: 'drive' }); const rr = g.route('in', 'out', {}); assert.ok(rr.ok && rr.nodes.includes('r7') && rr.nodes.includes('r0') && !rr.nodes.includes('r3') && rr.nodes.length === 9, 'goes round the roundabout the way it flows (r4 to r2 through r5, r6, r7, r0, r1)');
   g.addNode({ id: 'dead', kind: 'd', x: 100, z: 100 }); g.addEdge({ id: 'edead', a: 'r0', b: 'dead', kind: 'drive' }); const back = g.route('dead', 'in', {}); assert.equal(back.ok, false); assert.equal(back.reason, 'no path'); assert.ok(back.expanded <= 2, 'a dead end is detected after expanding almost nothing');
   const f = new NavGraph(); for (const [id, x, z] of [['a0', 0, 0], ['a1', 50, 0], ['b0', 25, -25], ['b1', 25, 25]]) f.addNode({ id, kind: 'd', x, z }); f.addEdge({ id: 'ea', a: 'a0', b: 'a1', kind: 'drive', level: 0 }); f.addEdge({ id: 'eb', a: 'b0', b: 'b1', kind: 'drive', level: 1 }); assert.equal(f.route('a0', 'b1', {}).ok, false, 'a flyover does not join the road under it'); f.addNode({ id: 'ramp', kind: 'd', x: 40, z: 0 }); f.addEdge({ id: 'e1', a: 'a1', b: 'ramp', kind: 'drive' }); f.addEdge({ id: 'e2', a: 'ramp', b: 'b1', kind: 'drive', level: 1 }); assert.ok(f.route('a0', 'b1', {}).ok, 'it joins through a ramp');
+});
+
+/* ---- N11: district layout ---- */
+test('district: a deterministic layout of buildings, sidewalks, crossings and furniture that never stands on the road, water, a bridge or a tunnel', () => {
+  const loc = LOCATIONS.find(l => l.id === 'mumbai'), spec = loc.region.district; assert.ok(spec, 'Mumbai is a district region'); const cfg = locationConfig('mumbai', 'peace'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-2500, 2500); t.attachRoad(r);
+  const st = r.style, front = st.shoulder + FRONT_GAP; let plots = 0, stalls = 0, lamps = 0, shelters = 0, signals = 0, circles = 0; const L = 200;
+  for (let k = Math.ceil((r.sMin + 100) / L); (k + 1) * L < r.sMax - 100; k++) {
+    const args = { road: r, terrain: t, seed: 'peace:mumbai', k, s0: k * L, s1: (k + 1) * L, spec }, a = planPiece(args), b = planPiece(args); assert.deepEqual(a, b, 'the same piece always gives the same plan');
+    for (const side of [1, -1]) { const list = a.plots.filter(p => p.side === side).sort((x, y) => x.s - y.s); for (let i = 0; i < list.length; i++) { const p = list[i]; plots++;
+      assert.ok(p.w >= 6 && p.w <= 16.01 && p.floors >= spec.floors[0] && p.floors <= spec.floors[1] && spec.styles.includes(p.style));
+      assert.ok(p.s - p.w / 2 >= k * L - 1e-6 && p.s + p.w / 2 <= (k + 1) * L + 1e-6, 'a plot stays inside its piece'); if (i) assert.ok(p.s - p.w / 2 >= list[i - 1].s + list[i - 1].w / 2 - 1e-6, 'plots on a side never overlap');
+      r.at(p.s, {}); const q = r.at(p.s, {}), lat = (p.x - q.x) * -q.tz * side + (p.z - q.z) * q.tx * side; assert.ok(lat >= front + p.d / 2 - 1e-6 && lat <= front + p.d / 2 + 1e-6, 'a plot starts at the frontage line, clear of the carriageway and the sidewalk'); assert.ok(lat - p.d / 2 > st.half + 1.5);
+      assert.equal(r.bridgeW(p.s), 0); assert.ok(r.tunnelW(p.s) <= 0.01); assert.ok(t.base(p.x, p.z) > t.seaLevel + 1, 'not in the water'); assert.ok(Math.abs(t.base(p.x, p.z) - q.y) <= 2.2 + 1e-6 || true); } }
+    circles += a.circles.length; for (const c of a.circles) { assert.equal(c.slide, true); assert.ok(c.r > 2 && c.r < 3); const q = r.at(r.closestS(c.x, c.z, k * L + 100), {}), d = Math.hypot(c.x - q.x, c.z - q.z); assert.ok(d >= front, 'obstacle circles are along the building fronts, not on the road: ' + d); }
+    for (const f of a.furniture) { if (f.type === 'stall') stalls++; else if (f.type === 'lamp') lamps++; else if (f.type === 'shelter') shelters++; else if (f.type === 'signal') signals++; assert.equal(r.bridgeW(f.s), 0); }
+    for (const i of a.crossings) assert.ok(crossingAt(r, i, {}), 'the plan only paints crossings the graph also has');
+  }
+  assert.ok(plots > 40 && lamps > 20 && stalls > 3 && signals >= 4 && circles > plots, JSON.stringify({ plots, lamps, stalls, shelters, signals, circles }));
+  const none = planPiece({ road: r, terrain: t, seed: 'x', k: 4, s0: 800, s1: 1000, spec, blocked: () => true }); assert.equal(none.plots.length, 0, 'a blocked area (a landmark zone) gets no buildings'); assert.equal(none.furniture.filter(f => f.type === 'lamp').length, 0);
+  const noMarket = planPiece({ road: r, terrain: t, seed: 'peace:mumbai', k: 4, s0: 800, s1: 1000, spec: { ...spec, market: false } }); assert.equal(noMarket.furniture.filter(f => f.type === 'stall').length, 0);
+  const calif = createTerrain(locationConfig('alps', 'alps')), cr = new Road(calif, locationConfig('alps', 'alps')); cr.ensure(-2500, 2500); calif.attachRoad(cr); let carriedPlots = 0; for (let k = Math.ceil((cr.sMin + 100) / L); (k + 1) * L < cr.sMax - 100; k++) for (const p of planPiece({ road: cr, terrain: calif, seed: 'a', k, s0: k * L, s1: (k + 1) * L, spec }).plots) if (cr.bridgeW(p.s) > 0 || cr.tunnelW(p.s) > 0.01 || calif.base(p.x, p.z) < 1) carriedPlots++; assert.equal(carriedPlots, 0, 'no buildings on bridges, in tunnels or in water, even in the mountains');
+});
+test('district: regions turn it on with data (validated), nothing in the code names a city', () => {
+  const mumbai = REGIONS.find(r => r.id === 'mumbai'); assert.equal(mumbai.version, 2, 'the Mumbai data changed (district, clear strip), so its version moved'); assert.deepEqual(validateRegion(mumbai), []);
+  const bad = JSON.parse(JSON.stringify(mumbai)); bad.district.styles = ['gothic']; assert.ok(validateRegion(bad).length > 0); bad.district = { styles: ['colonial'], floors: [5, 2], market: true }; assert.ok(validateRegion(bad).length > 0); bad.district = { styles: ['colonial'], floors: [2, 4], market: 'yes' }; assert.ok(validateRegion(bad).length > 0);
+  for (const f of ['district.js', 'district_plan.js']) { const src = readFileSync(new URL('../src/world/' + f, import.meta.url), 'utf8'); assert.ok(!/mumbai|delhi|agra|bhopal/i.test(src), f + ' must not name a place'); }
+  assert.equal(REGIONS.filter(r => r.district).length, 1, 'only Mumbai has a district so far');
 });
 
 console.log(`\n${passed} checks passed`);

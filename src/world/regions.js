@@ -12,7 +12,8 @@
      land          { terrain, palette, water } the numbers the terrain generator, ground colours and sea take (same fields as a world config)
      vegetation    { trees, rocks, bushes, tufts, pineBias, tint, ... }  the scatter settings
      roads         { style, maxAlt, drive: 'left' | 'right', density 0..1 }
-     buildings     { styles: [names], density 0..1 }           data for the building kit (N11); unused by the renderer today
+     buildings     { styles: [names], density 0..1 }           broad character of the buildings (data for later phases)
+     district      (optional) { styles: [palette names], floors: [min, max], market: bool }   turns on the built-up road edge (world/district.js): modular buildings, sidewalks, crossings, furniture
      traffic       { mix: { kind: weight }, scale 0..2 }       vehicle mix (kinds: car, van, truck, two-wheeler, auto-rickshaw, bus) and a density multiplier
      population    { density 0..1, archetypes: [names] }       for pedestrians (N13)
      audio         { ambient }                                  the ambient sound profile name
@@ -28,16 +29,18 @@ export const KNOWN_LANDMARKS = ['gateway', 'tajHotel', 'marine', 'indiaGate', 't
 export const VEHICLE_KINDS = ['car', 'van', 'truck', 'two-wheeler', 'auto-rickshaw', 'bus'];
 export const ROAD_STYLE_IDS = ['two-lane', 'highway', 'boulevard', 'dirt', 'gravel'];
 export const TIME_IDS = ['dawn', 'day', 'dusk', 'night'], WEATHER_IDS = ['clear', 'overcast', 'rain', 'fog', 'storm', 'snow'];
+export const DISTRICT_STYLES = { colonial: 1, 'art-deco': 1, modern: 1, mixed: 1, mughal: 1, 'old-city': 1 };         // palette names the district builder knows (district_plan.js PALETTES)
 const INDIA = { lat: [6, 36], lon: [68, 98] };
 
 const MUMBAI = {
-  schema: 1, id: 'mumbai', version: 1, name: 'Mumbai', blurb: 'the art-deco curve of Marine Drive, the Gateway of India and the Taj Mahal Palace hotel, at golden hour by the Arabian Sea.', accent: '#ff9d5c',
+  schema: 1, id: 'mumbai', version: 2, name: 'Mumbai', blurb: 'the art-deco curve of Marine Drive, the Gateway of India and the Taj Mahal Palace hotel, at golden hour by the Arabian Sea.', accent: '#ff9d5c',
   inspiration: { place: 'Mumbai, Maharashtra', lat: 18.93, lon: 72.83, boundsKm: [20, 20] },
   transform: { anchorLat: 18.93, anchorLon: 72.83, metresPerGameMetre: 1 },
   climate: { time: 'dusk', weather: 'clear' },
   land: { terrain: { seaLevel: 0, lowland: 7, continent: { scale: 3800, rise: 20 }, coast: { lo: -0.3, hi: -0.1 }, warp: { scale: 1000, amp: 150 }, hills: { scale: 520, amp: 9, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.6, full: 0.95, scale: 3400, amp: 120, octaves: 4, gain: 0.4, sharp: 1.5 } }, palette: { grass: [0.56, 0.66, 0.28], grass2: [0.36, 0.52, 0.2], dry: [0.72, 0.64, 0.4], alpine: [0.5, 0.52, 0.34], rock: [0.52, 0.47, 0.4], sand: [0.9, 0.82, 0.62], treeline: 400, snowline: 2500 }, water: { color: '#2a7f8e' } },
-  vegetation: { trees: 0.0042, rocks: 0.0003, bushes: 0.0016, tufts: 0.008, pineBias: -0.95, tint: [1, 1.04, 0.78] },
+  vegetation: { clearRoad: 30, trees: 0.0042, rocks: 0.0003, bushes: 0.0016, tufts: 0.008, pineBias: -0.95, tint: [1, 1.04, 0.78] },
   roads: { style: 'boulevard', maxAlt: 150, drive: 'left', density: 1 },
+  district: { styles: ['colonial', 'art-deco', 'colonial', 'mixed'], floors: [3, 7], market: true },
   buildings: { styles: ['colonial', 'art-deco'], density: 0.8 },
   traffic: { mix: { car: 62, 'two-wheeler': 20, 'auto-rickshaw': 14, truck: 4 }, scale: 1 },
   population: { density: 0.9, archetypes: ['commuter', 'vendor', 'tourist'] },
@@ -115,6 +118,7 @@ export function validateRegion(r) {
   if (isObj(la) && isObj(la.water)) need(/^#[0-9a-fA-F]{6}$/.test(la.water.color || ''), 'water.color must be #rrggbb');
   const v = r.vegetation; need(isObj(v) && ['trees', 'rocks', 'bushes', 'tufts'].every(k => isNum(v[k]) && v[k] >= 0 && v[k] < 0.1) && Array.isArray(v.tint) && v.tint.length === 3, 'vegetation needs trees, rocks, bushes, tufts (0..0.1) and a 3-number tint');
   const ro = r.roads; need(isObj(ro) && ROAD_STYLE_IDS.includes(ro.style) && isNum(ro.maxAlt) && ro.maxAlt > 0 && (ro.drive === 'left' || ro.drive === 'right') && in01(ro.density), 'roads needs a known style, maxAlt, drive left|right and density 0..1');
+  if (r.district !== undefined) { const di = r.district; need(isObj(di) && Array.isArray(di.styles) && di.styles.length > 0 && di.styles.every(x => isStr(x) && Object.prototype.hasOwnProperty.call(DISTRICT_STYLES, x)) && Array.isArray(di.floors) && di.floors.length === 2 && di.floors.every(Number.isInteger) && di.floors[0] >= 1 && di.floors[1] >= di.floors[0] && di.floors[1] <= 12 && typeof di.market === 'boolean', 'district needs known styles, floors [min, max] (1..12) and market true|false'); }
   const bu = r.buildings; need(isObj(bu) && Array.isArray(bu.styles) && bu.styles.length > 0 && bu.styles.every(isStr) && in01(bu.density), 'buildings needs styles and density 0..1');
   const tf = r.traffic; need(isObj(tf) && isObj(tf.mix) && isNum(tf.scale) && tf.scale >= 0 && tf.scale <= 2, 'traffic needs mix and scale 0..2');
   if (isObj(tf) && isObj(tf.mix)) { const ks = Object.keys(tf.mix); need(ks.length > 0 && ks.every(k => VEHICLE_KINDS.includes(k) && isNum(tf.mix[k]) && tf.mix[k] >= 0) && ks.reduce((a, k) => a + tf.mix[k], 0) > 0, 'traffic.mix: known vehicle kinds with weights, total above 0'); }
