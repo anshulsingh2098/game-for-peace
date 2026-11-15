@@ -21,6 +21,7 @@ import { AssetCache } from './core/assets.js';
 import { SectorManager } from './world/sectors.js';
 import { RoadNav } from './world/navgraph.js';
 import { NavDebug } from './debug/navdebug.js';
+import { Pedestrians } from './pedestrians/pedestrians.js';
 import { WALL, ARCH } from './world/tunnels.js';
 import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
@@ -92,7 +93,7 @@ const assetCache = new AssetCache({ load: async key => { if (key === 'traffic:pa
 let trafficPack = null; assetCache.acquire('traffic:pack').then(p => { trafficPack = p; if (p && typeof traffic !== 'undefined' && traffic) traffic.useModels(p); }).catch(() => {});          // the traffic vehicles load in the background; plain boxes until they are there
 let nature = null; if (natureLevel !== 'flat') loadNature(natureLevel).then(p => { nature = p; loadState.scenery = true; loadUpdate(); if (p && typeof scatter !== 'undefined' && scatter) scatter.setProps(p); });       // real-scan trees, plants and rocks (src/world/nature.js); ?nature=flat keeps the drawn ones
 const photoGround = groundLevel !== 'flat', groundMat = photoGround ? makeGroundMaterial(groundLevel) : null;                // photographic ground (src/world/groundmat.js); ?ground=flat for the old drawn texture
-let nav = null, navDebug = null;                                                                                 // the navigation graph of the current road (src/world/navgraph.js), built a sector at a time; ?nav draws it
+let nav = null, navDebug = null, peds = null;                                                                                 // the navigation graph of the current road (src/world/navgraph.js), built a sector at a time; ?nav draws it
 let holes = null;                                                                                                // doorways cut through the hillside at tunnel portals (src/world/tunnel_holes.js)
 const ground = groundMat ? groundMat.material : new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
 const ripples = waterNormalTex(), RIP = 0.07;
@@ -116,7 +117,9 @@ function makeScenery() {
   if (landmarks) landmarks.dispose(); landmarks = new Landmarks(scene, terrain, road, config, grid.origin, locationById(config.location).landmarks);       // sights beside the road; they also level the land under them
   roadMesh = new RoadMesh(scene, road, road.style, grid.origin, { district: (locationById(config.location).region || {}).district, seed: config.seed + ':' + config.location, blocked: (x, z) => terrain.inZone(x, z, 8) }); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
   if (nav) nav.unloadAll(); nav = new RoadNav(road, { drive: locationById(config.location).drive || 'right' }); if (q.has('nav') && !navDebug) navDebug = new NavDebug(scene);
+  if (peds) { peds.dispose(); peds = null; }
   if (traffic) traffic.dispose(); traffic = new Traffic(scene, road, config.seed, grid.origin, { mode: S.traffic, drive: locationById(config.location).drive || 'right', scale: (locationById(config.location).region || { traffic: { scale: 1 } }).traffic.scale, mix: (locationById(config.location).region || { traffic: {} }).traffic.mix || null, pack: trafficPack });          // cars on the road (src/traffic), on the right or the left as the place drives
+  { const reg = locationById(config.location).region; if (reg && reg.district && reg.population && reg.population.density > 0) peds = new Pedestrians(scene, nav, config.seed + ':' + config.location, grid.origin, { density: reg.population.density, archetypes: reg.population.archetypes, level: S.traffic, traffic: traffic.sim }); }          // people on the sidewalks of a built-up region (src/pedestrians); their number follows the traffic setting
   env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); } if (!holes) holes = installTunnelHoles(ground, WALL, ARCH); waterMat.color.set(config.water.color);
 }
 makeScenery();
@@ -233,7 +236,7 @@ menu = new Menu({
     if (k === 'time') { S.time = v; save(); env.setTime(v); } else if (k === 'weather') { S.weather = v; save(); env.setWeather(v); } else if (k === 'lights') { S.lights = v; save(); }
     else if (k === 'sfx') { S.muted = v === 'off'; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } }
     else if (k === 'rumble') { S.rumble = v; save(); }
-    else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); }
+    else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (peds) peds.setLevel(v); }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
   locations: LOCATIONS, setLocation: id => setLocation(id), radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
@@ -320,6 +323,7 @@ function update(dt, now) {
   if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
+  if (peds && traffic) peds.update(dt, { x: px, z: pz, u: phys ? phys.u : 0 }, traffic.sim.time);
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
@@ -371,6 +375,6 @@ addEventListener('message', async e => {
 });
 if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
-window.__next = { bus, runtime, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
+window.__next = { bus, runtime, get peds() { return peds; }, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
