@@ -66,6 +66,24 @@ function wagonSide(kind, seed) {
   return cv;
 }
 
+
+/* Vande Bharat (owner's photos): white body, a deep blue band along the base and sweeping up round the nose, a continuous dark window band, plug doors, "वंदे भारत EXPRESS" in blue, the tricolour at the nose */
+function vandeSide(info) {
+  const L = LEN.coach, W = Math.round(L * PX), H = Math.round(3.1 * PX), cv = canvas(W, H), c = cv.getContext('2d'), m = PX;
+  c.fillStyle = '#f2f4f5'; c.fillRect(0, 0, W, H); c.fillStyle = '#a9aeb4'; c.fillRect(0, H - 0.7 * m, W, 0.7 * m); c.fillStyle = '#1b4f9c'; c.fillRect(0, H - 1.05 * m, W, 0.3 * m); c.fillStyle = '#d3d7db'; c.fillRect(0, 0, W, 0.22 * m);
+  c.fillStyle = '#16212b'; for (let i = 0; i < 5; i++) { const x = (2.0 + i * 4.3) * m; rr(c, x, 0.8 * m, 3.4 * m, 0.7 * m, 10); c.fill(); }                                                         // big tinted windows between the doors
+  for (const dx of [0.5 * m, W - 2.4 * m]) { c.fillStyle = '#c6cacf'; rr(c, dx, 0.55 * m, 1.9 * m, 1.9 * m, 8); c.fill(); c.fillStyle = '#16212b'; rr(c, dx + 0.35 * m, 0.8 * m, 1.2 * m, 0.7 * m, 6); c.fill(); c.fillStyle = '#1b4f9c'; c.fillRect(dx + 0.95 * m, 0.6 * m, 0.04 * m, 1.8 * m); }
+  c.fillStyle = '#1b4f9c'; c.textBaseline = 'middle'; c.textAlign = 'left'; c.font = FONT(30); c.fillText('वंदे भारत', W / 2 - 1.2 * m, 1.95 * m); c.font = ASC(20); c.fillText('EXPRESS', W / 2 + 0.3 * m, 2.25 * m);
+  c.fillStyle = '#1b4f9c'; c.font = ASC(18); c.textAlign = 'center'; c.fillText((info && info.label) || '', W / 2, 0.3 * m); c.fillStyle = '#e8801f'; c.fillRect(W / 2 - 3.6 * m, 2.7 * m, 0.5 * m, 0.1 * m); c.fillStyle = '#fff'; c.fillRect(W / 2 - 3.1 * m, 2.7 * m, 0.5 * m, 0.1 * m); c.fillStyle = '#1b7a3a'; c.fillRect(W / 2 - 2.6 * m, 2.7 * m, 0.5 * m, 0.1 * m);
+  return cv;
+}
+function vandeNose(name) {
+  const cv = canvas(256, 256), c = cv.getContext('2d'); c.fillStyle = '#f2f4f5'; c.fillRect(0, 0, 256, 256); c.fillStyle = '#1b4f9c'; c.beginPath(); c.moveTo(0, 150); c.quadraticCurveTo(128, 100, 256, 150); c.lineTo(256, 256); c.lineTo(0, 256); c.fill(); c.fillStyle = '#a9aeb4'; c.fillRect(0, 226, 256, 30);
+  c.fillStyle = '#10161d'; rr(c, 40, 34, 176, 82, 18); c.fill(); c.fillStyle = 'rgba(255,255,255,.14)'; rr(c, 52, 42, 60, 60, 12); c.fill(); c.fillStyle = '#fff6c9'; c.beginPath(); c.ellipse(48, 176, 14, 8, 0, 0, 7); c.ellipse(208, 176, 14, 8, 0, 0, 7); c.fill();
+  c.fillStyle = '#ffb000'; c.font = ASC(14); c.textAlign = 'center'; c.fillText(name, 128, 24, 150); c.fillStyle = '#e8801f'; c.fillRect(100, 128, 18, 5); c.fillStyle = '#fff'; c.fillRect(118, 128, 18, 5); c.fillStyle = '#1b7a3a'; c.fillRect(136, 128, 18, 5);
+  c.fillStyle = '#fff'; c.beginPath(); c.arc(128, 196, 18, 0, 7); c.fill(); c.fillStyle = '#e8801f'; c.font = ASC(18); c.fillText('IR', 128, 197); return cv;
+}
+
 /* A vehicle: a textured body box plus a merged mesh of dark details (bogies, buffers, roof equipment, pantograph). */
 export class TrainArt {
   constructor() { this.cache = new Map(); this.order = []; this.detail = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.2 }); this.plain = new Map(); }
@@ -87,8 +105,14 @@ export class TrainArt {
       for (const sx of [-1, 1]) { const cab = new THREE.BoxGeometry(3.2, 3.9, 3.1), p = cab.attributes.position; for (let i = 0; i < p.count; i++) if (p.getX(i) * sx > 0 && p.getY(i) > 0) p.setX(i, p.getX(i) - sx * 0.7); cab.computeVertexNormals();
         const cu = cab.attributes.uv; for (let i = 0; i < cu.count; i++) { /* side faces: map the cab's own end of the side texture */ } const ce = sx > 0 ? M(front) : M(front);
         const cm = new THREE.Mesh(cab, sx > 0 ? [ce, this.flat(P.body), this.flat(P.accent), this.flat(0x2a2a2e), this.flat(P.body), this.flat(P.body)] : [this.flat(P.body), ce, this.flat(P.accent), this.flat(0x2a2a2e), this.flat(P.body), this.flat(P.body)]); cm.position.set(sx * (LEN.loco / 2 - 1.6), 1.15 + 1.95, 0); g.add(cm); }
-      add(2.2, 0.12, 1.6, 0, 4.55, 0, 0x2f343a); add(0.1, 0.9, 0.1, 0.9, 4.9, 0.5, 0x2f343a); add(0.1, 0.9, 0.1, 0.9, 4.9, -0.5, 0x2f343a); add(1.4, 0.06, 1.8, 0.2, 5.35, 0, 0x111111); add(1.4, 0.06, 1.8, 6.5, 5.35, 0, 0x111111); add(1.2, 0.12, 1.4, 6.5, 4.5, 0, 0x2f343a);   // two pantographs
+      if (item.diesel) { add(1.4, 1.0, 1.4, 5.5, 4.55, 0, 0x2f343a); add(5.0, 0.5, 2.2, -4.5, 4.4, 0, 0x4a4f55); add(2.0, 0.3, 2.6, 1, 4.4, 0, 0x3a3f45); }                         // a diesel: radiator hoods and an exhaust, no pantograph
+      else { add(2.2, 0.12, 1.6, 0, 4.55, 0, 0x2f343a); add(0.1, 0.9, 0.1, 0.9, 4.9, 0.5, 0x2f343a); add(0.1, 0.9, -0.1 + 0.2, 0.9, 4.9, -0.5, 0x2f343a); add(1.4, 0.06, 1.8, 0.2, 5.35, 0, 0x111111); add(1.4, 0.06, 1.8, 6.5, 5.35, 0, 0x111111); add(1.2, 0.12, 1.4, 6.5, 4.5, 0, 0x2f343a); }   // two pantographs
       bogie(-6.4); bogie(6.4); buffers(LEN.loco);
+    } else if (kind === 'maint' || kind === 'maint_wagon') {                                                           // yellow track-maintenance machine and its wagons (the yellow livery is for maintenance and inspection)
+      const yel = this.flat(0xf0c01f), dark = this.flat(0x16212b), grey = this.flat(0x55595f);
+      if (kind === 'maint') { const cab = new THREE.Mesh(new THREE.BoxGeometry(5.5, 3.0, 3.1), [yel, yel, yel, grey, yel, yel]); cab.position.set(4.2, 1.4 + 1.5, 0); g.add(cab); const win = new THREE.Mesh(new THREE.BoxGeometry(5.6, 1.0, 3.2), dark); win.position.set(4.2, 3.5, 0); g.add(win); const hood = new THREE.Mesh(new THREE.BoxGeometry(7.2, 2.2, 3.1), [yel, yel, yel, grey, yel, yel]); hood.position.set(-2.4, 1.4 + 1.1, 0); g.add(hood); add(1.0, 4.2, 0.4, -4.5, 3.6, 0, 0xf0c01f); add(7.0, 0.5, 0.5, -1.0, 6.0, 0, 0xf0c01f); add(0.4, 0.4, 3.0, 4.2, 5.1, 0, 0x2f343a); }
+      else { const w = new THREE.Mesh(new THREE.BoxGeometry(11.6, 1.8, 2.9), [yel, yel, yel, grey, yel, yel]); w.position.set(0, 1.4 + 0.9, 0); g.add(w); add(10, 0.5, 2.6, 0, 3.0, 0, 0x6b6f75); add(4.0, 1.4, 2.4, 2.5, 3.5, 0, 0xf0c01f); }
+      bogie(-L / 2 + 2.2); bogie(L / 2 - 2.2); buffers(L);
     } else if (kind === 'boxn' || kind === 'tank' || kind === 'container' || kind === 'brake') {
       const side = this.t('w|' + kind + '|' + (ctx.seed % 7) + '|' + (item.label || ''), () => wagonSide(kind, ctx.seed + (item.i || 0) * 3));
       if (kind === 'tank') { const cyl = new THREE.CylinderGeometry(1.3, 1.3, L - 1.2, 14); cyl.rotateZ(Math.PI / 2); const cm = new THREE.Mesh(cyl, M(side)); cm.position.set(0, 1.2 + 1.45, 0); g.add(cm); add(L, 0.4, 2.4, 0, 1.15, 0, 0x1c1c1f); }
@@ -96,11 +120,12 @@ export class TrainArt {
       else { const hgt = kind === 'brake' ? 3.0 : 2.4, b = new THREE.Mesh(new THREE.BoxGeometry(L - 0.2, hgt, 2.9), [this.flat(0x2b2d31), this.flat(0x2b2d31), this.flat(kind === 'boxn' ? 0x1b1b1c : 0xb3201c), this.flat(0x1c1c1f), M(side), M(side)]); b.position.set(0, 1.3 + hgt / 2, 0); g.add(b); }
       bogie(-L / 2 + 2.2); bogie(L / 2 - 2.2); buffers(L);
     } else {                                                                                                          // a passenger coach, EMU car or Vande Bharat car
-      const kk = kind === 'vande_end' ? 'vande' : kind, key = 'cs|' + kk + '|' + liv + '|' + info.name + '|' + info.num, side = this.t(key, () => coachSide(kk, liv, info)), P = COLOURS[liv] || COLOURS.lhb, W = kind === 'emu' ? 3.66 : 3.25;
+      const kk = kind === 'vande_end' ? 'vande' : kind, key = 'cs|' + kk + '|' + liv + '|' + info.name + '|' + info.num, side = this.t(key, () => kk === 'vande' ? vandeSide(info) : coachSide(kk, liv, info)), P = COLOURS[liv] || COLOURS.lhb, W = kind === 'emu' ? 3.66 : 3.25;
       const body = new THREE.BoxGeometry(L, 3.1, W), sideM = M(side), endM = this.flat(new THREE.Color(P.skirt).getHex()); let mats = [endM, endM, this.flat(new THREE.Color(P.roof).getHex()), this.flat(0x1c1c1f), sideM, sideM];
       if (item.end) {                                                                                               // the cab end of an EMU or Vande Bharat: a yellow or white nose with a windscreen
-        const nose = this.t('nose|' + liv, () => { const cv = canvas(256, 256), c = cv.getContext('2d'); c.fillStyle = liv === 'emu_wr' || liv === 'emu_cr' ? '#f2c230' : '#f1f3f4'; c.fillRect(0, 0, 256, 256); c.fillStyle = '#10141a'; rr(c, 30, 44, 196, 100, 14); c.fill(); c.fillStyle = '#fff6c9'; c.beginPath(); c.arc(50, 190, 13, 0, 7); c.arc(206, 190, 13, 0, 7); c.fill(); c.fillStyle = '#ffb000'; c.font = ASC(20); c.textAlign = 'center'; c.fillText(info.name.slice(0, 18), 128, 28); return cv; });
+        const nose = kind === 'vande_end' ? this.t('vnose|' + info.name, () => vandeNose(info.name.replace(/ Vande Bharat Express/i, '').slice(0, 24))) : this.t('nose|' + liv, () => { const cv = canvas(256, 256), c = cv.getContext('2d'); c.fillStyle = liv === 'emu_wr' || liv === 'emu_cr' ? '#f2c230' : '#f1f3f4'; c.fillRect(0, 0, 256, 256); c.fillStyle = '#10141a'; rr(c, 30, 44, 196, 100, 14); c.fill(); c.fillStyle = '#fff6c9'; c.beginPath(); c.arc(50, 190, 13, 0, 7); c.arc(206, 190, 13, 0, 7); c.fill(); c.fillStyle = '#ffb000'; c.font = ASC(20); c.textAlign = 'center'; c.fillText(info.name.slice(0, 18), 128, 28); return cv; });
         mats = item.end > 0 ? [M(nose), endM, mats[2], mats[3], sideM, sideM] : [endM, M(nose), mats[2], mats[3], sideM, sideM]; }
+      if (kind === 'vande_end') { const p = body.attributes.position, sx = item.end; for (let i = 0; i < p.count; i++) if (p.getX(i) * sx > 0) { const up = (p.getY(i) + 1.55) / 3.1; p.setX(i, p.getX(i) - sx * (0.9 + 1.6 * up)); p.setZ(i, p.getZ(i) * (0.9 - 0.12 * up)); } body.computeVertexNormals(); }          // the rounded, sloping Vande Bharat nose
       const bm = new THREE.Mesh(body, mats); bm.position.set(0, 1.25 + 1.55, 0); g.add(bm);
       bogie(-L / 2 + 3.6); bogie(L / 2 - 3.6); if (kind !== 'emu' && kind !== 'vande' && kind !== 'vande_end') buffers(L);
       if (kk === 'ac3' || kk === 'ac2' || kk === 'pantry' || kk === 'vande') { add(1.8, 0.25, 1.4, -5, 4.4, 0, 0xb4b8bd); add(1.8, 0.25, 1.4, 5, 4.4, 0, 0xb4b8bd); }                                       // the roof air-conditioning units

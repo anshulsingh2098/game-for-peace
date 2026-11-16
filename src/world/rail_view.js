@@ -2,10 +2,11 @@
    Everything is built near the player, one piece per frame, and dropped when far. */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { findCrossings, trainSpan, crossingClosed, TRAIN, trainMotion, STYLES } from './rail.js';
+import { classifyCrossings, trainSpan, crossingClosed, TRAIN, trainMotion, STYLES } from './rail.js';
 import { styleOf, laneOffsets, TRACK_GAP } from './rail_timetable.js';
 import { TrainArt } from './train_art.js';
 import { registerRail } from './keepout.js';
+import { planSignals, aspectOf, ASPECT_LAMPS } from './rail_signals.js';
 import { consist, lengthOf, locoNumber, headcode } from './train_consist.js';
 
 const CHUNK = 64, SEG = 4, RANGE = 750, STATION_LEN = 120, BRIDGE_R = 70, BRIDGE_H = 6.5, LEVEL_NEAR_STATION = 600;
@@ -35,27 +36,45 @@ function nameTexture(en, hi) {
 }
 
 export class RailView {
-  constructor({ scene, terrain, origin, network, grade, book = null, tracks = null, roads, cities, toWorld, toGame, names = {} }) {
+  constructor({ scene, terrain, origin, network, grade, book = null, tracks = null, crossings = null, roads, cities, toWorld, toGame, names = {} }) {
     this.grade = grade; this.book = book; this.tracks = tracks || network.edges.map(() => 1); this.art = new TrainArt(); this.cityNames = Object.fromEntries(Object.entries(names).map(([k, v]) => [k, v.en])); this.scene = scene; this.t = terrain; this.origin = origin; this.net = network; this.lines = network.edges; this.toWorld = toWorld; this.toGame = toGame; this.names = names; this.chunks = new Map(); this.stationsBuilt = new Map(); this.time = 0;
     this.group = new THREE.Group(); scene.add(this.group); this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.15 });
     this.p = {}; this.q = {}; if (terrain.keepout) registerRail(terrain.keepout, { network, tracks: this.tracks, toWorld });          // the track beds and stations claim their ground (keepout.js): the district, trees and props keep off
     /* crossings with the roads: a rail bridge over the road, or a level crossing near a station */
-    this.crossings = []; const stn = network.stations; for (const ln of this.lines) for (const c of findCrossings(ln, roads, cities, { minCity: 60 })) {
-      if (c.sinA < 0.3) continue; const ds = stn.length ? Math.min(...stn.map(n => Math.hypot(n.x - c.x, n.z - c.z))) : 1e9; c.rail = ln.id; c.type = ds < LEVEL_NEAR_STATION ? 'level' : 'bridge'; c.line = ln; this.crossings.push(c); }
+    this.crossings = crossings || classifyCrossings(this.lines, roads, cities, network.stations, LEVEL_NEAR_STATION);
     this.byEdge = new Map(); for (const c of this.crossings) { let l = this.byEdge.get(c.rail); if (!l) this.byEdge.set(c.rail, l = []); l.push(c); }
-    const mum = cities.find(c => c.id === 'mumbai'), pick = (ln, i) => { const m = ln.at(ln.len / 2, {}); if (mum && Math.hypot(m.x - mum.x, m.z - mum.z) < 1500) return m.x > mum.x ? 'emu_cr' : 'emu_wr'; return ['express', 'express', 'rajdhani', 'vande', 'freight', 'express'][i % 6]; };
+    const mum = cities.find(c => c.id === 'mumbai'), pick = (ln, i) => { const m = ln.at(ln.len / 2, {}); if (mum && Math.hypot(m.x - mum.x, m.z - mum.z) < 1500) return m.x > mum.x ? 'emu_cr' : 'emu_wr'; return ['express', 'express', 'rajdhani', 'express', 'freight', 'express'][i % 6]; };
+    /* electrification: nearly all of the network has overhead wire, but quiet branch sections do not (diesel there); a line used by a Vande Bharat, Rajdhani or Shatabdi is always electrified */
+    const eh = n => { let x = (n * 2654435761) >>> 0; x = (x ^ (x >>> 15)) >>> 0; return x / 4294967296; };
+    this.elec = this.lines.map(ln => { const set = book ? book.byEdge.get(ln.edgeId) : null, busy = set ? set.size : 0, fast = set && [...set].some(k => /vande|rajdhani|shatabdi|duronto/i.test(book.trains[k].name)); return fast || busy >= 5 || eh(ln.edgeId + 11) > 0.25; });
     this.trains = this.lines.map((ln, li) => ({ ln, li })).filter(o => o.ln.len > 350).map(({ ln, li }, i) => {
-      let style = pick(ln, i); const real = book && !style.startsWith('emu') ? book.identify(ln.edgeId, i) : null; if (real) style = styleOf(real); else if (!style.startsWith('emu')) style = i % 3 === 0 ? 'freight' : 'passenger';
-      const S = STYLES[style], seed = (i * 7919 + ln.edgeId * 31) >>> 0, cs = consist(style, real, seed), total = cs.items.reduce((sum, it) => sum + lengthOf(it.kind), 0), nt = this.tracks[li], lanes = laneOffsets(nt), left = lanes.filter(o => o < -0.1), right = lanes.filter(o => o > 0.1), mid = lanes.filter(o => Math.abs(o) <= 0.1);
+      let style = pick(ln, i); const real = book && !style.startsWith('emu') ? book.identify(ln.edgeId, i) : null; if (real) style = styleOf(real); else if (!style.startsWith('emu')) style = i % 19 === 7 ? 'maintenance' : i % 3 === 0 ? 'freight' : 'passenger';
+      const S = STYLES[style], seed = (i * 7919 + ln.edgeId * 31) >>> 0, cs = consist(style, real, seed, { diesel: !this.elec[li] }), total = cs.items.reduce((sum, it) => sum + lengthOf(it.kind), 0), nt = this.tracks[li], lanes = laneOffsets(nt), left = lanes.filter(o => o < -0.1), right = lanes.filter(o => o > 0.1), mid = lanes.filter(o => Math.abs(o) <= 0.1);
       const pickLane = (set, k) => set.length ? set[Math.floor(((seed >>> k) % 1000) / 1000 * set.length)] : (mid[0] || 0);
       return { real, local: style.startsWith('emu') ? (book ? book.locals.find(l => l.livery === style) || null : null) : null, line: ln, li, style, cs, seed, total, outLane: pickLane(left, 3), backLane: pickLane(right, 5), offset: (i * 977) % Math.max(ln.len, 1), meshes: [], vehicles: [], active: false, circles: [], dir: 1, head: 0, span: null, v: 0, mo: null };
     });
-    this.barMat = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.6 }); this.redMat = new THREE.MeshStandardMaterial({ color: 0xc8231f, roughness: 0.6 }); this.nearEdge = new Map();
+    this.lampOff = new THREE.MeshBasicMaterial({ color: 0x3a1010 }); this.lampOn = new THREE.MeshBasicMaterial({ color: 0xff2a1a }); this.barMat = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.6 }); this.redMat = new THREE.MeshStandardMaterial({ color: 0xc8231f, roughness: 0.6 }); this.nearEdge = new Map(); this.sigCache = new Map(); this.gates = new Map();
   }
   /* the height of the track at distance s along edge li: its own smooth profile (rail_grade.js), raised over a road where there is a rail bridge */
   trackY(li, s) { const ln = this.lines[li]; return (this.grade ? this.grade.yAt(li, s) : this.t.drive(...this.wxz(ln, s))) + this.lift(ln, s); }
   wxz(ln, s) { const a = ln.at(s, this.q), w = this.toWorld(a.x, a.z); return [w.x, w.z]; }
-  lift(ln, s) { const l = this.byEdge.get(ln.id); if (!l) return 0; let h = 0; for (const c of l) if (c.type === 'bridge') h = Math.max(h, BRIDGE_H * smooth(1.5 - Math.abs(s - c.s) / (BRIDGE_R * 0.5))); return h; }
+  signalsOf(li) {
+    let l = this.sigCache.get(li); if (l) return l; const ln = this.lines[li], nodes = this.net.nodes, endInfo = id => { const n = nodes[id]; return n && (n.city || n.deg >= 3) ? { station: !!n.city } : null; };
+    l = planSignals(ln.len, endInfo(ln.a), endInfo(ln.b), (this.byEdge.get(ln.id) || []).filter(c => c.type === 'level').map(c => c.s)); this.sigCache.set(li, l); return l;
+  }
+  /* the lamps of every built signal show its aspect: red when a train is in the block, yellow when the next block is taken, else green; a gate signal is red until the gate has closed */
+  updateSignals() {
+    const ON = { r: [1, 0.16, 0.1], y: [1, 0.76, 0.1], g: [0.16, 1, 0.35] }, OFF = { r: [0.16, 0.05, 0.05], y: [0.17, 0.14, 0.03], g: [0.04, 0.16, 0.08] }, names = ['r', 'y', 'g', 'y'];
+    for (const g of this.chunks.values()) { const recs = g.userData.signals; if (!recs || !recs.length || !g.userData.mesh) continue; const col = g.userData.mesh.geometry.attributes.color; let dirty = false;
+      for (const r of recs) { const ln = r.line, spans = this.trains.filter(t => t.li === r.li && t.span).map(t => t.span), sigs = this.signalsOf(r.li), sg = sigs[r.k], occ = (a, b) => spans.some(sp => sp[1] > a && sp[0] < b);
+        const cross = (this.byEdge.get(ln.id) || []).filter(c => c.type === 'level' && Math.abs(c.s - (sg.s + sg.dir * 260)) < 40)[0], closed = cross ? crossingClosed(cross.s, spans) : true, asp = aspectOf(sigs, r.k, ln.len, occ, closed);
+        if (r.asp === asp) continue; r.asp = asp; const on = ASPECT_LAMPS[asp];
+        for (let q = 0; q < 4; q++) { const c = (on[q] ? ON : OFF)[names[q]]; for (let v = 0; v < 24; v++) col.setXYZ(r.v[q] + v, c[0], c[1], c[2]); } dirty = true; }
+      if (dirty) col.needsUpdate = true; }
+  }
+  /* is a built road within `r` metres of the world point (x, z)? A pier or a pillar must never stand in or beside a road */
+  roadNear(x, z, r) { const rs = this.t.road; return !!(rs && rs.nearest && rs.nearest(x, z) && rs.hit.d < r); }
+  lift() { return 0; }                                                                                              // the rise over a road is part of the track's own profile now (rail_grade.js), not an extra lift
   key(li, k) { return li * 1e6 + k; }
   build(li, k) {
     const ln = this.lines[li], s0 = k * CHUNK, s1 = Math.min(ln.len, s0 + CHUNK), W = this.toWorld, T = this.t, sea = T.seaLevel, parts = [], grp = new THREE.Group(), G = this.grade;
@@ -75,13 +94,13 @@ export class RailView {
       for (let q = 0; q < 2; q++) if (hash(li * 31 + Math.floor(s / SEG) * 3 + q) < 0.55) { const side = q ? 1 : -1, off = 2.3 + wide / 2 + hash(Math.floor(s) + q) * 0.5, bs = 0.3 + hash(Math.floor(s) * 7 + q) * 0.45, g = new THREE.BoxGeometry(bs, bs * 0.7, bs * 1.15); g.rotateY(hash(Math.floor(s) * 5 + q) * 3); g.translate(cx + nx * off * side + ux * (hash(q + Math.floor(s)) - 0.5) * L, y + 0.18, cz + nz * off * side + uz * (hash(q + Math.floor(s)) - 0.5) * L); parts.push(colourise(g, hash(Math.floor(s) * 3 + q) < 0.5 ? 0x7d7a72 : 0x5d5a54)); }
       if (viaduct && !onBridge) {                                                                                                          // a viaduct of stone arches and piers over the valley
         box(parts, L + 0.1, 1.4, 5.6 + wide, cx, y - 0.7, cz, yaw, 0xb2a98f); for (const side of [-1, 1]) box(parts, L + 0.1, 0.9, 0.3, cx + nx * (2.7 + wide / 2) * side, y + 0.55, cz + nz * (2.7 + wide / 2) * side, yaw, 0xa89f86);
-        if (Math.floor(sm / 12) !== Math.floor((sm - SEG) / 12)) { const ground = T.base(wa.x, wa.z), hgt = Math.max(1, y - 1.4 - ground); box(parts, 4.2, hgt, 5.2 + wide, cx, ground + hgt / 2, cz, yaw, 0xa39a82); box(parts, 4.6, 0.4, 5.6 + wide, cx, y - 1.6, cz, yaw, 0xb8af95); }
+        if (Math.floor(sm / 12) !== Math.floor((sm - SEG) / 12) && !this.roadNear(wa.x, wa.z, 22) && !this.roadNear(wb.x, wb.z, 22)) { const ground = T.base(wa.x, wa.z), hgt = Math.max(1, y - 1.4 - ground); box(parts, 4.2, hgt, 5.2 + wide, cx, ground + hgt / 2, cz, yaw, 0xa39a82); box(parts, 4.6, 0.4, 5.6 + wide, cx, y - 1.6, cz, yaw, 0xb8af95); }
       }
       if (onBridge) { box(parts, L + 0.1, 1.0, 5.4 + wide, cx, y - 0.45, cz, yaw, 0x8c8f93); for (const side of [-1, 1]) box(parts, L + 0.1, 0.9, 0.18, cx + nx * (2.6 + wide / 2) * side, y + 0.55, cz + nz * (2.6 + wide / 2) * side, yaw, 0x6b7076); }
       else if (lf > 0.5) { const h = lf + 0.2; box(parts, L + 0.1, h, 6.2 + wide + lf * 0.9, cx, y - h / 2 - 0.3, cz, yaw, 0x8a7a5c); }
     }
     /* overhead electrification (25 kV AC): a mast every 50 m (on the left of a single track; on both outer sides with a cross girder on a multi-track line), a contact wire 5.6 m over each rail and a messenger wire above */
-    { const nT = this.tracks[li], offs = laneOffsets(nT), half = (nT - 1) * TRACK_GAP / 2;
+    if (this.elec[li]) { const nT = this.tracks[li], offs = laneOffsets(nT), half = (nT - 1) * TRACK_GAP / 2;
       for (let s = Math.ceil(s0 / 50) * 50; s < s1; s += 50) {
         const y = this.trackY(li, s), y2 = this.trackY(li, Math.min(s + 50, ln.len)); if (T.base(pt(s, 0).wx, pt(s, 0).wz) < sea + 0.4) continue;
         const sides = nT === 1 ? [-3.5] : [-(half + 3.1), half + 3.1];
@@ -90,17 +109,32 @@ export class RailView {
         for (const off of nT === 1 ? [0] : offs) { const c0 = pt(s, off), c1 = pt(Math.min(s + 50, ln.len), off), dx = c1.x - c0.x, dz = c1.z - c0.z, L = Math.hypot(dx, dz) || 1, wyaw = -Math.atan2(dz, dx);
           box(parts, L, 0.05, 0.05, (c0.x + c1.x) / 2, (y + y2) / 2 + 6.0, (c0.z + c1.z) / 2, wyaw, 0x2b2b2b); box(parts, L, 0.05, 0.05, (c0.x + c1.x) / 2, (y + y2) / 2 + 6.8, (c0.z + c1.z) / 2, wyaw, 0x3a3a3a); }
       } }
-    for (const c of cross) if (c.s >= s0 && c.s < s1 && c.type === 'bridge') {
-      const wc = W(c.x, c.z), h = T.base(wc.x, wc.z), yaw = Math.atan2(-c.railTz, c.railTx); for (const side of [-1, 1]) { const off = 19 / Math.max(c.sinA, 0.5) * side; box(parts, 1.4, BRIDGE_H + 0.6, 6.8, wc.x + c.railTx * off - ox, h + (BRIDGE_H + 0.6) / 2 - 0.3, wc.z + c.railTz * off - oz, -yaw, 0xa9a69c); } }
-    if (parts.length) { const m = new THREE.Mesh(mergeGeometries(parts), this.mat); m.receiveShadow = true; m.castShadow = true; grp.add(m); for (const g of parts) g.dispose(); }
-    const arms = [];
+    /* signals (rail_signals.js): a mast on the left of the line it governs, a head with four lamps whose colour follows the aspect */
+    const sigRecs = []; { const sigs = this.signalsOf(li), nT = this.tracks[li], half = (nT - 1) * TRACK_GAP / 2;
+      for (let k = 0; k < sigs.length; k++) { const sg = sigs[k]; if (sg.s < s0 || sg.s >= s1) continue; const lat = sg.dir > 0 ? -(half + 2.6) : half + 2.6, m = pt(sg.s, lat), y = this.trackY(li, sg.s); if (T.base(m.wx, m.wz) < sea + 0.4) continue; const yaw = -Math.atan2(m.tz, m.tx), fx = -m.tx * 0.3 * sg.dir, fz = -m.tz * 0.3 * sg.dir;
+        box(parts, 0.2, 5.0, 0.2, m.x, y + 2.5, m.z, 0, 0x6c7076); box(parts, 0.45, 2.4, 0.7, m.x, y + 5.0, m.z, yaw, 0x15181c); if (sg.kind === 'distant') box(parts, 0.1, 0.5, 0.5, m.x + fx * 1.3, y + 3.9, m.z + fz * 1.3, yaw, 0xf1f1ee); if (sg.kind === 'gate') box(parts, 0.1, 0.5, 0.5, m.x + fx * 1.3, y + 3.9, m.z + fz * 1.3, yaw, 0xe9b520);
+        const rec = { k, idx: [], line: ln, li }; for (let q = 0; q < 4; q++) { rec.idx.push(parts.length); box(parts, 0.1, 0.32, 0.32, m.x + fx, y + 5.95 - q * 0.55, m.z + fz, yaw, 0x2a0d0d); } sigRecs.push(rec); } }
+    const starts = []; { let acc = 0; for (const g of parts) { starts.push(acc); acc += g.attributes.position.count; } } let mainMesh = null;
+    if (parts.length) { mainMesh = new THREE.Mesh(mergeGeometries(parts), this.mat); mainMesh.receiveShadow = true; mainMesh.castShadow = true; grp.add(mainMesh); for (const g of parts) g.dispose(); }
+    for (const r of sigRecs) r.v = r.idx.map(i => starts[i]);
+    const arms = [], lamps = [], gateKeys = [], rs = T.road;
     for (const c of cross) if (c.s >= s0 && c.s < s1 && c.type === 'level') {
-      const wc = W(c.x, c.z), h = this.trackY(li, c.s) - 0.4, rx = c.roadTx, rz = c.roadTz, wd = Math.atan2(rz, rx);
-      for (const side of [-1, 1]) { const px = wc.x + rx * 7.5 * side - ox, pz = wc.z + rz * 7.5 * side - oz, piv = new THREE.Group(); piv.position.set(px, h + 1.05, pz); piv.rotation.y = -wd + (side < 0 ? Math.PI : 0);
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, 0.3), this.barMat); post.position.set(px, h + 0.55, pz); grp.add(post);
-        const arm = new THREE.Group(); for (let i = 0; i < 6; i++) { const seg = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.14, 0.14), i % 2 ? this.redMat : this.barMat); seg.position.set(0.6 + i * 1.2, 0, 0); arm.add(seg); } arm.rotation.z = 1.3; piv.add(arm); grp.add(piv); arms.push({ arm, cs: c.s, side, line: ln }); }
+      /* a level crossing is drawn on the road that is really there: find it, take its direction and width, and put a boom barrier on each side of the track, 3.3 m from the outer rail, across the lane that approaches (traffic keeps left) */
+      const wc = W(c.x, c.z); if (!rs || !rs.nearest(wc.x, wc.z) || rs.hit.d > 16) continue; const rd = rs.last, rh = rs.hit.s, tmp = {}; rd.at(rh, tmp); const half = (rs.style && rs.style.half) || 6, hb = (this.tracks[li] - 1) * TRACK_GAP / 2, along = (hb + 3.3) / Math.max(c.sinA, 0.35);
+      const ux = tmp.tx, uz = tmp.tz, nx = -uz, nz = ux, cx0 = tmp.x, cz0 = tmp.z, gy = this.trackY(li, c.s) - 0.4;
+      for (const side of [-1, 1]) {
+        const ax = cx0 + ux * along * side, az = cz0 + uz * along * side, lat = -side, px = ax + nx * lat * (half + 0.9), pz = az + nz * lat * (half + 0.9), dirx = -nx * lat, dirz = -nz * lat, n6 = Math.max(4, Math.ceil((2 * half + 1.6) / 1.2));
+        const piv = new THREE.Group(); piv.position.set(px - ox, gy + 1.15, pz - oz); piv.rotation.y = -Math.atan2(dirz, dirx);
+        box(parts, 0.35, 1.3, 0.35, px - ox, gy + 0.65, pz - oz, 0, 0xe9e9e4); box(parts, 0.7, 0.6, 0.5, px - ox, gy + 1.5, pz - oz, 0, 0x22262b);                               // the barrier's post and its mechanism
+        box(parts, 0.1, 2.6, 1.3, px - ox + ux * side * 0.4, gy + 2.2, pz - oz + uz * side * 0.4, -Math.atan2(uz, ux), 0xf1f1ee);                                                         // the white cross-board (St Andrew's cross)
+        for (const sg of [-1, 1]) box(parts, 0.08, 0.5, 0.09, px - ox + ux * side * 0.45, gy + 2.9 + sg * 0.35, pz - oz + uz * side * 0.45, 0, 0x1a1a1c);
+        const arm = new THREE.Group(); for (let i = 0; i < n6; i++) { const seg = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.16, 0.16), i % 2 ? this.redMat : this.barMat); seg.position.set(0.6 + i * 1.2, 0, 0); arm.add(seg); } arm.rotation.z = 1.4; piv.add(arm); grp.add(piv); arms.push({ arm, cs: c.s, side, line: ln });
+        for (const sg of [-1, 1]) { const lm = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), this.lampOff); lm.position.set(px - ox + ux * side * 0.5, gy + 2.55 + (sg > 0 ? 0.0 : 0.38), pz - oz + uz * side * 0.5 + (sg > 0 ? 0.0 : 0)); lm.position.add(new THREE.Vector3(nx * 0.0, 0, nz * 0.0)); grp.add(lm); lamps.push({ lm, cs: c.s, line: ln, flip: sg }); }
+      }
+      { const key = li + ':' + c.s, cs = c.s; this.gates.set(key, { key, x: cx0, z: cz0, along, line: ln, cs, closed: () => crossingClosed(cs, this.trains.filter(t => t.line === ln && t.span).map(t => t.span)) }); gateKeys.push(key); }
+      const hut = { x: cx0 + ux * (along + 6) + nx * (half + 6), z: cz0 + uz * (along + 6) + nz * (half + 6) }; box(parts, 2.6, 2.6, 2.2, hut.x - ox, gy + 1.3, hut.z - oz, -Math.atan2(uz, ux), 0xd9d2bd); box(parts, 2.9, 0.25, 2.5, hut.x - ox, gy + 2.7, hut.z - oz, -Math.atan2(uz, ux), 0x8b3a2e);   // the gateman's hut
     }
-    grp.userData = { x: ox, z: oz, arms }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
+    grp.userData = { x: ox, z: oz, arms, lamps, gateKeys, signals: sigRecs, mesh: mainMesh }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
   }
   /* a station at a city: two platforms with a canopy, a building and name boards, along the track through the node */
   buildStation(n) {
@@ -110,15 +144,23 @@ export class RailView {
     for (const side of [-1, 1]) {
       const c = { x: nx * side * PL, z: nz * side * PL }; box(parts, STATION_LEN, 1.0, 6, c.x, y + 0.5, c.z, yaw, 0xb8b3a6); box(parts, STATION_LEN, 0.2, 6.2, c.x, y + 1.05, c.z, yaw, 0xe3ded2);               // the platform and its edge
       box(parts, STATION_LEN * 0.8, 0.3, 5.4, c.x, y + 4.6, c.z, yaw, 0x3d5a80); for (let k = -4; k <= 4; k++) box(parts, 0.3, 3.5, 0.3, c.x + ux * k * STATION_LEN * 0.1, y + 2.85, c.z + uz * k * STATION_LEN * 0.1, 0, 0x555a60);    // the canopy and its posts
-      if (ko && ko.rect(wn.x + nx * side * (halfT + 17) + ux * 20, wn.z + nz * side * (halfT + 17) + uz * 20, 17, 4.5, Math.atan2(uz, ux), 1, { as: 'building', ignore: 'station:' + n.id })) continue;          // the building would stand on a road or another building: leave it out
-      box(parts, 34, 7, 9, nx * side * (halfT + 17) + ux * 20, y + 3.5, nz * side * (halfT + 17) + uz * 20, yaw, side > 0 ? 0xd8c7a0 : 0xc9b88d); box(parts, 34.4, 1.1, 9.4, nx * side * (halfT + 17) + ux * 20, y + 7.4, nz * side * (halfT + 17) + uz * 20, yaw, 0x8b3a2e);   // the station building
+      if (ko && ko.rect(wn.x + nx * side * (halfT + 22) + ux * 20, wn.z + nz * side * (halfT + 22) + uz * 20, 17, 4.5, Math.atan2(uz, ux), 1, { as: 'building', ignore: 'station:' + n.id })) continue;          // the building would stand on a road or another building: leave it out
+      box(parts, 34, 7, 9, nx * side * (halfT + 22) + ux * 20, y + 3.5, nz * side * (halfT + 22) + uz * 20, yaw, side > 0 ? 0xd8c7a0 : 0xc9b88d); box(parts, 34.4, 1.1, 9.4, nx * side * (halfT + 22) + ux * 20, y + 7.4, nz * side * (halfT + 22) + uz * 20, yaw, 0x8b3a2e);   // the station building
     }
+    /* points and crossings (switching): a passing loop beside the main line with a turnout at each end, and crossovers between neighbouring tracks of a multi-track line. Each turnout is an S-curve of track (smooth lateral shift) with a switch blade, a lever stand and a points indicator at its toe. */
+    const smooth2 = t => t * t * (3 - 2 * t), at = (u, off) => ({ x: ux * u + nx * off, z: uz * u + nz * off });
+    const trackPath = (P, w) => { for (let i = 0; i + 1 < P.length; i++) { const a = P[i], b = P[i + 1], dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz); if (L < 0.05) continue; const yw = -Math.atan2(dz, dx), cx = (a.x + b.x) / 2, cz = (a.z + b.z) / 2, tnx = -dz / L, tnz = dx / L;
+        box(parts, L + 0.1, 0.26, w, cx, y + 0.02, cz, yw, 0x6d6a63); for (const sd of [-1, 1]) box(parts, L + 0.1, 0.17, 0.09, cx + tnx * 0.72 * sd, y + 0.44, cz + tnz * 0.72 * sd, yw, 0x8a7a70); for (let q = 0.4; q < L; q += 0.8) box(parts, 0.26, 0.2, 2.6, a.x + dx / L * q, y + 0.36, a.z + dz / L * q, yw, 0x9c9b94); } };
+    const curve = (u0, off0, u1, off1, N = 14) => Array.from({ length: N + 1 }, (_, i) => { const t = i / N; return at(u0 + (u1 - u0) * t, off0 + (off1 - off0) * smooth2(t)); });
+    const toe = (u, off, dirn) => { const p = at(u, off + 1.3 * dirn); box(parts, 4.0, 0.12, 0.2, p.x, y + 0.5, p.z, yaw, 0xcfd2d6); box(parts, 0.3, 0.7, 0.3, p.x + nx * 1.6 * dirn, y + 0.35, p.z + nz * 1.6 * dirn, 0, 0x4b4f55); box(parts, 0.1, 0.6, 0.6, p.x + nx * 1.6 * dirn, y + 1.0, p.z + nz * 1.6 * dirn, yaw, 0xe9b520); };   // the switch blade, the lever stand, the points indicator
+    { const loopOff = halfT + 11.5, offs = laneOffsets(nTs); trackPath(Array.from({ length: 13 }, (_, i) => at(-120 + i * 20, loopOff)), 3.4); for (const sgn of [-1, 1]) { trackPath(curve(sgn * 120, loopOff, sgn * 180, halfT), 3.4); toe(sgn * 180, halfT, 1); }
+      for (let i = 0; i + 1 < offs.length; i++) for (const sgn of [-1, 1]) { const u0 = sgn * 70, u1 = sgn * 110; trackPath(curve(Math.min(u0, u1), sgn > 0 ? offs[i] : offs[i + 1], Math.max(u0, u1), sgn > 0 ? offs[i + 1] : offs[i], 10), 3.0); toe(sgn * 70, offs[i], 1); } }
     const nm = this.names[n.city] || { en: n.city, hi: '' }, tex = nameTexture(nm.en, nm.hi); textures.push(tex);
     for (const side of [-1, 1]) for (const k of [-1, 1]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(nx * side * PL + ux * k * 30, y + 2.4, nz * side * PL + uz * k * 30); m.rotation.y = Math.atan2(-nx * side, -nz * side); grp.add(m); }   // name boards on the platforms, facing across the track
     if (parts.length) { const m = new THREE.Mesh(mergeGeometries(parts), this.mat); m.castShadow = true; m.receiveShadow = true; grp.add(m); for (const g of parts) g.dispose(); }
     grp.userData = { x: wn.x, z: wn.z, textures }; grp.position.set(wn.x - this.origin.x, 0, wn.z - this.origin.z); this.group.add(grp); return grp;
   }
-  drop(g) { this.group.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map && o.material !== this.mat) { o.material.map.dispose(); o.material.dispose(); } }); }
+  drop(g) { if (g.userData && g.userData.gateKeys) for (const k of g.userData.gateKeys) this.gates.delete(k); this.group.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map && o.material !== this.mat) { o.material.map.dispose(); o.material.dispose(); } }); }
   reposition() { for (const g of this.chunks.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); for (const g of this.stationsBuilt.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); }
   update(dt, px, pz) {
     this.time += dt; const pg = this.toGame(px, pz); let built = false;
@@ -131,7 +173,7 @@ export class RailView {
       if (!built) for (let d = 0; d <= hi - lo && !built; d++) for (const k of d ? [Math.floor(near.s / CHUNK) + d, Math.floor(near.s / CHUNK) - d] : [Math.floor(near.s / CHUNK)]) { const key = this.key(li, k); if (k >= lo && k <= hi && k * CHUNK < ln.len && !this.chunks.has(key)) { this.chunks.set(key, this.build(li, k)); built = true; break; } }
     }
     for (const n of this.net.stations) { const d = Math.hypot(n.x - pg.x, n.z - pg.z); const has = this.stationsBuilt.has(n.id); if (d < 700 && !has && !built) { const g = this.buildStation(n); if (g) this.stationsBuilt.set(n.id, g); built = true; } else if (d > 1100 && has) { this.drop(this.stationsBuilt.get(n.id)); this.stationsBuilt.delete(n.id); } }
-    this.updateTrains(dt, px, pz); this.updateBars();
+    this.updateTrains(dt, px, pz); this.updateBars(); this.sigT = (this.sigT || 0) + dt; if (this.sigT > 0.25) { this.sigT = 0; this.updateSignals(); }
   }
   edgeHas(li) { for (const key of this.chunks.keys()) if (Math.floor(key / 1e6) === li) return true; return false; }
   updateTrains(dt, px, pz) {
@@ -154,7 +196,8 @@ export class RailView {
     tr.cs.items.forEach((item, i) => { item.i = i; const v = this.art.build(item, ctx); this.group.add(v.obj); tr.meshes.push(v.obj); tr.vehicles.push(v); });
   }
   release(tr) { for (const m of tr.meshes) this.group.remove(m); for (const v of tr.vehicles) v.dispose(); tr.meshes = []; tr.vehicles = []; tr.active = false; }
-  updateBars() { for (const g of this.chunks.values()) for (const b of g.userData.arms) { const spans = this.trains.filter(t => t.line === b.line && t.span).map(t => t.span), closed = crossingClosed(b.cs, spans); b.arm.rotation.z += ((closed ? 0 : 1.3) - b.arm.rotation.z) * 0.1; } }
+  updateBars() { for (const g of this.chunks.values()) for (const l of g.userData.lamps || []) { const spans = this.trains.filter(t => t.line === l.line && t.span).map(t => t.span), closed = crossingClosed(l.cs, spans), on = closed && (Math.floor(this.time * 2) % 2 === (l.flip > 0 ? 0 : 1)); l.lm.material = on ? this.lampOn : this.lampOff; }
+    for (const g of this.chunks.values()) for (const b of g.userData.arms) { const spans = this.trains.filter(t => t.line === b.line && t.span).map(t => t.span), closed = crossingClosed(b.cs, spans); b.arm.rotation.z += ((closed ? 0 : 1.3) - b.arm.rotation.z) * 0.1; } }
   near(x, z, r) { const out = this._out || (this._out = [[]]), l = out[0]; l.length = 0; for (const tr of this.trains) if (tr.active) for (const c of tr.circles) if (Math.abs(c.x - x) < r + 4 && Math.abs(c.z - z) < r + 4) l.push(c); return out; }
   dispose() { for (const g of this.chunks.values()) this.drop(g); this.chunks.clear(); for (const g of this.stationsBuilt.values()) this.drop(g); this.stationsBuilt.clear(); for (const t of this.trains) if (t.active) this.release(t); this.group.parent && this.group.parent.remove(this.group); this.mat.dispose(); }
 }
