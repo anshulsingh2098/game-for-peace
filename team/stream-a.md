@@ -2,6 +2,24 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-22 19:00  Owner answers recorded (CITY_PLAN, CITY_PACK)
+Branch: claude/goofy-liskov-0a8557
+What changed: docs only: enclave entry like a bypass, downloads approved (log each file), all well-known places, invented look-alike brands.
+For the other stream: nothing.
+Status: done
+
+## 2026-11-22 18:00  City plan Phase 0: keep-out registry and the city architecture note
+Branch: claude/goofy-liskov-0a8557  Commit: see the PR
+What changed: `src/world/keepout.js` (new, pure: claims for lines, circles, rectangles and providers; rank station > landmark > rail > road > building > scenery; `railClaim`, `stationClaim`, `registerRail`, `roadProvider`). Shared or other files, each a small edit: `terrain.js` (`terrain.keepout`, `addZone` registers a landmark claim), `district_plan.js` (whole-plot rectangle check, own-piece overlap check, furniture and signals ask; new params `keepout`, `ignore`), `district.js` (registers and drops its plots), `scatter.js` (trees ask; tiles re-plant when a claim lands on them; CRLF file), `rail_view.js` (**two small edits for the railway-control session**: the constructor calls `registerRail`, and `buildStation` skips a building that would stand on a road), `main.js` (one line: `roadProvider(terrain.keepout, roadSet)` in `makeWorld`), `tools/selftest.mjs` (4 checks, 86 in all), `docs/CITY_PACK.md` (new), `docs/CITY_PLAN.md`, `docs/WORK_REMAINING.md` (section 10), `docs/DISTRICT.md`, `CHECKLIST.md`, `HANDOFF.md`.
+For the other stream: if you add anything that covers ground (a new rail object, a station, a depot, a car park, a landmark), register it: `terrain.keepout.add(owner, kind, { t: 'rect' | 'line' | 'circle', ... })`, and ask `terrain.keepout.point/rect(..., { as: 'building' | 'scenery' })` before placing. The railway-control session: keep `registerRail` and the `ko` check in `buildStation` when you change `rail_view.js`; if you change the station layout (120 m platforms, 34 x 9 m building 17 m beyond the outer track) change `STATION_HALF_LEN` and the `stationClaim` size in `keepout.js` to match. Nothing to run.
+Status: open
+
+## 2026-11-22 15:00  City plan (docs/CITY_PLAN.md): cities one by one, Delhi NCR first
+Branch: claude/flyover-physics-262398
+What changed: `docs/CITY_PLAN.md` (new), `HANDOFF.md` (new section). No code.
+For the other stream: nothing yet. Phase 0 (keep-out registry, city scale decision) will touch `district_plan.js`, `rail_view.js`, `landmarks.js` (Stream A) and probably `main.js`.
+Status: open
+
 ## 2026-11-22 12:00  Overpasses: multi-level roads in the physics and the road set
 Branch: claude/flyover-physics-262398
 What changed: `world/interchange.js` (new, pure: crossings and overpasses), `world/router.js` (`Road.addLift`, lift in `at`/`nearest`/`bridgeW`, `waterW`), `world/roadset.js` (layers: `drive(x, z, natural, y)`, `deck`, `deckMesh`, `grade` follows the ground road), `world/terrain.js` (`drive(x, z, y)`, `deck`), `world/road.js` (`RoadMesh.refresh`), `world/bridges.js` (no pier on the road below, truss only over water), `world/bridge_rails.js`, `world/highway_plan.js`, `world/district_plan.js` (circles carry `y`). Your files, small edits: `vehicle/rapier-vehicle.js` (`buildPatch` makes a deck trimesh beside the ground heightfield; `reset(x, z, yaw, yHint)`; `collide` skips circles of the other level), `vehicle/physics.js` (hint passed), `traffic/sim.js` (car circles carry `y`). `main.js` (shared): `world.height(x, z, y)`, `world.ground`, `world.deck`, `world.deckMesh`, `raiseOverpasses` in `buildCityRoads` and `updateBranches`, `placeOnRoad` passes the road height, `__next.roadSet`. Self-test: one new check (78 checks): a car drives over and under a crossing, no layer snapping, traffic on the deck. `tools/vehicle_acceptance.mjs` passes. India world: two highways cross at Agra (`?play&q=med&india=world&at=agra`, the North-South road goes over the Golden Quadrilateral twice, at about 1.4 and 1.7 km from the start point; use the browser console `__next.branches` to find them: the road `ns` has two `lifts`).
