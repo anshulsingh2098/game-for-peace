@@ -35,6 +35,27 @@ cd cloudflare && npx wrangler deploy      # run `python tools/stage_cloudflare.p
 
 For tuner Publish (once): `npx wrangler kv namespace create SETTINGS`, add the printed id to `cloudflare/wrangler.jsonc` as `"kv_namespaces": [{ "binding": "SETTINGS", "id": "<id>" }]`, run `npx wrangler secret put TUNER_PASSWORD`, then deploy again. Until then the API answers 503 and the game ignores it. The tuner page has no login of its own (it cannot publish without the password).
 
+## Post-N6 state (N7 to N15, built 17 Nov 2026, Rajul's session)
+
+Stacked pull requests, none merged yet: 27 (N7) <- 28 (N8) <- 29 (N9) <- 30 (N10) <- 31 (N11) <- 32 (N12) <- 33 (N13) <- 34 (N14) <- 35 (N15). Merge in that order, each into the one below it or into `main` after its base. Every phase is a **first increment**, tested headless (62 self-test checks) and looked at in a desktop browser, **never measured on a phone and never reviewed by Anshul**.
+
+| Phase | What exists | Doc |
+|---|---|---|
+| N7 | `GameRuntime` (phases, frame clamp, fixed step), strict `EventBus`, `Registry` with generational handles, `Pool` | `docs/RUNTIME.md` |
+| N8 | 512 m sectors with load states, hysteresis, pins, cancellation; ref-counted `AssetCache` | `docs/STREAMING.md` |
+| N9 | versioned region records (Mumbai, Delhi, Agra, Bhopal), validation, OSM/ODbL and elevation provenance rules | `docs/REGIONS.md` |
+| N10 | navigation graph (lanes, sidewalks, crossings, signals) in sector chunks, cached A*, debug view | `docs/NAVIGATION.md` |
+| N11 | Mumbai district: procedural buildings, sidewalks, zebras, lamps, shelters, stalls, signal poles | `docs/DISTRICT.md` |
+| N12 | region traffic mix, two-wheelers, auto-rickshaws (procedural), signals with stop lines | `docs/TRAFFIC.md` |
+| N13 | pedestrians on sidewalks and crossings, density follows the traffic setting | `docs/PEDESTRIANS.md` |
+| N14 | on foot: G to get out and in, walk, run, jump, interaction registry | `docs/ONFOOT.md` |
+| N15 | point-to-point activities; save version 2 with migration and recovery | `docs/ACTIVITIES.md` |
+
+Also done on the way: tunnel doorways cleared of terrain (shader cut-out plus a cleared approach), ground normal maps, lighthouse and a richer Taj Hotel, retaining walls, `tools/collision_audit.mjs`.
+**Not built, in rough order of value:** a junction and local street in the Mumbai district, a promenade, a designed route; traffic that routes through junctions; real (not box) pedestrian models and reactions; two-wheeler and auto-rickshaw art beyond procedural shapes; interiors; a map and route line; more activity kinds; phone benchmarks for all of it. Assets are the hard part: see `docs/ASSET_PLAN.md`.
+**Owner decisions waiting:** whether OpenStreetMap data may be used (ODbL attribution and share-alike); which Mumbai district to model; an asset budget; whether on-foot play is wanted on phones.
+**Not changed:** the live site, `cloudflare/public`, deploys.
+
 ## What is next: phases from here
 
 Full table with owners and "done when" is in `PARALLEL_PLAN.md`; the outside Master Plan uses the same N0 to N6 labels. Status after pull request 22 (merged). **After N6 there is now a second plan, N7 to N15, the open-world India programme: `docs/post-n6-open-world-plan.md`, summarised with review notes in `PARALLEL_PLAN.md`. It is gated: nothing from N7 starts until N0 to N6 are accepted on real devices.**

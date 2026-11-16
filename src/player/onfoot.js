@@ -53,6 +53,6 @@ export class Interactions {
   constructor() { this.items = new Map(); }
   add(item) { if (!item || !item.id) throw new Error('an interactable needs an id'); this.items.set(item.id, { r: 3, enabled: () => true, ...item }); return () => this.items.delete(item.id); }
   remove(id) { return this.items.delete(id); }
-  nearest(x, z) { let best = null, bd = Infinity; for (const it of this.items.values()) { if (!it.enabled()) continue; const d = Math.hypot(x - it.x, z - it.z); if (d <= it.r && d < bd) { bd = d; best = it; } } return best; }
-  use(x, z) { const it = this.nearest(x, z); if (!it) return false; it.onUse(it); return true; }
+  nearest(x, z, prefix = '') { let best = null, bd = Infinity; for (const it of this.items.values()) { if (!it.enabled() || !it.id.startsWith(prefix)) continue; const d = Math.hypot(x - it.x, z - it.z); if (d <= it.r && d < bd) { bd = d; best = it; } } return best; }
+  use(x, z, prefix = '') { const it = this.nearest(x, z, prefix); if (!it) return false; it.onUse(it); return true; }
 }

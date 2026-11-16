@@ -32,7 +32,8 @@ import { VehicleView, loadModel } from './vehicle/vehicle.js';
 import { CAMFX } from './vehicle/camfx.js';
 import { LOOK, applyLook } from './fx/grade.js';
 import { rumbleFor } from './input/rumble.js';
-import { sanitiseSaved } from './core/saved.js';
+import { loadSave, writeSave } from './core/save.js';
+import { ActivityRunner, activitiesFor, recordResult } from './activities/activities.js';
 import { Traffic, loadTrafficPack } from './traffic/traffic.js';
 import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
@@ -78,8 +79,8 @@ if (fx) loadSkyLight(renderer, 'assets/sky/drakensberg_puresky_1k.hdr').then(t =
 const shadowsOn = q.get('shadows') ? q.get('shadows') !== 'off' : quality !== 'low';
 renderer.shadowMap.enabled = shadowsOn; renderer.shadowMap.type = quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap; env.setShadows(shadowsOn ? (quality === 'high' ? 4096 : 2048) : 0, quality === 'high' ? 90 : 70);
 /* saved choices for this preview */
-const saved = (() => { try { return JSON.parse(localStorage.getItem('gfp-next') || '{}'); } catch (e) { return {}; } })();
-const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, traffic: quality === 'low' ? 'off' : quality === 'med' ? 'low' : 'mid', ...sanitiseSaved(saved, { vehicles: VEHICLES.length, vehicleIds: VEHICLES.map(v => v.id), locations: LOCATIONS.map(l => l.id) }) }, save = () => { try { localStorage.setItem('gfp-next', JSON.stringify(S)); } catch (e) { /* storage unavailable */ } };
+const loaded = loadSave((() => { try { return localStorage; } catch (e) { return { getItem: () => null, setItem() { throw e; }, removeItem() {} }; } })(), { vehicles: VEHICLES.length, vehicleIds: VEHICLES.map(v => v.id), locations: LOCATIONS.map(l => l.id) });      // versioned, checked, recovers from damage (core/save.js)
+const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, traffic: quality === 'low' ? 'off' : quality === 'med' ? 'low' : 'mid', ...loaded.data }, save = () => writeSave((() => { try { return localStorage; } catch (e) { return { setItem() { throw e; } }; } })(), S, loaded);
 env.setTime(S.time); env.setWeather(S.weather);
 
 const natureLevel = q.get('nature') || (quality === 'low' ? 'low' : 'full'), groundLevel = q.get('ground') || (quality === 'low' ? 'flat' : quality === 'med' ? 'lite' : 'full');      // quality tiers: low keeps the cheap ground and fewer scenery variants, med a lighter photographic ground, high everything
@@ -183,9 +184,9 @@ function exitVehicle() {
   interactions.add({ id: 'vehicle', x: phys.x, z: phys.z, r: 3.4, prompt: 'Get in (G)', onUse: enterVehicle }); toast('On foot: W A S D walk, Shift run, Space jump, G to get back in');
 }
 function enterVehicle() { if (mode !== 'foot' || !phys) return; interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
-function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else exitVehicle(); }
+function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && interactions.use(phys.x, phys.z, 'activity:')) { /* an activity started */ } else exitVehicle(); }
 const actBtn = document.createElement('button'); actBtn.type = 'button'; actBtn.id = 'interact'; actBtn.style.cssText = 'position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:20;display:none;padding:8px 18px;border-radius:999px'; document.body.appendChild(actBtn); actBtn.addEventListener('pointerdown', e => { e.preventDefault(); useNearby(); });
-function updatePrompt() { let t = ''; if (!frozen()) { if (mode === 'foot' && foot) { const it = interactions.nearest(foot.x, foot.z); if (it) t = it.prompt; } else if (mode === 'drive' && phys && Math.abs(phys.u) < 1 && !autodrive.enabled) t = 'Get out (G)'; } if (t !== actBtn.textContent) actBtn.textContent = t; actBtn.style.display = t ? 'block' : 'none'; }
+function updatePrompt() { let t = ''; if (!frozen()) { if (mode === 'foot' && foot) { const it = interactions.nearest(foot.x, foot.z); if (it) t = it.prompt; } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && !autodrive.enabled) t = (phys && interactions.nearest(phys.x, phys.z, 'activity:') || {}).prompt || 'Get out (G)'; } if (t !== actBtn.textContent) actBtn.textContent = t; actBtn.style.display = t ? 'block' : 'none'; }
 function setMode(m) {
   if (m !== mode) bus.emit('mode:changed', { from: mode, to: m });
   if (m !== 'drive' && autodrive.enabled) { autodrive.toggle(false); $('#autoBtn').classList.remove('on'); }
@@ -314,6 +315,28 @@ bus.on('world:rebuilt', () => sectors.reset());                                 
 runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'sectors', order: 10, update: (dt, now) => sectors.update(focus.x, focus.z, focus, now) });
 runtime.add({ name: 'render', order: 100, render: now => draw(now) }); runtime.start();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) runtime.resetClock(); });          // no time spike when the tab comes back
+/* activities (N15, src/activities): start markers beside the road (G while stopped near one), a goal beacon, a timer line, results kept in the save */
+const runner = new ActivityRunner(bus), actMarks = new THREE.Group(), actHud = document.createElement('div'); let actDefs = [], actGoal = null;
+actHud.style.cssText = 'position:fixed;left:50%;top:92px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.75);border-radius:999px;padding:6px 16px;font-size:14px;pointer-events:none'; document.body.appendChild(actHud); scene.add(actMarks);
+const beacon = (color, x, z, y) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 60, 14, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide })); m.userData.w = { x, z, y }; actMarks.add(m); return m; };
+function setupActivities() {
+  runner.cancel(); for (const d of actDefs) interactions.remove('activity:' + d.id); actDefs = []; actGoal = null; while (actMarks.children.length) { const m = actMarks.children.pop(); m.geometry.dispose(); m.material.dispose(); }
+  if (!road) return; for (const d of activitiesFor(config.location)) {
+    const a = road.at(d.startS, {}), b = road.at(d.startS + d.distance, {}), start = { x: a.x + a.tz * 2, z: a.z - a.tx * 2 }, goal = { x: b.x, z: b.z }; actDefs.push({ ...d, goal }); beacon(0x40e070, start.x, start.z, terrain.drive(start.x, start.z));
+    interactions.add({ id: 'activity:' + d.id, x: start.x, z: start.z, r: 14, prompt: d.title + ': start (G)', enabled: () => runner.state !== 'running', onUse: () => { actGoal = beacon(0xffc040, goal.x, goal.z, terrain.drive(goal.x, goal.z)); runner.start(d, goal); toast(d.title + ': reach the gold beacon in ' + d.limit + ' s'); } });
+  }
+}
+bus.on('world:rebuilt', setupActivities);
+bus.on('mode:changed', e => { if (e.to !== 'drive' && runner.state === 'running') runner.cancel(); });
+bus.on('activity:finished', r => {
+  if (actGoal) { actMarks.remove(actGoal); actGoal.geometry.dispose(); actGoal.material.dispose(); actGoal = null; } actHud.style.display = 'none'; if (r.outcome === 'cancelled') return;
+  const rec = recordResult(S.progress, r); S.progress = rec.progress; save(); const t = actDefs.find(d => d.id === r.id);
+  toast(r.outcome === 'done' ? (t ? t.title + ': ' : '') + r.time.toFixed(1) + ' s, ' + r.rating + (rec.isBest ? ', new best' : '') : 'Out of time');
+});
+function updateActivities(dt, px, pz) {
+  runner.update(dt, px, pz); for (const m of actMarks.children) m.position.set(m.userData.w.x - grid.origin.x, m.userData.w.y + 30, m.userData.w.z - grid.origin.z);
+  if (runner.state === 'running') { actHud.style.display = 'block'; actHud.textContent = runner.def.title + ': ' + Math.round(runner.dist) + ' m to go, ' + Math.max(0, runner.def.limit - runner.t).toFixed(0) + ' s left'; }
+}
 function update(dt, now) {
   WIND.t.value = now / 1000; let px, pz;
   if (mode === 'drive' && phys) {
@@ -347,7 +370,7 @@ function update(dt, now) {
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
-  updatePrompt();
+  updateActivities(dt, px, pz); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
@@ -368,7 +391,7 @@ function update(dt, now) {
   if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label;
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }
 }
-setVehicle(vehicle).then(() => { setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); loadDone(); if (+q.get('bench')) setTimeout(() => startBench(+q.get('bench')), 4000); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); loadDone(); });
+setVehicle(vehicle).then(() => { setupActivities(); setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); loadDone(); if (+q.get('bench')) setTimeout(() => startBench(+q.get('bench')), 4000); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); loadDone(); });
 /* ?bench=30: drive on autodrive for 30 s and report what a frame costs on this device (also logged as BENCH in the console and kept in window.__bench) */
 function startBench(secs) {
   setAuto(true); const ts = []; let prev = performance.now(); const t0 = prev;
