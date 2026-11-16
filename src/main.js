@@ -33,7 +33,8 @@ import { CAMFX } from './vehicle/camfx.js';
 import { LOOK, applyLook } from './fx/grade.js';
 import { rumbleFor } from './input/rumble.js';
 import { loadSave, writeSave } from './core/save.js';
-import { destinationsFor } from './world/india_network.js';
+import { destinationsFor, HINDI, CITY } from './world/india_network.js';
+import { RoadNetwork } from './world/network.js';
 import { DRIVE_MODES, DRIVE_MODE_IDS } from './vehicle/physics.js';
 import { laneOffsets } from './traffic/sim.js';
 import { ActivityRunner, activitiesFor, recordResult } from './activities/activities.js';
@@ -59,7 +60,12 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let savedLoc = null; try { savedLoc = JSON.parse(localStorage.getItem('gfp-next') || '{}').location || null; } catch (e) { /* no saved choice */ }
-let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || (savedLoc && (LEGACY[savedLoc] || savedLoc)) || START_LOCATION, q.get('seed') || 'peace');          // India only: an old saved choice moves to its Indian replacement
+/* a real highway to drive (docs/INDIA_MAP_PLAN.md section 9): ?india=<road id>&from=<city>&toward=<city>. The road follows the path of that highway at 1:100 through procedural land; the signs name the next cities. Roads and cities: assets/india/skeleton.json */
+let indiaRoute = null;
+if (q.get('india')) { try { const sk = await (await fetch('assets/india/skeleton.json')).json(), net = new RoadNetwork(sk), r = net.roads.get(q.get('india')); if (r) { const from = q.get('from') || r.stops[0].id, toward = q.get('toward') || r.stops[r.stops.length - 1].id, g = net.guideFor(r.id, from, toward); if (g) indiaRoute = { ...g, name: r.name, kind: r.kind, nh: r.nh, fromCity: sk.nodes.find(n => n.id === from) }; } } catch (e) { console.warn('india route not loaded', e); } }
+const nearestRegionId = id => { const c = CITY[id]; let best = START_LOCATION, bd = Infinity; for (const l of LOCATIONS) { const ins = l.region && l.region.inspiration; if (!ins || !c) continue; const d = Math.hypot(ins.lat - c.lat, (ins.lon - c.lon) * 0.9); if (d < bd) { bd = d; best = l.id; } } return best; };
+let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || (indiaRoute && nearestRegionId(indiaRoute.from)) || (savedLoc && (LEGACY[savedLoc] || savedLoc)) || START_LOCATION, q.get('seed') || 'peace');          // India only: an old saved choice moves to its Indian replacement
+if (indiaRoute) config.road = { ...config.road, guide: indiaRoute.pts, style: indiaRoute.kind === 'nh' ? 'highway' : 'nh6' };           // main highways get the six-lane national highway look
 /* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
 registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES); registerRoot('handling', ARCADE); registerRoot('camera', CAMFX); registerRoot('look', LOOK);
 for (const url of ['api/settings', 'settings.json']) {             // the published settings (tuner Publish), else a settings.json committed with the site
@@ -132,7 +138,7 @@ function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
   if (landmarks) landmarks.dispose(); landmarks = new Landmarks(scene, terrain, road, config, grid.origin, locationById(config.location).landmarks);       // sights beside the road; they also level the land under them
-  roadMesh = new RoadMesh(scene, road, road.style, grid.origin, { dests: (() => { const ins = (locationById(config.location).region || {}).inspiration; return ins ? destinationsFor(ins.lat, ins.lon) : []; })(), district: (locationById(config.location).region || {}).district, seed: config.seed + ':' + config.location, blocked: (x, z) => terrain.inZone(x, z, 8) }); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
+  roadMesh = new RoadMesh(scene, road, road.style, grid.origin, { dests: indiaRoute ? indiaRoute.cities.filter(c => c.along > 0).map(c => ({ en: c.name, hi: HINDI[c.id] || '', km: 0, alongM: c.along })) : (() => { const ins = (locationById(config.location).region || {}).inspiration; return ins ? destinationsFor(ins.lat, ins.lon) : []; })(), district: (locationById(config.location).region || {}).district, seed: config.seed + ':' + config.location, blocked: (x, z) => terrain.inZone(x, z, 8) }); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
   if (nav) nav.unloadAll(); nav = new RoadNav(road, { drive: locationById(config.location).drive || 'right' }); if (q.has('nav') && !navDebug) navDebug = new NavDebug(scene);
   if (peds) { peds.dispose(); peds = null; }
   if (traffic) traffic.dispose(); traffic = new Traffic(scene, road, config.seed, grid.origin, { mode: S.traffic, drive: locationById(config.location).drive || 'right', scale: (locationById(config.location).region || { traffic: { scale: 1 } }).traffic.scale, mix: (locationById(config.location).region || { traffic: {} }).traffic.mix || null, pack: trafficPack });          // cars on the road (src/traffic), on the right or the left as the place drives
@@ -359,6 +365,10 @@ bus.on('activity:finished', r => {
   const rec = recordResult(S.progress, r); S.progress = rec.progress; save(); const t = actDefs.find(d => d.id === r.id);
   toast(r.outcome === 'done' ? (t ? t.title + ': ' : '') + r.time.toFixed(1) + ' s, ' + r.rating + (rec.isBest ? ', new best' : '') : 'Out of time');
 });
+/* India route readout (only with ?india): the next city and the real distance left, and the OpenStreetMap credit the road data needs */
+const routeHud = document.createElement('div'); routeHud.style.cssText = 'position:fixed;left:50%;top:128px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.7);border-radius:999px;padding:5px 14px;font-size:13px;pointer-events:none'; document.body.appendChild(routeHud);
+if (indiaRoute) { const cr = document.createElement('div'); cr.textContent = 'Road shapes © OpenStreetMap contributors (ODbL)'; cr.style.cssText = 'position:fixed;right:8px;bottom:4px;font-size:10px;color:#9fb0c8;z-index:5;pointer-events:none'; document.body.appendChild(cr); }
+function updateRoute() { if (!indiaRoute) return; const arc = road.guideArc(phys && mode !== 'fly' ? phys.x : cam.x, phys && mode !== 'fly' ? phys.z : cam.z) || 0, nxt = indiaRoute.cities.find(c => c.along > arc + 40); routeHud.style.display = 'block'; routeHud.textContent = nxt ? indiaRoute.name + ' · next: ' + nxt.name + ', ' + Math.max(0, Math.round((nxt.along - arc) * 100 / 1000)) + ' km' : indiaRoute.name + ' · end of the path'; }
 function updateActivities(dt, px, pz) {
   runner.update(dt, px, pz); for (const m of actMarks.children) m.position.set(m.userData.w.x - grid.origin.x, m.userData.w.y + 30, m.userData.w.z - grid.origin.z);
   if (runner.state === 'running') { actHud.style.display = 'block'; actHud.textContent = runner.def.title + ': ' + Math.round(runner.dist) + ' m to go, ' + Math.max(0, runner.def.limit - runner.t).toFixed(0) + ' s left'; }
@@ -397,7 +407,7 @@ function update(dt, now) {
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
-  updateActivities(dt, px, pz); updatePrompt();
+  updateActivities(dt, px, pz); updateRoute(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);

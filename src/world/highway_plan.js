@@ -5,7 +5,7 @@
    the lanes. Nothing on a bridge, in a tunnel or on a sharp bend; no rail inside or near a toll plaza. Positions are world metres; `lat` is the lateral offset from the centre line
    (positive to the right of travel, the convention of road.at's tz, -tx). Deterministic for a seed. */
 import { alea } from '../core/rng.js';
-export const RAIL_STEP = 4, STONE_EVERY = 1000, GANTRY_EVERY = 1500, TOLL_EVERY = 7000, TOLL_LEN = 16, TOLL_OFFSET = 1800, GANTRY_OFFSET = 700, RAIL_LAT_GAP = 0.45, SIGN_SCALE = 25;
+export const RAIL_STEP = 4, STONE_EVERY = 1000, GANTRY_EVERY = 1500, TOLL_EVERY = 7000, TOLL_LEN = 16, TOLL_OFFSET = 1800, GANTRY_OFFSET = 700, RAIL_LAT_GAP = 0.45, SIGN_SCALE = 25, ROAD_SCALE = 100;
 
 const clear = (road, s) => road.bridgeW(s) <= 0 && road.tunnelW(s) <= 0.01;
 export function tollAt(s0, s1) { const out = []; for (let m = Math.floor((s0 - TOLL_LEN - TOLL_OFFSET) / TOLL_EVERY); m * TOLL_EVERY + TOLL_OFFSET < s1; m++) { const s = m * TOLL_EVERY + TOLL_OFFSET; if (s + TOLL_LEN > s0 && s < s1) out.push(s); } return out; }
@@ -17,7 +17,7 @@ export function validTolls(road, s0, s1) { const out = []; for (const s of tollA
 export const tollCap = d => d <= 0 ? 4 : Math.min(40, 4 + d * 0.3);
 
 /* road, seed, k (piece number), s0..s1, dests: [{ en, hi, km }] from india_network.destinationsFor */
-export function planHighway({ road, seed, k, s0, s1, dests = [] }) {
+export function planHighway({ road, seed, k, s0, s1, dests = [], arcAt = null }) {
   const st = road.style, plan = { rails: [], stones: [], gantries: [], tolls: [], circles: [] }; if (st.id !== 'nh6') return plan;
   const p = {}, tolls = validTolls(road, s0 - TOLL_LEN, s1 + TOLL_LEN);
   const nearToll = s => tolls.some(t => s > t - 36 && s < t + TOLL_LEN + 36);
@@ -29,9 +29,11 @@ export function planHighway({ road, seed, k, s0, s1, dests = [] }) {
   for (let m = Math.ceil(s0 / STONE_EVERY); m * STONE_EVERY < s1; m++) { const s = m * STONE_EVERY; if (!clear(road, s) || nearToll(s)) continue; for (const side of [1, -1]) { const a = at(s, side * (edge + 0.9)); plan.stones.push({ s, side, km: m, x: a.x, z: a.z, y: a.y, tx: a.tx, tz: a.tz }); } }
   for (let m = Math.ceil((s0 - GANTRY_OFFSET) / GANTRY_EVERY); m * GANTRY_EVERY + GANTRY_OFFSET < s1; m++) {
     const s = m * GANTRY_EVERY + GANTRY_OFFSET; if (s < s0 || !clear(road, s) || nearToll(s) || bendAt(road, s - 6, 12) > 0.05) continue;
-    const posts = [-edge - 0.8, 0, edge + 0.8].map(lat => ({ lat, ...at(s, lat) })), d = dests.length ? dests[Math.abs(m) % dests.length] : null;
-    const kmLeft = d ? Math.max(1, Math.round(d.km / SIGN_SCALE - ((s / 1000) % Math.max(2, d.km / SIGN_SCALE * 0.9)))) : 0;
-    const d2 = dests.length > 1 ? dests[(Math.abs(m) + 1) % dests.length] : d, kmRight = d2 ? Math.max(1, Math.round(d2.km / SIGN_SCALE - ((s / 1000) % Math.max(2, d2.km / SIGN_SCALE * 0.9)))) : 0;
+    const posts = [-edge - 0.8, 0, edge + 0.8].map(lat => ({ lat, ...at(s, lat) })), arc = arcAt && s >= 0 ? arcAt(s) : s, up = dests.filter(x => x.alongM !== undefined && x.alongM > arc + 300);
+    /* a road that follows a real highway (dests with alongM, the distance along it in game metres): the board names the next cities and the real distance still to go (game metres x scale / 1000); otherwise the nearest places, with a distance that counts down */
+    const along = up.length > 0, pool = along ? up : dests.filter(x => x.alongM === undefined), d = pool.length ? (along ? pool[0] : pool[Math.abs(m) % pool.length]) : null;
+    const kmLeft = d ? (along ? Math.max(1, Math.round((d.alongM - arc) * ROAD_SCALE / 1000)) : Math.max(1, Math.round(d.km / SIGN_SCALE - ((s / 1000) % Math.max(2, d.km / SIGN_SCALE * 0.9))))) : 0;
+    const d2 = pool.length > 1 ? (along ? pool[1] : pool[(Math.abs(m) + 1) % pool.length]) : d, kmRight = d2 ? (along ? Math.max(1, Math.round((d2.alongM - arc) * ROAD_SCALE / 1000)) : Math.max(1, Math.round(d2.km / SIGN_SCALE - ((s / 1000) % Math.max(2, d2.km / SIGN_SCALE * 0.9))))) : 0;
     plan.gantries.push({ s, posts, tx: posts[1].tx, tz: posts[1].tz, y: posts[1].y, sign: d ? { en: d.en, hi: d.hi, km: kmLeft } : null, sign2: d2 ? { en: d2.en, hi: d2.hi, km: kmRight } : null });
     for (const q of posts) plan.circles.push({ x: q.x, z: q.z, r: 0.6, slide: true });
   }

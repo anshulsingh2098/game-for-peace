@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 19:00  Drive a real highway: ?india= guided road
+Branch: feat/landscape-look (PR 36)
+What changed: `main.js` (`?india=<road>&from=<city>&toward=<city>` loads the skeleton, builds the guide, picks the nearest region and a highway style, route readout, OpenStreetMap credit), `world/router.js` (`guideArc`, `arcAtS`), `world/highway_plan.js` and `highway.js` (gantry boards name the next cities with real distance left when the road has a guide), `docs/INDIA_MAP_PLAN.md`. One more self-test case (67 checks). Checked in the browser: Delhi to Lucknow follows its guide, readout and credit show. Limits: one road, no junctions, no real elevation, no city worlds.
+For the other stream: the road model change is additive (`config.road.guide` is optional). Please read the network design in section 9 of the India plan.
+Status: open
+
 ## 2026-11-18 17:00  Drive modes (Eco, Normal, Sport, Off-road) and the road network model
 Branch: feat/landscape-look (PR 36)
 What changed: owner asked for drive modes like a modern car. `vehicle/physics.js` (`DRIVE_MODES`, `combineMods`, `setDriveMode`), `vehicle/rapier-vehicle.js` (limiter, throttle map, hill descent control, loose-ground grip, shift points, traction limit, engine braking; Stream B files, smallest change, both physics classes keep one surface), `main.js` (N key and button, HUD tag, saved choice), `input/controls.js` (`drivemode`), `core/saved.js` (`driveMode`), `index.html` (button, tag), `docs/DRIVE_MODES.md`. `tools/vehicle_acceptance.mjs` now checks every mode for every vehicle (all pass). Also in this push: `world/network.js` (road network model, `cleanPath`, `guideFor`) and a `config.road.guide` option in `world/router.js` so a road can follow a real highway path (tested: it stays within 450 m of the guide); not wired into the game yet. 67 self-tests pass.

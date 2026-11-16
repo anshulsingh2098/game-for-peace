@@ -30,7 +30,7 @@ export class Highway {
     const mid = Math.floor(s / L); for (let d = 0; d <= hi - lo + 1; d++) for (const k of d ? [mid + d, mid - d] : [mid]) if (k >= lo && k <= hi && !this.pieces.has(k)) { this.pieces.set(k, this.build(k)); return; }
   }
   build(k) {
-    const r = this.road, s0 = k * this.len, s1 = s0 + this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, plan = planHighway({ road: r, seed: this.seed, k, s0, s1, dests: this.dests }), parts = [], grp = new THREE.Group(), textures = [];
+    const r = this.road, s0 = k * this.len, s1 = s0 + this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, plan = planHighway({ road: r, seed: this.seed, k, s0, s1, dests: this.dests, arcAt: r.guide ? s => r.arcAtS(s) : null }), parts = [], grp = new THREE.Group(), textures = [];
     for (const a of plan.rails) { const dx = a.x2 - a.x, dz = a.z2 - a.z, L = Math.hypot(dx, dz) || 1, yaw = -Math.atan2(dz, dx), my = (a.y + a.y2) / 2; box(parts, L, 0.3, 0.06, (a.x + a.x2) / 2 - ox, my + 0.72, (a.z + a.z2) / 2 - oz, yaw, 0xb9bec4); box(parts, 0.1, 0.8, 0.12, a.x - ox, a.y + 0.4, a.z - oz, yaw, 0x8c9096); }
     for (const a of plan.stones) { const yaw = -Math.atan2(a.tz, a.tx); box(parts, 0.18, 0.55, 0.36, a.x - ox, a.y + 0.27, a.z - oz, yaw, 0xf2f2ec); box(parts, 0.18, 0.14, 0.36, a.x - ox, a.y + 0.62, a.z - oz, yaw, 0xf2c230); }
     const sign = (sx, sy, sz, tx, tz, w, h, tex) => { const th = Math.atan2(tx, tz); for (const f of [0, Math.PI]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, side: THREE.FrontSide })); m.rotation.y = th + f; m.position.set(sx + Math.sin(th + f) * 0.07, sy, sz + Math.cos(th + f) * 0.07); grp.add(m); } };

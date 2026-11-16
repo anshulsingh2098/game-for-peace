@@ -54,6 +54,13 @@ export class Road {
     let j = i, acc = 0; while (j < n - 1 && acc < 350) { acc += Math.hypot(g[j * 2 + 2] - g[j * 2], g[j * 2 + 3] - g[j * 2 + 1]); j++; }
     const dx = g[j * 2] - last.x, dz = g[j * 2 + 1] - last.z; if (dx * dx + dz * dz < 900) return null; return Math.atan2(dz, dx);
   }
+  /* how far along its guide a point is (metres of guide path, 0 at the start city), or null when this road has no guide */
+  guideArc(x, z) {
+    const g = this.guide; if (!g) return null; let acc = 0, best = Infinity, arc = 0;
+    for (let i = 0; i + 3 < g.length; i += 2) { const dx = g[i + 2] - g[i], dz = g[i + 3] - g[i + 1], L = Math.hypot(dx, dz) || 1, f = Math.max(0, Math.min(1, ((x - g[i]) * dx + (z - g[i + 1]) * dz) / (L * L))), d = Math.hypot(x - (g[i] + dx * f), z - (g[i + 1] + dz * f)); if (d < best) { best = d; arc = acc + f * L; } acc += L; }
+    return arc;
+  }
+  arcAtS(s) { const p = this.at(s, this._ga || (this._ga = {})); return this.guideArc(p.x, p.z); }
   scout(arm) {
     const c = this.c, T = this.t, last = arm.n[arm.n.length - 1], sea = this.sea, wet = sea + c.clearance + 1; let best = arm.axis, bestCost = Infinity;
     for (let d = -7; d <= 7; d++) {
