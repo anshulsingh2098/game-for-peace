@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 18:00  Limits batch 2 and region blending (N9 step)
+Branch: feat/limits-2
+What changed: `traffic/sim.js` (cars wait for a player standing in a crossing), `main.js` (toll toast, India drive activities, results card, region grid), `world/terrain.js` + `world/scatter.js` (region palette and tint blending by position), `world/india_network.js` (Jaipur to Kota, Agra to Lucknow), `assets/india/waypoints.json`, `skeleton.json`, `terrain.bin` rebuilt (30 roads; corridor floor includes the new roads), `docs/REGIONS.md`, `docs/WORK_REMAINING.md`. Tests: 70 checks (player yield, region blending). Checked in the browser: along Delhi to Mumbai the ground colour goes from Delhi green-grey through ochre Rajasthan to Deccan green.
+For the other stream: `traffic/sim.js` change is additive.
+Status: open
+
 ## 2026-11-19 14:00  Real elevation and land cover; licenses page
 Branch: feat/limits-and-n8 (PR 37)
 What changed: owner asked for real elevation and land cover and a licence list linked from the title page. Downloaded (owner approved, "download all the pack"): AWS Terrain Tiles (528 tiles) and Esri / Impact Observatory land cover (64 blocks) into `data/raw` (git-ignored; `.gitignore` already covers `data/`); `tools/fetch_india_terrain.py`, `tools/build_india_grids.py` -> `assets/india/terrain.bin` + `terrain.json` (3.2 MB, listed in `assets/ASSETS.md`); `world/terrain.js` (`config.terrain.macro`: real relief, cover, `cover()`), `world/scatter.js`, `world/groundmat.js` (bare ground shows sand from the vertex colour), `main.js` (loads the grid in `?india=` mode, `?real=off`); `tools/build_licenses.mjs` -> `licenses.html` (generated from `assets/ASSETS.md` plus data and library lists), linked from the title screen and the Credits screen (`ui/menu.js`); `tools/stage_cloudflare.py` now also stages `licenses.html` and `india_map.html` (shared file, one line). Tests: 70 checks (grid values at known cities, terrain follows a grid, cover drives forest and colour, no grid changes nothing, `licenses.html` is current). Differences from the plan: land cover from Esri (CC BY 4.0) not ESA WorldCover (ESA's service refused the connection here and the tiles are 90 MB each); elevation from the AWS terrain tiles, not raw SRTM. Licence statements are credited as applicable and unreviewed.

@@ -60,6 +60,7 @@ export const HIGHWAYS = [
   H('nh-bhopal-indore', 'Bhopal to Indore and Ahmedabad', 'nh', 'NH46', 'bhopal indore ratlam vadodara'), H('nh-nagpur-raipur', 'Nagpur to Raipur and Ranchi', 'nh', 'NH53', 'nagpur raipur rourkela ranchi'),
   H('nh-bhopal-nagpur', 'Bhopal to Nagpur', 'nh', 'NH46', 'bhopal sagar'), H('nh-mumbai-nashik', 'Mumbai to Nashik and Indore', 'nh', 'NH160', 'mumbai nashik bhusawal indore'),
   H('nh-nagpur-warangal', 'Nagpur to Warangal', 'nh', 'NH353/NH163', 'nagpur balharshah warangal hyderabad'), H('nh-chennai-tirupati', 'Chennai to Tirupati', 'nh', 'NH71', 'chennai tirupati'), H('nh-kurnool-guntakal', 'Kurnool to Guntakal and Anantapur', 'nh', 'NH44', 'kurnool guntakal anantapur'),
+  H('nh-jaipur-kota', 'Jaipur to Kota', 'nh', 'NH52', 'jaipur kota'), H('nh-agra-lucknow', 'Agra to Lucknow (expressway)', 'nh', 'NH30/expressway', 'agra lucknow'),
   H('nh-siliguri-gangtok', 'Siliguri to Gangtok', 'nh', 'NH10', 'siliguri gangtok'), H('nh-madurai-munnar', 'Madurai to Munnar and Kochi (tea hills)', 'nh', 'NH85', 'madurai munnar kochi'), H('nh-coimbatore-ooty', 'Coimbatore to Ooty (the 36 hairpins)', 'nh', 'NH181', 'coimbatore ooty')
 ];
 

@@ -21,3 +21,6 @@ Data present but not used yet: vehicle mix (needs two-wheeler and rickshaw asset
 
 ## The two test regions
 Mumbai (hand-authored, unchanged world: its config hash before and after the move is identical) and Bhopal (new, procedural: low green hills, about 10 percent lake, small bridges, two-lane roads, left-hand traffic, lighter traffic). Delhi and Agra moved to the same format at the same time. The other locations (Green Valley, Alps, Himalayas, California, Southern Coast) are not India regions and stay as they were.
+
+## Blending between regions (N9 step, 19 Nov 2026)
+In `?india=` mode the land is one continuous map, so the look of the ground changes with position. `main.js` builds a coarse grid (50 real km cells) of the nearest region, the second nearest and a blend weight (`world/regionmap.js`, the same rule sectors use), plus each region's palette and plant tint; `terrain.js` (`regionAt`, `regionTint`) mixes the ground's grass, deep-grass and dry colours and `scatter.js` mixes the plant tint by position, so driving from Delhi through Rajasthan to the Deccan shifts from green-grey plains to ochre dry land to green hills. Not blended: water colour (one material), tree species mix, road style, buildings, traffic mix, audio.
