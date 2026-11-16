@@ -58,7 +58,7 @@ import { Radio } from './audio/radio.js';
 import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
 import { Gps } from './ui/gps.js';
-import { RailLine, RailNetwork, findCrossings } from './world/rail.js';
+import { RailLine, RailNetwork, classifyCrossings } from './world/rail.js';
 import { RailGrade } from './world/rail_grade.js';
 import { TrainBook, clockMinutes, fmtTime, announcement } from './world/rail_timetable.js';
 import { StationBoard, Announcer } from './ui/railboard.js';
@@ -177,10 +177,10 @@ const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.ring
 function currentCityId() { try { if (indiaRoute && phys) { const gf = gameFrame(phys.x, phys.z), ll = fromGame(gf.x, gf.z), c = nearestCity(ll.lat, ll.lon); if (c) return c.city.id; } const ins = (locationById(config.location).region || {}).inspiration; if (ins) { const c = nearestCity(ins.lat, ins.lon); if (c) return c.city.id; } } catch (e) { /* fall through */ } return 'delhi'; }
 let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
 const gateSub = (net, cityId, roadId) => { try { return net.junctionChoices(cityId).filter(c => c.road !== roadId).slice(0, 2).map(c => (c.nh || c.name) + ' \u2192 ' + c.towardName).join('   '); } catch (e) { return ''; } };       // the roads that cross at a city, for the board over the road before it
-let railNet = null, railGrade = null, railBook = null, railTracks = null;
+let railNet = null, railGrade = null, railBook = null, railTracks = null, railCross = null;
 function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0;
   railNet = null; railGrade = null; if (indiaRoute && indiaRoute.world && indiaRoute.net.rails && config.road.guide && q.get('rail') !== 'off') {            // the railway's own ground: cuttings and embankments
-    const net = indiaRoute.net, n0 = net.cities.get(indiaRoute.from), g0 = config.road.guide; railNet = new RailNetwork(net.rails); railBook = net.trainsJson ? new TrainBook(net.trainsJson, railNet) : null; railTracks = railNet.edges.map(e => railBook ? railBook.tracks(e.edgeId) : 1); railGrade = new RailGrade({ tracks: railTracks, edges: railNet.edges, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), natural: (x, z) => terrain.base(x, z) }); terrain.attachRail(railGrade); } }
+    const net = indiaRoute.net, n0 = net.cities.get(indiaRoute.from), g0 = config.road.guide; railNet = new RailNetwork(net.rails); railBook = net.trainsJson ? new TrainBook(net.trainsJson, railNet) : null; railTracks = railNet.edges.map(e => railBook ? railBook.tracks(e.edgeId) : 1); railCross = classifyCrossings(railNet.edges, [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), [...net.cities.values()], railNet.stations); railGrade = new RailGrade({ crossings: railCross, tracks: railTracks, edges: railNet.edges, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), natural: (x, z) => terrain.base(x, z) }); terrain.attachRail(railGrade); } }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
 function makeScenery() {
@@ -608,7 +608,7 @@ function update(dt, now) {
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
   updateBranches(px, pz, dt); junctionSignals.update();
   if (indiaRoute && indiaRoute.world && !rail && terrain && grid && q.get('rail') !== 'off' && railNet) { const net = indiaRoute.net, g0 = guideWorld(), n0 = net.cities.get(indiaRoute.from), cityList = [...net.cities.values()];
-    rail = new RailView({ tracks: railTracks, scene, terrain, origin: grid.origin, network: railNet, grade: railGrade, book: railBook, roads: [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), cities: cityList, names: Object.fromEntries(cityList.map(c => [c.id, { en: c.name, hi: HINDI[c.id] || '' }])), toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }) }); }
+    rail = new RailView({ crossings: railCross, tracks: railTracks, scene, terrain, origin: grid.origin, network: railNet, grade: railGrade, book: railBook, roads: [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), cities: cityList, names: Object.fromEntries(cityList.map(c => [c.id, { en: c.name, hi: HINDI[c.id] || '' }])), toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }) }); }
   if (rail) { rail.update(dt, px, pz); updateRailLife(dt, px, pz); }
   if (grid.rebase(px, pz)) { if (rail) rail.reposition(); far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);

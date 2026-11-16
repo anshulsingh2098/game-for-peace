@@ -128,6 +128,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 22 Nov 2026: the railway now rises over a road on its own long ramp (profile in `rail_grade.js`, at most 2.4 percent, 7.2 m clearance), instead of an extra lift with short abutments; no steep bump any more. Open: the road does not dip under the track, and the deck is simple.
 - 22 Nov 2026: multi-level roads (7.9 first part): lifts, deck layer in the physics, overpass built where two highways cross outside a city, drive over and under. Open: slip roads and cloverleafs.
 - 21 Nov 2026: railway realism: own ground with cuttings and viaducts, ballast, overhead wire, train kinds and physics, real train names and timetables, departure boards, announcements, train sound.
 - 21 Nov 2026: the full real railway network (7.7), stations, rail bridges and level crossings. Open: road interchanges (7.9).

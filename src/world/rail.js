@@ -46,6 +46,11 @@ export function findCrossings(rail, roads, cities = [], { minAngle = 0.45, minCi
   return out.sort((a, b) => a.s - b.s);
 }
 
+/* every place the railway meets a road, classed: a rail overbridge (the track passes over the highway on a long gentle rise) except within `levelNear` game metres of a station, where it is a level crossing with barriers */
+export function classifyCrossings(lines, roads, cities, stations, levelNear = 600) {
+  const out = []; for (const ln of lines) for (const c of findCrossings(ln, roads, cities, { minCity: 60 })) { if (c.sinA < 0.3) continue; const ds = stations.length ? Math.min(...stations.map(n => Math.hypot(n.x - c.x, n.z - c.z))) : 1e9; c.rail = ln.id; c.type = ds < levelNear ? 'level' : 'bridge'; c.line = ln; out.push(c); } return out;
+}
+
 /* a train that runs from one end of its line to the other and back, for ever: head distance and travel direction (+1 towards the line's end) at time t (s) */
 export function trainPlace(len, t, speed, offset = 0) {
   const span = Math.max(len, 1), d = ((speed * t + offset) % (2 * span) + 2 * span) % (2 * span);
