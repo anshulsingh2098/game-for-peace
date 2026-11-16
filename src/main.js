@@ -419,7 +419,7 @@ const sectors = new SectorManager({ bus,
   meta: s => { const meta = { region: config.location, assets: ['traffic:pack'], cities: [] }; if (guideWorld()) { const cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, gf = gameFrame(cx, cz), ll = fromGame(gf.x, gf.z), r = regionAt(ll.lat, ll.lon, REGIONS); if (r) { meta.region = r.id; meta.blend = r.blend; } meta.cities = cityNodes().filter(c => c.x >= s.x0 && c.x < s.x1 && c.z >= s.z0 && c.z < s.z1); } return meta; },
   load: async (s, signal) => { for (const k of s.meta.assets) await assetCache.acquire(k); if (nav) nav.loadSector(s.sx, s.sz); for (const c of s.meta.cities) ensureCityJunction(c); return { held: s.meta.assets.slice(), cities: s.meta.cities.map(c => c.id) }; },
   unload: s => { if (nav) nav.unloadSector(s.sx, s.sz); if (s.data && s.data.cities) for (const id of s.data.cities) dropBranches(id); if (s.data && s.data.held) for (const k of s.data.held) assetCache.release(k); } });
-bus.on('world:rebuilt', () => { sectors.reset(); if (rail) { rail.dispose(); rail = null; } });                                                    // a new world: every sector starts again
+bus.on('world:rebuilt', () => { sectors.reset(); if (rail) { rail.dispose(); rail = null; } gateReg.clear(); });                                                    // a new world: every sector starts again
 runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'sectors', order: 10, update: (dt, now) => sectors.update(focus.x, focus.z, focus, now) });
 runtime.add({ name: 'render', order: 100, render: now => draw(now) }); runtime.start();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) runtime.resetClock(); });          // no time spike when the tab comes back
@@ -552,6 +552,7 @@ function updateRailLife(dt, px, pz) {
   /* a station within 160 m: its board, and an announcement when the clock reaches a scheduled arrival */
   let st = null; for (const n of rail.net.stations) { if (Math.abs(n.x - pg.x) < 200 && Math.abs(n.z - pg.z) < 200 && Math.hypot(n.x - pg.x, n.z - pg.z) < 160) { st = n; break; } }
   if (!stationBoard) { stationBoard = new StationBoard(); announcer = new Announcer(q.get('tts') === 'on'); }
+  syncCrossingGates(now);
   announcer.muted = !!S.muted; if (railSamples.ok) { railSamples.loop('platform', st ? 0.55 : 0, 1.2); railSamples.loop('station', st ? 0.35 : 0, 1.5); }
   if (st && railBook) { const clock = clockMinutes(railT), city = rail.names[st.city] || { en: st.city, hi: '' }; stationBoard.show(city.en, city.hi, fmtTime(clock), railBook.departures(st.city, clock, 4));
     if (lastStation !== st) { lastStation = st; announcer.say(announcement('welcome', {}, 1, city.en), now, 8); }
@@ -560,6 +561,13 @@ function updateRailLife(dt, px, pz) {
 }
 const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 const STYLE_ELECTRIC = tr => tr.style !== 'freight' || true;
+/* level crossings stop the road traffic: each built gate is registered with the traffic simulation of the road it is on (the player's road or a branch) and removed when the chunk goes */
+const gateReg = new Map(); let gateSyncAt = 0;
+function syncCrossingGates(now) {
+  if (now - gateSyncAt < 1000 || !traffic) return; gateSyncAt = now; const sims = [traffic.sim, ...traffic.extra.map(e => e.sim)];
+  for (const [key, r] of gateReg) if (!rail.gates.has(key)) { const i = r.sim.gates.indexOf(r.gt); if (i >= 0) r.sim.gates.splice(i, 1); gateReg.delete(key); }
+  for (const [key, g] of rail.gates) { if (gateReg.has(key)) continue; for (const sim of sims) { const rd = sim.road, s = rd.closestS(g.x, g.z, 0), q = rd.at(s, tmpP); if (Math.hypot(q.x - g.x, q.z - g.z) < 12) { const gt = { s, along: g.along, closed: g.closed }; sim.gates.push(gt); gateReg.set(key, { sim, gt }); break; } } }
+}
 /* the readout on an India drive: the road you are on, the next city ahead and how far (real km), and, with a destination set, what to do at that city */
 function updateRoute() {
   if (!indiaRoute) return; const rec = activeRec; if (!rec) return; const px = phys && mode !== 'fly' ? phys.x : cam.x, pz = phys && mode !== 'fly' ? phys.z : cam.z, arc = rec.road.guideArcSigned(px, pz); if (arc === null) return;

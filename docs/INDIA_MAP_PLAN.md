@@ -100,3 +100,5 @@ Order of work: tile tool and Natural Earth/SRTM import (offline) -> the national
 **Changed 22 Nov 2026: rail over road.** Where a line meets a road away from a city, the railway's own vertical profile is forced to rise at least 7.2 m over the land at the crossing, on ramps no steeper than 2.4 percent (about 300 m each side), and the terrain carves the embankment from that profile, so the track climbs smoothly like a real rail overbridge. Near stations it stays a level crossing with barriers.
 
 **Built 22 Nov 2026: loco classes, diesel sections, Vande Bharat, maintenance trains.** See WORK_REMAINING 7.15 and 7.16. Next: narrow-gauge hill railways (Kalka-Shimla, Darjeeling, Nilgiri), Mumbai local frequencies from a real timetable, the sleeper Vande Bharat, a modelled loco and coach.
+
+**Built 22 Nov 2026: railway signals, proper level crossings and switching.** See WORK_REMAINING 7.17. Next: trains that obey the signals and stop at a red, track circuits and interlocking, junction track layouts, platform-end signals.
