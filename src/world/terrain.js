@@ -66,8 +66,9 @@ export function createTerrain(config) {
     for (let i = 0; i < zones.length; i++) { const q = zones[i], d = Math.hypot(x - q.x, z - q.z); if (d < q.r + q.blend) h = q.y + (h - q.y) * sstep(q.r, q.r + q.blend, d); }
     return h;
   }
-  function height(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.grade(x, z, h) : h; }
-  function drive(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.drive(x, z, h) : h; }                  // what wheels roll on: the road surface itself
+  let railG = null;                                                                                                  // the railway's cuttings and embankments (world/rail_grade.js), where no road already shapes the ground
+  function height(x, z) { const h = zones.length ? natural(x, z) : base(x, z), r = road ? road.grade(x, z, h) : h; return railG && r === h ? railG.grade(x, z, h) : r; }
+  function drive(x, z) { const h = zones.length ? natural(x, z) : base(x, z), r = road ? road.drive(x, z, h) : h; return railG && r === h ? railG.grade(x, z, h) : r; }                  // what wheels roll on: the road surface itself
   function inZone(x, z, margin = 0) { for (let i = 0; i < zones.length; i++) if (Math.hypot(x - zones[i].x, z - zones[i].z) < zones[i].r + margin) return true; return false; }                  // what wheels roll on: the road surface itself
   function forest(x, z) { if (MAC) { const c = cover(x, z); return sstep(0.1, 0.5, c.tree + 0.25 * c.grass) * (1 - 0.8 * c.built); } return sstep(-0.12, 0.22, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
 
@@ -133,7 +134,7 @@ export function createTerrain(config) {
   }
 
   const terrain = { base, height, drive, surface, inZone, addZone: (x, z, r, y, blend = 40) => { zones.push({ x, z, r, y, blend }); }, colour, forest, findSpawn, seaLevel: sea, config,
-    cover, regionAt, regionTint, attachRoad(r) { road = r; }, get road() { return road; },
+    cover, regionAt, regionTint, attachRoad(r) { road = r; }, attachRail(g) { railG = g; }, get road() { return road; },
     /* the same land without the road, for the coarse horizon tiles */
     far: { height: base, colour: (x, z, h, ny, out) => colour(x, z, h, ny, out, false) } };
   return terrain;
