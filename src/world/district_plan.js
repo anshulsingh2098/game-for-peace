@@ -9,6 +9,8 @@
    - Obstacle circles ({ x, z, r, slide }) along each building front, for the world.near contract the vehicle physics uses. */
 import { alea } from '../core/rng.js';
 import { crossingAt, STEP } from './navgraph.js';
+import { KeepOut } from './keepout.js';
+export const PLOT_SHRINK = 0.25;                 // a plot registers its ground this much smaller on every side, so plots that touch do not count as overlapping (the asker adds 0.3)
 export const FRONT_GAP = 3.2, DEPTH = 12, LEVEL = 2.2, LAMP_EVERY = 36, SHELTER_EVERY = 300, FLOOR_H = 3.2, GROUND_H = 4;
 export const PALETTES = {
   colonial: [0xe9d8b4, 0xd9b98a, 0xcf9d72, 0xe4c9a6, 0xc98a62], 'art-deco': [0xf0c9b4, 0xbfe0d0, 0xf2e2a6, 0xe8b6c4, 0xb9d3ea, 0xf4efe2], modern: [0xcfd5db, 0xaeb8c2, 0xe4e6e8, 0x9fb1c4], mixed: [0xe2cba6, 0xc8b8a0, 0xd8a890, 0xb9c4c8], mughal: [0xd9a98a, 0xe6c6a4, 0xcd8f6c], 'old-city': [0xd9b690, 0xc7956d, 0xe3c7a2]
@@ -16,7 +18,8 @@ export const PALETTES = {
 export const SHOP = [0xd94f3c, 0x2f7fb8, 0xf0b429, 0x3f9d6a, 0x8e4f9e, 0xe07a2f, 0x2b3a67];
 
 /* spec: the region's `district`: { styles: [names], floors: [min, max], market: bool }; returns the plan for road distance [s0, s1) */
-export function planPiece({ road, terrain, seed, k, s0, s1, spec, blocked = () => false }) {
+export function planPiece({ road, terrain, seed, k, s0, s1, spec, blocked: blockedAt = () => false, keepout = null, ignore = null }) {
+  const mine = new KeepOut(), blocked = keepout ? (x, z) => blockedAt(x, z) || !!keepout.point(x, z, 0.6, { as: 'building', ignore }) : blockedAt;          // the shared keep-out registry (keepout.js): other roads, rails, stations, landmarks, other buildings
   const st = road.style, sea = terrain.seaLevel, plots = [], furniture = [], circles = [], p = {}, q = {}, front = st.shoulder + FRONT_GAP;
   const crossings = []; for (let i = Math.ceil(s0 / STEP); i * STEP < s1; i++) if (crossingAt(road, i, p)) crossings.push(i);
   for (const side of [1, -1]) {
@@ -29,10 +32,15 @@ export function planPiece({ road, terrain, seed, k, s0, s1, spec, blocked = () =
         road.at(sc, p); const nx = -p.tz * side, nz = p.tx * side; road.at(s, q); const th0 = q.th; road.at(s + w, q); if (Math.abs(Math.atan2(Math.sin(q.th - th0), Math.cos(q.th - th0))) > 0.06) return false;
         for (const [a, b] of [[front + 0.5, -w / 2], [front + 0.5, w / 2], [front + DEPTH - 0.5, -w / 2], [front + DEPTH - 0.5, w / 2], [front + DEPTH / 2, 0]]) {
           const x = p.x + nx * a + p.tx * b, z = p.z + nz * a + p.tz * b, h = terrain.base(x, z); if (h < sea + 1 || Math.abs(h - p.y) > LEVEL || blocked(x, z)) return false;
-        } return true;
+        }
+        const dd = DEPTH + (extras > 0.7 ? 4 : 0), rx = p.x + nx * (front + dd / 2), rz = p.z + nz * (front + dd / 2), ry = Math.atan2(p.tz, p.tx);
+        if (mine.rect(rx, rz, w / 2, dd / 2, ry, 0.3)) return false;                                                                     // not into a plot of this piece (they fan out on a bend)
+        if (keepout && keepout.rect(rx, rz, w / 2, dd / 2, ry, 0.3, { as: 'building', ignore })) return false;                          // the whole plot, not five points: not on another road, a rail, a station, a landmark, another piece's plot
+        return true;
       })();
       if (ok) {
         road.at(sc, p); const nx = -p.tz * side, nz = p.tx * side, d = DEPTH + (extras > 0.7 ? 4 : 0), cx = p.x + nx * (front + d / 2), cz = p.z + nz * (front + d / 2);
+        mine.add('p', 'building', { t: 'rect', x: cx, z: cz, hx: w / 2 - PLOT_SHRINK, hz: d / 2 - PLOT_SHRINK, yaw: Math.atan2(p.tz, p.tx) });
         plots.push({ side, s: sc, w, d, floors, style, colour, shop, extras, x: cx, z: cz, y: p.y, th: p.th, tx: p.tx, tz: p.tz, nx, nz, tx: p.tx, tz: p.tz, front });
         for (let u = -w / 2 + 2; u <= w / 2 - 2 + 0.01; u += 4) circles.push({ x: p.x + nx * (front + 1.5) + p.tx * u, z: p.z + nz * (front + 1.5) + p.tz * u, r: 2.4, slide: true, y: p.y });
         if (w < 8.5) circles.push({ x: p.x + nx * (front + 1.5), z: p.z + nz * (front + 1.5), r: 2.4, slide: true, y: p.y });
@@ -45,6 +53,6 @@ export function planPiece({ road, terrain, seed, k, s0, s1, spec, blocked = () =
     for (let m = Math.ceil(s0 / SHELTER_EVERY); m * SHELTER_EVERY < s1; m++) { const ss = m * SHELTER_EVERY + 60; if (ss < s0 || ss >= s1 || side < 0 || road.bridgeW(ss) > 0 || road.tunnelW(ss) > 0.01) continue; road.at(ss, p); if (crossings.some(i => Math.abs(i * STEP - ss) < 30)) continue; if (blocked(p.x - p.tz * side * walk, p.z + p.tx * side * walk)) continue; furniture.push({ type: 'shelter', side, s: ss, x: p.x - p.tz * side * (walk + 0.6), z: p.z + p.tx * side * (walk + 0.6), y: p.y, th: p.th, tx: p.tx, tz: p.tz }); }
     if (spec.market) for (let ss = Math.ceil(s0 / 22) * 22 + 7; ss < s1; ss += 22) { if (road.bridgeW(ss) > 0 || road.tunnelW(ss) > 0.01 || crossings.some(i => Math.abs(i * STEP - ss) < 14)) continue; const rr = alea(seed, 'stall', k, side, ss); if (rr() > 0.55) continue; road.at(ss, p); const lat = front - 1.2; if (blocked(p.x - p.tz * side * lat, p.z + p.tx * side * lat)) continue; furniture.push({ type: 'stall', side, s: ss, x: p.x - p.tz * side * lat, z: p.z + p.tx * side * lat, y: p.y, th: p.th, tx: p.tx, tz: p.tz, colour: Math.floor(rr() * 64) }); }
   }
-  for (const i of crossings) { road.at(i * STEP, p); for (const side of [1, -1]) { const lat = st.shoulder + 0.9; furniture.push({ type: 'signal', side, s: i * STEP, x: p.x - p.tz * side * lat + p.tx * 2.2, z: p.z + p.tx * side * lat + p.tz * 2.2, y: p.y, th: p.th, tx: p.tx, tz: p.tz, signalled: ['boulevard', 'highway'].includes(st.id) }); } }
+  for (const i of crossings) { road.at(i * STEP, p); for (const side of [1, -1]) { const lat = st.shoulder + 0.9; if (blocked(p.x - p.tz * side * lat + p.tx * 2.2, p.z + p.tx * side * lat + p.tz * 2.2)) continue; furniture.push({ type: 'signal', side, s: i * STEP, x: p.x - p.tz * side * lat + p.tx * 2.2, z: p.z + p.tx * side * lat + p.tz * 2.2, y: p.y, th: p.th, tx: p.tx, tz: p.tz, signalled: ['boulevard', 'highway'].includes(st.id) }); } }
   return { plots, furniture, circles, crossings };
 }

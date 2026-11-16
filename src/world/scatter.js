@@ -16,7 +16,9 @@ export class Scatter {
     this.terrain = terrain; this.config = config; this.origin = origin; this.size = config.view.tile; this.props = propGeometry();
     this.tiles = new Map(); this.queue = []; this.ptx = NaN; this.ptz = NaN; this.dirty = true; this.count = 0;
     this.group = new THREE.Group(); scene.add(this.group);
+    if (terrain.keepout) { this._ko = bb => this.invalidateBox(bb); terrain.keepout.listeners.push(this._ko); }       // new ground claimed (a rail, a plot): trees already planted there are replanted
   }
+  invalidateBox(bb) { const Sz = this.size; for (let i = Math.floor(bb[0] / Sz); i <= Math.floor(bb[2] / Sz); i++) for (let j = Math.floor(bb[1] / Sz); j <= Math.floor(bb[3] / Sz); j++) { const k = i + ',' + j, t = this.tiles.get(k); if (t) { this.drop(t); this.tiles.delete(k); this.dirty = true; } } }
   /* swap in the real-scan models (world/nature.js) and rebuild every tile with them */
   setProps(patch) { this.nature = patch; for (const t of this.tiles.values()) this.drop(t); this.tiles.clear(); this.queue.length = 0; this.dirty = true; }
   update(px, pz) {
@@ -38,7 +40,7 @@ export class Scatter {
     const T = this.terrain, c = this.config.scatter, pal = this.config.palette, Sz = this.size, x0 = tx * Sz, z0 = tz * Sz, sea = T.seaLevel, dens = this.config.view.scenery.density, road = T.road;
     const lists = { pine: [], round: [], rock: [], bush: [], tuft: [] }, hits = [];
     const wide = road ? Math.max(0, road.style.clear - 10) : 0;                 // wider roads keep more room clear (two-lane: 0)
-    const clear = (x, z, m) => !(road && road.nearest(x, z) && road.hit.d < m + wide) && !T.inZone(x, z, 3);
+    const ko = T.keepout, clear = (x, z, m) => !(road && road.nearest(x, z) && road.hit.d < m + wide) && !T.inZone(x, z, 3) && !(ko && ko.point(x, z, 1.5, { as: 'scenery' }));          // not on a road, rail, station, landmark or building (keepout.js)
     const R = alea(this.config.seed, 'trees', tx, tz);
     for (let n = Math.round(c.trees * Sz * Sz * dens); n > 0; n--) {
       const x = x0 + R() * Sz, z = z0 + R() * Sz, keep = R(), kind = R(), sc = 0.75 + R() * 0.85, rot = R() * 6.28, tall = 0.9 + R() * 0.3, shade = R();
@@ -103,6 +105,6 @@ export class Scatter {
     for (let tz = Math.floor((z - r) / S); tz <= Math.floor((z + r) / S); tz++) for (let tx = Math.floor((x - r) / S); tx <= Math.floor((x + r) / S); tx++) { const t = this.tiles.get(tx + ',' + tz); if (t && t.hits.length) out.push(t.hits); }
     return out;
   }
-  dispose() { for (const t of this.tiles.values()) this.drop(t); this.tiles.clear(); this.group.parent && this.group.parent.remove(this.group); }
+  dispose() { if (this._ko) { const L = this.terrain.keepout.listeners, i = L.indexOf(this._ko); if (i >= 0) L.splice(i, 1); } for (const t of this.tiles.values()) this.drop(t); this.tiles.clear(); this.group.parent && this.group.parent.remove(this.group); }
   stats() { return { tiles: this.tiles.size, things: this.count, queue: this.queue.length }; }
 }

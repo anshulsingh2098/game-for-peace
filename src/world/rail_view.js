@@ -5,6 +5,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { findCrossings, trainSpan, crossingClosed, TRAIN, trainMotion, STYLES } from './rail.js';
 import { styleOf, laneOffsets, TRACK_GAP } from './rail_timetable.js';
 import { TrainArt } from './train_art.js';
+import { registerRail } from './keepout.js';
 import { consist, lengthOf, locoNumber, headcode } from './train_consist.js';
 
 const CHUNK = 64, SEG = 4, RANGE = 750, STATION_LEN = 120, BRIDGE_R = 70, BRIDGE_H = 6.5, LEVEL_NEAR_STATION = 600;
@@ -37,7 +38,7 @@ export class RailView {
   constructor({ scene, terrain, origin, network, grade, book = null, tracks = null, roads, cities, toWorld, toGame, names = {} }) {
     this.grade = grade; this.book = book; this.tracks = tracks || network.edges.map(() => 1); this.art = new TrainArt(); this.cityNames = Object.fromEntries(Object.entries(names).map(([k, v]) => [k, v.en])); this.scene = scene; this.t = terrain; this.origin = origin; this.net = network; this.lines = network.edges; this.toWorld = toWorld; this.toGame = toGame; this.names = names; this.chunks = new Map(); this.stationsBuilt = new Map(); this.time = 0;
     this.group = new THREE.Group(); scene.add(this.group); this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.15 });
-    this.p = {}; this.q = {};
+    this.p = {}; this.q = {}; if (terrain.keepout) registerRail(terrain.keepout, { network, tracks: this.tracks, toWorld });          // the track beds and stations claim their ground (keepout.js): the district, trees and props keep off
     /* crossings with the roads: a rail bridge over the road, or a level crossing near a station */
     this.crossings = []; const stn = network.stations; for (const ln of this.lines) for (const c of findCrossings(ln, roads, cities, { minCity: 60 })) {
       if (c.sinA < 0.3) continue; const ds = stn.length ? Math.min(...stn.map(n => Math.hypot(n.x - c.x, n.z - c.z))) : 1e9; c.rail = ln.id; c.type = ds < LEVEL_NEAR_STATION ? 'level' : 'bridge'; c.line = ln; this.crossings.push(c); }
@@ -103,12 +104,13 @@ export class RailView {
   }
   /* a station at a city: two platforms with a canopy, a building and name boards, along the track through the node */
   buildStation(n) {
-    const W = this.toWorld, T = this.t, wn = W(n.x, n.z), e = this.net.adj.get(n.id)[0], y0 = this.grade ? this.grade.junctionY(wn.x, wn.z) : T.drive(wn.x, wn.z); if (!e) return null; const P = e.pts, fwd = e.a === n.id, i = fwd ? 0 : P.length / 2 - 1, j = fwd ? 1 : P.length / 2 - 2;
+    const W = this.toWorld, T = this.t, ko = T.keepout, wn = W(n.x, n.z), e = this.net.adj.get(n.id)[0], y0 = this.grade ? this.grade.junctionY(wn.x, wn.z) : T.drive(wn.x, wn.z); if (!e) return null; const P = e.pts, fwd = e.a === n.id, i = fwd ? 0 : P.length / 2 - 1, j = fwd ? 1 : P.length / 2 - 2;
     const tx = (P[j * 2] - P[i * 2]), tz = (P[j * 2 + 1] - P[i * 2 + 1]), tl = Math.hypot(tx, tz) || 1, ux = tx / tl, uz = tz / tl, nx = -uz, nz = ux, yaw = -Math.atan2(uz, ux), parts = [], grp = new THREE.Group(), y = y0, textures = [];
     const nTs = Math.max(...this.net.adj.get(n.id).map(e2 => this.tracks[this.lines.indexOf(e2)] || 1)), halfT = (nTs - 1) * TRACK_GAP / 2, PL = halfT + 4.9;
     for (const side of [-1, 1]) {
       const c = { x: nx * side * PL, z: nz * side * PL }; box(parts, STATION_LEN, 1.0, 6, c.x, y + 0.5, c.z, yaw, 0xb8b3a6); box(parts, STATION_LEN, 0.2, 6.2, c.x, y + 1.05, c.z, yaw, 0xe3ded2);               // the platform and its edge
       box(parts, STATION_LEN * 0.8, 0.3, 5.4, c.x, y + 4.6, c.z, yaw, 0x3d5a80); for (let k = -4; k <= 4; k++) box(parts, 0.3, 3.5, 0.3, c.x + ux * k * STATION_LEN * 0.1, y + 2.85, c.z + uz * k * STATION_LEN * 0.1, 0, 0x555a60);    // the canopy and its posts
+      if (ko && ko.rect(wn.x + nx * side * (halfT + 17) + ux * 20, wn.z + nz * side * (halfT + 17) + uz * 20, 17, 4.5, Math.atan2(uz, ux), 1, { as: 'building', ignore: 'station:' + n.id })) continue;          // the building would stand on a road or another building: leave it out
       box(parts, 34, 7, 9, nx * side * (halfT + 17) + ux * 20, y + 3.5, nz * side * (halfT + 17) + uz * 20, yaw, side > 0 ? 0xd8c7a0 : 0xc9b88d); box(parts, 34.4, 1.1, 9.4, nx * side * (halfT + 17) + ux * 20, y + 7.4, nz * side * (halfT + 17) + uz * 20, yaw, 0x8b3a2e);   // the station building
     }
     const nm = this.names[n.city] || { en: n.city, hi: '' }, tex = nameTexture(nm.en, nm.hi); textures.push(tex);

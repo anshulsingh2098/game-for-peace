@@ -12,6 +12,7 @@ import { RoadMesh } from './world/road.js';
 import { roadStyleById } from './world/roadstyles.js';
 import { TileGrid } from './world/chunks.js';
 import { Scatter } from './world/scatter.js';
+import { roadProvider } from './world/keepout.js';
 import { WIND } from './world/props.js';
 import { grassTex, waterNormalTex } from './world/textures.js';
 import { makeGroundMaterial } from './world/groundmat.js';
@@ -178,7 +179,7 @@ function currentCityId() { try { if (indiaRoute && phys) { const gf = gameFrame(
 let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
 const gateSub = (net, cityId, roadId) => { try { return net.junctionChoices(cityId).filter(c => c.road !== roadId).slice(0, 2).map(c => (c.nh || c.name) + ' \u2192 ' + c.towardName).join('   '); } catch (e) { return ''; } };       // the roads that cross at a city, for the board over the road before it
 let railNet = null, railGrade = null, railBook = null, railTracks = null;
-function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0;
+function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadProvider(terrain.keepout, roadSet); roadS = 0;
   railNet = null; railGrade = null; if (indiaRoute && indiaRoute.world && indiaRoute.net.rails && config.road.guide && q.get('rail') !== 'off') {            // the railway's own ground: cuttings and embankments
     const net = indiaRoute.net, n0 = net.cities.get(indiaRoute.from), g0 = config.road.guide; railNet = new RailNetwork(net.rails); railBook = net.trainsJson ? new TrainBook(net.trainsJson, railNet) : null; railTracks = railNet.edges.map(e => railBook ? railBook.tracks(e.edgeId) : 1); railGrade = new RailGrade({ tracks: railTracks, edges: railNet.edges, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), natural: (x, z) => terrain.base(x, z) }); terrain.attachRail(railGrade); } }
 makeWorld();
