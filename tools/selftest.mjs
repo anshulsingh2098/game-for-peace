@@ -13,9 +13,10 @@ import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
 import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
 import { CITIES, CITY, HIGHWAYS, RAIL, COAST as INDIA_COAST, routeKm, roadGraph, shortestRoute, nearestCity, distanceKm, gameKm, driveMinutes } from '../src/world/india_network.js';
 import { validTolls, tollCap, planHighway, RAIL_STEP, GANTRY_EVERY, TOLL_EVERY, TOLL_LEN, tollAt } from '../src/world/highway_plan.js';
+import { regionAt, distKm } from '../src/world/regionmap.js';
 import { Junction, JSIG } from '../src/traffic/junction.js';
 import { RoadSet } from '../src/world/roadset.js';
-import { RoadNetwork } from '../src/world/network.js';
+import { RoadNetwork, guidePoint } from '../src/world/network.js';
 import { toGame, fromGame, smoothPath, pathLength, buildSkeleton, GAME_SCALE } from '../src/world/india_network.js';
 import { readFileSync as readSkeleton } from 'node:fs';
 import { destinationsFor, HINDI } from '../src/world/india_network.js';
@@ -811,6 +812,14 @@ test('road set: a road that branches off another one starts at its height, both 
   for (const c of mainSim.cars) { const q2 = main.at(c.s, {}); const lat = Math.hypot(c.x - q2.x, c.z - q2.z); if (c.blend === 0) assert.ok(lat < 12, 'a turned car ends up in a lane (' + lat.toFixed(1) + ')'); } mainSim.detachJunction(jx); assert.equal(mainSim.junctions.length, 0);
   const far = t.surface(jp.x + 3000, jp.z + 3000); assert.notEqual(far, 'asphalt'); set.remove(br); assert.equal(set.roads.length, 1); set.remove(main); assert.equal(set.roads.length, 1, 'the primary road cannot be removed');
   const alone = []; for (let i = 0; i < 30; i++) { const x = i * 97 - 800, z = i * 41 - 300; alone.push([x, z, t.height(x, z), t.surface(x, z)]); } assert.deepEqual(alone, solo, 'with the branch gone the land is as before (one-road behaviour is unchanged)');
+});
+
+test('N8 sector content: the region of a place, blends at borders, a point along a guide, which sector a city falls in', () => {
+  const near = (lat, lon) => regionAt(lat, lon, REGIONS); assert.equal(near(28.6, 77.2).id, 'delhi'); assert.equal(near(19.1, 72.9).id, 'mumbai'); assert.equal(near(9.9, 76.3).id, 'kerala'); assert.equal(near(34.1, 77.6).id, 'ladakh'); assert.equal(near(26.9, 75.8).id, 'rajasthan');
+  const inside = near(28.61, 77.23); assert.ok(inside.blend < 0.05 && inside.km < 5, 'right at a region: no blend'); const mid = near(27.9, 77.6); assert.ok(mid.blend > 0 && mid.blend <= 0.5 && mid.second && mid.second !== mid.id, 'between Delhi and Agra the two mix: ' + JSON.stringify(mid));
+  assert.ok(Math.abs(distKm(28.61, 77.21, 19.08, 72.88) - 1150) < 40, 'great-circle Delhi to Mumbai about 1,150 km'); assert.equal(regionAt(10, 10, []), null); assert.deepEqual(regionAt(10, 10, [REGIONS[0]]).second, null);
+  const flat = [0, 0, 300, 0, 300, 400]; assert.deepEqual(guidePoint(flat, 150), { x: 150, z: 0 }); assert.deepEqual(guidePoint(flat, 500), { x: 300, z: 200 }); assert.deepEqual(guidePoint(flat, 9999), { x: 300, z: 400 }); assert.deepEqual(guidePoint(flat, 0), { x: 0, z: 0 });
+  const sectorOf = (x, z) => [Math.floor(x / 512), Math.floor(z / 512)]; assert.deepEqual(sectorOf(-1, 513), [-1, 1]); assert.deepEqual(sectorOf(1023.9, 0), [1, 0]);
 });
 
 console.log(`\n${passed} checks passed`);

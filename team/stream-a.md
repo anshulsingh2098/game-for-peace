@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 09:00  Limits batch and N8 step 2
+Branch: feat/limits-and-n8
+What changed: credits screen in the pause menu (`ui/menu.js`), branch-road bridges in `world.near` (`main.js`), an asphalt patch over the crossing (`world/junction_signals.js`), N8: sectors hold content: `world/regionmap.js` (new), `world/network.js` (`guidePoint`), `main.js` (sector `meta` and `load` build the crossing roads of a city, `unload` removes them; the arc-distance trigger is gone), debug panel line for side roads, `docs/STREAMING.md`, `docs/WORK_REMAINING.md` updated. One new self-test (69 checks). Checked in the browser with the sector manager pumped by hand: Delhi's six roads at the start, Jaipur's crossing road built 1.1 km before it, Delhi's removed after moving away. Note: `__next.step()` does not run the sector system (only the real frame loop does).
+For the other stream: nothing required.
+Status: open
+
 ## 2026-11-19 05:00  Owner approved merging PRs 27 to 36; known-limits reference file
 Branch: feat/landscape-look (PR 36)
 What changed: `docs/WORK_REMAINING.md` lists every known limit by area with a tag (person, owner, build, which stream) and priority, plus the owner decisions waiting; `HANDOFF.md` points to it. The owner asked for PRs 27 to 36 to be merged in order on 19 Nov 2026.

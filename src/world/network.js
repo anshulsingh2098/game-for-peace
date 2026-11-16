@@ -10,6 +10,11 @@ export function cleanPath(pts, tol = 90, passes = 3) {
   for (let k = 0; k < passes; k++) { const q = [out[0], out[1]]; for (let i = 0; i + 3 < out.length; i += 2) { q.push(0.75 * out[i] + 0.25 * out[i + 2], 0.75 * out[i + 1] + 0.25 * out[i + 3], 0.25 * out[i] + 0.75 * out[i + 2], 0.25 * out[i + 1] + 0.75 * out[i + 3]); } q.push(out[out.length - 2], out[out.length - 1]); out = q; }
   return out;
 }
+/* the point at distance `along` (metres) on a flat [x, z, ...] path: { x, z } (clamped to the ends) */
+export function guidePoint(flat, along) {
+  let acc = 0; for (let i = 0; i + 3 < flat.length; i += 2) { const dx = flat[i + 2] - flat[i], dz = flat[i + 3] - flat[i + 1], L = Math.hypot(dx, dz); if (acc + L >= along) { const f = L ? (along - acc) / L : 0; return { x: flat[i] + dx * f, z: flat[i + 1] + dz * f }; } acc += L; }
+  return { x: flat[flat.length - 2], z: flat[flat.length - 1] };
+}
 const cumulative = pts => { const s = [0]; for (let i = 2; i < pts.length; i += 2) s.push(s[s.length - 1] + Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1])); return s; };
 
 export class RoadNetwork {

@@ -30,7 +30,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | # | Limit | Tag |
 |---|---|---|
 | 2.1 | N7: the core-contracts note and the HUD and map layer change requests (N7a) are not written | P3 [build] |
-| 2.2 | N8: sectors only load shared assets and the navigation chunks; the world itself (terrain, roads, scenery) does not yet generate and release by sector, which the continuous India world needs | P1 [build] |
+| 2.2 | N8: sectors now own the crossing roads, signals and traffic of each city on a route (built when a sector holding a city is within 900 m, removed beyond 1,200 m), carry a region and a blend near borders (`world/regionmap.js`), and show side-road counts in the debug panel. Terrain, plain roads and scenery still stream by tile and road piece, not by sector, and the world is still one guided road at a time. | P1 [build] |
 | 2.3 | N9: moving between regions is a full reload behind the loading screen; no seamless transition, no blending at borders | P2 [build] |
 | 2.4 | N9: regions are impressions from old terrain recipes with new colours; none uses real elevation | P2 [build] |
 | 2.5 | N10: the navigation graph covers the main road only; side roads and junctions are not in it | P1 [build] [B] |
@@ -81,8 +81,8 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 ## 7. Roads, highways, rail
 | # | Limit | Tag |
 |---|---|---|
-| 7.1 | Junctions are flat overlaps: no ramps, flyovers, interchanges or cloverleaves, and one road's lane paint runs across the other | P2 [build] |
-| 7.2 | Side roads (branches) draw bridges, tunnels and retaining walls but these are not in the collision list | P1 [build] |
+| 7.1 | Junctions have no ramps, flyovers or cloverleaves; a round asphalt patch now covers the lane paint at the crossing (colour looked bluish under the sky light and was retuned, not re-checked) | P2 [build] |
+| 7.2 | Branch roads' bridges are now in the collision list (`world.near`); their tunnels and retaining walls are drawn but still not in it | P2 [build] |
 | 7.3 | Service roads behind a barrier, concrete median barriers, elevated sections are not built | P2 [build] |
 | 7.4 | The `ghat` hill road has tighter bends in Himachal (39 m minimum radius) but not the stacked hairpins seen in the tea-garden photos | P2 [build] |
 | 7.5 | Centre-line colour on Indian roads is unconfirmed (sources disagree); lane and shoulder widths follow common practice, not the IRC tables, which were not found | P3 [person] |
@@ -97,7 +97,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 8.2 | The skeleton roads are simplified driving routes (a waypoint every 20 to 60 real km) from the OSRM demo server over OpenStreetMap data, not surveyed alignments; they are the fastest route through each city list and can differ from the numbered highway | P2 [build] |
 | 8.3 | Some data gaps: Jaipur offers Ajmer twice (two corridors) and no Kota; only the corridors entered exist | P3 [build] |
 | 8.4 | One road per `?india=` drive from the player's start, plus side roads within 2.4 km of a city on the route; no free roaming across the country yet; the junction panel regenerates the world (short loading screen) | P1 [build] |
-| 8.5 | The in-game OpenStreetMap credit shows only in `?india=` mode and on the map page, not in a credits screen | P2 [build] |
+| 8.5 | The OpenStreetMap credit now also appears under Credits in the pause menu (all asset credits summarised); the full licence list stays `assets/ASSETS.md` | P3 [done in part] |
 | 8.6 | Real land cover and elevation (ESA WorldCover, SRTM or Copernicus) are researched but not downloaded or used | P2 [owner 1.7] |
 | 8.7 | The coastline on the map page is a sketch, not a boundary | P3 [owner 1.4] |
 | 8.8 | Festivals, seasons by region, monsoon waterlogging, heat haze and winter fog are not built | P3 [build] |
@@ -118,4 +118,5 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 19 Nov 2026: credits screen in the pause menu; branch-road bridges in collision; asphalt patch over lane paint at junctions; N8 sector-driven city junctions, region lookup by position and debug stats (see 2.2, 7.1, 7.2, 8.5).
 - 18 to 19 Nov 2026: tunnel doorways, mouse look on foot, plant variants, patchwork land, moving water with foam, five Indian worlds, highway furniture, toll slowing, India skeleton and map page, drive modes, guided roads, junction choice panel, multi-road engine step 1, traffic on every road, crossing behaviour (all first increments: see their limits above).
