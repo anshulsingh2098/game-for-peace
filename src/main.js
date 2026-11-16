@@ -58,6 +58,10 @@ import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
 import { Gps } from './ui/gps.js';
 import { RailLine, RailNetwork, findCrossings } from './world/rail.js';
+import { RailGrade } from './world/rail_grade.js';
+import { TrainBook, clockMinutes, fmtTime, announcement } from './world/rail_timetable.js';
+import { StationBoard, Announcer } from './ui/railboard.js';
+import { TrainSound } from './audio/trainsound.js';
 import { RailView } from './world/rail_view.js';
 import { LOCATIONS, locationConfig, locationById, LEGACY, START_LOCATION, pickerLocations } from './world/locations.js';
 import { Landmarks } from './world/landmarks.js';
@@ -75,7 +79,7 @@ const wantWorld = q.get('india') === 'world' || (!q.get('india') && !q.get('loc'
 let indiaRoute = null;
 if (q.get('india') || wantWorld) {
   try {
-    const sk = await (await fetch('assets/india/skeleton.json')).json(), net = new RoadNetwork(sk); try { net.rails = await (await fetch('assets/india/rails.json')).json(); } catch (e) { net.rails = null; }
+    const sk = await (await fetch('assets/india/skeleton.json')).json(), net = new RoadNetwork(sk); try { net.rails = await (await fetch('assets/india/rails.json')).json(); } catch (e) { net.rails = null; } try { net.trainsJson = await (await fetch('assets/india/trains.json')).json(); } catch (e) { net.trainsJson = null; }
     if (wantWorld) {                                                                                                      // the free world: start in a city on the best highway through it, with a way ahead and a way behind
       const at = q.get('at') || savedCity || 'mumbai', ws = net.worldStart(at) || net.worldStart('mumbai'); if (ws) { const from = ws.gA.from; indiaRoute = { ...ws.gA, net, world: true, roadId: ws.road, name: ws.name, kind: ws.kind, nh: ws.nh, ptsBack: ws.gB ? ws.gB.pts : null, citiesBack: ws.gB ? ws.gB.cities.map(c => ({ ...c, along: -c.along })) : [], legs: [], from }; }
     } else if (q.get('india') === 'route') {                                                                                     // ?india=route&from=<city>&to=<city>: the shortest way over several roads, as one drive
@@ -169,7 +173,10 @@ const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.ring
 function currentCityId() { try { if (indiaRoute && phys) { const gf = gameFrame(phys.x, phys.z), ll = fromGame(gf.x, gf.z), c = nearestCity(ll.lat, ll.lon); if (c) return c.city.id; } const ins = (locationById(config.location).region || {}).inspiration; if (ins) { const c = nearestCity(ins.lat, ins.lon); if (c) return c.city.id; } } catch (e) { /* fall through */ } return 'delhi'; }
 let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
 const gateSub = (net, cityId, roadId) => { try { return net.junctionChoices(cityId).filter(c => c.road !== roadId).slice(0, 2).map(c => (c.nh || c.name) + ' \u2192 ' + c.towardName).join('   '); } catch (e) { return ''; } };       // the roads that cross at a city, for the board over the road before it
-function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
+let railNet = null, railGrade = null;
+function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0;
+  railNet = null; railGrade = null; if (indiaRoute && indiaRoute.world && indiaRoute.net.rails && config.road.guide && q.get('rail') !== 'off') {            // the railway's own ground: cuttings and embankments
+    const net = indiaRoute.net, n0 = net.cities.get(indiaRoute.from), g0 = config.road.guide; railNet = new RailNetwork(net.rails); railGrade = new RailGrade({ edges: railNet.edges, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), natural: (x, z) => terrain.base(x, z) }); terrain.attachRail(railGrade); } }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
 function makeScenery() {
@@ -512,8 +519,26 @@ function updateBranches(px, pz, dt) {
 /* toll plazas on the player's road: passing through one pays the toll (a toast; two-wheelers go free, trucks pay more); no money system yet */
 let lastToll = null;
 function updateToll() { const tr = activeRec ? activeRec.road : road, ts0 = activeRec ? activeRec.hint : roadS; if (!tr || tr.style.id !== 'nh6' || mode !== 'drive' || !phys || phys.u < 1) return; for (const ts of validTolls(tr, ts0 - 20, ts0 + 40)) { if (ts0 >= ts && ts0 <= ts + TOLL_LEN && lastToll !== ts) { lastToll = ts; const id = VEHICLES[vehicle].id, fare = id === 'bike' ? 0 : id === 'truck' ? 270 : 85; toast(fare ? 'Toll plaza: \u20b9' + fare + ' paid with FASTag' : 'Toll plaza: two-wheelers pass free'); } } }
-let gps = null, gpsNext = null, rail = null; let navDest = q.get('nav') && CITY[q.get('nav')] ? q.get('nav') : null, lastCityToast = '';
+let gps = null, gpsNext = null, rail = null, railBook = null, stationBoard = null, announcer = null, trainSound = null, railT = 0, lastStation = null, lastNearTrain = null; let navDest = q.get('nav') && CITY[q.get('nav')] ? q.get('nav') : null, lastCityToast = '';
 function setNav(id) { navDest = id && CITY[id] ? id : null; toast(navDest ? 'Navigating to ' + CITY[navDest].name : 'Navigation off'); }
+/* the railway's life around the player: the nearest train is heard, a station shows its departure board and announces trains by the railway clock */
+function updateRailLife(dt, px, pz) {
+  railT += dt; const now = performance.now(), pg = rail.toGame(px, pz), ox = grid.origin.x, oz = grid.origin.z; if (!trainSound) trainSound = new TrainSound(sound);
+  let best = null, bd = 1e9; for (const tr of rail.trains) if (tr.active) { const m = tr.meshes[Math.min(2, tr.meshes.length - 1)], d = Math.hypot(m.position.x + ox - px, m.position.z + oz - pz); if (d < bd) { bd = d; best = { tr, m, d }; } }
+  if (best) { const m = best.m, wx = m.position.x + ox, wz = m.position.z + oz, f = best.tr.line.at(best.tr.head, tmpP), prevD = best.tr.pd === undefined ? best.d : best.tr.pd; best.tr.pd = best.d; const closing = dt > 0 ? (prevD - best.d) / dt : 0, yaw = phys ? phys.yaw : cam.yaw, rx = wx - px, rz = wz - pz, side = (-rx * Math.sin(yaw) + rz * Math.cos(yaw)) / Math.max(1, best.d);
+    trainSound.update(dt, { d: best.d, closing, v: best.tr.v, pan: side, motor: STYLE_ELECTRIC(best.tr), approaching: closing > -2 }, now); void f;
+    if (best.d < 90 && lastNearTrain !== best.tr) { lastNearTrain = best.tr; const t = best.tr.real; toast(t ? t.n + ' ' + t.name : best.tr.local ? best.tr.local.name + ' · ' + best.tr.local.kind : best.tr.style === 'freight' ? 'Goods train' : 'Passenger train'); } } else trainSound.update(dt, null, now);
+  /* a station within 160 m: its board, and an announcement when the clock reaches a scheduled arrival */
+  let st = null; for (const n of rail.net.stations) { if (Math.abs(n.x - pg.x) < 200 && Math.abs(n.z - pg.z) < 200 && Math.hypot(n.x - pg.x, n.z - pg.z) < 160) { st = n; break; } }
+  if (!stationBoard) { stationBoard = new StationBoard(); announcer = new Announcer(); }
+  announcer.muted = !!S.muted;
+  if (st && railBook) { const clock = clockMinutes(railT), city = rail.names[st.city] || { en: st.city, hi: '' }; stationBoard.show(city.en, city.hi, fmtTime(clock), railBook.departures(st.city, clock, 4));
+    if (lastStation !== st) { lastStation = st; announcer.say(announcement('welcome', {}, 1, city.en), now, 8); }
+    for (const a of railBook.arrivalsAt(st.city, clock)) { const key = a.n + ':' + Math.floor(railT / 60); if (updateRailLife.done !== key) { updateRailLife.done = key; const plat = 1 + Math.floor(hashStr(a.n + st.city) * 4); announcer.say(announcement('arriving', a, plat, city.en), now, 12); break; } } }
+  else { stationBoard.hide(); if (lastStation) { lastStation = null; if (announcer) announcer.stop(); } }
+}
+const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
+const STYLE_ELECTRIC = tr => tr.style !== 'freight' || true;
 /* the readout on an India drive: the road you are on, the next city ahead and how far (real km), and, with a destination set, what to do at that city */
 function updateRoute() {
   if (!indiaRoute) return; const rec = activeRec; if (!rec) return; const px = phys && mode !== 'fly' ? phys.x : cam.x, pz = phys && mode !== 'fly' ? phys.z : cam.z, arc = rec.road.guideArcSigned(px, pz); if (arc === null) return;
@@ -561,9 +586,9 @@ function update(dt, now) {
   focus.x = px; focus.z = pz; if (mode === 'drive' && phys) { focus.dx = Math.cos(phys.yaw); focus.dz = Math.sin(phys.yaw); focus.speed = Math.abs(phys.u); } else focus.speed = 0;
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
   updateBranches(px, pz, dt); junctionSignals.update();
-  if (indiaRoute && indiaRoute.world && !rail && terrain && grid && q.get('rail') !== 'off' && indiaRoute.net.rails) { const net = indiaRoute.net, g0 = guideWorld(), n0 = net.cities.get(indiaRoute.from), cityList = [...net.cities.values()];
-    rail = new RailView({ scene, terrain, origin: grid.origin, network: new RailNetwork(net.rails), roads: [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), cities: cityList, names: Object.fromEntries(cityList.map(c => [c.id, { en: c.name, hi: HINDI[c.id] || '' }])), toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }) }); }
-  if (rail) rail.update(dt, px, pz);
+  if (indiaRoute && indiaRoute.world && !rail && terrain && grid && q.get('rail') !== 'off' && railNet) { const net = indiaRoute.net, g0 = guideWorld(), n0 = net.cities.get(indiaRoute.from), cityList = [...net.cities.values()];
+    railBook = net.trainsJson ? new TrainBook(net.trainsJson, railNet) : null; rail = new RailView({ scene, terrain, origin: grid.origin, network: railNet, grade: railGrade, book: railBook, roads: [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), cities: cityList, names: Object.fromEntries(cityList.map(c => [c.id, { en: c.name, hi: HINDI[c.id] || '' }])), toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }) }); }
+  if (rail) { rail.update(dt, px, pz); updateRailLife(dt, px, pz); }
   if (grid.rebase(px, pz)) { if (rail) rail.reposition(); far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);

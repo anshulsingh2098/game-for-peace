@@ -58,6 +58,29 @@ export function crossingClosed(cs, spans, before = 110, after = 45) { for (const
 
 export const TRAIN = { speed: 24, coach: 22, coaches: 9, width: 3.2 };
 
+/* The kinds of train and their livery, size and performance (broad gauge, 1,676 mm; sizes from Indian Railways rolling stock: ICF and LHB coaches about 23.5 x 3.25 x 4.0 m, a WAP-7 loco 20.6 m,
+   a Mumbai suburban EMU car 20.3 x 3.66 x 4.27 m, a BOXN wagon about 10.7 m). Speeds are the running speed in m/s (1 m/s = 3.6 km/h), accel and brake in m/s2, dwell the stop at a station end in s. Colours are 0xRRGGBB. */
+export const STYLES = {
+  express:  { name: 'Express', cars: 14, len: 23.5, locoLen: 20.6, width: 3.25, height: 4.0, body: 0x2a4f9b, lower: 0x2a4f9b, stripe: 0xeceff1, loco: 0x2b4f93, locoBand: 0xe8e8e8, roof: 0xb9bec4, electric: true, fan: true, windows: true, vmax: 30, accel: 0.45, brake: 0.7, dwell: 50 },
+  rajdhani: { name: 'Rajdhani', cars: 16, len: 23.5, locoLen: 20.6, width: 3.25, height: 4.0, body: 0x8b1d26, lower: 0x8b1d26, stripe: 0xe7dcc2, loco: 0x7e1d27, locoBand: 0xe7dcc2, roof: 0xb9bec4, electric: true, fan: true, windows: true, vmax: 36, accel: 0.5, brake: 0.8, dwell: 60 },
+  vande:    { name: 'Vande Bharat', cars: 8, len: 23.5, locoLen: 0, width: 3.25, height: 4.0, body: 0xf1f3f4, lower: 0xf1f3f4, stripe: 0x1c4f8c, loco: 0, locoBand: 0, roof: 0xc9cdd1, electric: true, motor: true, windows: true, vmax: 36, accel: 0.7, brake: 0.9, dwell: 60 },
+  freight:  { name: 'Freight', cars: 22, len: 10.7, locoLen: 20.6, width: 3.2, height: 3.5, body: 0x6b3b2a, lower: 0x5a3224, stripe: 0x6b3b2a, loco: 0x2f5fa0, locoBand: 0xd9d9d9, roof: 0x4a2c20, electric: true, fan: true, windows: false, vmax: 17, accel: 0.2, brake: 0.3, dwell: 70 },
+  emu_wr:   { name: 'Western Railway local', cars: 12, len: 20.3, locoLen: 0, width: 3.66, height: 4.27, body: 0xf1f1ee, lower: 0x2a63b0, stripe: 0xc8231f, loco: 0, locoBand: 0, roof: 0xb9bec4, electric: true, motor: true, windows: true, vmax: 24, accel: 0.8, brake: 0.9, dwell: 30 },
+  emu_cr:   { name: 'Central Railway local', cars: 12, len: 20.3, locoLen: 0, width: 3.66, height: 4.27, body: 0x2557a7, lower: 0xf0f0f0, stripe: 0xf2c230, loco: 0, locoBand: 0, roof: 0xb9bec4, electric: true, motor: true, windows: true, vmax: 22, accel: 0.8, brake: 0.9, dwell: 30 },
+};
+
+/* One train's motion on a run of length L between two stops, back and forth for ever: it accelerates to vmax, cruises, brakes to a stop at the other end, waits `dwell`, and returns.
+   A closed form of time t (s), so the world needs no state. Returns { s (0..L, distance of the head from the start end), v (speed, m/s), dir (+1 outbound, -1 back), stopped }. */
+export function trainMotion(L, t, vmax, accel, brake, dwell, offset = 0) {
+  L = Math.max(L, 1); const ta = vmax / accel, tb = vmax / brake, da = vmax * vmax / (2 * accel), db = vmax * vmax / (2 * brake); let tAcc = ta, tBr = tb, vTop = vmax, tCr = 0;
+  if (da + db > L) { vTop = Math.sqrt(2 * L / (1 / accel + 1 / brake)); tAcc = vTop / accel; tBr = vTop / brake; } else tCr = (L - da - db) / vmax;
+  const run = tAcc + tCr + tBr, T = 2 * (run + dwell); let u = ((t + offset) % T + T) % T, dir = 1; if (u >= run + dwell) { u -= run + dwell; dir = -1; }
+  if (u >= run) return { s: dir > 0 ? L : 0, v: 0, dir, stopped: true };
+  let s, v; if (u < tAcc) { s = 0.5 * accel * u * u; v = accel * u; } else if (u < tAcc + tCr) { s = 0.5 * vTop * tAcc + vTop * (u - tAcc); v = vTop; } else { const w = u - tAcc - tCr; s = L - 0.5 * brake * (tBr - w) * (tBr - w); v = brake * (tBr - w); }
+  return { s: dir > 0 ? s : L - s, v, dir, stopped: false };
+}
+
+
 /* The real network (assets/india/rails.json, tools/build_india_rails.mjs): edges are RailLines between nodes; a node with 3 or more edges is a junction, a node with a city is a station.
    route(a, b) is the shortest way by rail between two node ids as steps { edge, fwd }; routeLine joins the steps into one RailLine; trainRoutes picks the runs of the trains. */
 export class RailNetwork {
@@ -66,11 +89,14 @@ export class RailNetwork {
     this.adj = new Map(this.nodes.map(n => [n.id, []])); for (const e of this.edges) { this.adj.get(e.a).push(e); this.adj.get(e.b).push(e); }
     this.stations = this.nodes.filter(n => n.city); this.byCity = new Map(this.stations.map(n => [n.city, n]));
   }
+  /* shortest-path tree from node a (cached: the timetable asks for thousands of routes) */
+  tree(a) {
+    this.trees || (this.trees = new Map()); let t = this.trees.get(a); if (t) return t; const dist = new Map([[a, 0]]), prev = new Map(), open = new Set([a]);
+    while (open.size) { let u = null; for (const n of open) if (u === null || dist.get(n) < dist.get(u)) u = n; open.delete(u); for (const e of this.adj.get(u)) { const v = e.a === u ? e.b : e.a, nd = dist.get(u) + e.len; if (!dist.has(v) || nd < dist.get(v)) { dist.set(v, nd); prev.set(v, { from: u, edge: e }); open.add(v); } } }
+    t = { dist, prev }; this.trees.set(a, t); return t;
+  }
   route(a, b) {
-    if (a === b) return []; const dist = new Map([[a, 0]]), prev = new Map(), open = new Set([a]);
-    while (open.size) { let u = null; for (const n of open) if (u === null || dist.get(n) < dist.get(u)) u = n; open.delete(u); if (u === b) break;
-      for (const e of this.adj.get(u)) { const v = e.a === u ? e.b : e.a, nd = dist.get(u) + e.len; if (!dist.has(v) || nd < dist.get(v)) { dist.set(v, nd); prev.set(v, { from: u, edge: e }); open.add(v); } } }
-    if (!dist.has(b)) return null; const steps = []; for (let c = b; c !== a;) { const p = prev.get(c); steps.unshift({ edge: p.edge, fwd: p.edge.a === p.from }); c = p.from; } return steps;
+    if (a === b) return []; const { dist, prev } = this.tree(a); if (!dist.has(b)) return null; const steps = []; for (let c = b; c !== a;) { const p = prev.get(c); steps.unshift({ edge: p.edge, fwd: p.edge.a === p.from }); c = p.from; } return steps;
   }
   routeLine(steps, id = 'route') {
     const pts = []; for (const st of steps) { const P = st.edge.pts, n = P.length / 2; for (let i = 0; i < n; i++) { const k = st.fwd ? i : n - 1 - i; if (pts.length && i === 0) continue; pts.push(P[k * 2], P[k * 2 + 1]); } }
