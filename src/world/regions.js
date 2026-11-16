@@ -13,6 +13,7 @@
      vegetation    { trees, rocks, bushes, tufts, pineBias, tint, ... }  the scatter settings
      roads         { style, maxAlt, drive: 'left' | 'right', density 0..1, router? }   router (optional): route-planner numbers for this land { maxGrade, hardGrade, maxCut, minRadius, tunnelName }, e.g. tighter bends for hill roads
      buildings     { styles: [names], density 0..1 }           broad character of the buildings (data for later phases)
+     junctions     (optional) [{ s, style, bearing, arm }]: streets that cross the main road: s = metres along the road, style = a road style id, bearing = radians from the road's heading (1.5708 = at right angles), arm = metres of street each side. Built with traffic and a shared signal (world/regionmap is not involved: see main.js buildRegionJunctions)
      district      (optional) { styles: [palette names], floors: [min, max], market: bool }   turns on the built-up road edge (world/district.js): modular buildings, sidewalks, crossings, furniture
      traffic       { mix: { kind: weight }, scale 0..2 }       vehicle mix (kinds: car, van, truck, two-wheeler, auto-rickshaw, bus) and a density multiplier
      population    { density 0..1, archetypes: [names] }       for pedestrians (N13)
@@ -42,6 +43,7 @@ const MUMBAI = {
   vegetation: { clearRoad: 30, trees: 0.0042, rocks: 0.0003, bushes: 0.0016, tufts: 0.008, pineBias: -0.95, tint: [1, 1.04, 0.78] },
   roads: { style: 'boulevard', maxAlt: 150, drive: 'left', density: 1 },
   district: { styles: ['colonial', 'art-deco', 'colonial', 'mixed'], floors: [3, 7], market: true },
+  junctions: [{ s: 560, style: 'boulevard', bearing: Math.PI / 2, arm: 1200 }, { s: 1300, style: 'two-lane', bearing: -Math.PI / 2 + 0.25, arm: 900 }],
   buildings: { styles: ['colonial', 'art-deco'], density: 0.8 },
   traffic: { mix: { car: 62, 'two-wheeler': 20, 'auto-rickshaw': 14, truck: 4 }, scale: 1 },
   population: { density: 0.9, archetypes: ['commuter', 'vendor', 'tourist'] },
@@ -202,6 +204,7 @@ export function validateRegion(r) {
   const v = r.vegetation; need(isObj(v) && ['trees', 'rocks', 'bushes', 'tufts'].every(k => isNum(v[k]) && v[k] >= 0 && v[k] < 0.1) && Array.isArray(v.tint) && v.tint.length === 3, 'vegetation needs trees, rocks, bushes, tufts (0..0.1) and a 3-number tint');
   const ro = r.roads; need(isObj(ro) && ROAD_STYLE_IDS.includes(ro.style) && isNum(ro.maxAlt) && ro.maxAlt > 0 && (ro.drive === 'left' || ro.drive === 'right') && in01(ro.density), 'roads needs a known style, maxAlt, drive left|right and density 0..1');
   if (isObj(ro) && ro.router !== undefined) need(isObj(ro.router) && Object.entries(ro.router).every(([k, x]) => ['maxGrade', 'hardGrade', 'maxCut', 'minRadius'].includes(k) ? isNum(x) && x > 0 : k === 'tunnelName' && isStr(x)), 'roads.router may hold maxGrade, hardGrade, maxCut, minRadius (numbers above 0) and tunnelName (text)');
+  if (r.junctions !== undefined) need(Array.isArray(r.junctions) && r.junctions.length <= 6 && r.junctions.every(j => isObj(j) && isNum(j.s) && j.s >= 150 && j.s <= 5000 && ROAD_STYLE_IDS.includes(j.style) && isNum(j.bearing) && Math.abs(j.bearing) <= 3.2 && isNum(j.arm) && j.arm >= 300 && j.arm <= 3000), 'junctions: up to six of { s 150..5000, style, bearing in radians, arm 300..3000 }');
   if (r.district !== undefined) { const di = r.district; need(isObj(di) && Array.isArray(di.styles) && di.styles.length > 0 && di.styles.every(x => isStr(x) && Object.prototype.hasOwnProperty.call(DISTRICT_STYLES, x)) && Array.isArray(di.floors) && di.floors.length === 2 && di.floors.every(Number.isInteger) && di.floors[0] >= 1 && di.floors[1] >= di.floors[0] && di.floors[1] <= 12 && typeof di.market === 'boolean', 'district needs known styles, floors [min, max] (1..12) and market true|false'); }
   const bu = r.buildings; need(isObj(bu) && Array.isArray(bu.styles) && bu.styles.length > 0 && bu.styles.every(isStr) && in01(bu.density), 'buildings needs styles and density 0..1');
   const tf = r.traffic; need(isObj(tf) && isObj(tf.mix) && isNum(tf.scale) && tf.scale >= 0 && tf.scale <= 2, 'traffic needs mix and scale 0..2');

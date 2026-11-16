@@ -15,3 +15,6 @@ Geometry is original and procedural: no external assets, so the licence manifest
 
 ## How it behaves
 `?loc=mumbai` shows it. A world rebuild drops and recreates it. The Mumbai region data moved to version 2 (the district data, and a 30 m clear strip for trees so they do not grow through the buildings); worlds made from older Mumbai share codes keep their old numbers.
+
+## Crossing streets (N11 junction, 19 Nov 2026)
+A region can list `junctions: [{ s, style, bearing, arm }]` (`world/regions.js`): streets that cross the main road at distance s, at `bearing` radians from its heading, `arm` metres each side, in a road style. `main.js buildRegionJunctions` builds each as a second road (`RoadSet`, the same machinery as the India side roads) with the region's district along it, its own traffic (`Traffic.addRoad`) and a `Junction` shared signal with an asphalt patch. Mumbai has a boulevard at 560 m and a two-lane street at 1,300 m. Checked in the browser: both streets draw with buildings, cars run on them and cross at the signal. Limits: buildings at the four corners of a crossing overlap the main road's own plots; no pedestrians, crossings or navigation graph on the cross streets; the sea side of the first street is water, so its road bends along the shore; nothing measured on a phone.

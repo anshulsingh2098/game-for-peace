@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 20:00  N11 junction: crossing streets in region worlds
+Branch: feat/n11-junction
+What changed: `world/regions.js` (optional `junctions`, validated; Mumbai has two), `main.js` (`buildRegionJunctions`: a second road with the district along it, traffic and a shared signal; side roads of region worlds now grow and draw: `updateBranches` no longer returns early outside `?india=`; India-mode roads may bend tighter), `docs/DISTRICT.md`, `docs/WORK_REMAINING.md`. One new self-test (71 checks). Checked in the browser: both Mumbai streets draw, cars run on them. Limits are in `docs/DISTRICT.md`.
+For the other stream: nothing required.
+Status: open
+
 ## 2026-11-19 18:00  Limits batch 2 and region blending (N9 step)
 Branch: feat/limits-2
 What changed: `traffic/sim.js` (cars wait for a player standing in a crossing), `main.js` (toll toast, India drive activities, results card, region grid), `world/terrain.js` + `world/scatter.js` (region palette and tint blending by position), `world/india_network.js` (Jaipur to Kota, Agra to Lucknow), `assets/india/waypoints.json`, `skeleton.json`, `terrain.bin` rebuilt (30 roads; corridor floor includes the new roads), `docs/REGIONS.md`, `docs/WORK_REMAINING.md`. Tests: 70 checks (player yield, region blending). Checked in the browser: along Delhi to Mumbai the ground colour goes from Delhi green-grey through ochre Rajasthan to Deccan green.
