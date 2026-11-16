@@ -41,10 +41,13 @@ export class RailView {
     /* crossings with the roads: a rail bridge over the road, or a level crossing near a station */
     this.crossings = crossings || classifyCrossings(this.lines, roads, cities, network.stations, LEVEL_NEAR_STATION);
     this.byEdge = new Map(); for (const c of this.crossings) { let l = this.byEdge.get(c.rail); if (!l) this.byEdge.set(c.rail, l = []); l.push(c); }
-    const mum = cities.find(c => c.id === 'mumbai'), pick = (ln, i) => { const m = ln.at(ln.len / 2, {}); if (mum && Math.hypot(m.x - mum.x, m.z - mum.z) < 1500) return m.x > mum.x ? 'emu_cr' : 'emu_wr'; return ['express', 'express', 'rajdhani', 'vande', 'freight', 'express'][i % 6]; };
+    const mum = cities.find(c => c.id === 'mumbai'), pick = (ln, i) => { const m = ln.at(ln.len / 2, {}); if (mum && Math.hypot(m.x - mum.x, m.z - mum.z) < 1500) return m.x > mum.x ? 'emu_cr' : 'emu_wr'; return ['express', 'express', 'rajdhani', 'express', 'freight', 'express'][i % 6]; };
+    /* electrification: nearly all of the network has overhead wire, but quiet branch sections do not (diesel there); a line used by a Vande Bharat, Rajdhani or Shatabdi is always electrified */
+    const eh = n => { let x = (n * 2654435761) >>> 0; x = (x ^ (x >>> 15)) >>> 0; return x / 4294967296; };
+    this.elec = this.lines.map(ln => { const set = book ? book.byEdge.get(ln.edgeId) : null, busy = set ? set.size : 0, fast = set && [...set].some(k => /vande|rajdhani|shatabdi|duronto/i.test(book.trains[k].name)); return fast || busy >= 5 || eh(ln.edgeId + 11) > 0.25; });
     this.trains = this.lines.map((ln, li) => ({ ln, li })).filter(o => o.ln.len > 350).map(({ ln, li }, i) => {
-      let style = pick(ln, i); const real = book && !style.startsWith('emu') ? book.identify(ln.edgeId, i) : null; if (real) style = styleOf(real); else if (!style.startsWith('emu')) style = i % 3 === 0 ? 'freight' : 'passenger';
-      const S = STYLES[style], seed = (i * 7919 + ln.edgeId * 31) >>> 0, cs = consist(style, real, seed), total = cs.items.reduce((sum, it) => sum + lengthOf(it.kind), 0), nt = this.tracks[li], lanes = laneOffsets(nt), left = lanes.filter(o => o < -0.1), right = lanes.filter(o => o > 0.1), mid = lanes.filter(o => Math.abs(o) <= 0.1);
+      let style = pick(ln, i); const real = book && !style.startsWith('emu') ? book.identify(ln.edgeId, i) : null; if (real) style = styleOf(real); else if (!style.startsWith('emu')) style = i % 19 === 7 ? 'maintenance' : i % 3 === 0 ? 'freight' : 'passenger';
+      const S = STYLES[style], seed = (i * 7919 + ln.edgeId * 31) >>> 0, cs = consist(style, real, seed, { diesel: !this.elec[li] }), total = cs.items.reduce((sum, it) => sum + lengthOf(it.kind), 0), nt = this.tracks[li], lanes = laneOffsets(nt), left = lanes.filter(o => o < -0.1), right = lanes.filter(o => o > 0.1), mid = lanes.filter(o => Math.abs(o) <= 0.1);
       const pickLane = (set, k) => set.length ? set[Math.floor(((seed >>> k) % 1000) / 1000 * set.length)] : (mid[0] || 0);
       return { real, local: style.startsWith('emu') ? (book ? book.locals.find(l => l.livery === style) || null : null) : null, line: ln, li, style, cs, seed, total, outLane: pickLane(left, 3), backLane: pickLane(right, 5), offset: (i * 977) % Math.max(ln.len, 1), meshes: [], vehicles: [], active: false, circles: [], dir: 1, head: 0, span: null, v: 0, mo: null };
     });
@@ -79,7 +82,7 @@ export class RailView {
       else if (lf > 0.5) { const h = lf + 0.2; box(parts, L + 0.1, h, 6.2 + wide + lf * 0.9, cx, y - h / 2 - 0.3, cz, yaw, 0x8a7a5c); }
     }
     /* overhead electrification (25 kV AC): a mast every 50 m (on the left of a single track; on both outer sides with a cross girder on a multi-track line), a contact wire 5.6 m over each rail and a messenger wire above */
-    { const nT = this.tracks[li], offs = laneOffsets(nT), half = (nT - 1) * TRACK_GAP / 2;
+    if (this.elec[li]) { const nT = this.tracks[li], offs = laneOffsets(nT), half = (nT - 1) * TRACK_GAP / 2;
       for (let s = Math.ceil(s0 / 50) * 50; s < s1; s += 50) {
         const y = this.trackY(li, s), y2 = this.trackY(li, Math.min(s + 50, ln.len)); if (T.base(pt(s, 0).wx, pt(s, 0).wz) < sea + 0.4) continue;
         const sides = nT === 1 ? [-3.5] : [-(half + 3.1), half + 3.1];
