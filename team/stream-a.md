@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-20 06:00  One continuous India world, separate Explore cities
+Branch: feat/one-world (stacked on feat/overtaking, PR 42)
+What changed: the main game (Play, no address options) is now one India world: every highway through a city is built as it nears, roads and junctions stream in and out, no reload. `main.js` (road registry: primary, branches, activeRec, buildCityRoads, updateBranches, navigation HUD, `exploreCity`/`goWorld`), `world/network.js` (`worldStart`), `world/router.js` (signed arcs for the other arm), `ui/menu.js` ("Explore cities" is the old locations list; Travel has Navigate and fast travel), `core/saved.js` (city), 73 self-test checks pass. Address: `?india=world&at=<city>`; `?loc=<region>` is an Explore city.
+For the other stream: pull and drive Mumbai to Goa, Delhi to Jaipur; tell me if roads pop in late or traffic misbehaves at junctions. Gates and signs for the far arm of a branch road are not built yet.
+Status: open
+
 ## 2026-11-20 03:00  Travel screen; Indian lane discipline in traffic
 Branch: feat/overtaking
 What changed: owner asked how to get from the Kerala map to Mumbai and to keep Indian driving rules in mind. `ui/menu.js` (Travel screen), `main.js` (`currentCityId`, `travelTo`), `traffic/sim.js` (keep-left spawning for slow kinds, overtaking on the right and return left, class speed caps, lateral drift; Stream B file, additive), `traffic/junction.js` (hand-over fields), docs (`docs/TRAFFIC.md` section with the rules and sources, `docs/INDIA_MAP_PLAN.md`, `docs/WORK_REMAINING.md`, `CHECKLIST.md`), one new self-test (73 checks). Rules are from the 2018 MoRTH speed notification and the 2017 Driving Regulations (secondary sources; roundabout and junction priority not verified, so not built).

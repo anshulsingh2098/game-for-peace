@@ -20,6 +20,7 @@ export function sanitiseSaved(raw, ctx = {}) {
   if (LIGHTS.includes(raw.lights)) out.lights = raw.lights;
   if (Number.isInteger(raw.vehicle) && raw.vehicle >= 0 && raw.vehicle < (ctx.vehicles || 1)) out.vehicle = raw.vehicle;
   if (typeof raw.muted === 'boolean') out.muted = raw.muted;
+  if (typeof raw.city === 'string' && /^[a-z_]{2,30}$/.test(raw.city)) out.city = raw.city;                              // the city of the India map you were last at
   if (['eco', 'normal', 'sport', 'offroad'].includes(raw.driveMode)) out.driveMode = raw.driveMode;
   if (raw.rumble === 'on' || raw.rumble === 'off') out.rumble = raw.rumble;
   if (['off', 'low', 'mid', 'high'].includes(raw.traffic)) out.traffic = raw.traffic; else if (raw.traffic === 'light') out.traffic = 'low'; else if (raw.traffic === 'busy') out.traffic = 'high';          // 'light' and 'busy' were the first names

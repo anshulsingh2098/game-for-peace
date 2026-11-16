@@ -44,7 +44,7 @@ export class Menu {
     mk('div', 'm-kicker', p, 'A drive through an endless, generated world');
     mk('h1', '', p, 'Game for Peace');
     const col = mk('div', 'm-col', p);
-    btn(col, 'Play', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Location', () => this.open2('locations', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title')); btn(col, 'Travel', () => this.open2('travel', 'title'));
+    btn(col, 'Play', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Explore cities', () => this.open2('locations', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title')); btn(col, 'Travel', () => this.open2('travel', 'title'));
     mk('div', 'm-hint', p, 'Pick a car, truck or bike, then roam. Hold Q at any time to tune a live radio station from around the world, including India.');
     const lic = mk('a', '', p, 'Licenses and credits'); lic.href = 'licenses.html'; lic.target = '_blank'; lic.rel = 'noopener'; lic.style.cssText = 'display:block;margin-top:14px;font-size:12px;color:#9fb0c8;text-align:center';          // every credit and licence in one page, linked from the title screen
   }
@@ -67,12 +67,12 @@ export class Menu {
   }
 
   locations() {
-    const api = this.api, st = api.state(), p = mk('div', 'm-panel m-side', this.root); mk('h2', '', p, 'Location');
-    mk('p', 'm-desc', p, 'Each place has its own land, colours, plants and light. The world is made fresh when you pick one.');
+    const api = this.api, st = api.state(), p = mk('div', 'm-panel m-side', this.root); mk('h2', '', p, 'Explore cities');
+    mk('p', 'm-desc', p, 'Visit a city or a landscape on its own: streets and buildings, local traffic, its own light. The India map (the main game) is one continuous world over all the highways; this is a separate place to explore, made fresh when you pick it.');
     const list = mk('div', 'm-locs', p);
     for (const L of api.locations) { const b = mk('button', 'm-loc' + (L.id === st.location ? ' on' : ''), list); b.type = 'button'; b.style.setProperty('--c', L.accent); mk('b', '', b, L.name); mk('small', '', b, L.blurb);
       b.onclick = e => { e.stopPropagation(); api.setLocation(L.id); this.show('locations'); }; }
-    const row = mk('div', 'm-row', p); btn(row, 'Drive', () => this.hide(), 'primary'); btn(row, 'Back', () => this.show(this.from || 'title'));
+    const row = mk('div', 'm-row', p); if (api.inWorld && !api.inWorld()) btn(row, 'India map', () => { api.indiaMap(); }, 'primary'); else btn(row, 'Drive', () => this.hide(), 'primary'); btn(row, 'Back', () => this.show(this.from || 'title'));
   }
 
   settings() {
@@ -97,10 +97,11 @@ export class Menu {
      Distances are real kilometres; the drive time is at 1:100 and 100 km/h. api.travel(cityId), api.currentCity() -> city id. */
   travel() {
     const api = this.api, from = api.currentCity ? api.currentCity() : 'delhi', p = mk('div', 'm-panel', this.root); mk('h2', '', p, 'Travel'); const g = roadGraph();
-    const note = mk('p', '', p, 'You are near ' + (CITY[from] ? CITY[from].name : from) + '. Pick a city: the highways of India take you there as one drive.'); note.style.cssText = 'margin:4px 0 8px;font-size:13px;color:#9fb0c8';
+    const note = mk('p', '', p, 'You are near ' + (CITY[from] ? CITY[from].name : from) + '. Pick a city to start there (fast travel), or Navigate to drive there on the highways with directions on screen.'); note.style.cssText = 'margin:4px 0 8px;font-size:13px;color:#9fb0c8';
     const list = mk('div', 'm-col', p); list.style.cssText = 'max-height:52vh;overflow:auto;width:100%';
     const rows = CITIES.filter(c => c.id !== from && (c.tier === 'metro' || c.tier === 'major' || c.tier === 'city')).map(c => ({ c, r: shortestRoute(from, c.id, g) })).filter(x => x.r).sort((a, b) => a.r.km - b.r.km);
-    for (const { c, r } of rows) { const km = Math.round(r.km), min = Math.max(1, Math.round(driveMinutes(gameKm(km, 100), 100))); const b = btn(list, c.name + ' · ' + c.state + ' · ' + km + ' km · about ' + min + ' min', () => { api.travel(c.id); }); b.style.textAlign = 'left'; }
+    const dest = api.navTarget ? api.navTarget() : null; if (dest) { const clr = btn(list, 'Stop navigating to ' + (CITY[dest] ? CITY[dest].name : dest), () => { api.navigate(null); this.show('travel'); }); clr.style.textAlign = 'left'; }
+    for (const { c, r } of rows) { const km = Math.round(r.km), min = Math.max(1, Math.round(driveMinutes(gameKm(km, 100), 100))), line = mk('div', '', list); line.style.cssText = 'display:flex;gap:6px;margin:2px 0'; const b = btn(line, c.name + ' · ' + c.state + ' · ' + km + ' km · about ' + min + ' min', () => { api.travel(c.id); }); b.style.cssText = 'flex:1;text-align:left'; b.title = 'Fast travel: start there on the India map'; if (api.inWorld && api.inWorld()) { const nv = btn(line, dest === c.id ? 'Navigating' : 'Navigate', () => { api.navigate(c.id); this.hide(); }); nv.title = 'Drive there: directions appear on screen'; } }
     if (!rows.length) mk('p', '', list, 'No road route from here yet.');
     const row = mk('div', 'm-row', p); btn(row, 'Back', () => this.show(this.from || 'pause'), 'primary');
   }
@@ -120,7 +121,7 @@ export class Menu {
   pause() {
     const api = this.api, p = mk('div', 'm-panel m-title', this.root); mk('h2', '', p, 'Paused');
     const col = mk('div', 'm-col', p);
-    btn(col, 'Resume', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'pause')); btn(col, 'Location', () => this.open2('locations', 'pause')); btn(col, 'Settings', () => this.open2('settings', 'pause')); btn(col, 'Credits', () => this.open2('credits', 'pause'));
+    btn(col, 'Resume', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'pause')); btn(col, 'Explore cities', () => this.open2('locations', 'pause')); btn(col, 'Settings', () => this.open2('settings', 'pause')); btn(col, 'Credits', () => this.open2('credits', 'pause'));
     btn(col, 'Travel', () => this.open2('travel', 'pause'));
     btn(col, 'Back to the road', () => { api.toRoad(); this.hide(); }); btn(col, 'New world', () => { api.newWorld(); this.hide(); }); btn(col, 'Title screen', () => this.show('title'));
   }
