@@ -57,6 +57,8 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] Publish: only after the Cloudflare setup (see `HANDOFF.md`): wrong password is refused, right password publishes, Load live and History work.
 - [ ] Worker checks (after the Cloudflare setup): a wrong password is refused after a short wait (about 0.4 s) every time; a body over 64 KB is refused; a number over 10 million is refused; `/api/settings` without the password cannot publish; with no KV or no password the API answers 503 and the rest of the site still loads.
 
+- [ ] Mumbai (`?loc=mumbai`): the buildings, sidewalks, zebra crossings, lamps and stalls look right, nothing floats or sinks, you cannot drive through a building front, windows glow at dusk and night, the frame rate stays smooth on a phone (district piece cost not yet measured on a device).
+
 ## 5. Phone (do this at least weekly, and before any deploy)
 
 - [ ] Open the live or local address on a real phone (same wifi: start the server with `python tools/serve.py --lan`; it prints the address to type into the phone. Plain `python tools/serve.py` is only reachable from the computer itself).
