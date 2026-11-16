@@ -67,20 +67,28 @@ export class Scatter {
       }
     }
     const g = new THREE.Group(), pr = this.props, tint = c.tint; let count = 0;
-    const fill = (geom, mat, arr, jitter) => {
+    const fill = (geom, mat, arr, jitter, vt) => {
       const im = new THREE.InstancedMesh(geom, mat, arr.length);
       arr.forEach((a, n) => {
         P.set(a[0], a[1], a[2]); q.setFromEuler(e.set(0, a[4], 0)); S.set(a[3], a[3] * a[5], a[3]); im.setMatrixAt(n, M.compose(P, q, S));
         const v = 0.80 + a[6] * 0.4; if (jitter) col.setRGB(v, v * (0.94 + a[6] * 0.12), v * (0.92 + a[6] * 0.1)); else col.setRGB(1, 1, 1);
         if (jitter && tint && mat !== pr.solid) col.setRGB(col.r * tint[0], col.g * tint[1], col.b * tint[2]);            // a place's leaves lean greener, yellower or drier
+        if (jitter && vt) col.setRGB(col.r * vt[0], col.g * vt[1], col.b * vt[2]);                                    // this variant's own colour (a yellower birch, an autumn oak)
         im.setColorAt(n, col);
       });
       im.castShadow = true; const sm = shadowMat(mat); if (sm) im.customDepthMaterial = sm; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
     };
     const nat = this.nature, defs = k => nat && nat[k] && nat[k].length ? nat[k] : [pr[k]];                   // real-scan variants when loaded, else the drawn model
-    const variants = (k, f) => defs(k).forEach((d, vi, all) => { const sub = all.length > 1 ? lists[k].filter((_, i) => i % all.length === vi) : lists[k]; if (sub.length) f(d, sub); });
-    for (const k of ['pine', 'round']) if (lists[k].length) variants(k, (d, sub) => { if (d.trunk) { fill(d.trunk, pr.solid, sub, false); fill(d.foliage, d.mat, sub, true); count -= sub.length; } else fill(d.foliage, d.mat, sub, true); });
-    for (const k of ['bush', 'tuft']) if (lists[k].length) variants(k, (d, sub) => fill(d.foliage, d.mat, sub, true));
+    /* variants are not scattered at random: slow patches across the land favour one kind (a stand of birch, a clump of dark fir), mixed with some chance, as in real woods. Each variant has a weight w (rare ones are small) */
+    const cl = (x, z) => 0.5 + 0.5 * Math.sin(x * 0.011 + 1.3 + Math.sin(z * 0.017) * 1.6) * Math.cos(z * 0.0127 - 0.7 + Math.sin(x * 0.009) * 1.4);
+    const variants = (k, f) => {
+      const all = defs(k), n = all.length; if (n < 2) { if (lists[k].length) f(all[0], lists[k]); return; }
+      const tw = all.reduce((sum, d) => sum + (d.w || 1), 0), subs = all.map(() => []);
+      for (const a of lists[k]) { const c = Math.max(0, Math.min(0.999, (cl(a[0] + x0, a[2] + z0) - 0.5) * 1.7 + 0.5)); let u = (0.7 * c + 0.3 * a[6] * 0.999) * tw, i = 0; while (i < n - 1 && u >= (all[i].w || 1)) { u -= all[i].w || 1; i++; } subs[i].push(a); }
+      all.forEach((d, i) => { if (subs[i].length) f(d, subs[i]); });
+    };
+    for (const k of ['pine', 'round']) if (lists[k].length) variants(k, (d, sub) => { if (d.trunk) { fill(d.trunk, pr.solid, sub, false); fill(d.foliage, d.mat, sub, true, d.tint); count -= sub.length; } else fill(d.foliage, d.mat, sub, true, d.tint); });
+    for (const k of ['bush', 'tuft']) if (lists[k].length) variants(k, (d, sub) => fill(d.foliage, d.mat, sub, true, d.tint));
     if (lists.rock.length) { if (full && nat && nat.rock && nat.rock.length) nat.rock.forEach((d, vi) => { const sub = lists.rock.filter((_, i) => i % nat.rock.length === vi); if (sub.length) fill(d.geom, d.mat, sub, true); }); else fill(pr.rock, pr.solid, lists.rock, true); }
     g.position.set(x0 - this.origin.x, 0, z0 - this.origin.z); this.group.add(g); this.count += count;
     return { tx, tz, full, g, hits, count };

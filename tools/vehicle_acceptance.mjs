@@ -40,6 +40,22 @@ for (let i = 0; i < VEHICLES.length; i++) {
   // repeatability: two identical runs must agree exactly
   { const a = make(i), b = make(i); const inp = (p, k) => ({ steer: Math.sin(k / 50) * 0.4, throttle: k < 400 ? 1 : 0.3, brake: 0, hand: k > 600 && k < 640 ? 1 : 0 }); run(a, 14, inp); run(b, 14, inp); out.repeat = Math.abs(a.x - b.x) + Math.abs(a.z - b.z) + Math.abs(a.u - b.u); if (out.repeat > 1e-6) problems.push(V.id + ' is not repeatable: runs differ by ' + out.repeat); a.free(); b.free(); }
 
+  // drive modes (eco, normal, sport, off-road): limiters, throttle maps, loose-ground grip, hill descent control
+  { const row = {}, t100 = id => { const ph = make(i); ph.setDriveMode(id); let t = 0, got = null; run(ph, 40, GO, p => { t += 1 / 60; if (got === null && p.kmh >= 100) got = +t.toFixed(1); }); const kmh = ph.kmh; ph.free(); return got === null ? { t: null, kmh } : { t: got, kmh }; };
+    const topIn = id => { const ph = make(i); ph.setDriveMode(id); let top = 0; run(ph, 60, GO, p => { top = Math.max(top, p.kmh); }); ph.free(); return top; };
+    const grass6 = id => { const ph = make(i, world('grass')); ph.setDriveMode(id); let t = 0, got = null; run(ph, 25, GO, p => { t += 1 / 60; if (got === null && p.kmh >= 60) got = +t.toFixed(1); }); ph.free(); return got; };
+    const down = id => { const ph = make(i, world('asphalt', -0.1)); ph.setDriveMode(id); run(ph, 60, p => ({ ...GO, throttle: p.kmh < 45 ? 1 : 0 })); run(ph, 12, { steer: 0, throttle: 0, brake: 0, hand: 0 }); const k = ph.kmh; ph.free(); return k; };
+    const part = id => { const ph = make(i); ph.setDriveMode(id); run(ph, 3, { ...GO, throttle: 0.3 }); const k = ph.kmh; ph.free(); return k; };
+    row.top = Object.fromEntries(['eco', 'normal', 'sport', 'offroad'].map(id => [id, Math.round(topIn(id))])); row.zero100 = Object.fromEntries(['eco', 'normal', 'sport'].map(id => [id, t100(id).t])); row.grass60 = Object.fromEntries(['normal', 'offroad'].map(id => [id, grass6(id)])); row.downhill = Object.fromEntries(['normal', 'offroad'].map(id => [id, Math.round(down(id))])); row.partThrottle3s = Object.fromEntries(['eco', 'normal', 'sport'].map(id => [id, Math.round(part(id))]));
+    out.modes = row;
+    if (topKmh > 118) { if (row.top.eco > 112 || row.top.eco < 90) problems.push(V.id + ' eco limiter: top ' + row.top.eco + ' km/h, wanted 90 to 112'); } if (topKmh > 95) { if (row.top.offroad > 87) problems.push(V.id + ' off-road limiter: top ' + row.top.offroad + ' km/h, wanted at most 87'); }
+    if (row.top.eco < 0.8 * Math.min(row.top.normal, 110)) problems.push(V.id + ' eco cripples the vehicle: top ' + row.top.eco + ' km/h against ' + row.top.normal + ' in normal');
+    if (row.top.normal < row.top.eco - 1 || row.top.sport < row.top.normal * 0.97) problems.push(V.id + ' modes: normal and sport must not be slower than eco / normal at the top');
+    if (row.zero100.eco !== null && row.zero100.normal !== null && row.zero100.eco < row.zero100.normal) problems.push(V.id + ' eco accelerates faster than normal'); if (row.zero100.sport !== null && row.zero100.normal !== null && row.zero100.sport > row.zero100.normal + 0.05) problems.push(V.id + ' sport is slower to 100 than normal');
+    if (row.partThrottle3s.sport < row.partThrottle3s.normal || row.partThrottle3s.eco > row.partThrottle3s.normal) problems.push(V.id + ' throttle maps: part-throttle speed should rise eco < normal < sport (' + JSON.stringify(row.partThrottle3s) + ')');
+    if (row.grass60.offroad !== null && row.grass60.normal !== null && row.grass60.offroad > row.grass60.normal + 0.1) problems.push(V.id + ' off-road is slower than normal to 60 km/h on grass'); if (V.id !== 'bike' && row.downhill.offroad > 16) problems.push(V.id + ' hill descent control does not hold a crawl (' + row.downhill.offroad + ' km/h)'); if (V.id !== 'bike' && row.downhill.offroad >= row.downhill.normal && row.downhill.normal > 16) problems.push(V.id + ' hill descent control does nothing');
+  }
+
   // telemetry sanity
   { const ph = make(i); run(ph, 6, GO); const T = ph.telemetry(); const ok = Number.isFinite(T.speed) && Math.abs(T.kmh - T.u * 3.6) < 1e-9 && T.grounded > 0 && (T.rpm === null || (T.rpm >= V.body.pt.idle * 0.99 && T.rpm <= V.body.pt.redline * 1.01)); if (!ok) problems.push(V.id + ' telemetry out of range: ' + JSON.stringify(T)); out.telemetry = { gear: T.gear, rpm: T.rpm && Math.round(T.rpm), grounded: T.grounded }; ph.free(); }
 

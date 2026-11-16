@@ -18,7 +18,7 @@
 import { laneOffsets } from '../traffic/sim.js';
 
 export const STEP = 25, CROSS_EVERY = 150, SIGNAL_STYLES = ['boulevard', 'highway'], STOP_LINE_NODES = 1;
-const SPEED = { 'two-lane': 22, highway: 30, boulevard: 16, dirt: 12, gravel: 14 };       // m/s, the same table as the traffic sim's speed limits
+const SPEED = { 'two-lane': 22, highway: 30, boulevard: 16, dirt: 12, gravel: 14, nh6: 33, ghat: 13 };       // m/s, the same table as the traffic sim's speed limits
 
 /* is there a pedestrian crossing at road sample i? every CROSS_EVERY metres, on a straight stretch that is not carried on a bridge or in a tunnel (shared with the district builder, so painted crossings and graph crossings are the same places) */
 export function crossingAt(road, i, p = {}) {

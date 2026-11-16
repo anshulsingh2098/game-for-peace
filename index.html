@@ -42,6 +42,8 @@
   #unit { color: #b9c3d3; font-size: 12px; }
   #surface { color: var(--accent); font-size: 12px; font-weight: 600; margin-left: 6px; }
   #sky { color: #b9c3d3; font-size: 12px; margin-left: 6px; }
+  #modeTag { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-left: 8px; padding: 1px 6px; border-radius: 6px; border: 1px solid currentColor; color: #b9c3d3; }
+  #modeTag.eco { color: #5fd38a; } #modeTag.sport { color: #ff6b5f; } #modeTag.offroad { color: #e0a24a; } #modeTag.limit { background: rgba(255,255,255,.14); }
   .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; color: #b9c3d3; }
   select { background: #1a2130; border: 1px solid rgba(255, 255, 255, .18); border-radius: 6px; color: #eef2f8; padding: 5px 6px; font: inherit; }
   body:not([data-mode=drive]) #hud, body:not([data-mode=drive]) #pads { display: none; }
@@ -141,13 +143,14 @@
   <button type="button" id="radioBtn" title="Radio (hold Q)">Radio</button>
   <button type="button" id="viewBtn" title="Switch camera (C)">Camera</button>
   <button type="button" id="autoBtn" title="Autodrive: the car follows the road by itself (E)">Auto</button>
+  <button type="button" id="modeBtn" title="Drive mode: Eco, Normal, Sport, Off-road (N)">Normal</button>
   <button type="button" id="reset" title="Back to the road (B)">To road</button>
   <button type="button" id="fly" class="devonly" title="Free camera (F)">Fly</button>
   <button type="button" id="ride" class="devonly" title="Ride along the road (T)">Ride</button>
   <button type="button" id="pauseBtn" title="Pause menu (Esc)">Menu</button>
 </nav>
 
-<section class="panel" id="hud" aria-label="Speed"><b id="spd">0</b><span id="unit">km/h</span><span id="surface">Road</span><span id="sky"></span></section>
+<section class="panel" id="hud" aria-label="Speed"><b id="spd">0</b><span id="unit">km/h</span><span id="surface">Road</span><span id="sky"></span><span id="modeTag" class="normal">Normal</span></section>
 <div id="pads" aria-label="Touch controls">
   <div><span class="pad" data-k="left" role="button" aria-label="Steer left">◀</span><span class="pad" data-k="right" role="button" aria-label="Steer right">▶</span></div>
   <div><span class="pad" data-k="down" role="button" aria-label="Brake and reverse">▼</span><span class="pad" data-k="up" role="button" aria-label="Accelerate">▲</span></div>

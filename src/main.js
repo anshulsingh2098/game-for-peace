@@ -33,6 +33,13 @@ import { CAMFX } from './vehicle/camfx.js';
 import { LOOK, applyLook } from './fx/grade.js';
 import { rumbleFor } from './input/rumble.js';
 import { loadSave, writeSave } from './core/save.js';
+import { destinationsFor, HINDI, CITY } from './world/india_network.js';
+import { RoadNetwork } from './world/network.js';
+import { RoadSet } from './world/roadset.js';
+import { Junction } from './traffic/junction.js';
+import { JunctionSignals } from './world/junction_signals.js';
+import { DRIVE_MODES, DRIVE_MODE_IDS } from './vehicle/physics.js';
+import { laneOffsets } from './traffic/sim.js';
 import { ActivityRunner, activitiesFor, recordResult } from './activities/activities.js';
 import { Traffic, loadTrafficPack } from './traffic/traffic.js';
 import { applyPaint } from './vehicle/paint.js';
@@ -46,7 +53,7 @@ import { Sound } from './audio/engine.js';
 import { Radio } from './audio/radio.js';
 import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
-import { LOCATIONS, locationConfig, locationById } from './world/locations.js';
+import { LOCATIONS, locationConfig, locationById, LEGACY, START_LOCATION, pickerLocations } from './world/locations.js';
 import { Landmarks } from './world/landmarks.js';
 import { FlyCam } from './debug/flycam.js';
 import { statsPanel } from './debug/stats.js';
@@ -56,7 +63,21 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let savedLoc = null; try { savedLoc = JSON.parse(localStorage.getItem('gfp-next') || '{}').location || null; } catch (e) { /* no saved choice */ }
-let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || savedLoc || 'default', q.get('seed') || 'peace');
+/* a real highway to drive (docs/INDIA_MAP_PLAN.md section 9): ?india=<road id>&from=<city>&toward=<city>. The road follows the path of that highway at 1:100 through procedural land; the signs name the next cities. Roads and cities: assets/india/skeleton.json */
+let indiaRoute = null;
+if (q.get('india')) {
+  try {
+    const sk = await (await fetch('assets/india/skeleton.json')).json(), net = new RoadNetwork(sk);
+    if (q.get('india') === 'route') {                                                                                     // ?india=route&from=<city>&to=<city>: the shortest way over several roads, as one drive
+      const g = net.routeGuide(q.get('from') || 'delhi', q.get('to') || 'mumbai'); if (g) { const kinds = g.legs.map(l => net.roads.get(l.road).kind); indiaRoute = { ...g, net, roadId: null, name: net.cities.get(g.from).name + ' to ' + net.cities.get(g.to).name, kind: kinds.some(k => k !== 'nh') ? 'gq' : 'nh' }; }
+    } else {
+      const r = net.roads.get(q.get('india')); if (r) { const from = q.get('from') || r.stops[0].id, toward = q.get('toward') || r.stops[r.stops.length - 1].id, g = net.guideFor(r.id, from, toward); if (g) indiaRoute = { ...g, net, roadId: r.id, name: r.name, kind: r.kind, nh: r.nh }; }
+    }
+  } catch (e) { console.warn('india route not loaded', e); }
+}
+const nearestRegionId = id => { const c = CITY[id]; let best = START_LOCATION, bd = Infinity; for (const l of LOCATIONS) { const ins = l.region && l.region.inspiration; if (!ins || !c) continue; const d = Math.hypot(ins.lat - c.lat, (ins.lon - c.lon) * 0.9); if (d < bd) { bd = d; best = l.id; } } return best; };
+let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || (indiaRoute && nearestRegionId(indiaRoute.from)) || (savedLoc && (LEGACY[savedLoc] || savedLoc)) || START_LOCATION, q.get('seed') || 'peace');          // India only: an old saved choice moves to its Indian replacement
+if (indiaRoute) config.road = { ...config.road, guide: indiaRoute.pts, style: indiaRoute.kind === 'nh' ? 'highway' : 'nh6' };           // main highways get the six-lane national highway look
 /* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
 registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES); registerRoot('handling', ARCADE); registerRoot('camera', CAMFX); registerRoot('look', LOOK);
 for (const url of ['api/settings', 'settings.json']) {             // the published settings (tuner Publish), else a settings.json committed with the site
@@ -99,10 +120,22 @@ let nav = null, navDebug = null, peds = null;                                   
 let holes = null;                                                                                                // doorways cut through the hillside at tunnel portals (src/world/tunnel_holes.js)
 const ground = groundMat ? groundMat.material : new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
 const ripples = waterNormalTex(), RIP = 0.07;
-const waterMat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.9, normalMap: ripples, normalScale: new THREE.Vector2(0.22, 0.22), envMapIntensity: 1.5 });
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.74, normalMap: ripples, normalScale: new THREE.Vector2(0.3, 0.3), envMapIntensity: 1.5 });
 /* ripples fade out with distance (beyond a few hundred metres they only alias into a checker pattern) and the surface is calmer far off */
+const waterT = { value: 0 };
+/* four moving layers of the same ripple texture (different sizes and directions, so the surface never repeats or sits still) */
 waterMat.onBeforeCompile = sh => {
-  sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normalize(mix(nonPerturbedNormal, normal, 1.0 - smoothstep(18.0, 260.0, length(vViewPosition))));');
+  sh.uniforms.uWT = waterT;
+  sh.fragmentShader = 'uniform float uWT;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+#ifdef USE_NORMALMAP_TANGENTSPACE
+  vec3 w2 = texture2D(normalMap, vNormalMapUv * 2.3 + vec2(uWT * 0.021, uWT * 0.013)).xyz * 2.0 - 1.0;
+  vec3 w3 = texture2D(normalMap, vNormalMapUv * -0.55 + vec2(-uWT * 0.011, uWT * 0.017)).xyz * 2.0 - 1.0;
+  vec3 w4 = texture2D(normalMap, vNormalMapUv * 5.7 + vec2(uWT * 0.05, -uWT * 0.04)).xyz * 2.0 - 1.0;
+  vec3 w1 = texture2D(normalMap, vNormalMapUv + vec2(uWT * 0.008, uWT * 0.005)).xyz * 2.0 - 1.0;
+  vec2 wxy = (w1.xy + w2.xy * 0.7 + w3.xy * 0.9 + w4.xy * 0.35) * normalScale;
+  normal = normalize(tbn * vec3(wxy, 1.0));
+#endif
+  normal = normalize(mix(nonPerturbedNormal, normal, 1.0 - smoothstep(18.0, 260.0, length(vViewPosition))));`);
 };
 const water = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), waterMat); water.renderOrder = 1; scene.add(water);
 
@@ -110,19 +143,20 @@ const water = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2)
 let terrain, road, roadMesh, scatter, backdrop, landmarks, traffic = null, roadS = 0;
 const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.rings.length - 1].r * v.tile;      // far tiles leave out what the near grid is guaranteed to cover
   return { tile: f.tile, rings: [{ r: f.r, res: f.res }], budgetMs: 2, rebase: Infinity, inner: Math.floor(reach / f.tile) - 1, sink: f.sink }; };
-function makeWorld() { terrain = createTerrain(config); road = new Road(terrain, config); road.ensure(-2600, 2600); terrain.attachRoad(road); roadS = 0; }
+let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
+function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
 function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
   if (landmarks) landmarks.dispose(); landmarks = new Landmarks(scene, terrain, road, config, grid.origin, locationById(config.location).landmarks);       // sights beside the road; they also level the land under them
-  roadMesh = new RoadMesh(scene, road, road.style, grid.origin, { district: (locationById(config.location).region || {}).district, seed: config.seed + ':' + config.location, blocked: (x, z) => terrain.inZone(x, z, 8) }); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
+  roadMesh = new RoadMesh(scene, road, road.style, grid.origin, { gates: indiaRoute ? indiaRoute.cities.filter(c => c.along > 0).map(c => ({ en: c.name, hi: HINDI[c.id] || '', alongM: c.along })) : [], dests: indiaRoute ? indiaRoute.cities.filter(c => c.along > 0).map(c => ({ en: c.name, hi: HINDI[c.id] || '', km: 0, alongM: c.along })) : (() => { const ins = (locationById(config.location).region || {}).inspiration; return ins ? destinationsFor(ins.lat, ins.lon) : []; })(), district: (locationById(config.location).region || {}).district, seed: config.seed + ':' + config.location, blocked: (x, z) => terrain.inZone(x, z, 8) }); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
   if (nav) nav.unloadAll(); nav = new RoadNav(road, { drive: locationById(config.location).drive || 'right' }); if (q.has('nav') && !navDebug) navDebug = new NavDebug(scene);
   if (peds) { peds.dispose(); peds = null; }
   if (traffic) traffic.dispose(); traffic = new Traffic(scene, road, config.seed, grid.origin, { mode: S.traffic, drive: locationById(config.location).drive || 'right', scale: (locationById(config.location).region || { traffic: { scale: 1 } }).traffic.scale, mix: (locationById(config.location).region || { traffic: {} }).traffic.mix || null, pack: trafficPack });          // cars on the road (src/traffic), on the right or the left as the place drives
   { const reg = locationById(config.location).region; if (reg && reg.district && reg.population && reg.population.density > 0) peds = new Pedestrians(scene, nav, config.seed + ':' + config.location, grid.origin, { density: reg.population.density, archetypes: reg.population.archetypes, level: S.traffic, traffic: traffic.sim }); }          // people on the sidewalks of a built-up region (src/pedestrians); their number follows the traffic setting
-  env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); } if (!holes) holes = installTunnelHoles(ground, WALL, ARCH); waterMat.color.set(config.water.color);
+  env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); groundMat.uniforms.uArid.value = (config.palette && config.palette.arid) || 0; } if (!holes) holes = installTunnelHoles(ground, WALL, ARCH); waterMat.color.set(config.water.color);
 }
 makeScenery();
 function applyView() {
@@ -132,7 +166,7 @@ function applyView() {
 
 /* ---------- the vehicle ---------- */
 const cam = new FlyCam(canvas), controls = new Controls(), autodrive = new Autodrive(), view = new VehicleView(scene);
-const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => { const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
+const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => { const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
 const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
@@ -142,7 +176,8 @@ let mode = 'drive', vehicle = Math.max(0, Math.min(VEHICLES.length - 1, S.vehicl
 let menu = null; const frozen = () => !!(menu && menu.open);
 let rapier = false; const rapierReady = q.get('phys') === 'old' ? Promise.resolve() : initRapier().then(() => { rapier = true; loadState.physics = true; loadUpdate(); }).catch(e => console.warn('Rapier did not load; using the simple physics', e));
 /* put the vehicle in the left lane at road distance s, facing along the road */
-function placeOnRoad(s) { const p = road.at(s, {}); phys.reset(p.x + p.tz * 2, p.z - p.tx * 2, p.th); view.camYaw = null; }
+/* the player starts in the first lane of the direction of travel, on the side traffic keeps to (left in India); wide divided roads have their own lane centres */
+function placeOnRoad(s) { const p = road.at(s, {}), off = laneOffsets(road.style)[0], lat = (locationById(config.location).drive || 'right') === 'right' ? -off : off; phys.reset(p.x - p.tz * lat, p.z + p.tx * lat, p.th); view.camYaw = null; }
 async function setVehicle(i) {
   const def = VEHICLES[i], model = await loadModel(def), old = phys; vehicle = i; await rapierReady; bus.emit('vehicle:changed', { id: def.id });
   const par = vehicleParams(def.body, def.stats);
@@ -153,6 +188,7 @@ async function setVehicle(i) {
   if (S.paint[def.id] && S.paint[def.id] !== def.paint.colors[0]) await applyPaint(def, model, S.paint[def.id]);
   buildSwatches(def, model);
   view.realShadow = shadowsOn; view.setModel(def, model); $$('#vehicles button').forEach((b, k) => b.classList.toggle('on', k === i)); document.documentElement.style.setProperty('--accent', def.color);
+  if (phys.setDriveMode) phys.setDriveMode(S.driveMode || 'normal');
   S.vehicle = i; save(); if (sound.ctx) sound.setVehicle(def.id);
 }
 /* paint swatches for the current vehicle */
@@ -171,7 +207,7 @@ function useBuff() {
 }
 function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 /* on foot (N14, src/player/onfoot.js): G beside a stopped vehicle gets you out; G beside the parked vehicle gets you back in. The vehicle waits on its handbrake. */
-let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0;
+let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0, footPitch = 0.28, lookDrag = null;
 const footWorld = { height: (x, z) => world.height(x, z), surface: (x, z) => world.surface(x, z), get seaLevel() { return world.seaLevel; },
   near: (x, z, r) => { const l = world.near(x, z, r).slice(); if (phys && mode === 'foot') { const c = Math.cos(phys.yaw), s = Math.sin(phys.yaw), a = (phys.p.front + phys.p.rear) / 4; l.push([{ x: phys.x + c * a, z: phys.z + s * a, r: 1.15 }, { x: phys.x - c * a, z: phys.z - s * a, r: 1.15 }]); } return l; } };
 function makeFigure() { const g = new THREE.Group(), m = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }), box = (w, h, d, c, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m(c)); b.position.y = y; b.castShadow = true; g.add(b); return b; };
@@ -185,6 +221,11 @@ function exitVehicle() {
 }
 function enterVehicle() { if (mode !== 'foot' || !phys) return; interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
 function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && interactions.use(phys.x, phys.z, 'activity:')) { /* an activity started */ } else exitVehicle(); }
+/* mouse look on foot: click the game to capture the mouse (Esc releases it), then moving the mouse turns the character and tilts the camera; on a touch screen, drag on the scene */
+const lookBy = (dx, dy) => { if (mode !== 'foot' || !foot || frozen()) return; foot.yaw += dx * 0.0035; footPitch = Math.max(-0.35, Math.min(1.1, footPitch + dy * 0.0030)); };
+canvas.addEventListener('pointerdown', e => { if (mode !== 'foot' || frozen()) return; if (e.pointerType === 'mouse') { if (document.pointerLockElement !== canvas && canvas.requestPointerLock) { try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* not allowed: drag instead */ } } lookDrag = { id: e.pointerId, x: e.clientX, y: e.clientY }; } else lookDrag = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+addEventListener('pointermove', e => { if (document.pointerLockElement === canvas) { lookBy(e.movementX, e.movementY); return; } if (lookDrag && lookDrag.id === e.pointerId) { lookBy(e.clientX - lookDrag.x, e.clientY - lookDrag.y); lookDrag.x = e.clientX; lookDrag.y = e.clientY; } });
+for (const n of ['pointerup', 'pointercancel']) addEventListener(n, e => { if (lookDrag && lookDrag.id === e.pointerId) lookDrag = null; });
 const actBtn = document.createElement('button'); actBtn.type = 'button'; actBtn.id = 'interact'; actBtn.style.cssText = 'position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:20;display:none;padding:8px 18px;border-radius:999px'; document.body.appendChild(actBtn); actBtn.addEventListener('pointerdown', e => { e.preventDefault(); useNearby(); });
 function updatePrompt() { let t = ''; if (!frozen()) { if (mode === 'foot' && foot) { const it = interactions.nearest(foot.x, foot.z); if (it) t = it.prompt; } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && !autodrive.enabled) t = (phys && interactions.nearest(phys.x, phys.z, 'activity:') || {}).prompt || 'Get out (G)'; } if (t !== actBtn.textContent) actBtn.textContent = t; actBtn.style.display = t ? 'block' : 'none'; }
 function setMode(m) {
@@ -258,7 +299,7 @@ menu = new Menu({
     else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (peds) peds.setLevel(v); }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
-  locations: LOCATIONS, setLocation: id => setLocation(id), radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
+  locations: pickerLocations(), setLocation: id => setLocation(id), radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
   onOpen: () => { document.body.dataset.menu = 'open'; controls.locked = true; sound.setEngineOn(false); },
   onClose: () => { delete document.body.dataset.menu; controls.locked = false; camera.fov = 58; if (offset) { camera.clearViewOffset(); offset = 0; lastShot = ''; } sound.setEngineOn(mode === 'drive'); unlockAudio(); if (view.camYaw !== null) view.camYaw = phys ? phys.yaw : null; }
 });
@@ -284,6 +325,10 @@ const stats = statsPanel($('#stats'), renderer, () => {
     'origin      ' + grid.origin.x + ', ' + grid.origin.z + '   mode ' + mode,
     phys ? 'vehicle     u ' + phys.u.toFixed(1) + '  v ' + phys.v.toFixed(2) + '  r ' + phys.r.toFixed(2) + '  slip ' + phys.slip.toFixed(2) + '  ' + phys.surface : '', 'seed        ' + config.seed + '   quality ' + quality];
 });
+/* drive modes (vehicle/physics.js DRIVE_MODES): N or the button cycles Eco, Normal, Sport, Off-road; the choice is saved and applies to every vehicle */
+function setDriveMode(id, quiet) { if (!DRIVE_MODES[id]) id = 'normal'; S.driveMode = id; if (phys && phys.setDriveMode) phys.setDriveMode(id); const m = DRIVE_MODES[id]; $('#modeBtn').textContent = m.name; const tag = $('#modeTag'); tag.textContent = m.name; tag.className = id; save(); if (!quiet) toast(m.name + ': ' + m.blurb); }
+const cycleDriveMode = () => setDriveMode(DRIVE_MODE_IDS[(DRIVE_MODE_IDS.indexOf(S.driveMode || 'normal') + 1) % DRIVE_MODE_IDS.length]);
+controls.on('drivemode', cycleDriveMode); $('#modeBtn').addEventListener('click', cycleDriveMode); setDriveMode(S.driveMode || 'normal', true);
 const hud = { spd: $('#spd'), unit: $('#unit'), surf: $('#surface'), sky: $('#sky'), buff: $('#buff'), cd: $('#buffCd') }; let hudT = 0;
 
 /* ---------- the camera slowly circling the vehicle behind the title screen and the garage ---------- */
@@ -327,12 +372,54 @@ function setupActivities() {
   }
 }
 bus.on('world:rebuilt', setupActivities);
-bus.on('mode:changed', e => { if (e.to !== 'drive' && runner.state === 'running') runner.cancel(); });
+bus.on('mode:changed', e => { if (e.to !== 'drive' && runner.state === 'running') runner.cancel(); if (e.to !== 'foot') { lookDrag = null; if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock(); } });
 bus.on('activity:finished', r => {
   if (actGoal) { actMarks.remove(actGoal); actGoal.geometry.dispose(); actGoal.material.dispose(); actGoal = null; } actHud.style.display = 'none'; if (r.outcome === 'cancelled') return;
   const rec = recordResult(S.progress, r); S.progress = rec.progress; save(); const t = actDefs.find(d => d.id === r.id);
   toast(r.outcome === 'done' ? (t ? t.title + ': ' : '') + r.time.toFixed(1) + ' s, ' + r.rating + (rec.isBest ? ', new best' : '') : 'Out of time');
 });
+/* India route readout (only with ?india): the next city and the real distance left, and the OpenStreetMap credit the road data needs */
+const routeHud = document.createElement('div'); routeHud.style.cssText = 'position:fixed;left:50%;top:128px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.7);border-radius:999px;padding:5px 14px;font-size:13px;pointer-events:none'; document.body.appendChild(routeHud);
+if (indiaRoute) { const cr = document.createElement('div'); cr.textContent = 'Road shapes © OpenStreetMap contributors (ODbL)'; cr.style.cssText = 'position:fixed;right:8px;bottom:4px;font-size:10px;color:#9fb0c8;z-index:5;pointer-events:none'; document.body.appendChild(cr); }
+/* junctions: within 150 game metres of a city on the route a panel lists the roads you can take there; choosing another road regenerates the world at that city on that road (a short loading screen) */
+const junctionPanel = document.createElement('div'); junctionPanel.style.cssText = 'position:fixed;left:10px;bottom:90px;z-index:25;display:none;background:rgba(8,12,20,.82);border-radius:12px;padding:8px 10px;font-size:13px;max-width:260px'; document.body.appendChild(junctionPanel); let junctionShown = '';
+function junctionAt(arc) {
+  const R = indiaRoute; if (!R) return; const i = R.cities.findIndex((c, k) => k > 0 && Math.abs(arc - c.along) < 150); if (i < 0) { if (junctionShown) { junctionShown = ''; junctionPanel.style.display = 'none'; } return; }
+  const city = R.cities[i], next = R.cities[i + 1], key = city.id + ':' + (arc > city.along ? 'past' : 'near'); if (key === junctionShown) return; junctionShown = key;
+  const choices = R.net.junctionChoices(city.id, { cameFrom: R.cities[i - 1].id }); const wantRoad = R.roadId || (R.legs.find(l => l.fromAlong <= city.along + 1 && l.toAlong > city.along + 1) || {}).road; for (const c of choices) c.same = !!next && c.toward === next.id && c.road === wantRoad;
+  if (!choices.length) { junctionPanel.style.display = 'none'; return; }
+  junctionPanel.innerHTML = '<b>' + city.name + '</b> <span style="color:#9fb0c8">' + (HINDI[city.id] || '') + '</span><div style="color:#9fb0c8;margin:2px 0 6px">' + (next ? 'Junction: keep going or take another road' : 'Where next?') + '</div>';
+  for (const c of choices) { const b = document.createElement('button'); b.type = 'button'; b.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;padding:6px 8px;border-radius:8px'; b.textContent = (c.same ? 'Keep going: ' : '') + c.towardName + ' · ' + (c.nh || c.name) + ' · ' + c.km + ' km';
+    b.addEventListener('click', () => { if (c.same) { junctionPanel.style.display = 'none'; return; } const u = new URLSearchParams(location.search); u.set('india', c.road); u.set('from', city.id); u.set('toward', c.toward); u.delete('to'); u.delete('loc'); location.search = '?' + u.toString(); }); junctionPanel.appendChild(b); }
+  junctionPanel.style.display = 'block';
+}
+/* Junction roads: near each city of the route the other roads through it are generated as real roads that cross the player's road (each follows its own highway path on both sides of the city,
+   starts on the player's road at the same height, and is graded into the land); they are removed again when the player is far away. Only the player's road has traffic and navigation. */
+const roadBox = r => { const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity }, p = {}; for (let s = r.sMin; s <= r.sMax; s += 150) { r.at(s, p); b.minX = Math.min(b.minX, p.x); b.maxX = Math.max(b.maxX, p.x); b.minZ = Math.min(b.minZ, p.z); b.maxZ = Math.max(b.maxZ, p.z); } return b; };
+function buildBranches(city) {
+  const R = indiaRoute; let sc = null; if (city.along <= 0) sc = 0; else { for (let s = Math.max(0, road.sMin); s < road.sMax; s += 20) { const a = road.arcAtS(s); if (a !== null && a >= city.along) { sc = s; break; } } } if (sc === null) return false;
+  const p = road.at(sc, {}), start = { x: p.x, y: p.y, z: p.z }, used = new Set(R.roadId ? [R.roadId] : R.legs.filter(l => l.from === city.id || l.to === city.id || (l.fromAlong <= city.along && l.toAlong >= city.along)).map(l => l.road));
+  for (const j of R.net.junction(city.id)) {
+    if (used.has(j.road)) continue; const rd = R.net.roads.get(j.road), i = rd.stops.findIndex(st => st.id === city.id), nxt = rd.stops[i + 1], prv = rd.stops[i - 1];
+    let gA = nxt ? R.net.guideFor(j.road, city.id, nxt.id) : null, gB = prv ? R.net.guideFor(j.road, city.id, prv.id) : null; if (!gA) { gA = gB; gB = null; } if (!gA) continue;
+    const cfg = { ...config, seed: config.seed + ':' + city.id + ':' + j.road, road: { ...config.road, guide: gA.pts, guideBack: gB ? gB.pts : null, start, style: rd.kind === 'nh' ? 'highway' : 'nh6' } };
+    const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); branches.push({ city: city.id, road: br, mesh: new RoadMesh(scene, br, br.style, grid.origin, {}), hint: 0, near: false, te: traffic ? traffic.addRoad(br) : null });
+  }
+  const mine = branches.filter(b => b.city === city.id && b.te);
+  if (traffic && mine.length) { const jn = new Junction(p.x, p.z); jn.addArm(traffic.sim, road, sc); for (const b of mine) jn.addArm(b.te.sim, b.road, 0); traffic.addJunction(jn); junctionSignals.add(jn); junctionOf.set(city.id, jn); }          // the roads share one signal and cars may turn between them
+  return true;
+}
+function dropBranches(cityId) { const jn = junctionOf.get(cityId); if (jn) { if (traffic) traffic.removeJunction(jn); junctionSignals.remove(jn); junctionOf.delete(cityId); } dropBranchRoads(cityId); }
+function dropBranchRoads(cityId) { for (let i = branches.length - 1; i >= 0; i--) if (branches[i].city === cityId) { const b = branches[i]; roadSet.remove(b.road); if (traffic && b.te) traffic.removeRoad(b.te); grid.invalidate(roadBox(b.road)); b.mesh.dispose(); branches.splice(i, 1); } }
+const triedBranches = new Set(), tmpP = {}, junctionOf = new Map(), junctionSignals = new JunctionSignals(scene, grid.origin);
+bus.on('world:rebuilt', () => { triedBranches.clear(); for (const j of [...junctionSignals.items.keys()]) junctionSignals.remove(j); junctionOf.clear(); });
+function updateBranches(px, pz, dt) {
+  const R = indiaRoute; if (!R || !roadSet) return; const arc = road.guideArc(px, pz) || 0;
+  R.cities.forEach(c => { const d = Math.abs(arc - c.along), have = branches.some(b => b.city === c.id); if (d < 2400 && !have && !triedBranches.has(c.id)) { if (buildBranches(c)) triedBranches.add(c.id); } else if (d > 3600 && (have || triedBranches.has(c.id))) { dropBranches(c.id); triedBranches.delete(c.id); } });
+  for (const b of branches) { const s = b.road.closestS(px, pz, b.hint); b.hint = s; const box = b.road.ensure(s - 2600, s + 2600); if (box) grid.invalidate(box); b.mesh.update(s);
+    if (traffic && b.te) { const q = b.road.at(s, tmpP), dist = Math.hypot(q.x - px, q.z - pz); b.near = b.near ? dist < 1000 : dist < 700; traffic.updateExtra(b.te, dt, { x: px, z: pz, s, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, b.near); } }
+}
+function updateRoute() { if (!indiaRoute) return; const arc = road.guideArc(phys && mode !== 'fly' ? phys.x : cam.x, phys && mode !== 'fly' ? phys.z : cam.z) || 0, nxt = indiaRoute.cities.find(c => c.along > arc + 40); routeHud.style.display = 'block'; junctionAt(arc); routeHud.textContent = nxt ? indiaRoute.name + ' · next: ' + nxt.name + ', ' + Math.max(0, Math.round((nxt.along - arc) * 100 / 1000)) + ' km' : indiaRoute.name + ' · end of the path'; }
 function updateActivities(dt, px, pz) {
   runner.update(dt, px, pz); for (const m of actMarks.children) m.position.set(m.userData.w.x - grid.origin.x, m.userData.w.y + 30, m.userData.w.z - grid.origin.z);
   if (runner.state === 'running') { actHud.style.display = 'block'; actHud.textContent = runner.def.title + ': ' + Math.round(runner.dist) + ' m to go, ' + Math.max(0, runner.def.limit - runner.t).toFixed(0) + ' s left'; }
@@ -353,7 +440,8 @@ function update(dt, now) {
   } else if (mode === 'foot' && phys && foot) {
     if (!frozen()) { const i = controls.read(); foot.step(dt, { steer: i.steer, throttle: i.throttle, rev: i.rev, run: i.run, jump: i.brake > 0.5 }); }
     phys.step(dt, { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }); px = foot.x; pz = foot.z; roadS = road.closestS(px, pz, roadS);
-    cam.x = foot.x - Math.cos(foot.yaw) * 4.2; cam.z = foot.z - Math.sin(foot.yaw) * 4.2; cam.y = Math.max(terrain.seaLevel, foot.y) + 2.5; cam.yaw = -Math.PI / 2 - foot.yaw; cam.pitch = -0.2;
+    const back = Math.cos(footPitch) * 4.2, gy = Math.max(terrain.seaLevel, terrain.height(foot.x - Math.cos(foot.yaw) * back, foot.z - Math.sin(foot.yaw) * back));          // mouse look: the camera swings up and down around the character
+    cam.x = foot.x - Math.cos(foot.yaw) * back; cam.z = foot.z - Math.sin(foot.yaw) * back; cam.y = Math.max(Math.max(terrain.seaLevel, foot.y) + 1.5 + Math.sin(footPitch) * 4.2, gy + 0.4); cam.yaw = -Math.PI / 2 - foot.yaw; cam.pitch = -footPitch * 0.85;
   } else if (mode === 'ride') {
     roadS += Math.min(cam.speed, 90) * dt; road.at(roadS, rp);
     cam.x = rp.x + rp.tz * 2; cam.z = rp.z - rp.tx * 2; cam.y = rp.y + 1.6;
@@ -365,12 +453,13 @@ function update(dt, now) {
   if (navDebug && nav) navDebug.update(nav, grid.origin);
   focus.x = px; focus.z = pz; if (mode === 'drive' && phys) { focus.dx = Math.cos(phys.yaw); focus.dz = Math.sin(phys.yaw); focus.speed = Math.abs(phys.u); } else focus.speed = 0;
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
-  if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
+  updateBranches(px, pz, dt); junctionSignals.update();
+  if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
-  updateActivities(dt, px, pz); updatePrompt();
+  updateActivities(dt, px, pz); updateRoute(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
@@ -378,7 +467,7 @@ function update(dt, now) {
   else if (mode === 'drive' && phys) { if (offset) { camera.clearViewOffset(); offset = 0; } view.aim(camera, phys, grid.origin, dt, (x, z) => Math.max(terrain.seaLevel, terrain.drive(x, z)), boostEase); }
   else { cam.apply(camera, grid.origin); camera.fov = 58; camera.updateProjectionMatrix(); }
   water.position.x = camera.position.x; water.position.z = camera.position.z;
-  ripples.offset.set(((camera.position.x + grid.origin.x) * RIP + now * 0.000011) % 1, (-(camera.position.z + grid.origin.z) * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
+  waterT.value = now / 1000; if (groundMat) groundMat.uniforms.uTime.value = now / 1000; ripples.offset.set(((camera.position.x + grid.origin.x) * RIP) % 1, (-(camera.position.z + grid.origin.z) * RIP) % 1);     // ripples stay fixed to the world while the sheet follows the camera
   env.update(dt, now, camera, reach);
   if (skyLight) { scene.environment = skyLight; scene.environmentIntensity = 0.4 * Math.min(1, Math.max(0.06, 0.12 + env.sunDir.y * 1.1)); }
   { const cx = camera.position.x + grid.origin.x, cz = camera.position.z + grid.origin.z;                                              // inside a tunnel (the road says so): no rain, snow or thunder, and a roomier sound
@@ -388,7 +477,7 @@ function update(dt, now) {
   if (mode === 'drive' && phys && S.rumble !== 'off' && !frozen()) { const r = rumbleFor({ ...(phys.telemetry ? phys.telemetry() : { speed: Math.abs(phys.u), surface: phys.surface, slip: phys.slip }), impact: phys.impact }, 1); if (r) controls.rumble(r.strong, r.weak, r.ms); }
   if (mode === 'drive' && phys && sound.ctx) { const tel = phys.telemetry ? phys.telemetry() : { rpm01: null, gear: null }; sound.update({ tunnel: tunnelAmt, v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
     id: VEHICLES[vehicle].id, rpm01: tel.rpm01 === null ? undefined : tel.rpm01, gear: tel.gear === null ? undefined : tel.gear, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view }); }
-  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label;
+  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label; { const tag = $('#modeTag'), lim = phys.M && phys.M.cap > 0 && Math.abs(phys.u) > phys.M.cap * 0.97; if (tag.classList.contains('limit') !== lim) tag.classList.toggle('limit', lim); }
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }
 }
 setVehicle(vehicle).then(() => { setupActivities(); setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); loadDone(); if (+q.get('bench')) setTimeout(() => startBench(+q.get('bench')), 4000); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); loadDone(); });

@@ -1,0 +1,121 @@
+# Work remaining: every known limit, in one place (written 19 Nov 2026)
+
+This is the reference for what still needs doing. Every limit Claude reported while building N7 to N15, the landscape pass, the India map, the junction network and the drive modes is listed here, grouped by area. Update it when you fix something (move the line to "Done" at the bottom with the date) and when you find a new problem. The phase tables are in `PARALLEL_PLAN.md`; the India design is `docs/INDIA_MAP_PLAN.md`; data sources are `docs/OPEN_DATA.md`; assets are `docs/ASSET_PLAN.md`.
+
+Tags: **[person]** needs a human or a real device, Claude cannot do it. **[owner]** a decision only the owner can make. **[build]** Claude can build it. **[B]** mostly in Stream B's files (Anshul), **[A]** Stream A's.
+Priority: **P1** wrong or risky as it stands, **P2** missing feature that matters, **P3** polish.
+
+## 0. Things that apply to everything
+| # | Limit | Tag |
+|---|---|---|
+| 0.1 | Nothing has been tried on a real phone: frame rate, memory, touch controls, Hindi fonts, loading time. Everything was looked at in a desktop browser pane or by script. | P1 [person] |
+| 0.2 | Anshul has not reviewed any of N7 to N15, the landscape work, the India map, the junction network or the drive modes. Many Stream B files were changed additively (`traffic/sim.js`, `traffic/traffic.js`, `vehicle/physics.js`, `vehicle/rapier-vehicle.js`, `main.js`). | P1 [person] [B] |
+| 0.3 | The live site is not updated. Only Anshul deploys. `cloudflare/public` is out of date by design. | [person] |
+| 0.4 | N0 and N4 real-device acceptance, listening to the engine, and the N6 launch are still open. | P1 [person] |
+| 0.5 | Tests are headless or look at a few screenshots. Nothing was driven for a long session (leaks, hitches over 10 minutes). | P2 [person] |
+
+## 1. Owner decisions waiting
+| # | Decision | Notes |
+|---|---|---|
+| 1.1 | A lawyer's reading of OpenStreetMap ODbL share-alike for `assets/india/waypoints.json` and the skeleton | The data is already in the repo, credited |
+| 1.2 | Which city after Mumbai gets a full district (Delhi, Jaipur, Kolkata, Chennai, Bengaluru, Hyderabad) | Drives N11 and N16 |
+| 1.3 | Licensed or original music for the radio (Bollywood songs are copyrighted) | |
+| 1.4 | Which official map outline to use for India (the coastline sketch is not a boundary) | |
+| 1.5 | Asset budget and who downloads packs by hand (Indian vehicles, rigged people, building kit) | `docs/ASSET_PLAN.md` |
+| 1.6 | Whether on-foot play is wanted on phones | |
+| 1.7 | Whether to use real elevation and land cover (NASA SRTM or Copernicus, ESA WorldCover) and approve the downloads | `docs/OPEN_DATA.md` |
+| 1.8 | The tuner page login and the live Publish setup (N5 leftovers) | |
+
+## 2. Engine and phases N7 to N10
+| # | Limit | Tag |
+|---|---|---|
+| 2.1 | N7: the core-contracts note and the HUD and map layer change requests (N7a) are not written | P3 [build] |
+| 2.2 | N8: sectors only load shared assets and the navigation chunks; the world itself (terrain, roads, scenery) does not yet generate and release by sector, which the continuous India world needs | P1 [build] |
+| 2.3 | N9: moving between regions is a full reload behind the loading screen; no seamless transition, no blending at borders | P2 [build] |
+| 2.4 | N9: regions are impressions from old terrain recipes with new colours; none uses real elevation | P2 [build] |
+| 2.5 | N10: the navigation graph covers the main road only; side roads and junctions are not in it | P1 [build] [B] |
+| 2.6 | `config.road.guide` roads follow a path but the land is a region recipe, not the real terrain under that highway | P2 [build] |
+
+## 3. Cities and districts (N11)
+| # | Limit | Tag |
+|---|---|---|
+| 3.1 | Mumbai district has no junction or local street, no promenade, no designed route, no phone numbers | P2 [build] |
+| 3.2 | Only Mumbai has a built-up district; Delhi, Agra, Bhopal and the rest are records with no buildings | P2 [build] [owner 1.2] |
+| 3.3 | No city worlds are inserted into the India map: a city is only a name on a gate sign and a junction | P2 [build] |
+| 3.4 | Buildings are procedural boxes with textures; no interiors | P2 [build] |
+| 3.5 | Dhabas, roadside shrines, chai stalls, truck art, market clutter are not built | P3 [build] |
+| 3.6 | Signage is English and Hindi on highway signs only; no regional languages, no shop signs in Hindi | P3 [build] |
+
+## 4. Traffic, pedestrians, vehicles (N12, N13)
+| # | Limit | Tag |
+|---|---|---|
+| 4.1 | Two-wheelers and auto-rickshaws are procedural boxes; no buses with local liveries, cows, hand-carts, tempos, e-rickshaws | P2 [build] [owner 1.5] |
+| 4.2 | No horns as behaviour, no lane-less weaving, no wrong-way riders | P3 [build] [B] |
+| 4.3 | Pedestrians are box figures: no real models, no reactions to the car or the player, not solid to the car | P2 [build] [B] [owner 1.5] |
+| 4.4 | Pedestrians and the navigation graph exist on the main road only (not on side roads or at junctions) | P1 [build] [B] |
+| 4.5 | A car that has left the 700 m window of a side road is gone; cars respawn when you return, they do not continue | P3 [build] [B] |
+| 4.6 | Cars do not give way inside a crossing, have no turn lanes or indicators, and do not avoid a player who runs a red; a turned car appears mid-road with a short blend instead of driving the curve | P2 [build] [B] |
+| 4.7 | Toll plazas slow cars to walking pace but no one pays or stops; no toll queue, no FASTag lane behaviour | P3 [build] [B] |
+| 4.8 | Traffic budgets are tuned by count (about 25 cars at High across a junction), not measured on a phone | P1 [person] |
+
+## 5. On foot and activities (N14, N15)
+| # | Limit | Tag |
+|---|---|---|
+| 5.1 | On-foot: no interiors, only the player's own vehicle can be entered, the player is a box figure with swinging legs, the camera does not avoid walls | P2 [build] [B] |
+| 5.2 | On-foot on touch screens: only the G button and drag-to-look; walking uses the driving pads | P2 [build] [B] |
+| 5.3 | Pointer lock (mouse capture) was not tested in a real browser session | P2 [person] |
+| 5.4 | Activities: one kind (point-to-point drive), two shipped; par times are guesses, no results screen, no leaderboard, no map or route line, no points of interest from region data | P2 [build] |
+| 5.5 | Save: no cloud save, no versioned migration beyond version 2 yet (the machinery exists) | P3 [build] |
+
+## 6. Landscape, plants, water
+| # | Limit | Tag |
+|---|---|---|
+| 6.1 | The scanned art is one broadleaf tree, six conifers, one shrub, one fern and one grass tuft; the other species are built in code with flat leaf textures and look like painted blobs up close | P2 [build] [owner 1.5] |
+| 6.2 | No palms (Kerala), no mango, neem, banyan, bamboo or teak art | P2 [owner 1.5] |
+| 6.3 | The field patchwork colour is subtle from altitude and was judged on the default location only | P3 [build] |
+| 6.4 | Water: four moving ripple layers, shore foam and shallow-to-deep colour exist; no reflections of the surroundings, no waves with height, no flow along rivers | P2 [build] |
+| 6.5 | Every new variant adds draw calls (two per variant per tile); the low preset keeps fewer but nothing is measured on a phone | P1 [person] |
+| 6.6 | Rajasthan and Ladakh dryness is one number (`arid`); no real desert dunes, no snow line control per region beyond the old numbers | P3 [build] |
+| 6.7 | Kerala, Himachal, Ladakh and Deccan were looked at once; they may need colour, plant and road tuning | P3 [person] |
+
+## 7. Roads, highways, rail
+| # | Limit | Tag |
+|---|---|---|
+| 7.1 | Junctions are flat overlaps: no ramps, flyovers, interchanges or cloverleaves, and one road's lane paint runs across the other | P2 [build] |
+| 7.2 | Side roads (branches) draw bridges, tunnels and retaining walls but these are not in the collision list | P1 [build] |
+| 7.3 | Service roads behind a barrier, concrete median barriers, elevated sections are not built | P2 [build] |
+| 7.4 | The `ghat` hill road has tighter bends in Himachal (39 m minimum radius) but not the stacked hairpins seen in the tea-garden photos | P2 [build] |
+| 7.5 | Centre-line colour on Indian roads is unconfirmed (sources disagree); lane and shoulder widths follow common practice, not the IRC tables, which were not found | P3 [person] |
+| 7.6 | Sign gantries are not lit at night; Hindi text uses system fonts that may be missing on a device | P2 [person] |
+| 7.7 | Railways exist only as hand-entered data and a dashed line on the map page: no tracks, no level crossings, no trains, nothing rideable | P2 [build] |
+| 7.8 | The road is one generated path per highway; real elevation and real curves between waypoints are not used | P2 [build] |
+
+## 8. India map and data
+| # | Limit | Tag |
+|---|---|---|
+| 8.1 | Highway numbers and the intermediate cities are from secondary sources that disagree; they are labelled approximate and must be checked against NHAI and Railways tables before being shown as fact | P1 [person] |
+| 8.2 | The skeleton roads are simplified driving routes (a waypoint every 20 to 60 real km) from the OSRM demo server over OpenStreetMap data, not surveyed alignments; they are the fastest route through each city list and can differ from the numbered highway | P2 [build] |
+| 8.3 | Some data gaps: Jaipur offers Ajmer twice (two corridors) and no Kota; only the corridors entered exist | P3 [build] |
+| 8.4 | One road per `?india=` drive from the player's start, plus side roads within 2.4 km of a city on the route; no free roaming across the country yet; the junction panel regenerates the world (short loading screen) | P1 [build] |
+| 8.5 | The in-game OpenStreetMap credit shows only in `?india=` mode and on the map page, not in a credits screen | P2 [build] |
+| 8.6 | Real land cover and elevation (ESA WorldCover, SRTM or Copernicus) are researched but not downloaded or used | P2 [owner 1.7] |
+| 8.7 | The coastline on the map page is a sketch, not a boundary | P3 [owner 1.4] |
+| 8.8 | Festivals, seasons by region, monsoon waterlogging, heat haze and winter fog are not built | P3 [build] |
+
+## 9. Drive modes
+| # | Limit | Tag |
+|---|---|---|
+| 9.1 | Modes are tuned by script only; nobody has felt them on a phone or with a gamepad | P1 [person] |
+| 9.2 | No per-mode engine sound, no raised ride height or suspension change for Off-road, no Comfort mode, no Eco efficiency score, no per-mode rumble | P3 [build] [B] |
+| 9.3 | The Eco (110 km/h) and Off-road (85 km/h) limits are the same for every vehicle; the truck's own top speed is 111 km/h so Eco barely changes it | P3 [build] [B] |
+| 9.4 | Hill descent control holds a crawl by braking; it does not shift gears | P3 [build] [B] |
+
+## 10. Assets and sound
+| # | Limit | Tag |
+|---|---|---|
+| 10.1 | No Indian vehicle models (auto-rickshaw, two-wheelers, local buses, Tata trucks, Ambassador); no rigged pedestrians; no Indian building kit; only procedural stand-ins | P2 [owner 1.5] |
+| 10.2 | Ambient sound per region, temple bells, call to prayer, horn variety are not built | P3 [build] [owner 1.3] |
+| 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
+
+## Done (move lines here with the date)
+- 18 to 19 Nov 2026: tunnel doorways, mouse look on foot, plant variants, patchwork land, moving water with foam, five Indian worlds, highway furniture, toll slowing, India skeleton and map page, drive modes, guided roads, junction choice panel, multi-road engine step 1, traffic on every road, crossing behaviour (all first increments: see their limits above).

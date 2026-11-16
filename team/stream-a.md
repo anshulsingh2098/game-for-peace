@@ -2,6 +2,102 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 05:00  Owner approved merging PRs 27 to 36; known-limits reference file
+Branch: feat/landscape-look (PR 36)
+What changed: `docs/WORK_REMAINING.md` lists every known limit by area with a tag (person, owner, build, which stream) and priority, plus the owner decisions waiting; `HANDOFF.md` points to it. The owner asked for PRs 27 to 36 to be merged in order on 19 Nov 2026.
+For the other stream: after the merge, pull `main`, read `docs/WORK_REMAINING.md` (sections 0.2, 2.5, 4 and 9 are yours) and review the additive changes in the files named in 0.2.
+Status: open
+
+## 2026-11-19 03:00  Crossing behaviour: shared signals, stopping at red, turning, signal poles
+Branch: feat/landscape-look (PR 36)
+What changed: new `traffic/junction.js` (`Junction`: shared three-phase signal, `transfer` hands a car to another road's sim), `traffic/sim.js` (junction stop and turn logic, car fields for the turn blend, stuck limit raised to 48 s at junctions; Stream B file, additive), `traffic/traffic.js` (`addJunction`, `removeJunction`, junction clock), new `world/junction_signals.js` (poles and lamps), `main.js` (junction built with the side roads). One long self-test block added (68 checks): signal phases, never green on two roads, cars stop at the line on red, turns happen, no car in two sims, car cap respected. Checked in the browser at Delhi (six-road star cycles, cars turn, poles visible, no console errors). Not done: yielding inside the crossing, avoiding a player who runs a red, turn lanes, real indicators, pedestrians and the navigation graph at junctions.
+For the other stream: please review the changes in `traffic/sim.js` and `traffic/traffic.js` (additive); the junction rules are in `traffic/junction.js`.
+Status: open
+
+## 2026-11-19 01:00  Traffic on every road of the world
+Branch: feat/landscape-look (PR 36)
+What changed: `traffic/sim.js` (`branchMode`), `traffic/traffic.js` (`addRoad`, `removeRoad`, `updateExtra`; extra sims share the instanced meshes; `circles` and `setMode` cover them), `main.js` (each branch road gets a sim while the player is within 700 m), one self-test extension (68 checks: cars appear on the side road, keep to its lanes, live near the player, are cleared when off, circles reach physics). Checked in the browser at Delhi. Not done: cars turning between roads, giving way or traffic lights at crossings (two roads' cars can pass through each other), pedestrians and the navigation graph on side roads, continuing cars when you leave and return.
+For the other stream: this touches `traffic/sim.js` and `traffic/traffic.js` (your files; additive). Please say how you want crossing behaviour done (priority, signals, turning).
+Status: open
+
+## 2026-11-18 23:00  Multi-road engine step 1: RoadSet and branch roads at junctions
+Branch: feat/landscape-look (PR 36)
+What changed: new `world/roadset.js` (`RoadSet`: nearest, grade, drive, style over several roads; `terrain.attachRoad(roadSet)` in `main.js`), `world/router.js` (`config.road.start` and `guideBack`, `hAt` height blend: a road can start on another road; both arms can follow guides), `main.js` (branch roads built near each city of an `?india=` route and removed when far, their meshes updated and repositioned like the main road), one self-test (68 checks: branch starts at the road's height, follows its guide, nearest-road answers, one-road behaviour unchanged). Checked in the browser: six roads form a star at Delhi, no console errors, about 3 ms per headless step. Not done: traffic, pedestrians and the navigation graph on branches, interchanges and ramps, paint cut-outs, collision for branch bridges and walls, the physical choice replaced the panel only partly.
+For the other stream: `terrain.road` is now a `RoadSet` (it has `nearest`, `hit`, `style`, `grade`, `drive`); code that wants one Road should keep using the `road` it is given. Traffic and navigation over several roads are your area; please say how you want that shaped.
+Status: open
+
+## 2026-11-18 21:00  Junction network: routes across roads, city gates, junction panel
+Branch: feat/landscape-look (PR 36)
+What changed: `world/network.js` (`slice`, `routeGuide`, `junctionChoices`), `main.js` (`?india=route&from&to`, junction panel, regenerate on choosing another road), `world/highway_plan.js` + `highway.js` + `road.js` (city gate boards over the road before each city, `gates` option), `docs/INDIA_MAP_PLAN.md`. Self-test cases added (67 checks, still passing). Checked in the browser (Delhi to Mumbai route, Jaipur gate and panel, switching to NH 62). Limit: one road at a time; the junction is a choice, not a visible crossing; no real side roads, no network traffic or navigation yet.
+For the other stream: the next step needs the engine to hold several roads at once (terrain, scatter, traffic, navigation all take one `Road` today). Please look at how much of that is yours before I start.
+Status: open
+
+## 2026-11-18 19:00  Drive a real highway: ?india= guided road
+Branch: feat/landscape-look (PR 36)
+What changed: `main.js` (`?india=<road>&from=<city>&toward=<city>` loads the skeleton, builds the guide, picks the nearest region and a highway style, route readout, OpenStreetMap credit), `world/router.js` (`guideArc`, `arcAtS`), `world/highway_plan.js` and `highway.js` (gantry boards name the next cities with real distance left when the road has a guide), `docs/INDIA_MAP_PLAN.md`. One more self-test case (67 checks). Checked in the browser: Delhi to Lucknow follows its guide, readout and credit show. Limits: one road, no junctions, no real elevation, no city worlds.
+For the other stream: the road model change is additive (`config.road.guide` is optional). Please read the network design in section 9 of the India plan.
+Status: open
+
+## 2026-11-18 17:00  Drive modes (Eco, Normal, Sport, Off-road) and the road network model
+Branch: feat/landscape-look (PR 36)
+What changed: owner asked for drive modes like a modern car. `vehicle/physics.js` (`DRIVE_MODES`, `combineMods`, `setDriveMode`), `vehicle/rapier-vehicle.js` (limiter, throttle map, hill descent control, loose-ground grip, shift points, traction limit, engine braking; Stream B files, smallest change, both physics classes keep one surface), `main.js` (N key and button, HUD tag, saved choice), `input/controls.js` (`drivemode`), `core/saved.js` (`driveMode`), `index.html` (button, tag), `docs/DRIVE_MODES.md`. `tools/vehicle_acceptance.mjs` now checks every mode for every vehicle (all pass). Also in this push: `world/network.js` (road network model, `cleanPath`, `guideFor`) and a `config.road.guide` option in `world/router.js` so a road can follow a real highway path (tested: it stays within 450 m of the guide); not wired into the game yet. 67 self-tests pass.
+For the other stream: please feel-test the modes on a phone and with a gamepad; the numbers are tuned by script only. Sound per mode is not done.
+Status: open
+
+## 2026-11-18 15:00  Real road shapes (OpenStreetMap-derived) in the India skeleton
+Branch: feat/landscape-look (PR 36)
+What changed: owner approved the OSM download. `tools/fetch_india_routes.mjs` fetched 28 simplified driving routes from the OSRM demo server (OSM data, ODbL) into `assets/india/waypoints.json` (20 KB, credit and licence in `meta`); `tools/build_india_skeleton.mjs` and `buildSkeleton` use them (skeleton now 64 KB, `assets/india/skeleton.json`); `india_map.html` draws the real shapes with the credit; `.gitignore` ignores `data/`; self-tests check the waypoints (66 checks). An Overpass trial was far too big (8 MB for one highway) and was stopped and deleted. Credit line in the game itself is still to do. Not used by the game world yet.
+For the other stream: ODbL share-alike on `assets/india/waypoints.json` and the skeleton: please read `docs/OPEN_DATA.md`.
+Status: open
+
+## 2026-11-18 13:00  India game space and skeleton file; open data research
+Branch: feat/landscape-look (PR 36)
+What changed: `docs/OPEN_DATA.md` (data and open-source projects, licences, what needs approval; nothing downloaded), `src/world/india_network.js` (`toGame`, `fromGame`, `smoothPath`, `buildSkeleton`, `GAME_SCALE` 100), `tools/build_india_skeleton.mjs`, `assets/india/skeleton.json` (generated, 32 KB, listed in `assets/ASSETS.md`), `india_map.html` default 1:100, one self-test (66 checks, includes a check that the shipped skeleton is current). Not used by the game yet: the game still loads one road from the start.
+For the other stream: nothing required; section 9 of the India plan still needs your review.
+Status: open
+
+## 2026-11-18 11:00  Owner decisions on the India map recorded
+Branch: feat/landscape-look (PR 36)
+What changed: `docs/INDIA_MAP_PLAN.md` section 9: real road lines (as a skeleton for procedural detail), GTA-like compression (about 1:100 on highways, cities near full scale), one continuous world generated by distance. Design and order of work written down; nothing built. Needs Anshul's review before work starts (it changes the road model from one polyline to a network).
+For the other stream: read section 9 and say if the engine side (sectors, nav graph, traffic) can take a road network.
+Status: open
+
+## 2026-11-18 09:00  Traffic slows at toll plazas; Himachal and Ladakh retuned
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: `traffic/sim.js` (cars on nh6 roads ease down to 4 m/s through toll plazas, using the same plaza list as the plan: `validTolls`, `tollCap` in `world/highway_plan.js`), `world/regions.js` (Himachal v2: mountains everywhere, the road climbs about 240 m in 5 km with 39 m minimum bend radius; Ladakh v2: tan barren ground, `arid` 0.8). Checked in the browser: cars measured at 4 m/s in the plaza; Himachal, Kerala, Ladakh, Deccan, Rajasthan all load and look as intended at first glance. Kerala has no palm trees (no art): banyan-like trees only. 65 checks pass.
+For the other stream: nothing required.
+Status: open
+
+## 2026-11-18 07:00  Highway details on six-lane national highways
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: new `world/highway_plan.js` (pure rules) and `world/highway.js` (meshes): guardrails, km stones, bilingual green sign gantries, toll plazas on `nh6` roads only; wired into `road.js` (`RoadMesh.highway`, `extras.dests`) and `main.js` (`world.near` gets the circles; `placeOnRoad` now starts the player in the first lane on the traffic side for the region's drive side, which also fixes a start on the wrong side of two-lane roads in left-hand regions), `india_network.js` (`HINDI`, `destinationsFor`). One self-test (65 checks). Looked at in the browser in the Deccan world: gantry, guardrail, toll plaza, bridge rails visible. Not done: traffic does not slow for the toll plaza, service roads, interchanges, night lighting of signs, nothing measured on a phone. Merged-mesh cost: a few thousand triangles per piece of road in range.
+For the other stream: the Indian signs use system fonts for Devanagari; check they show on a phone.
+Status: open
+
+## 2026-11-18 05:00  India-only worlds: five Indian regions replace the old picker
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: `world/regions.js` (regions himachal, ladakh, rajasthan, kerala, deccan; optional `roads.router` numbers passed to the route planner; DEFAULT_CONFIG import), `world/locations.js` (old five ids hidden from the picker, `LEGACY` map, `START_LOCATION` mumbai, `pickerLocations()`), `main.js` (start in Mumbai, old saved choice moves to its replacement, picker shows India only, `uArid`), `world/groundmat.js` (optional palette `arid` mixes sand into the ground so Rajasthan and Ladakh look dry). Old ids and share codes still load. Looked at in the browser (Rajasthan closely, the others only loaded without errors). 64 checks pass.
+For the other stream: the title and picker show Indian places only now; check the menu text on a phone.
+Status: open
+
+## 2026-11-18 03:00  India-only direction: network data, map page, two Indian road styles
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: `docs/INDIA_MAP_PLAN.md` (research, scale, what makes an Indian game, order of work, owner decisions), `src/world/india_network.js` (98 cities, 28 highways including the Golden Quadrilateral, North-South and East-West corridors, the six rail trunk routes, route and distance helpers; calibrated so the four GQ sides total about 5,800 km), `india_map.html` + `src/debug/indiamap.js` (draws it, plans a route between two clicked cities), `roadstyles.js` (new `nh6` six-lane divided highway and `ghat` mountain road; styles may now list their own `lanes`), small additions in `road.js`, `traffic/sim.js`, `world/navgraph.js`, `regions.js`. Two self-tests (64 checks). Not done: hairpin routing for ghat roads, service roads, gantry signs, toll plazas, interchanges, the five non-India worlds are still there, no real alignments (needs the OSM decision).
+For the other stream: nothing required. `lanes` on a road style is new (see `laneOffsets`).
+Status: open
+
+## 2026-11-18 01:00  Landscape pass 2: tree species built in code, shore and depth on water, sharper forests
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: new `world/species.js` (oak, birch, poplar, cypress, a rare autumn maple: trunk, branches and a crown of leaf clusters, leaf textures drawn on a canvas, no outside assets; mixed into the scanned trees by `nature.js`, two kept on the low preset), `world/groundmat.js` (ground under water goes from pale turquoise shallows to deep blue, wet sand, a moving line of foam at the shore; new `uTime` uniform), `main.js` (water opacity 0.74 so the bed shows), `terrain.js` (sharper forest edges). Looked at in the browser only. Cost: each species adds about 300 triangles and two draw calls per variant per tile; not measured on a phone.
+For the other stream: phone frame rate and memory check on the mid and low presets.
+Status: open
+
+## 2026-11-17 23:50  Mouse look on foot, plant variety, patchwork land colour, moving water
+Branch: feat/landscape-look
+What changed: `main.js` (mouse look and touch drag in foot mode; water material now has four moving ripple layers, stronger normals), `world/nature.js` + `world/scatter.js` (each plant kind now has several variants: sizes, shapes, colours, a rare autumn tree, three wildflower cards drawn in code; variants are placed in patches, not at random), `world/terrain.js` + `world/groundmat.js` (patchwork of hay-yellow, fresh and deep green fields on open lowland). No new outside assets; the scanned art is still one broadleaf tree, six conifers, one shrub, one fern, one grass: real new species need packs the owner downloads (see `docs/ASSET_PLAN.md`). Water has no shore foam or depth colour yet.
+For the other stream: look at it on a phone (more variants cost draw calls: the low preset keeps the old few).
+Status: open
+
 ## 2026-11-17 23:00  N15 first increment: activities and a versioned save
 Branch: feat/n15-activities
 What changed: new `src/activities/activities.js` (data-driven point-to-point drives, runner, ratings, best times), `src/core/save.js` (version 2 envelope, migration, corrupt text kept in `gfp-next.bad`, newer saves never overwritten), `saved.js` (`sanitiseProgress`), `runtime.js` (events `activity:started`, `activity:finished`), `main.js` (markers, beacon, timer line, G to start, save wiring), `player/onfoot.js` (`Interactions` prefix filter). `docs/ACTIVITIES.md`. Two self-tests (62 checks). Checked in the browser: prompt, start, finish, best time saved. Par times are guesses.

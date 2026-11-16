@@ -6,7 +6,8 @@
      strips    pairs of column indices joined into surface (a pair left out is a gap)
      lines     paint: { t: offset, w: width, dash?: [dash, gap] }
      colour    kind -> [r, g, b] (multiplied by the road texture)
-     mats      colour kind -> texture set (asphalt, gravel, dirt, pave: see MATERIALS in road.js)
+     mats      colour kind -> texture set (asphalt, gravel, dirt, pave, grass: see MATERIALS in road.js)
+   lanes     (optional) the centre of each lane per direction, metres from the centre line; without it, one lane each way up to half 8 m, two beyond (traffic/sim.js laneOffsets)
      surfaces  [distance from centre, key of SURFACES in vehicle/physics.js]: what wheels feel out to that distance
      shoulder  where the lift that raises the drive surface back to the road ends (see Road.drive)
    and derived below: outer, grade { flat, blend, lift: [a, b] }, clear (metres kept clear of scenery). */
@@ -81,7 +82,31 @@ export const GRAVEL = finish({
   surfaces: [[5.2, 'gravel']]
 });
 
-export const ROAD_STYLES = { 'two-lane': TWO_LANE, highway: HIGHWAY, boulevard: BOULEVARD, dirt: DIRT, gravel: GRAVEL };
+
+/* an Indian National Highway, six lanes (three each way): two carriageways with a planted grass median between them (a raised kerb on both sides of it), white dashed lane lines,
+   solid white edge lines, a paved shoulder and a red-soil verge, as on the Golden Quadrilateral and the Mumbai-Pune expressway. Traffic keeps left (set by the region).
+   Widths follow the usual Indian practice: 3.5 m lanes, a 2.4 m half-median, a 1.5 m paved shoulder. Service roads and the concrete barriers are not drawn yet. */
+export const NH6 = finish({
+  id: 'nh6', name: 'National Highway (six-lane)', half: 14.4, shoulder: 15.4, lanes: [4.15, 7.65, 11.15],
+  ...symmetric([[0, 0, 'grass', 0.5], [2.1, 0, 'grass', 0.7], [2.1, -0.15, 'kerb', 0.7], [2.4, -0.15, 'kerb', 0.7], [2.4, 0, 'asphalt', 0.2], [12.9, 0, 'asphalt', 0.8], [14.4, 0, 'shoulder', 0.88], [14.4, 0.02, 'soil', 0.9], [15.4, 0.08, 'soil', 1], [17.5, 0.75, 'soil', 1]], [true, true, true, true, true, true, true, true, true]),
+  lines: [{ t: 2.6, w: 0.15 }, { t: -2.6, w: 0.15 }, { t: 5.9, w: 0.12, dash: [3, 6] }, { t: -5.9, w: 0.12, dash: [3, 6] }, { t: 9.4, w: 0.12, dash: [3, 6] }, { t: -9.4, w: 0.12, dash: [3, 6] }, { t: 12.7, w: 0.18 }, { t: -12.7, w: 0.18 }],
+  colour: { grass: [0.95, 1.08, 0.72], kerb: [1.25, 1.25, 1.2], asphalt: [1.1, 1.1, 1.15], shoulder: [1.2, 1.2, 1.22], soil: [0.95, 0.6, 0.42], line: [0.92, 0.92, 0.88] },
+  mats: { grass: 'grass', kerb: 'pave', asphalt: 'asphalt', shoulder: 'asphalt', soil: 'dirt' },
+  surfaces: [[2.1, 'grass'], [14.5, 'asphalt'], [15.8, 'gravel']]
+});
+
+/* a ghat (mountain) road as in the Western Ghats, Nilgiris and Himalayan states: about 6.5 m wide, a dashed white centre line, white edge lines, a low stone parapet on the outer edge and
+   red-brown soil on the hill side, hairpins and tea or forest all round (the plants come from the region) */
+export const GHAT = finish({
+  id: 'ghat', name: 'Ghat road', half: 3.3, shoulder: 4.2,
+  ...symmetric([[0, 0, 'asphalt', 0.5], [3.3, 0, 'asphalt', 0.9], [3.3, -0.5, 'kerb', 0.9], [3.7, -0.5, 'kerb', 0.95], [3.7, 0.1, 'soil', 0.95], [4.6, 0.25, 'soil', 1], [7, 1.0, 'soil', 1]], [true, true, true, true, true, true]),
+  lines: [{ t: 0, w: 0.12, dash: [4, 5] }, { t: 3.0, w: 0.12 }, { t: -3.0, w: 0.12 }],
+  colour: { asphalt: [1.15, 1.15, 1.2], kerb: [1.1, 1.08, 1.0], soil: [0.9, 0.55, 0.4], line: [0.9, 0.9, 0.85] },
+  mats: { asphalt: 'asphalt', kerb: 'pave', soil: 'dirt' },
+  surfaces: [[3.4, 'asphalt'], [4.4, 'gravel']]
+});
+
+export const ROAD_STYLES = { 'two-lane': TWO_LANE, highway: HIGHWAY, boulevard: BOULEVARD, dirt: DIRT, gravel: GRAVEL, nh6: NH6, ghat: GHAT };
 export const roadStyleById = id => ROAD_STYLES[id] || TWO_LANE;
 
 /* the physics key (a SURFACES key) for a point `d` metres from the centre line, or null beyond the road */

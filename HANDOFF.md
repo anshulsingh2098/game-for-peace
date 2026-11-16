@@ -35,6 +35,8 @@ cd cloudflare && npx wrangler deploy      # run `python tools/stage_cloudflare.p
 
 For tuner Publish (once): `npx wrangler kv namespace create SETTINGS`, add the printed id to `cloudflare/wrangler.jsonc` as `"kv_namespaces": [{ "binding": "SETTINGS", "id": "<id>" }]`, run `npx wrangler secret put TUNER_PASSWORD`, then deploy again. Until then the API answers 503 and the game ignores it. The tuner page has no login of its own (it cannot publish without the password).
 
+**Every known limit and what is left to do is in `docs/WORK_REMAINING.md`** (the reference list; keep it up to date).
+
 ## Post-N6 state (N7 to N15, built 17 Nov 2026, Rajul's session)
 
 Stacked pull requests, none merged yet: 27 (N7) <- 28 (N8) <- 29 (N9) <- 30 (N10) <- 31 (N11) <- 32 (N12) <- 33 (N13) <- 34 (N14) <- 35 (N15). Merge in that order, each into the one below it or into `main` after its base. Every phase is a **first increment**, tested headless (62 self-test checks) and looked at in a desktop browser, **never measured on a phone and never reviewed by Anshul**.

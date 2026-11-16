@@ -13,7 +13,7 @@
    Conventions: the body's forward is +z and up is +y, as the vehicle models face +z; the car's left is +x. Rapier steering angle is positive to the
    left; the game's steering angle (delta) is positive to the right, so the two are opposite in sign. */
 import RAPIER from '../../vendor/rapier/rapier.mjs';
-import { SURFACES, NO_MOD, makeTelemetry } from './physics.js';
+import { SURFACES, NO_MOD, makeTelemetry, DRIVE_MODES, combineMods } from './physics.js';
 
 let ready = null;
 export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIER));
@@ -81,7 +81,7 @@ function calibrate(p, id) {
 export class RapierVehicle {
   /* params: from vehicleParams(); id: 'car' | 'truck' | 'bike'; world: { height, surface, near, seaLevel, grip? } */
   constructor(params, id, world) {
-    this.p = params; this.id = id; this.world = world; this.mod = NO_MOD; this.acc = 0;
+    this.p = params; this.id = id; this.world = world; this.mod = NO_MOD; this.dm = DRIVE_MODES.normal; this.M = combineMods(NO_MOD, this.dm); this.acc = 0;
     this.cal = calibrate(params, id); this.hCom = this.cal.hCom; this.L0 = this.cal.L0;
     this.R = new RAPIER.World({ x: 0, y: -G, z: 0 }); this.R.timestep = H;
     this.N = 44; this.cell = 1.5; this.patch = null; this.ox = 0; this.oz = 0;       // heightfield patch: N x N cells of `cell` metres
@@ -117,7 +117,8 @@ export class RapierVehicle {
   }
   get speed() { return Math.hypot(this.u, this.v); }
   get kmh() { return this.u * 3.6; }
-  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; }
+  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; this.M = combineMods(this.mod, this.dm); }
+  setDriveMode(id) { this.dm = DRIVE_MODES[id] || DRIVE_MODES.normal; this.M = combineMods(this.mod, this.dm); }
 
   telemetry() { return makeTelemetry(this, this.id); }                                  // the stable report of this vehicle's state (see VEHICLE_CONTRACT.md)
 
@@ -144,7 +145,7 @@ export class RapierVehicle {
   }
 
   sub(input) {
-    const p = this.p, W = this.world, h = H, m = p.mass, M = this.mod, top = p.top * M.top, b = this.body, vc = this.vc, car = this.car;
+    const p = this.p, W = this.world, h = H, m = p.mass, M = this.M, top = Math.min(p.top * M.top, M.cap > 0 ? M.cap : Infinity), b = this.body, vc = this.vc, car = this.car;
     /* refresh the ground patch when the car nears its edge */
     const pt = this.patch, ex = Math.abs(this.x - pt.x), ez = Math.abs(this.z - pt.z), edge = this.N * this.cell / 2 - 14;
     if (ex > edge * 0.55 || ez > edge * 0.55) { const lead = clamp(this.u * 0.45, -14, 14); this.buildPatch(this.x + Math.cos(this.yaw) * lead, this.z + Math.sin(this.yaw) * lead); this.patchNew = true; }
@@ -158,12 +159,14 @@ export class RapierVehicle {
 
     const key = W.surface(this.x, this.z); this.surface = key; const S0 = SURFACES[key] || SURFACES.grass;
     const depth = W.seaLevel - this.groundY; this.wet = depth > 0 ? depth : 0; this.groundY = this.y; const flooded = depth > 1.1;
-    const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), hnd = clamp(input.hand || 0, 0, 1), rev = thr > 0 ? 0 : clamp(input.rev || 0, 0, 1), u = this.u;
+    const thr = Math.pow(clamp(input.throttle, 0, 1), M.pedal), brk = clamp(input.brake, 0, 1), hnd = clamp(input.hand || 0, 0, 1), rev = thr > 0 ? 0 : clamp(input.rev || 0, 0, 1), u = this.u;
 
     /* forces on the wheels. Four separate controls: throttle, reverse, the foot brake (never reverses) and the handbrake (rear wheels only). */
     let engine = 0, brake = 0, rearBrake = 0, coast = false;
     if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = ARCADE.on && p.pt ? this.powertrain(thr, u, h, M, S0) : m * p.accel * M.accel * (ARCADE.on ? ARCADE.power[this.id] || 1 : 1) * thr * Math.max(0, 1 - (Math.abs(u) / top) ** (ARCADE.on ? ARCADE.curve : 2)); }                    // gas while rolling backwards brakes first
     else if (rev > 0) { if (u > 1.2) brake = m * p.brake * 0.9 * rev; else if (!flooded) engine = -m * p.revAccel * 1.35 * rev * Math.max(0, 1 - (u / p.revTop) ** 2); }   // reverse: brakes while still rolling forward, then drives backwards
+    if (M.cap > 0 && engine > 0) engine *= clamp((M.cap - u) / (0.1 * M.cap), 0, 1);                                              // speed limiter: the engine fades out over the last 10% below the limit
+    if (M.hdc > 0 && thr === 0 && rev === 0 && brk === 0 && hnd === 0 && this.pitch < -0.045 && u > M.hdc) brake = Math.max(brake, m * p.brake * 0.35 * clamp((u - M.hdc) / 2.5, 0, 1));          // hill descent control: holds a crawl on a steep downhill
     if (brk > 0) brake = Math.max(brake, m * p.brake * (ARCADE.on ? ARCADE.brakeMul * (p.pt ? p.pt.brakeMul ?? 1 : 1) : 1) * brk);                                                  // foot brake: all four wheels
     if (hnd > 0) rearBrake = m * p.brake * 1.0 * hnd;                                                         // handbrake: the rear wheels lock
     if (thr === 0 && rev === 0 && brk === 0 && hnd === 0) {
@@ -176,7 +179,7 @@ export class RapierVehicle {
     car.wheels.forEach((w, i) => {
       const pos = vc.wheelContactPoint(i), wx = pos ? pos.x + this.ox : this.x, wz = pos ? pos.z + this.oz : this.z, S = SURFACES[W.surface(wx, wz)] || S0;
       const wet = (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(W.surface(wx, wz)) : 1);
-      const muW = p.mu * (ARCADE.on ? ARCADE.gripMul : 1) * S.grip * wet * M.grip * (!w.front && hnd > 0 ? 1 - 0.5 * hnd : 1); (this.muW || (this.muW = []))[i] = muW; this.hnd = hnd;
+      const muW = p.mu * (ARCADE.on ? ARCADE.gripMul : 1) * S.grip * (S.grip < 0.95 ? M.loose : 1) * wet * M.grip * (!w.front && hnd > 0 ? 1 - 0.5 * hnd : 1); (this.muW || (this.muW = []))[i] = muW; this.hnd = hnd;
       vc.setWheelFrictionSlip(i, muW);      // a locked rear wheel slides: the tail steps out
       let a = 0; if (w.front) a = w.side === 0 ? this.delta : Math.atan(p.L / (R + w.side * p.track / 2));       // Ackermann: the inner wheel turns more
       vc.setWheelSteering(i, w.front ? -a : 0);
@@ -187,7 +190,7 @@ export class RapierVehicle {
     const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
     const roll = -m * G * (S0.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(u / 0.5, -1, 1), air = -(ARCADE.on && p.pt ? 0.6 * p.pt.cdA : p.aero * (ARCADE.on ? ARCADE.aeroMul : 1)) * u * Math.abs(u);
     let F = roll + air; const fwd = { x: c, z: s };
-    if (coast) F -= Math.sign(u) * m * (0.30 + 0.008 * Math.abs(u)) * clamp(Math.abs(u) / 0.5, 0, 1);                  // engine braking: not limited by tyre grip, so the car slows on grass as well as on tarmac
+    if (coast) F -= Math.sign(u) * m * (0.30 * M.regen + 0.008 * Math.abs(u)) * clamp(Math.abs(u) / 0.5, 0, 1);                  // engine braking: not limited by tyre grip, so the car slows on grass as well as on tarmac
     if (M.slope < 1) F += m * G * Math.sin(this.pitch) * (1 - M.slope);                                           // Hill Hauler: climbs as if the slope were not there
     b.resetForces(true); b.addForce({ x: fwd.x * F, y: -(ARCADE.on && p.pt ? 0.6 * ARCADE.downforce * (p.pt.downforce ?? 1) * u * u : 0), z: fwd.z * F }, true);          // downforce: the faster the car, the harder it is pressed into the road (force = 0.5 x air density x lift area x speed squared)
     /* anti-roll: a spring and damper about the forward axis so tall vehicles lean but do not tip over (a bike is held upright) */
@@ -213,14 +216,14 @@ export class RapierVehicle {
     if (this.shiftT > 0) this.shiftT -= h;
     else {
       const dnKick = (pt.down ?? 0.6) * pt.redline, dnEasy = (pt.downEasy ?? 0.42) * pt.redline;                  // downshift points (share of the rev limit): on full throttle, and otherwise
-      if (g < n - 1 && rpmIn(g) > pt.upshift * pt.redline && rpmIn(g + 1) > dnKick) { this.gear = ++g; this.shiftT = pt.shiftTime; }                     // never shift up into a gear the box would shift straight back out of (hunting)
+      if (g < n - 1 && rpmIn(g) > pt.upshift * M.shift * pt.redline && rpmIn(g + 1) > dnKick) { this.gear = ++g; this.shiftT = pt.shiftTime; }                     // never shift up into a gear the box would shift straight back out of (hunting)
       else if (g > 0 && rpmIn(g) < (thr > 0.9 ? dnKick : dnEasy) && rpmIn(g - 1) < 0.92 * pt.redline) { this.gear = --g; this.shiftT = pt.shiftTime * 0.6; }
     }
     const rpm = Math.max(rpmIn(g), g === 0 && thr > 0.05 ? pt.idle + (pt.launch - pt.idle) * thr : pt.idle); this.rpm += (rpm - this.rpm) * Math.min(1, h * 25);
     if (rpm >= pt.redline) return 0;                                                                              // rev limiter
     const x = rpm / pt.peak, P = pt.kw * 1000 * clamp(x * (0.55 + 1.15 * x - 0.7 * x * x), 0, 1.05), T = P / (rpm / TAU);        // power curve (turbo-like shape, 1.0 at the peak), torque = power / angular speed
     let F = T * ratio(g) / M.top * pt.eff / R * thr * M.accel * (this.shiftT > 0 ? 0.08 : 1);
-    return Math.min(F, pt.tcs * this.p.mu * ARCADE.gripMul * S0.grip * this.p.mass * G * Math.sqrt(M.accel));          // traction limit: the tyres cannot push harder than they grip
+    return Math.min(F, pt.tcs * M.tcs * this.p.mu * ARCADE.gripMul * S0.grip * this.p.mass * G * Math.sqrt(M.accel));          // traction limit: the tyres cannot push harder than they grip
   }
 
   /* Tyre sideways force from the Pacejka "Magic Formula" (the standard published tyre curve): force = mu x load x sin(C x atan(B a - E (B a - atan(B a)))), where a is the
