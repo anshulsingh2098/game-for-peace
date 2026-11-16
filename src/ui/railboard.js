@@ -16,7 +16,7 @@ export class StationBoard {
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export class Announcer {
-  constructor() { this.last = 0; this.queue = []; this.muted = false; this.ok = typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined'; this.voices = null; }
+  constructor(enabled = false) { this.last = 0; this.queue = []; this.muted = false; this.voices = null; this.ok = enabled && typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined'; }       // the synthesised voice is off unless asked for (?tts=on): it sounded poor; real recordings (announceclips.js) are used instead
   pick(lang) { if (!this.ok) return null; if (!this.voices || !this.voices.length) this.voices = speechSynthesis.getVoices(); const v = this.voices || [], pre = lang.slice(0, 2).toLowerCase(); return v.find(x => x.lang && x.lang.replace('_', '-').toLowerCase() === lang.toLowerCase()) || v.find(x => x.lang && x.lang.toLowerCase().startsWith(pre)) || null; }
   /* say { regional?: { lang, text }, hi, en } in that order (the state language first, as at real stations); at most one announcement every `gap` seconds */
   say(a, now, gap = 25) {
