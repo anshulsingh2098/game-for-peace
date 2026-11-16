@@ -46,9 +46,11 @@ export function findCrossings(rail, roads, cities = [], { minAngle = 0.45, minCi
   return out.sort((a, b) => a.s - b.s);
 }
 
+/* Expressway-class roads (the Golden Quadrilateral and the north-south and east-west corridors: six lanes, the 'nh6' style) are NEVER crossed on the level by a railway: always a bridge, even next to a station. Only the plain national highways may have a level crossing, and only near a station. */
+export const EXPRESS_KINDS = new Set(['gq', 'ns', 'ew']);
 /* every place the railway meets a road, classed: a rail overbridge (the track passes over the highway on a long gentle rise) except within `levelNear` game metres of a station, where it is a level crossing with barriers */
 export function classifyCrossings(lines, roads, cities, stations, levelNear = 600) {
-  const out = []; for (const ln of lines) for (const c of findCrossings(ln, roads, cities, { minCity: 60 })) { if (c.sinA < 0.3) continue; const ds = stations.length ? Math.min(...stations.map(n => Math.hypot(n.x - c.x, n.z - c.z))) : 1e9; c.rail = ln.id; c.type = ds < levelNear ? 'level' : 'bridge'; c.line = ln; out.push(c); } return out;
+  const out = []; for (const ln of lines) for (const c of findCrossings(ln, roads, cities, { minCity: 60 })) { if (c.sinA < 0.3) continue; const ds = stations.length ? Math.min(...stations.map(n => Math.hypot(n.x - c.x, n.z - c.z))) : 1e9; c.rail = ln.id; c.type = ds < levelNear && !EXPRESS_KINDS.has(c.kind) ? 'level' : 'bridge'; c.line = ln; out.push(c); } return out;
 }
 
 /* a train that runs from one end of its line to the other and back, for ever: head distance and travel direction (+1 towards the line's end) at time t (s) */
