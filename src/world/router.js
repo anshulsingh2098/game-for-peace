@@ -62,6 +62,10 @@ export class Road {
     return arc;
   }
   arcAtS(s) { const p = this.at(s, this._ga || (this._ga = {})); return this.guideArc(p.x, p.z); }
+  /* the same with both arms: positive along guide A (the way the road was built forward), negative along guideBack (the other way); null when the road has no guide */
+  _arcOn(g, x, z) { let acc = 0, best = Infinity, arc = 0; for (let i = 0; i + 3 < g.length; i += 2) { const dx = g[i + 2] - g[i], dz = g[i + 3] - g[i + 1], L = Math.hypot(dx, dz) || 1, f = Math.max(0, Math.min(1, ((x - g[i]) * dx + (z - g[i + 1]) * dz) / (L * L))), d = Math.hypot(x - (g[i] + dx * f), z - (g[i + 1] + dz * f)); if (d < best) { best = d; arc = acc + f * L; } acc += L; } return { arc, d: best }; }
+  guideArcSigned(x, z) { const a = this.guide ? this._arcOn(this.guide, x, z) : null, b = this.guideB ? this._arcOn(this.guideB, x, z) : null; if (!a && !b) return null; return a && (!b || a.d <= b.d) ? a.arc : -b.arc; }
+  arcAtSigned(s) { const p = this.at(s, this._ga || (this._ga = {})); return this.guideArcSigned(p.x, p.z); }
   scout(arm) {
     const c = this.c, T = this.t, last = arm.n[arm.n.length - 1], sea = this.sea, wet = sea + c.clearance + 1; let best = arm.axis, bestCost = Infinity;
     for (let d = -7; d <= 7; d++) {
