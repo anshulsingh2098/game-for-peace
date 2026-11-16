@@ -18,10 +18,10 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&am
 export class Announcer {
   constructor() { this.last = 0; this.queue = []; this.muted = false; this.ok = typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined'; this.voices = null; }
   pick(lang) { if (!this.ok) return null; if (!this.voices || !this.voices.length) this.voices = speechSynthesis.getVoices(); const v = this.voices || [], pre = lang.slice(0, 2).toLowerCase(); return v.find(x => x.lang && x.lang.replace('_', '-').toLowerCase() === lang.toLowerCase()) || v.find(x => x.lang && x.lang.toLowerCase().startsWith(pre)) || null; }
-  /* say { en, hi }; at most one announcement every `gap` seconds */
+  /* say { regional?: { lang, text }, hi, en } in that order (the state language first, as at real stations); at most one announcement every `gap` seconds */
   say(a, now, gap = 25) {
     if (!this.ok || this.muted || !a || now - this.last < gap * 1000) return false; this.last = now;
-    try { speechSynthesis.cancel(); for (const [lang, text] of [['en-IN', a.en], ['hi-IN', a.hi]]) { if (!text) continue; const u = new SpeechSynthesisUtterance(text), v = this.pick(lang); u.lang = lang; if (v) u.voice = v; u.rate = 0.9; u.pitch = 1; u.volume = 0.9; speechSynthesis.speak(u); } } catch (e) { return false; }
+    try { speechSynthesis.cancel(); for (const [lang, text] of [...(a.regional ? [[a.regional.lang, a.regional.text]] : []), ['hi-IN', a.hi], ['en-IN', a.en]]) { if (!text) continue; const u = new SpeechSynthesisUtterance(text), v = this.pick(lang); u.lang = lang; if (v) u.voice = v; u.rate = 0.9; u.pitch = 1; u.volume = 0.9; speechSynthesis.speak(u); } } catch (e) { return false; }
     return true;
   }
   stop() { if (this.ok) try { speechSynthesis.cancel(); } catch (e) { /* nothing to stop */ } }

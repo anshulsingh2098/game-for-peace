@@ -539,7 +539,7 @@ function updateRailLife(dt, px, pz) {
   announcer.muted = !!S.muted; if (railSamples.ok) { railSamples.loop('platform', st ? 0.55 : 0, 1.2); railSamples.loop('station', st ? 0.35 : 0, 1.5); }
   if (st && railBook) { const clock = clockMinutes(railT), city = rail.names[st.city] || { en: st.city, hi: '' }; stationBoard.show(city.en, city.hi, fmtTime(clock), railBook.departures(st.city, clock, 4));
     if (lastStation !== st) { lastStation = st; announcer.say(announcement('welcome', {}, 1, city.en), now, 8); }
-    for (const a of railBook.arrivalsAt(st.city, clock)) { const key = a.n + ':' + Math.floor(railT / 60); if (updateRailLife.done !== key) { updateRailLife.done = key; const plat = 1 + Math.floor(hashStr(a.n + st.city) * 4); announcer.say(announcement('arriving', a, plat, city.en), now, 12); break; } } }
+    for (const a of railBook.arrivalsAt(st.city, clock)) { const key = a.n + ':' + Math.floor(railT / 60); if (updateRailLife.done !== key) { updateRailLife.done = key; const plat = 1 + Math.floor(hashStr(a.n + st.city) * 4); announcer.say(announcement('arriving', a, plat, city.en, (CITY[st.city] || {}).state), now, 12); break; } } }
   else { stationBoard.hide(); if (lastStation) { lastStation = null; if (announcer) announcer.stop(); } }
 }
 const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };

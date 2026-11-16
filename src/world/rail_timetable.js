@@ -32,7 +32,20 @@ export class TrainBook {
 }
 
 /* the words of a station announcement, English and Hindi, in the usual Indian Railways style (written for this game; the recordings of the real ones are not used) */
-export function announcement(kind, t, platform, cityName) {
+/* the state language of a station, spoken first as at real stations (Hindi and English follow); the Hindi-speaking states have none. The regional texts below are plain translations of the arrival wording written for the game
+   and have NOT been checked by native speakers (WORK_REMAINING 7.11). lang is the BCP 47 tag the browser's speech voices use. */
+export const STATE_LANG = { Maharashtra: 'mr-IN', 'West Bengal': 'bn-IN', 'Tamil Nadu': 'ta-IN', Telangana: 'te-IN', 'Andhra Pradesh': 'te-IN', Karnataka: 'kn-IN', Kerala: 'ml-IN', Gujarat: 'gu-IN', Punjab: 'pa-IN', Odisha: 'or-IN', Assam: 'as-IN' };
+const REGIONAL_ARRIVING = {
+  'mr-IN': (n, nm, p) => `प्रवाशांनी कृपया लक्ष द्यावे. गाडी क्रमांक ${n}, ${nm}, फलाट क्रमांक ${p} वर येत आहे.`, 'bn-IN': (n, nm, p) => `যাত্রীগণ দয়া করে মনোযোগ দিন। ট্রেন নম্বর ${n}, ${nm}, ${p} নম্বর প্ল্যাটফর্মে আসছে।`,
+  'ta-IN': (n, nm, p) => `பயணிகள் கவனத்திற்கு. வண்டி எண் ${n}, ${nm}, நடைமேடை எண் ${p} இல் வந்து கொண்டிருக்கிறது.`, 'te-IN': (n, nm, p) => `ప్రయాణికులకు విజ్ఞప్తి. రైలు నంబర్ ${n}, ${nm}, ప్లాట్‌ఫారం నంబర్ ${p} కు వస్తోంది.`,
+  'kn-IN': (n, nm, p) => `ಪ್ರಯಾಣಿಕರ ಗಮನಕ್ಕೆ. ರೈಲು ಸಂಖ್ಯೆ ${n}, ${nm}, ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಸಂಖ್ಯೆ ${p} ಕ್ಕೆ ಬರುತ್ತಿದೆ.`, 'ml-IN': (n, nm, p) => `യാത്രക്കാരുടെ ശ്രദ്ധയ്ക്ക്. ട്രെയിൻ നമ്പർ ${n}, ${nm}, പ്ലാറ്റ്ഫോം നമ്പർ ${p} ലേക്ക് വരുന്നു.`,
+  'gu-IN': (n, nm, p) => `મુસાફરોને વિનંતી છે કે ધ્યાન આપો. ટ્રેન નંબર ${n}, ${nm}, પ્લેટફોર્મ નંબર ${p} પર આવી રહી છે.`, 'pa-IN': (n, nm, p) => `ਯਾਤਰੀ ਕਿਰਪਾ ਕਰਕੇ ਧਿਆਨ ਦੇਣ। ਗੱਡੀ ਨੰਬਰ ${n}, ${nm}, ਪਲੇਟਫਾਰਮ ਨੰਬਰ ${p} 'ਤੇ ਆ ਰਹੀ ਹੈ।`,
+  'or-IN': (n, nm, p) => `ଯାତ୍ରୀମାନେ ଦୟାକରି ଧ୍ୟାନ ଦିଅନ୍ତୁ। ଟ୍ରେନ ନମ୍ବର ${n}, ${nm}, ପ୍ଲାଟଫର୍ମ ନମ୍ବର ${p} କୁ ଆସୁଛି।`, 'as-IN': (n, nm, p) => `যাত্ৰীসকল অনুগ্ৰহ কৰি মনোযোগ দিয়ক। ট্ৰেইন নম্বৰ ${n}, ${nm}, প্লেটফৰ্ম নম্বৰ ${p} লৈ আহি আছে।`,
+};
+export function announcement(kind, t, platform, cityName, state = '') {
+  const a = announce1(kind, t, platform, cityName), lang = STATE_LANG[state]; if (lang && kind === 'arriving' && REGIONAL_ARRIVING[lang]) a.regional = { lang, text: REGIONAL_ARRIVING[lang](t.n, t.name, platform) }; return a;
+}
+function announce1(kind, t, platform, cityName) {
   const n = t.n, nm = t.name, to = t.to || '';
   if (kind === 'arriving') return { en: `Attention please. Train number ${n}, ${nm}, to ${to}, is arriving on platform number ${platform}. Please stand behind the yellow line.`, hi: `यात्रीगण कृपया ध्यान दें। गाड़ी संख्या ${n}, ${nm}, प्लेटफॉर्म संख्या ${platform} पर आ रही है। कृपया पीली रेखा के पीछे रहें।` };
   if (kind === 'departing') return { en: `Attention please. Train number ${n}, ${nm}, to ${to}, will depart from platform number ${platform} shortly.`, hi: `यात्रीगण कृपया ध्यान दें। गाड़ी संख्या ${n}, ${nm}, प्लेटफॉर्म संख्या ${platform} से कुछ ही देर में रवाना होगी।` };
