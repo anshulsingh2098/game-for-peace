@@ -63,6 +63,8 @@ import { TrainBook, clockMinutes, fmtTime, announcement } from './world/rail_tim
 import { StationBoard, Announcer } from './ui/railboard.js';
 import { TrainSound } from './audio/trainsound.js';
 import { RailSamples } from './audio/railsamples.js';
+import { AnnounceClips } from './audio/announceclips.js';
+import { STATE_LANG } from './world/rail_timetable.js';
 import { RailView } from './world/rail_view.js';
 import { LOCATIONS, locationConfig, locationById, LEGACY, START_LOCATION, pickerLocations } from './world/locations.js';
 import { Landmarks } from './world/landmarks.js';
@@ -520,11 +522,11 @@ function updateBranches(px, pz, dt) {
 /* toll plazas on the player's road: passing through one pays the toll (a toast; two-wheelers go free, trucks pay more); no money system yet */
 let lastToll = null;
 function updateToll() { const tr = activeRec ? activeRec.road : road, ts0 = activeRec ? activeRec.hint : roadS; if (!tr || tr.style.id !== 'nh6' || mode !== 'drive' || !phys || phys.u < 1) return; for (const ts of validTolls(tr, ts0 - 20, ts0 + 40)) { if (ts0 >= ts && ts0 <= ts + TOLL_LEN && lastToll !== ts) { lastToll = ts; const id = VEHICLES[vehicle].id, fare = id === 'bike' ? 0 : id === 'truck' ? 270 : 85; toast(fare ? 'Toll plaza: \u20b9' + fare + ' paid with FASTag' : 'Toll plaza: two-wheelers pass free'); } } }
-let gps = null, gpsNext = null, rail = null, railBook = null, stationBoard = null, announcer = null, trainSound = null, railSamples = null, railT = 0, lastStation = null, lastNearTrain = null; let navDest = q.get('nav') && CITY[q.get('nav')] ? q.get('nav') : null, lastCityToast = '';
+let gps = null, gpsNext = null, rail = null, railBook = null, stationBoard = null, announcer = null, trainSound = null, railSamples = null, announceClips = null, railT = 0, lastStation = null, lastNearTrain = null; let navDest = q.get('nav') && CITY[q.get('nav')] ? q.get('nav') : null, lastCityToast = '';
 function setNav(id) { navDest = id && CITY[id] ? id : null; toast(navDest ? 'Navigating to ' + CITY[navDest].name : 'Navigation off'); }
 /* the railway's life around the player: the nearest train is heard, a station shows its departure board and announces trains by the railway clock */
 function updateRailLife(dt, px, pz) {
-  railT += dt; const now = performance.now(), pg = rail.toGame(px, pz), ox = grid.origin.x, oz = grid.origin.z; if (!trainSound) { trainSound = new TrainSound(sound); railSamples = new RailSamples(sound); } if (sound.ctx) railSamples.load(); trainSound.quiet = railSamples.has('passby') || railSamples.has('diesel');
+  railT += dt; const now = performance.now(), pg = rail.toGame(px, pz), ox = grid.origin.x, oz = grid.origin.z; if (!trainSound) { trainSound = new TrainSound(sound); railSamples = new RailSamples(sound); announceClips = new AnnounceClips(sound); } if (sound.ctx) { railSamples.load(); announceClips.load(); } trainSound.quiet = railSamples.has('passby') || railSamples.has('diesel');
   let best = null, bd = 1e9; for (const tr of rail.trains) if (tr.active) { const m = tr.meshes[Math.min(2, tr.meshes.length - 1)], d = Math.hypot(m.position.x + ox - px, m.position.z + oz - pz); if (d < bd) { bd = d; best = { tr, m, d }; } }
   if (best) { const m = best.m, wx = m.position.x + ox, wz = m.position.z + oz, f = best.tr.line.at(best.tr.head, tmpP), prevD = best.tr.pd === undefined ? best.d : best.tr.pd; best.tr.pd = best.d; const closing = dt > 0 ? (prevD - best.d) / dt : 0, yaw = phys ? phys.yaw : cam.yaw, rx = wx - px, rz = wz - pz, side = (-rx * Math.sin(yaw) + rz * Math.cos(yaw)) / Math.max(1, best.d);
     trainSound.update(dt, { d: best.d, closing, v: best.tr.v, pan: side, motor: STYLE_ELECTRIC(best.tr), approaching: closing > -2 }, now); void f;
@@ -539,8 +541,8 @@ function updateRailLife(dt, px, pz) {
   announcer.muted = !!S.muted; if (railSamples.ok) { railSamples.loop('platform', st ? 0.55 : 0, 1.2); railSamples.loop('station', st ? 0.35 : 0, 1.5); }
   if (st && railBook) { const clock = clockMinutes(railT), city = rail.names[st.city] || { en: st.city, hi: '' }; stationBoard.show(city.en, city.hi, fmtTime(clock), railBook.departures(st.city, clock, 4));
     if (lastStation !== st) { lastStation = st; announcer.say(announcement('welcome', {}, 1, city.en), now, 8); }
-    for (const a of railBook.arrivalsAt(st.city, clock)) { const key = a.n + ':' + Math.floor(railT / 60); if (updateRailLife.done !== key) { updateRailLife.done = key; const plat = 1 + Math.floor(hashStr(a.n + st.city) * 4); announcer.say(announcement('arriving', a, plat, city.en, (CITY[st.city] || {}).state), now, 12); break; } } }
-  else { stationBoard.hide(); if (lastStation) { lastStation = null; if (announcer) announcer.stop(); } }
+    for (const a of railBook.arrivalsAt(st.city, clock)) { const key = a.n + ':' + Math.floor(railT / 60); if (updateRailLife.done !== key) { updateRailLife.done = key; const plat = 1 + Math.floor(hashStr(a.n + st.city) * 4); const stt = (CITY[st.city] || {}).state, rl = STATE_LANG[stt], clip = announceClips.pick({ city: st.city, kind: 'arriving', train: a.n, langs: [rl ? rl.slice(0, 2) : 'hi', 'hi', 'en'], seed: updateRailLife.done }); if (clip && announceClips.play(clip, now)) { announcer.stop(); toast('Announcement: ' + (clip.title || clip.file)); } else announcer.say(announcement('arriving', a, plat, city.en, stt), now, 12); break; } } }
+  else { stationBoard.hide(); if (lastStation) { lastStation = null; if (announcer) announcer.stop(); if (announceClips) announceClips.stop(); } }
 }
 const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 const STYLE_ELECTRIC = tr => tr.style !== 'freight' || true;

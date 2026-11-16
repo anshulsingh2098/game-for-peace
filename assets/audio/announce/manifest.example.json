@@ -1,0 +1,4 @@
+[
+  { "file": "mumbai_arriving_mr_12951.mp3", "city": "mumbai", "kind": "arriving", "lang": "mr", "train": "12951", "credit": "uploader name", "url": "https://www.youtube.com/watch?v=...", "title": "Mumbai Central, Rajdhani arriving (Marathi)" },
+  { "file": "pune_welcome_hi.mp3", "city": "pune", "kind": "welcome", "lang": "hi", "generic": true, "credit": "uploader name", "url": "https://www.youtube.com/watch?v=...", "title": "Pune station, general announcement (Hindi)" }
+]
