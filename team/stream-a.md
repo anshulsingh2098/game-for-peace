@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-20 03:00  Travel screen; Indian lane discipline in traffic
+Branch: feat/overtaking
+What changed: owner asked how to get from the Kerala map to Mumbai and to keep Indian driving rules in mind. `ui/menu.js` (Travel screen), `main.js` (`currentCityId`, `travelTo`), `traffic/sim.js` (keep-left spawning for slow kinds, overtaking on the right and return left, class speed caps, lateral drift; Stream B file, additive), `traffic/junction.js` (hand-over fields), docs (`docs/TRAFFIC.md` section with the rules and sources, `docs/INDIA_MAP_PLAN.md`, `docs/WORK_REMAINING.md`, `CHECKLIST.md`), one new self-test (73 checks). Rules are from the 2018 MoRTH speed notification and the 2017 Driving Regulations (secondary sources; roundabout and junction priority not verified, so not built).
+For the other stream: please review the lane-change logic and the speed caps; the rules are written in `docs/TRAFFIC.md`.
+Status: open
+
 ## 2026-11-20 00:00  Indian building styles, city buses and cows
 Branch: feat/building-styles
 What changed: `world/district.js` (domes and chhatris for `mughal`, jharokha balconies for `old-city`), `traffic/sim.js` (kinds `bus` and `cow`, `slow` speed factor, bus no longer part of the pack share), `traffic/traffic.js` (shapes, no lights on a cow; Stream B files, additive), `world/regions.js` (buses and cows in the mixes), one self-test (72 checks), docs. Checked in the browser (Agra: domes and a cow in the lane).

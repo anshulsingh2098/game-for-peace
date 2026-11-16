@@ -35,7 +35,7 @@ import { CAMFX } from './vehicle/camfx.js';
 import { LOOK, applyLook } from './fx/grade.js';
 import { rumbleFor } from './input/rumble.js';
 import { loadSave, writeSave } from './core/save.js';
-import { destinationsFor, HINDI, CITY, fromGame } from './world/india_network.js';
+import { destinationsFor, HINDI, CITY, fromGame, nearestCity } from './world/india_network.js';
 import { RoadNetwork, guidePoint } from './world/network.js';
 import { RoadSet } from './world/roadset.js';
 import { Junction } from './traffic/junction.js';
@@ -158,6 +158,9 @@ const water = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2)
 let terrain, road, roadMesh, scatter, backdrop, landmarks, traffic = null, roadS = 0;
 const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.rings.length - 1].r * v.tile;      // far tiles leave out what the near grid is guaranteed to cover
   return { tile: f.tile, rings: [{ r: f.r, res: f.res }], budgetMs: 2, rebase: Infinity, inner: Math.floor(reach / f.tile) - 1, sink: f.sink }; };
+/* Travel (menu): the nearest city to where you are (in an India drive, to the player; in a region world, to the place it is an impression of) and a new drive from there to another city over the highway network */
+function currentCityId() { try { if (indiaRoute && phys) { const gf = gameFrame(phys.x, phys.z), ll = fromGame(gf.x, gf.z), c = nearestCity(ll.lat, ll.lon); if (c) return c.city.id; } const ins = (locationById(config.location).region || {}).inspiration; if (ins) { const c = nearestCity(ins.lat, ins.lon); if (c) return c.city.id; } } catch (e) { /* fall through */ } return 'delhi'; }
+function travelTo(id) { const u = new URLSearchParams(location.search); u.set('play', ''); u.set('india', 'route'); u.set('from', currentCityId()); u.set('to', id); u.delete('toward'); u.delete('loc'); u.delete('road'); u.delete('c'); location.search = '?' + u.toString(); }
 let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
 function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
 makeWorld();
@@ -314,6 +317,7 @@ menu = new Menu({
     else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (peds) peds.setLevel(v); }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
+  currentCity: () => currentCityId(), travel: id => travelTo(id),
   locations: pickerLocations(), setLocation: id => setLocation(id), radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
   onOpen: () => { document.body.dataset.menu = 'open'; controls.locked = true; sound.setEngineOn(false); },
   onClose: () => { delete document.body.dataset.menu; controls.locked = false; camera.fov = 58; if (offset) { camera.clearViewOffset(); offset = 0; lastShot = ''; } sound.setEngineOn(mode === 'drive'); unlockAudio(); if (view.camYaw !== null) view.camYaw = phys ? phys.yaw : null; }

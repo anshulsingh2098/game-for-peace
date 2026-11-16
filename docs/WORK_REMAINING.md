@@ -50,11 +50,11 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | # | Limit | Tag |
 |---|---|---|
 | 4.1 | City buses (red, cream band) and cows (slow, cars queue behind them) are in the traffic mixes; two-wheelers and auto-rickshaws are procedural boxes; still no hand-carts, tempos, e-rickshaws, bus liveries by city, or real models | P2 [build] [owner 1.5] |
-| 4.2 | No horns as behaviour, no lane-less weaving, no wrong-way riders | P3 [build] [B] |
+| 4.2 | Horns, indicators, two-wheelers weaving between lanes, wrong-way riders and lane-less behaviour are not built; lane discipline (keep left, overtake on the right, slow kinds left) and class speed caps are (see docs/TRAFFIC.md); overtaking on single-lane-each-way roads and roundabout / uncontrolled-junction priority are not built (the priority rule was not verified from primary text) | P3 [build] [B] |
 | 4.3 | Pedestrians are box figures: no real models, no reactions to the car or the player, not solid to the car | P2 [build] [B] [owner 1.5] |
 | 4.4 | Pedestrians and the navigation graph exist on the main road only (not on side roads or at junctions) | P1 [build] [B] |
 | 4.5 | A car that has left the 700 m window of a side road is gone; cars respawn when you return, they do not continue | P3 [build] [B] |
-| 4.6 | Cars now wait for a player standing in the crossing (even on green); they still do not give way to each other inside it, have no turn lanes or indicators, and a turned car appears mid-road with a short blend instead of driving the curve | P2 [build] [B] |
+| 4.6 | Cars wait for a player standing in the crossing, keep left and overtake on the right; they still do not give way to each other inside a crossing, have no turn lanes or indicators, and a turned car appears mid-road with a short blend | P2 [build] [B] |
 | 4.7 | Passing a toll plaza on the player's road shows a toast (85 rupees car, 270 truck, two-wheelers free; FASTag); there is no money system, no queue and traffic only slows | P3 [build] [B] |
 | 4.8 | Traffic budgets are tuned by count (about 25 cars at High across a junction), not measured on a phone | P1 [person] |
 
@@ -119,6 +119,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 20 Nov 2026: Travel screen (reach any city from any world over the highways); Indian lane discipline and class speed limits in traffic (4.2, 4.6 part).
 - 19 Nov 2026: domes, chhatris and jharokha balconies on district buildings (3.2 part); city buses and cows in traffic (4.1 part).
 - 19 Nov 2026: districts and a crossing street for Delhi, Agra and Bhopal (3.2 part; the look is still the Mumbai kit).
 - 19 Nov 2026: Mumbai crossing streets with district, traffic and signal (3.1 part); India-mode roads allow tighter bends (7.4 part).
