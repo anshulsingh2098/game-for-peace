@@ -98,3 +98,4 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - Drive near a rail line (Gwalior, Jhansi, Agra): do you see track and a train, do the barriers at a level crossing go down, can you not drive through the train
 - Stand in Jhansi, Gwalior or Agra: is there a station with platforms and a name board, do trains pass, is there a rail bridge over a highway away from the cities
 - At Mumbai or Jhansi station: does the departure board show real trains, do you hear the train (clatter, horn) and an announcement in English then Hindi (it needs a speech voice on the device; check Hindi), do rails cut through hills and ride embankments, is there overhead wire
+- With the 10 audio.com clips in assets/audio/trains/: station ambience at a station, a pass-by sound as a train passes close, squeal as one brakes nearby (these files are not in git: copy them by hand to test)

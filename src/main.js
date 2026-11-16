@@ -62,6 +62,7 @@ import { RailGrade } from './world/rail_grade.js';
 import { TrainBook, clockMinutes, fmtTime, announcement } from './world/rail_timetable.js';
 import { StationBoard, Announcer } from './ui/railboard.js';
 import { TrainSound } from './audio/trainsound.js';
+import { RailSamples } from './audio/railsamples.js';
 import { RailView } from './world/rail_view.js';
 import { LOCATIONS, locationConfig, locationById, LEGACY, START_LOCATION, pickerLocations } from './world/locations.js';
 import { Landmarks } from './world/landmarks.js';
@@ -519,19 +520,23 @@ function updateBranches(px, pz, dt) {
 /* toll plazas on the player's road: passing through one pays the toll (a toast; two-wheelers go free, trucks pay more); no money system yet */
 let lastToll = null;
 function updateToll() { const tr = activeRec ? activeRec.road : road, ts0 = activeRec ? activeRec.hint : roadS; if (!tr || tr.style.id !== 'nh6' || mode !== 'drive' || !phys || phys.u < 1) return; for (const ts of validTolls(tr, ts0 - 20, ts0 + 40)) { if (ts0 >= ts && ts0 <= ts + TOLL_LEN && lastToll !== ts) { lastToll = ts; const id = VEHICLES[vehicle].id, fare = id === 'bike' ? 0 : id === 'truck' ? 270 : 85; toast(fare ? 'Toll plaza: \u20b9' + fare + ' paid with FASTag' : 'Toll plaza: two-wheelers pass free'); } } }
-let gps = null, gpsNext = null, rail = null, railBook = null, stationBoard = null, announcer = null, trainSound = null, railT = 0, lastStation = null, lastNearTrain = null; let navDest = q.get('nav') && CITY[q.get('nav')] ? q.get('nav') : null, lastCityToast = '';
+let gps = null, gpsNext = null, rail = null, railBook = null, stationBoard = null, announcer = null, trainSound = null, railSamples = null, railT = 0, lastStation = null, lastNearTrain = null; let navDest = q.get('nav') && CITY[q.get('nav')] ? q.get('nav') : null, lastCityToast = '';
 function setNav(id) { navDest = id && CITY[id] ? id : null; toast(navDest ? 'Navigating to ' + CITY[navDest].name : 'Navigation off'); }
 /* the railway's life around the player: the nearest train is heard, a station shows its departure board and announces trains by the railway clock */
 function updateRailLife(dt, px, pz) {
-  railT += dt; const now = performance.now(), pg = rail.toGame(px, pz), ox = grid.origin.x, oz = grid.origin.z; if (!trainSound) trainSound = new TrainSound(sound);
+  railT += dt; const now = performance.now(), pg = rail.toGame(px, pz), ox = grid.origin.x, oz = grid.origin.z; if (!trainSound) { trainSound = new TrainSound(sound); railSamples = new RailSamples(sound); } if (sound.ctx) railSamples.load(); trainSound.quiet = railSamples.has('passby') || railSamples.has('diesel');
   let best = null, bd = 1e9; for (const tr of rail.trains) if (tr.active) { const m = tr.meshes[Math.min(2, tr.meshes.length - 1)], d = Math.hypot(m.position.x + ox - px, m.position.z + oz - pz); if (d < bd) { bd = d; best = { tr, m, d }; } }
   if (best) { const m = best.m, wx = m.position.x + ox, wz = m.position.z + oz, f = best.tr.line.at(best.tr.head, tmpP), prevD = best.tr.pd === undefined ? best.d : best.tr.pd; best.tr.pd = best.d; const closing = dt > 0 ? (prevD - best.d) / dt : 0, yaw = phys ? phys.yaw : cam.yaw, rx = wx - px, rz = wz - pz, side = (-rx * Math.sin(yaw) + rz * Math.cos(yaw)) / Math.max(1, best.d);
     trainSound.update(dt, { d: best.d, closing, v: best.tr.v, pan: side, motor: STYLE_ELECTRIC(best.tr), approaching: closing > -2 }, now); void f;
+    const T = best.tr; if (railSamples.ok) {                                                                          // recorded sounds on top of the synthesised ones
+      const pan = Math.max(-1, Math.min(1, side)); if (best.d < 55 && T.v > 10 && !T.passed) { T.passed = true; railSamples.play('passby', { gain: 0.8, rate: 0.9 + Math.min(0.3, T.v / 100), pan }); } else if (best.d > 200) T.passed = false;
+      if (T.style === 'freight' && best.d < 320 && T.v > 2 && !T.heard) { T.heard = true; railSamples.play('diesel', { gain: 0.7 * Math.max(0.2, 1 - best.d / 320), pan }); } else if (best.d > 600) T.heard = false;
+      const decel = T.vPrev !== undefined && T.v < T.vPrev - 0.03; T.vPrev = T.v; if (decel && T.v > 3 && best.d < 160 && now - (T.squealAt || 0) > 20000) { T.squealAt = now; railSamples.play('grinding', { gain: 0.45, pan }); } }
     if (best.d < 90 && lastNearTrain !== best.tr) { lastNearTrain = best.tr; const t = best.tr.real; toast(t ? t.n + ' ' + t.name : best.tr.local ? best.tr.local.name + ' · ' + best.tr.local.kind : best.tr.style === 'freight' ? 'Goods train' : 'Passenger train'); } } else trainSound.update(dt, null, now);
   /* a station within 160 m: its board, and an announcement when the clock reaches a scheduled arrival */
   let st = null; for (const n of rail.net.stations) { if (Math.abs(n.x - pg.x) < 200 && Math.abs(n.z - pg.z) < 200 && Math.hypot(n.x - pg.x, n.z - pg.z) < 160) { st = n; break; } }
   if (!stationBoard) { stationBoard = new StationBoard(); announcer = new Announcer(); }
-  announcer.muted = !!S.muted;
+  announcer.muted = !!S.muted; if (railSamples.ok) { railSamples.loop('platform', st ? 0.55 : 0, 1.2); railSamples.loop('station', st ? 0.35 : 0, 1.5); }
   if (st && railBook) { const clock = clockMinutes(railT), city = rail.names[st.city] || { en: st.city, hi: '' }; stationBoard.show(city.en, city.hi, fmtTime(clock), railBook.departures(st.city, clock, 4));
     if (lastStation !== st) { lastStation = st; announcer.say(announcement('welcome', {}, 1, city.en), now, 8); }
     for (const a of railBook.arrivalsAt(st.city, clock)) { const key = a.n + ':' + Math.floor(railT / 60); if (updateRailLife.done !== key) { updateRailLife.done = key; const plat = 1 + Math.floor(hashStr(a.n + st.city) * 4); announcer.say(announcement('arriving', a, plat, city.en), now, 12); break; } } }
@@ -648,4 +653,4 @@ if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
 window.__next = { bus, runtime, get peds() { return peds; }, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
-  menu, get landmarks() { return landmarks; }, get branches() { return branches; }, get rail() { return rail; }, autodrive, get activeRec() { return activeRec; }, setNav, get primaryRec() { return primaryRec; }, sectors, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
+  menu, get landmarks() { return landmarks; }, get branches() { return branches; }, get rail() { return rail; }, get railSamples() { return railSamples; }, autodrive, get activeRec() { return activeRec; }, setNav, get primaryRec() { return primaryRec; }, sectors, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };

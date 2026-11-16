@@ -4,7 +4,7 @@
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 
 export class TrainSound {
-  constructor(sound) { this.s = sound; this.n = null; this.clack = 0; this.hornAt = 0; }
+  constructor(sound) { this.quiet = false; this.s = sound; this.n = null; this.clack = 0; this.hornAt = 0; }
   build() {
     const c = this.s.ctx; if (!c || !this.s.sfxBus || !this.s.noiseBuf) return false; const out = c.createGain(); out.gain.value = 0; const pan = c.createStereoPanner(); out.connect(pan); pan.connect(this.s.sfxBus);
     const rum = c.createBufferSource(); rum.buffer = this.s.noiseBuf; rum.loop = true; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 170; const rg = c.createGain(); rg.gain.value = 0; rum.connect(lp); lp.connect(rg); rg.connect(out); rum.start();
@@ -29,7 +29,7 @@ export class TrainSound {
     N.out.gain.setTargetAtTime(0.75 * near, T, 0.15); N.pan.pan.setTargetAtTime(clamp(tr.pan, -1, 1), T, 0.1);
     N.rg.gain.setTargetAtTime(moving ? Math.min(1, v / 25) * 0.9 : 0.05, T, 0.2); N.lp.frequency.setTargetAtTime(150 + v * 5, T, 0.2);
     N.mg.gain.setTargetAtTime(tr.motor && moving ? 0.07 + Math.min(0.08, v / 300) : 0, T, 0.25); N.mo.frequency.setTargetAtTime((90 + v * 9) * dop, T, 0.1); N.mf.frequency.setTargetAtTime((500 + v * 28) * dop, T, 0.1);
-    if (moving) { this.clack += (v / 6.5) * dt; let k = 0; while (this.clack >= 1 && k++ < 4) { this.clack -= 1; this.click(dop, 0.5 * Math.min(1, 0.4 + v / 30)); } if (this.clack > 4) this.clack = 0; }
+    if (moving) { this.clack += (v / 6.5) * dt; let k = 0; while (this.clack >= 1 && k++ < 4) { this.clack -= 1; this.click(dop, (this.quiet ? 0.28 : 0.5) * Math.min(1, 0.4 + v / 30)); } if (this.clack > 4) this.clack = 0; }
     if (tr.approaching !== false && moving && tr.d < 500 && now > this.hornAt) { this.horn(0.16); this.hornAt = now + 30000 + Math.random() * 25000; }
   }
 }
