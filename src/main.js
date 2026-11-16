@@ -17,6 +17,8 @@ import { grassTex, waterNormalTex } from './world/textures.js';
 import { makeGroundMaterial } from './world/groundmat.js';
 import { installTunnelHoles } from './world/tunnel_holes.js';
 import { GameRuntime, EventBus } from './core/runtime.js';
+import { AssetCache } from './core/assets.js';
+import { SectorManager } from './world/sectors.js';
 import { WALL, ARCH } from './world/tunnels.js';
 import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
@@ -83,7 +85,9 @@ const LOAD_TEXT = { physics: 'Starting the physics…', scenery: 'Growing the tr
 function loadUpdate() { const keys = Object.keys(loadState), done = keys.filter(k => loadState[k]).length, next = keys.find(k => !loadState[k]); if (loadBar) loadBar.style.width = Math.max(5, done / keys.length * 100) + '%'; if (loadMsg && next) loadMsg.textContent = LOAD_TEXT[next] || 'Building the world…'; }
 function loadDone() { loadState.car = true; loadUpdate(); if (loadEl) { loadEl.classList.add('done'); setTimeout(() => loadEl.remove(), 600); } }
 loadUpdate();
-let trafficPack = null; loadTrafficPack().then(p => { trafficPack = p; if (p && typeof traffic !== 'undefined' && traffic) traffic.useModels(p); });          // the traffic vehicles load in the background; plain boxes until they are there
+/* shared assets go through one cache (core/assets.js): loaded once, held while something uses them, freed when nothing does. Traffic holds the vehicle pack for the whole session; world sectors (below) hold what their region needs. */
+const assetCache = new AssetCache({ load: async key => { if (key === 'traffic:pack') return { value: await loadTrafficPack(), bytes: 1.8e6 }; throw new Error('unknown asset ' + key); }, dispose: () => {} });
+let trafficPack = null; assetCache.acquire('traffic:pack').then(p => { trafficPack = p; if (p && typeof traffic !== 'undefined' && traffic) traffic.useModels(p); }).catch(() => {});          // the traffic vehicles load in the background; plain boxes until they are there
 let nature = null; if (natureLevel !== 'flat') loadNature(natureLevel).then(p => { nature = p; loadState.scenery = true; loadUpdate(); if (p && typeof scatter !== 'undefined' && scatter) scatter.setProps(p); });       // real-scan trees, plants and rocks (src/world/nature.js); ?nature=flat keeps the drawn ones
 const photoGround = groundLevel !== 'flat', groundMat = photoGround ? makeGroundMaterial(groundLevel) : null;                // photographic ground (src/world/groundmat.js); ?ground=flat for the old drawn texture
 let holes = null;                                                                                                // doorways cut through the hillside at tunnel portals (src/world/tunnel_holes.js)
@@ -247,7 +251,8 @@ addEventListener('resize', resize); resize();
 
 const stats = statsPanel($('#stats'), renderer, () => {
   const s = grid.stats(), f = far.stats(), sc = scatter.stats();
-  return ['tiles       ' + s.tiles + '  (' + s.lod.join(' / ') + ' by detail)   far ' + f.tiles, 'build queue ' + (s.queue + f.queue + sc.queue) + '   pooled ' + (s.pooled + f.pooled) + '   built ' + (s.built + f.built),
+  const sm = sectors.summary(), ac = assetCache.summary();
+  return ['sectors     active ' + sm.active + ' ready ' + sm.ready + ' loading ' + sm.loading + ' queued ' + sm.queued + ' failed ' + sm.failed + '   (loaded ' + sm.loaded + ' unloaded ' + sm.unloaded + ' aborted ' + sm.aborted + ')   assets held ' + ac.held + ' idle ' + ac.idle + ' ' + (ac.bytes / 1048576).toFixed(1) + ' MB', 'tiles       ' + s.tiles + '  (' + s.lod.join(' / ') + ' by detail)   far ' + f.tiles, 'build queue ' + (s.queue + f.queue + sc.queue) + '   pooled ' + (s.pooled + f.pooled) + '   built ' + (s.built + f.built),
     'scenery     ' + sc.things.toLocaleString('en-US') + ' in ' + sc.tiles + ' tiles   road pieces ' + roadMesh.pieces.size,
     'road        at ' + (roadS / 1000).toFixed(2) + ' km   built ' + (road.sMin / 1000).toFixed(1) + ' .. ' + (road.sMax / 1000).toFixed(1) + ' km',
     'origin      ' + grid.origin.x + ', ' + grid.origin.z + '   mode ' + mode,
@@ -275,7 +280,14 @@ const bus = new EventBus(), runtime = new GameRuntime({ maxFrame: 0.05, bus });
 function frame(now) { requestAnimationFrame(frame); runtime.frame(now); }
 function step(dt, now) { update(dt, now); draw(now); }                                    // one whole frame (also used by the headless checks through __next.step)
 function draw(now) { if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
-runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'render', order: 100, render: now => draw(now) }); runtime.start();
+/* world sectors (src/world/sectors.js): 512 m squares with their own load state, above the terrain tiles. A sector loads the shared assets its region needs (today the vehicle pack) and releases them when it goes. */
+const focus = { x: 0, z: 0, dx: 1, dz: 0, speed: 0 };
+const sectors = new SectorManager({ bus, meta: s => ({ region: config.location, assets: ['traffic:pack'] }),
+  load: async (s, signal) => { for (const k of s.meta.assets) await assetCache.acquire(k); return { held: s.meta.assets.slice() }; },
+  unload: s => { if (s.data && s.data.held) for (const k of s.data.held) assetCache.release(k); } });
+bus.on('world:rebuilt', () => sectors.reset());                                                    // a new world: every sector starts again
+runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'sectors', order: 10, update: (dt, now) => sectors.update(focus.x, focus.z, focus, now) });
+runtime.add({ name: 'render', order: 100, render: now => draw(now) }); runtime.start();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) runtime.resetClock(); });          // no time spike when the tab comes back
 function update(dt, now) {
   WIND.t.value = now / 1000; let px, pz;
@@ -298,6 +310,7 @@ function update(dt, now) {
   } else {
     cam.update(dt, (x, z) => Math.max(terrain.seaLevel, terrain.height(x, z)) + 1.7); px = cam.x; pz = cam.z; roadS = road.closestS(px, pz, roadS);
   }
+  focus.x = px; focus.z = pz; if (mode === 'drive' && phys) { focus.dx = Math.cos(phys.yaw); focus.dz = Math.sin(phys.yaw); focus.speed = Math.abs(phys.u); } else focus.speed = 0;
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
   if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
@@ -353,6 +366,6 @@ addEventListener('message', async e => {
 });
 if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
-window.__next = { bus, runtime, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
+window.__next = { bus, runtime, sectors, assetCache, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };

@@ -22,10 +22,13 @@ import { ROAD_STYLES, roadSurfaceAt } from '../src/world/roadstyles.js';
 import * as tuning from '../src/core/tuning.js';
 import { explain, DOCS } from '../src/core/tuning-docs.js';
 import worker from '../cloudflare/worker.js';
+import { AssetCache } from '../src/core/assets.js';
+import { SectorManager, SECTOR_SIZE, sectorId } from '../src/world/sectors.js';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
+const tick = () => new Promise(r => setImmediate(r));
 const seq = (r, n) => Array.from({ length: n }, () => r());
 
 test('rng: same seed gives the same sequence', () => assert.deepEqual(seq(alea('peace'), 50), seq(alea('peace'), 50)));
@@ -430,6 +433,61 @@ test('traffic: the car pool is bounded and cars come back blank after removal, w
   const run = () => { const sim = new TrafficSim(r, { seed: 'pool', mode: 'high' }); const out = []; for (let k = 0; k < 600; k++) { const ps = 200 + k * 1.5; sim.update(1 / 20, { x: 0, z: 0, s: ps, u: 25, yaw: 0 }); if (k % 100 === 99) out.push(sim.cars.map(c => [c.id, Math.round(c.s), c.kind].join(':')).join(',')); assert.ok(sim.cars.length <= MODES.high); assert.equal(sim.pool.live, sim.cars.length, 'every car is a live pool object'); } return { out, stats: sim.pool.stats() }; };
   const a = run(), b = run(); assert.deepEqual(a.out, b.out, 'pooled cars give the same traffic every time'); assert.ok(a.stats.reused > 0 && a.stats.created <= MODES.high + 8, JSON.stringify(a.stats));
   const sim = new TrafficSim(r, { seed: 'pool', mode: 'low' }); sim.update(0.05, { x: 0, z: 0, s: 400, u: 0, yaw: 0 }); const live = sim.cars.length; sim.setMode('off'); assert.equal(sim.pool.live, 0); assert.equal(sim.cars.length, 0); assert.ok(live >= 0);
+});
+
+/* ---- N8: asset cache and world sectors ---- */
+await atest('assets: one load however many ask, pinned while held, evicted least recently used first, aborted when nobody waits', async () => {
+  let loads = 0, aborted = 0; const freed = [], sizes = { a: 40, b: 40, c: 40 };
+  const cache = new AssetCache({ maxBytes: 100, now: (() => { let t = 0; return () => ++t; })(), load: async (key, signal) => { loads++; await tick(); if (key === 'slow') { await new Promise(r => setTimeout(r, 20)); if (signal.aborted) aborted++; } if (key === 'bad') throw new Error('nope'); return { value: { key }, bytes: sizes[key] || 1 }; }, dispose: (key, v) => freed.push(key) });
+  const many = await Promise.all(Array.from({ length: 10 }, () => cache.acquire('a'))); assert.equal(loads, 1, 'duplicate loads'); assert.ok(many.every(v => v === many[0])); assert.equal(cache.refs('a'), 10);
+  for (let i = 0; i < 10; i++) cache.release('a'); assert.equal(cache.refs('a'), 0); assert.equal(cache.release('a'), false, 'extra release is harmless'); assert.ok(cache.has('a'), 'idle entries stay cached'); assert.equal((await cache.acquire('a')) === many[0], true); assert.equal(loads, 1, 'cache hit'); cache.release('a');
+  await cache.acquire('b'); cache.release('b'); await cache.acquire('c'); assert.deepEqual(cache.trim(), ['a'], 'over budget: the least recently used idle entry goes, the held one stays'); assert.deepEqual(freed, ['a']); assert.ok(cache.has('c') && cache.has('b'));
+  cache.release('c'); assert.deepEqual(cache.trim(true), ['b', 'c']); assert.equal(cache.bytes, 0);
+  const slow = cache.acquire('slow'); cache.release('slow'); await assert.rejects(slow, /aborted/); await new Promise(r => setTimeout(r, 40)); assert.equal(aborted, 1, 'the loader saw the abort signal'); assert.ok(!cache.has('slow')); assert.ok(freed.includes('slow'), 'a result that arrives after the abort is freed');
+  await assert.rejects(cache.acquire('bad'), /nope/); assert.equal(cache.refs('bad'), 0); await assert.rejects(cache.acquire('bad'), /nope/); assert.equal(loads >= 6, true, 'a failure is not cached');
+  await cache.acquire('a'); cache.dispose(); assert.equal(cache.summary().held + cache.summary().idle, 0);
+});
+const sectorRig = (opts = {}) => {
+  const live = new Set(), inflight = new Set(), log = { loads: [], unloads: [], aborts: 0, dup: 0, active: new Set(), maxLoading: 0 }; let fail = null, delay = 0;
+  const sm = new SectorManager({ loadRadius: 700, unloadRadius: 1000, activeRadius: 500, maxConcurrent: 2, maxStarts: 2, ...opts,
+    load: async (s, signal) => { if (inflight.has(s.id)) log.dup++; inflight.add(s.id); log.loads.push(s.id); log.maxLoading = Math.max(log.maxLoading, inflight.size); try { if (delay) await new Promise(r => setTimeout(r, delay)); else await tick(); if (signal.aborted) log.aborts++; if (fail && fail(s)) throw new Error('fail ' + s.id); live.add(s.id + '#' + log.loads.length); return { id: s.id, n: log.loads.length }; } finally { inflight.delete(s.id); } },
+    unload: s => { log.unloads.push(s.id); if (s.data) live.delete(s.data.id + '#' + s.data.n); }, activate: s => log.active.add(s.id), deactivate: s => log.active.delete(s.id) });
+  return { sm, live, log, setFail: f => { fail = f; }, setDelay: d => { delay = d; } };
+};
+await atest('sectors: lifecycle, nearest and forward first, concurrency and per-update budget respected', async () => {
+  const { sm, log } = sectorRig(); sm.update(256, 256, { dx: 1, dz: 0, speed: 20 }, 0); assert.equal(sm.summary().loading, 2, 'only maxConcurrent start'); assert.equal(sm.summary().queued > 0, true);
+  const first = sm.list('loading').map(s => s.id); assert.ok(first.includes('0,0'), 'the sector under the player loads first: ' + first); await tick(); await tick(); assert.equal(sm.stateOf('0,0') === 'ready' || sm.stateOf('0,0') === 'active', true);
+  for (let k = 0; k < 40; k++) { sm.update(256, 256, { dx: 1, dz: 0, speed: 20 }, 100 * k); await tick(); }
+  assert.equal(sm.stateOf('0,0'), 'active'); const far = sm.get('1,1'); assert.ok(far && (far.state === 'ready' || far.state === 'active')); assert.ok(sm.get('2,0'), 'the look-ahead point pulls in a sector the player alone would not'); assert.ok(log.maxLoading <= 2); assert.equal(log.dup, 0, 'no sector loaded twice at once');
+  const ahead = Math.min(...sm.list().map(s => s.priority)); assert.ok(Number.isFinite(ahead));
+});
+await atest('sectors: hysteresis (no load/unload flicker at a threshold) and pins hold a sector', async () => {
+  const { sm, log } = sectorRig(); for (let k = 0; k < 30; k++) { sm.update(256 + (k % 2 ? 25 : -25), 256, null, k); await tick(); } const base = sm.summary().loaded;
+  for (let k = 0; k < 200; k++) { sm.update(256 + (k % 2 ? 25 : -25), 256, null, 1000 + k); await tick(); }              // jitter back and forth across the load boundary
+  assert.equal(sm.summary().loaded, base, 'jitter near the boundary must not load again'); assert.equal(sm.summary().unloaded, 0, 'or unload'); for (let k = 0; k < 20; k++) { sm.update(800, 256, null, 3000 + k); await tick(); } assert.ok(sm.get('-1,0'), 'a sector 100 m past the load radius is still kept (the unload radius is further out)'); sm.update(256, 256, null, 3500);
+  sm.update(256, 256, null, 5000); const edge = '-1,0'; assert.ok(sm.get(edge)); sm.pin(edge, 'mission'); for (let k = 0; k < 10; k++) { sm.update(256 + 5000, 256, null, 6000 + k); await tick(); } assert.ok(sm.get(edge) && sm.get(edge).state !== 'unloading', 'a pinned sector stays loaded far away'); assert.equal(log.unloads.includes(edge), false);
+  sm.unpin(edge, 'mission'); sm.update(256 + 5000, 256, null, 7000); assert.equal(sm.get(edge), null); assert.ok(log.unloads.includes(edge));
+});
+await atest('sectors: queued requests are cancelled, loading ones aborted and late results freed; failures retry with back-off', async () => {
+  const rig = sectorRig(), sm = rig.sm; rig.setDelay(30); sm.update(256, 256, null, 0); const queued0 = sm.summary().queued; assert.ok(queued0 > 0); const loadingIds = sm.list('loading').map(s => s.id);
+  sm.update(256 + 20000, 256, null, 10); assert.equal(sm.list().filter(s => loadingIds.includes(s.id)).length, 0, 'the old requests are gone'); assert.ok(sm.summary().aborted >= 1 && sm.summary().cancelled >= 1);
+  await new Promise(r => setTimeout(r, 80)); assert.ok(rig.log.aborts >= 1, 'the loader saw the abort'); assert.ok(rig.log.unloads.length >= 1, 'a late result is handed back to unload'); assert.equal([...rig.live].filter(k => loadingIds.some(id => k.startsWith(id + '#'))).length, 0, 'nothing leaked');
+  const r2 = sectorRig({ maxRetries: 2 }); r2.setFail(s => s.id === '0,0'); r2.sm.update(100, 100, null, 0); await tick(); await tick(); assert.equal(r2.sm.stateOf('0,0'), 'failed'); r2.sm.update(100, 100, null, 500); await tick(); await tick(); assert.equal(r2.sm.stateOf('0,0'), 'failed', 'waits for the back-off');
+  for (const tm of [1100, 1200, 1300]) { r2.sm.update(100, 100, null, tm); await tick(); await tick(); } assert.equal(r2.sm.stateOf('0,0'), 'failed'); for (const tm of [4000, 4100, 9000, 9100]) { r2.sm.update(100, 100, null, tm); await tick(); await tick(); } assert.equal(r2.log.loads.filter(id => id === '0,0').length, 3, 'one try plus two retries then it stops');
+  r2.setFail(null); r2.sm.retry('0,0'); r2.sm.update(100, 100, null, 10000); await tick(); await tick(); assert.ok(['ready', 'active'].includes(r2.sm.stateOf('0,0')) || r2.sm.stateOf('0,0') === 'loading');
+});
+await atest('sectors: fast driving, reversing, teleports and repeated resets leave nothing loaded twice, stuck or leaked', async () => {
+  const rig = sectorRig({ maxConcurrent: 3, maxStarts: 3 }), sm = rig.sm, R = alea('sector-stress'); let x = 0, z = 0, t = 0, vx = 60, vz = 0;
+  for (let k = 0; k < 1500; k++) {
+    if (k % 200 === 0) vx = -vx; if (k % 333 === 0) { x += (R() - 0.5) * 60000; z += (R() - 0.5) * 60000; }                      // reversals and teleports
+    if (k % 97 === 0) vz = (R() - 0.5) * 50; x += vx * 0.1; z += vz * 0.1; t += 100; const sp = Math.hypot(vx, vz) || 1; sm.update(x, z, { dx: vx / sp, dz: vz / sp, speed: sp }, t); if (k % 3 === 0) await tick();
+    assert.ok(sm.summary().loadingNow <= 3, 'concurrency'); if (k === 800) { sm.reset(); }
+  }
+  assert.equal(rig.log.dup, 0); await tick(); await tick(); sm.update(x, z, null, t + 50); await tick(); await tick();
+  const sum = sm.summary(); assert.equal(sum.loadingNow, sm.list('loading').length, 'the loading counter matches the sectors loading');
+  sm.reset(); await new Promise(r => setTimeout(r, 20)); assert.equal(rig.live.size, 0, 'after reset nothing is still loaded: ' + [...rig.live].slice(0, 3)); assert.equal(sm.list().length, 0);
+  for (let c = 0; c < 20; c++) { sm.update(c * 4000, 0, null, c); await tick(); sm.reset(); } await new Promise(r => setTimeout(r, 20)); assert.equal(rig.live.size, 0, 'twenty rebuilds in a row leak nothing');
+  assert.throws(() => new SectorManager({ loadRadius: 500, unloadRadius: 500, load: async () => {} }), /hysteresis/);
 });
 
 console.log(`\n${passed} checks passed`);
