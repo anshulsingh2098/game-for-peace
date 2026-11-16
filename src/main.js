@@ -272,8 +272,14 @@ applyView(); $('#seed').value = config.seed;
 $('#seedForm').addEventListener('submit', e => { e.preventDefault(); regenerate($('#seed').value.trim() || 'peace'); $('#seed').blur(); });
 $('#newSeed').addEventListener('click', () => regenerate(randomSeed()));
 $$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { setVehicle(i); b.blur(); }));
-autodrive.lane = dir => traffic ? traffic.sim.lateral(dir, 0) : 0; autodrive.leader = (ph, s) => traffic && traffic.mode !== 'off' ? traffic.sim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }) : null;       // autodrive keeps to a lane and follows traffic
-function setAuto(on) { if (on && (mode !== 'drive' || !phys)) return; autodrive.s = roadS; autodrive.toggle(on); $('#autoBtn').classList.toggle('on', on); if (touchUI) touchUI.setAuto(on); toast(on ? 'Autodrive on: steer or brake to take over' : 'Autodrive off'); }
+let adSim = null;                                                                                              // the traffic of the road the autodrive is on (a branch road has its own)
+autodrive.lane = (dir, k = 0) => !adSim ? 0 : k === 1 && adSim.lanes.length < 2 ? adSim.lateral(-dir, 0) : adSim.lateral(dir, adSim.lanes[k] === undefined ? 0 : k); autodrive.lanes = () => adSim ? adSim.lanes.length : 1;
+autodrive.leader = (ph, s, range, lat) => adSim && adSim.cap ? adSim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, range, lat) : null; autodrive.lanesAt = (ph, s, lat, a, b) => adSim && adSim.cap ? adSim.laneGap({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, lat, a, b) : { ahead: null, behind: null };
+autodrive.tolls = s => adSim && adSim.road.style.id === 'nh6' ? adSim.tollsNear(s) : [];                      // toll plazas: slow down and keep the lane
+/* autodrive has two levels (E or the button cycles Off, Auto, Cruise): 'full' steers and drives, 'cruise' holds the speed and the gap while you steer. It drives in the style of the current drive mode (sport drives like a sports car). */
+function setAuto(on, level) { if (on && (mode !== 'drive' || !phys)) return; if (on) { autodrive.level = level || 'full'; autodriveStyle(); } autodrive.s = roadS; autodrive.toggle(on); const b = $('#autoBtn'); b.classList.toggle('on', on); b.textContent = on && autodrive.level === 'cruise' ? 'Cruise' : 'Auto'; if (touchUI) touchUI.setAuto(on); toast(on ? (autodrive.level === 'cruise' ? 'Cruise on: you steer, the car holds speed and distance. Brake to stop it' : 'Autodrive on: steer or brake to take over') + ' · ' + (DRIVE_MODES[S.driveMode || 'normal'].name) + ' style' : 'Autodrive off'); }
+function autodriveStyle() { autodrive.setStyle(S.driveMode || 'normal', phys && phys.p ? phys.p.top * (phys.M ? phys.M.top : 1) : 40); }
+function cycleAuto() { if (!autodrive.enabled) setAuto(true, 'full'); else if (autodrive.level === 'full') setAuto(true, 'cruise'); else setAuto(false); }
 /* camera views, cycled with V like the old GTA games; C jumps to the driver's seat and back */
 const CAMS = ['middle', 'far', 'close', 'hood', 'bumper', 'cockpit', 'cinematic'], CAM_NAMES = { middle: 'Chase', far: 'Far chase', close: 'Close chase', hood: 'Hood', bumper: 'Bumper', cockpit: 'Driver seat', cinematic: 'Cinematic' };
 function setCam(name, quiet) { if (!CAMS.includes(name)) name = 'middle'; view.setMode(name); S.cam = name; save(); if (!quiet) toast('Camera: ' + CAM_NAMES[name]); }
@@ -282,7 +288,7 @@ const toggleView = () => { if (view.mode === 'cockpit') setCam(S.camBefore || 'm
 setCam(S.cam, true);
 $('#viewBtn').addEventListener('click', cycleCam); $('#reset').addEventListener('click', backToRoad);
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
-controls.on('auto', () => setAuto(!autodrive.enabled)); $('#autoBtn').addEventListener('click', () => setAuto(!autodrive.enabled)); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('interact', useNearby); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
+controls.on('auto', cycleAuto); $('#autoBtn').addEventListener('click', cycleAuto); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('interact', useNearby); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
 let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
 $('#time').value = S.time; $('#weather').value = S.weather;
@@ -352,7 +358,7 @@ const stats = statsPanel($('#stats'), renderer, () => {
     phys ? 'vehicle     u ' + phys.u.toFixed(1) + '  v ' + phys.v.toFixed(2) + '  r ' + phys.r.toFixed(2) + '  slip ' + phys.slip.toFixed(2) + '  ' + phys.surface : '', 'seed        ' + config.seed + '   quality ' + quality];
 });
 /* drive modes (vehicle/physics.js DRIVE_MODES): N or the button cycles Eco, Normal, Sport, Off-road; the choice is saved and applies to every vehicle */
-function setDriveMode(id, quiet) { if (!DRIVE_MODES[id]) id = 'normal'; S.driveMode = id; if (phys && phys.setDriveMode) phys.setDriveMode(id); const m = DRIVE_MODES[id]; $('#modeBtn').textContent = m.name; const tag = $('#modeTag'); tag.textContent = m.name; tag.className = id; save(); if (!quiet) toast(m.name + ': ' + m.blurb); }
+function setDriveMode(id, quiet) { if (!DRIVE_MODES[id]) id = 'normal'; S.driveMode = id; if (autodrive.enabled) autodriveStyle(); if (phys && phys.setDriveMode) phys.setDriveMode(id); const m = DRIVE_MODES[id]; $('#modeBtn').textContent = m.name; const tag = $('#modeTag'); tag.textContent = m.name; tag.className = id; save(); if (!quiet) toast(m.name + ': ' + m.blurb); }
 const cycleDriveMode = () => setDriveMode(DRIVE_MODE_IDS[(DRIVE_MODE_IDS.indexOf(S.driveMode || 'normal') + 1) % DRIVE_MODE_IDS.length]);
 controls.on('drivemode', cycleDriveMode); $('#modeBtn').addEventListener('click', cycleDriveMode); setDriveMode(S.driveMode || 'normal', true);
 const hud = { spd: $('#spd'), unit: $('#unit'), surf: $('#surface'), sky: $('#sky'), buff: $('#buff'), cd: $('#buffCd') }; let hudT = 0;
@@ -516,7 +522,7 @@ function update(dt, now) {
     if (!frozen()) {
       input = controls.read();
       if (autodrive.enabled) {                                                                       // the car drives itself; steering or braking by hand takes over
-        if (Math.abs(input.steer) > 0.25 || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else input = autodrive.update(phys, road);
+        if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null, adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); }
       }
       if (auto) input = auto; phys.step(dt, input);
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
@@ -599,4 +605,4 @@ if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
 window.__next = { bus, runtime, get peds() { return peds; }, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
-  menu, get landmarks() { return landmarks; }, get branches() { return branches; }, get activeRec() { return activeRec; }, setNav, get primaryRec() { return primaryRec; }, sectors, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
+  menu, get landmarks() { return landmarks; }, get branches() { return branches; }, autodrive, get activeRec() { return activeRec; }, setNav, get primaryRec() { return primaryRec; }, sectors, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };

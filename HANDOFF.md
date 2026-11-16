@@ -2,6 +2,10 @@
 
 State of the work as of 14 November 2026, end of Rajul's session. Read `OVERVIEW.md` first for what the project is, `CLAUDE.md` for how the two Claudes work together, `CHECKLIST.md` for the daily checks, and `PARALLEL_PLAN.md` ("Phases from here") and `team/photoreal-plan.md` for the plans.
 
+## State on 20 Nov 2026 (read this first; Rajul's session)
+Merged into `main` today: PR 42 (Travel screen, Indian lane discipline) and PR 43 (**one continuous India world**: Play is `?india=world`, every highway through a city streams in and out, no reload; the old locations list is the separate **Explore cities** section). Also on branch `feat/autodrive-modes`: autodrive has two levels (Auto, Cruise) and drives in the style of the current drive mode (Sport drives like a sports car).
+Self-test: 74 checks. Not deployed: the live site is old and `cloudflare/public` is untouched. The complete list of known limits is `docs/WORK_REMAINING.md`; the plan for the India map is `docs/INDIA_MAP_PLAN.md`. Nobody has tried any of it on a phone and Anshul has not reviewed it.
+
 ## Where things stand
 
 State as of 16 November 2026. Written after pull requests 1 to 22 were merged into `main` (pull request 22 worked through N0 to N5) (the plan came from an outside review of a ZIP and is not in the repo; check its claims against the code).

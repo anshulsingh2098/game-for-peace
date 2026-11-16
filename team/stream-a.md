@@ -2,6 +2,18 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-20 12:00  Autodrive planner: sport no longer crashes
+Branch: feat/autodrive-modes
+What changed: `input/autodrive.js` (planner: horizon from stopping distance, bends and cars brought back with v^2 = v0^2 + 2ad, toll plazas, safe sport passing with lane checks and smooth lane slides, drop back), `traffic/sim.js` (additive: `leaderAhead(player, range, lat)` and `laneGap`), `main.js` (autodrive uses the active road's own traffic in the India world, lane count, tolls). Sport cornering budget 3.4 m/s2 (5 ran wide and hit the median at 190 km/h). 75 self-test checks (a six-run heavy-traffic test).
+For the other stream: please read `docs/DRIVE_MODES.md` (planner section). Known: the traffic sim can spawn a car about 100 m ahead (minSpawnGap); sport therefore does not pass in the oncoming lane.
+Status: open
+
+## 2026-11-20 09:00  Autodrive levels and drive-mode styles; PRs 42 and 43 merged
+Branch: feat/autodrive-modes
+What changed: PR 42 and 43 are merged into main. `input/autodrive.js` (Stream B area, additive): two levels, Auto (drives and steers) and Cruise (holds speed and gap, the player steers), and a style per drive mode (`STYLES`: Eco gentle, Normal 90, Sport fast, tight, overtakes on the right ignoring the rules, Off-road careful). `main.js`: E and the Auto button cycle Off, Auto, Cruise. HANDOFF.md (shared) has a new top section; docs and CHECKLIST updated; 74 self-test checks.
+For the other stream: pull main; drive Mumbai to Goa and try E in each drive mode; review `input/autodrive.js`. Autodrive does not stop at signals yet (WORK_REMAINING 9.5).
+Status: open
+
 ## 2026-11-20 06:00  One continuous India world, separate Explore cities
 Branch: feat/one-world (stacked on feat/overtaking, PR 42)
 What changed: the main game (Play, no address options) is now one India world: every highway through a city is built as it nears, roads and junctions stream in and out, no reload. `main.js` (road registry: primary, branches, activeRec, buildCityRoads, updateBranches, navigation HUD, `exploreCity`/`goWorld`), `world/network.js` (`worldStart`), `world/router.js` (signed arcs for the other arm), `ui/menu.js` ("Explore cities" is the old locations list; Travel has Navigate and fast travel), `core/saved.js` (city), 73 self-test checks pass. Address: `?india=world&at=<city>`; `?loc=<region>` is an Explore city.
