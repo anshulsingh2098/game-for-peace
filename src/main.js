@@ -464,10 +464,17 @@ function sOfAlong(r, along) {
 const roadBox = r => { const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity }, p = {}; for (let s = r.sMin; s <= r.sMax; s += 150) { r.at(s, p); b.minX = Math.min(b.minX, p.x); b.maxX = Math.max(b.maxX, p.x); b.minZ = Math.min(b.minZ, p.z); b.maxZ = Math.max(b.maxZ, p.z); } return b; };
 /* a city's crossing roads: every highway through the city that is not loaded yet is built as a road starting on a loaded road through the city, at the same height, following its own path both ways; one shared signal joins them all */
 /* a road that crosses another one (outside a city) is raised on a deck over it (src/world/interchange.js): the lift changes its heights, so the terrain under it and anything already drawn of it are rebuilt */
+const roadRank = x => ({ nh6: 3, highway: 2, boulevard: 2 })[x.style.id] ?? 1;                                    // the bigger road stays on the ground; the smaller one goes over it (equal: the newer one)
 function raiseOverpasses(r, rec) {
-  if (!indiaRoute || !roadSet || roadSet.roads.length < 2) return; const made = addOverpasses(r, roadSet.roads); if (!made.length) return;
-  const p = {}; for (const m of made) { const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity }; for (let s = Math.max(m.s0, r.sMin + 2); s <= Math.min(m.s1, r.sMax - 2); s += 20) { r.at(s, p); b.minX = Math.min(b.minX, p.x - 90); b.maxX = Math.max(b.maxX, p.x + 90); b.minZ = Math.min(b.minZ, p.z - 90); b.maxZ = Math.max(b.maxZ, p.z + 90); } grid.invalidate(b); }
-  if (rec && rec.mesh) rec.mesh.refresh(); else if (r === road && roadMesh) roadMesh.refresh();
+  if (!indiaRoute || !roadSet || roadSet.roads.length < 2) return;
+  const lift = (road, over, recOf) => {
+    const made = addOverpasses(road, over); if (!made.length) return; const p = {};
+    for (const m of made) { const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity }; for (let s = Math.max(m.s0, road.sMin + 2); s <= Math.min(m.s1, road.sMax - 2); s += 20) { road.at(s, p); b.minX = Math.min(b.minX, p.x - 90); b.maxX = Math.max(b.maxX, p.x + 90); b.minZ = Math.min(b.minZ, p.z - 90); b.maxZ = Math.max(b.maxZ, p.z + 90); } grid.invalidate(b); }
+    if (recOf && recOf.mesh) recOf.mesh.refresh(); else if (road === (primaryRec && primaryRec.road) && roadMesh) roadMesh.refresh();
+  };
+  const others = roadSet.roads.filter(o => o !== r), higher = others.filter(o => roadRank(o) >= roadRank(r)), lower = others.filter(o => roadRank(o) < roadRank(r));
+  lift(r, higher, rec);                                                                                           // this road goes over the bigger (or equal) roads it crosses
+  for (const o of lower) lift(o, [r], recs().find(x => x.road === o));                                            // smaller roads that cross this one go over it
 }
 function buildCityRoads(city) {
   const R = indiaRoute; ensurePrimaryRec(); const anchors = recs().filter(r => r.cityAlong.has(city.id)); if (!anchors.length) return false;
