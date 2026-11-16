@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 14:00  Real elevation and land cover; licenses page
+Branch: feat/limits-and-n8 (PR 37)
+What changed: owner asked for real elevation and land cover and a licence list linked from the title page. Downloaded (owner approved, "download all the pack"): AWS Terrain Tiles (528 tiles) and Esri / Impact Observatory land cover (64 blocks) into `data/raw` (git-ignored; `.gitignore` already covers `data/`); `tools/fetch_india_terrain.py`, `tools/build_india_grids.py` -> `assets/india/terrain.bin` + `terrain.json` (3.2 MB, listed in `assets/ASSETS.md`); `world/terrain.js` (`config.terrain.macro`: real relief, cover, `cover()`), `world/scatter.js`, `world/groundmat.js` (bare ground shows sand from the vertex colour), `main.js` (loads the grid in `?india=` mode, `?real=off`); `tools/build_licenses.mjs` -> `licenses.html` (generated from `assets/ASSETS.md` plus data and library lists), linked from the title screen and the Credits screen (`ui/menu.js`); `tools/stage_cloudflare.py` now also stages `licenses.html` and `india_map.html` (shared file, one line). Tests: 70 checks (grid values at known cities, terrain follows a grid, cover drives forest and colour, no grid changes nothing, `licenses.html` is current). Differences from the plan: land cover from Esri (CC BY 4.0) not ESA WorldCover (ESA's service refused the connection here and the tiles are 90 MB each); elevation from the AWS terrain tiles, not raw SRTM. Licence statements are credited as applicable and unreviewed.
+For the other stream: please review `licenses.html` too.
+Status: open
+
 ## 2026-11-19 09:00  Limits batch and N8 step 2
 Branch: feat/limits-and-n8
 What changed: credits screen in the pause menu (`ui/menu.js`), branch-road bridges in `world.near` (`main.js`), an asphalt patch over the crossing (`world/junction_signals.js`), N8: sectors hold content: `world/regionmap.js` (new), `world/network.js` (`guidePoint`), `main.js` (sector `meta` and `load` build the crossing roads of a city, `unload` removes them; the arc-distance trigger is gone), debug panel line for side roads, `docs/STREAMING.md`, `docs/WORK_REMAINING.md` updated. One new self-test (69 checks). Checked in the browser with the sector manager pumped by hand: Delhi's six roads at the start, Jaipur's crossing road built 1.1 km before it, Delhi's removed after moving away. Note: `__next.step()` does not run the sector system (only the real frame loop does).

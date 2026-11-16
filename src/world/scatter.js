@@ -57,12 +57,12 @@ export class Scatter {
       const D = alea(this.config.seed, 'undergrowth', tx, tz);
       for (let n = Math.round(c.bushes * Sz * Sz * dens); n > 0; n--) {
         const x = x0 + D() * Sz, z = z0 + D() * Sz, sc = 0.6 + D() * 0.9, rot = D() * 6.28, tall = 0.8 + D() * 0.5, shade = D();
-        if (!clear(x, z, 7)) continue; const h = T.height(x, z), up = h - sea; if (up < 2.5 || up > pal.treeline) continue;
+        if (!clear(x, z, 7)) continue; const cvB = T.cover ? T.cover(x, z) : null; if (cvB && D() < cvB.bare * 0.95 + cvB.built * 0.85) continue; const h = T.height(x, z), up = h - sea; if (up < 2.5 || up > pal.treeline) continue;
         lists.bush.push([x - x0, h - 0.05, z - z0, sc, rot, tall, shade]);
       }
       for (let n = Math.round(c.tufts * Sz * Sz * dens); n > 0; n--) {
         const x = x0 + D() * Sz, z = z0 + D() * Sz, sc = 0.42 + D() * 0.6, rot = D() * 6.28, tall = 0.8 + D() * 0.5, shade = D();
-        if (!clear(x, z, 5.6)) continue; const h = T.height(x, z), up = h - sea; if (up < 2.5 || up > pal.treeline + 40) continue;
+        if (!clear(x, z, 5.6)) continue; const cvT = T.cover ? T.cover(x, z) : null; if (cvT && D() < cvT.bare * 0.9 + cvT.built * 0.8) continue; const h = T.height(x, z), up = h - sea; if (up < 2.5 || up > pal.treeline + 40) continue;
         lists.tuft.push([x - x0, h - 0.02, z - z0, sc, rot, tall, shade]);
       }
     }

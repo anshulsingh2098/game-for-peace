@@ -34,7 +34,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 2.3 | N9: moving between regions is a full reload behind the loading screen; no seamless transition, no blending at borders | P2 [build] |
 | 2.4 | N9: regions are impressions from old terrain recipes with new colours; none uses real elevation | P2 [build] |
 | 2.5 | N10: the navigation graph covers the main road only; side roads and junctions are not in it | P1 [build] [B] |
-| 2.6 | `config.road.guide` roads follow a path but the land is a region recipe, not the real terrain under that highway | P2 [build] |
+| 2.6 | `config.road.guide` roads now run over real elevation (see 8.6); land under non-India modes is still a region recipe | P3 [build] |
 
 ## 3. Cities and districts (N11)
 | # | Limit | Tag |
@@ -72,7 +72,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 |---|---|---|
 | 6.1 | The scanned art is one broadleaf tree, six conifers, one shrub, one fern and one grass tuft; the other species are built in code with flat leaf textures and look like painted blobs up close | P2 [build] [owner 1.5] |
 | 6.2 | No palms (Kerala), no mango, neem, banyan, bamboo or teak art | P2 [owner 1.5] |
-| 6.3 | The field patchwork colour is subtle from altitude and was judged on the default location only | P3 [build] |
+| 6.3 | The field patchwork colour is stronger on real farmland in `?india=` mode; elsewhere it is subtle and was judged on the default location only | P3 [build] |
 | 6.4 | Water: four moving ripple layers, shore foam and shallow-to-deep colour exist; no reflections of the surroundings, no waves with height, no flow along rivers | P2 [build] |
 | 6.5 | Every new variant adds draw calls (two per variant per tile); the low preset keeps fewer but nothing is measured on a phone | P1 [person] |
 | 6.6 | Rajasthan and Ladakh dryness is one number (`arid`); no real desert dunes, no snow line control per region beyond the old numbers | P3 [build] |
@@ -98,9 +98,10 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 8.3 | Some data gaps: Jaipur offers Ajmer twice (two corridors) and no Kota; only the corridors entered exist | P3 [build] |
 | 8.4 | One road per `?india=` drive from the player's start, plus side roads within 2.4 km of a city on the route; no free roaming across the country yet; the junction panel regenerates the world (short loading screen) | P1 [build] |
 | 8.5 | The OpenStreetMap credit now also appears under Credits in the pause menu (all asset credits summarised); the full licence list stays `assets/ASSETS.md` | P3 [done in part] |
-| 8.6 | Real land cover and elevation (ESA WorldCover, SRTM or Copernicus) are researched but not downloaded or used | P2 [owner 1.7] |
+| 8.6 | Real elevation and land cover are in (`?india=` mode, `assets/india/terrain.bin`, 5 km cells): relief scaled to 0.08 vertically, forest, farmland, bare and built-up from the land cover. Limits: 5 km cells are coarse (no river valleys, small lakes or coast detail); the vertical scale is a taste choice (a real 6,000 m peak is 480 game m); the land cover is Esri / Impact Observatory (CC BY 4.0), not ESA WorldCover, and its year is unconfirmed; real water bodies other than the sea are not modelled; only `?india=` drives use it, the nine regions still use recipes | P2 [build] [person] |
 | 8.7 | The coastline on the map page is a sketch, not a boundary | P3 [owner 1.4] |
 | 8.8 | Festivals, seasons by region, monsoon waterlogging, heat haze and winter fog are not built | P3 [build] |
+| 8.9 | `licenses.html` (linked from the title screen and the Credits screen) credits every data set, library and asset as applicable; the owner has not reviewed it yet, and several licence statements (Esri land cover terms and year, Tilezen attribution wording, SRTM, GMTED and ETOPO terms) come from search results, not a legal review | P1 [owner] |
 
 ## 9. Drive modes
 | # | Limit | Tag |
@@ -118,5 +119,6 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 19 Nov 2026: real elevation and land cover downloaded and used in `?india=` mode (8.6); `licenses.html` linked from the title and Credits screens (8.9).
 - 19 Nov 2026: credits screen in the pause menu; branch-road bridges in collision; asphalt patch over lane paint at junctions; N8 sector-driven city junctions, region lookup by position and debug stats (see 2.2, 7.1, 7.2, 8.5).
 - 18 to 19 Nov 2026: tunnel doorways, mouse look on foot, plant variants, patchwork land, moving water with foam, five Indian worlds, highway furniture, toll slowing, India skeleton and map page, drive modes, guided roads, junction choice panel, multi-road engine step 1, traffic on every road, crossing behaviour (all first increments: see their limits above).

@@ -13,6 +13,7 @@ import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
 import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
 import { CITIES, CITY, HIGHWAYS, RAIL, COAST as INDIA_COAST, routeKm, roadGraph, shortestRoute, nearestCity, distanceKm, gameKm, driveMinutes } from '../src/world/india_network.js';
 import { validTolls, tollCap, planHighway, RAIL_STEP, GANTRY_EVERY, TOLL_EVERY, TOLL_LEN, tollAt } from '../src/world/highway_plan.js';
+import { renderLicenses } from './build_licenses.mjs';
 import { regionAt, distKm } from '../src/world/regionmap.js';
 import { Junction, JSIG } from '../src/traffic/junction.js';
 import { RoadSet } from '../src/world/roadset.js';
@@ -820,6 +821,22 @@ test('N8 sector content: the region of a place, blends at borders, a point along
   assert.ok(Math.abs(distKm(28.61, 77.21, 19.08, 72.88) - 1150) < 40, 'great-circle Delhi to Mumbai about 1,150 km'); assert.equal(regionAt(10, 10, []), null); assert.deepEqual(regionAt(10, 10, [REGIONS[0]]).second, null);
   const flat = [0, 0, 300, 0, 300, 400]; assert.deepEqual(guidePoint(flat, 150), { x: 150, z: 0 }); assert.deepEqual(guidePoint(flat, 500), { x: 300, z: 200 }); assert.deepEqual(guidePoint(flat, 9999), { x: 300, z: 400 }); assert.deepEqual(guidePoint(flat, 0), { x: 0, z: 0 });
   const sectorOf = (x, z) => [Math.floor(x / 512), Math.floor(z / 512)]; assert.deepEqual(sectorOf(-1, 513), [-1, 1]); assert.deepEqual(sectorOf(1023.9, 0), [1, 0]);
+});
+
+test('real elevation and land cover: the terrain follows a macro grid, plains stay plain, forest and fields follow the land cover; no grid changes nothing; licenses.html is current', () => {
+  const nx = 40, nz = 40, N = nx * nz, mk = f => { const a = new Int16Array(N); for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) a[j * nx + i] = f(i, j); return a; }, u8 = f => { const a = new Uint8Array(N); for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) a[j * nx + i] = f(i, j); return a; };
+  const macro = { cell: 50, x0: 0, z0: 0, nx, nz, vscale: 0.1, ox: 0, oz: 0, h: mk((i, j) => i < 10 ? -200 : i < 20 ? 20 : 1200), rel: u8((i, j) => i < 20 ? 2 : 100), tree: u8((i, j) => j < 20 ? 220 : 0), crop: u8((i, j) => j >= 20 && i < 30 ? 230 : 0), grass: u8(() => 0), bare: u8((i, j) => i >= 30 ? 240 : 0), built: u8(() => 0) };
+  const cfg = makeConfig({ seed: 'macro' }); cfg.terrain = { ...cfg.terrain, seaLevel: 0, seabed: -40, macro }; const T = createTerrain(cfg), plain = createTerrain(makeConfig({ seed: 'macro' }));
+  assert.ok(T.base(3 * 50 + 25, 600) < -5 && T.base(3 * 50 + 25, 600) >= -40, 'real sea floor is below sea level'); const lowland = T.base(15 * 50 + 25, 600); assert.ok(lowland > 0 && lowland < 6, 'real 20 m plain is about 2 game metres up: ' + lowland.toFixed(1)); const hi = T.base(25 * 50 + 25, 600); assert.ok(hi > 100 && hi < 175, 'real 1,200 m at 0.1 is about 120 game metres: ' + hi.toFixed(1));
+  const rough = (x0) => { let a = Infinity, b = -Infinity; for (let k = 0; k < 60; k++) { const h = T.base(x0 + k * 3, 600 + k * 2); a = Math.min(a, h); b = Math.max(b, h); } return b - a; }; assert.ok(rough(15 * 50) < rough(25 * 50), 'relief decides roughness: a plain is smoother than a range');
+  assert.ok(T.forest(500, 100) > 0.9 && T.forest(500, 1500) < 0.2, 'forest follows the tree cover'); const cv = T.cover(500, 100); assert.ok(cv.tree > 0.8 && cv.bare === 0, 'cover fractions'); assert.equal(plain.cover(500, 100), null, 'no macro, no cover');
+  const rgb = [0, 0, 0], rgb2 = [0, 0, 0]; T.colour(1700, 1500, T.base(1700, 1500), 1, rgb); T.colour(500, 1500, T.base(500, 1500), 1, rgb2); assert.ok(rgb[0] / rgb[2] > 2.6, 'bare ground is ochre (red much above blue): ' + (rgb[0] / rgb[2]).toFixed(2)); assert.ok(rgb2[0] / rgb2[2] < rgb[0] / rgb[2], 'farmland is greener than bare ground');
+  const gm = JSON.parse(readSkeleton(new URL('../assets/india/terrain.json', import.meta.url), 'utf8')), gb = readSkeleton(new URL('../assets/india/terrain.bin', import.meta.url)), GN = gm.nx * gm.nz; assert.equal(gb.length, GN * 8, 'terrain.bin holds eight bytes per cell'); const at = (cx, cz) => { const i = Math.floor((cx - gm.x0) / gm.cell), j = Math.floor((cz - gm.z0) / gm.cell), k = j * gm.nx + i; return { h: gb.readInt16LE(k * 2), tree: gb[GN * 3 + k], built: gb[GN * 7 + k], bare: gb[GN * 6 + k], grass: gb[GN * 5 + k] }; };
+  const skn = JSON.parse(readSkeleton(new URL('../assets/india/skeleton.json', import.meta.url), 'utf8')).nodes, city = id => skn.find(n => n.id === id); const real = { delhi: [227, 60], bhopal: [527, 80], leh: [3489, 400], manali: [2442, 500] }; for (const [id, [h, tol]] of Object.entries(real)) { const c = at(city(id).x, city(id).z); assert.ok(Math.abs(c.h - h) < tol, id + ' real elevation about ' + h + ' m: ' + c.h); }
+  assert.ok(at(city('delhi').x, city('delhi').z).built > 120, 'Delhi is built-up land'); assert.ok(at(city('manali').x, city('manali').z).tree > 60, 'Manali has forest around it'); assert.ok(at(city('jaisalmer').x, city('jaisalmer').z).grass > 80, 'Jaisalmer is rangeland'); assert.ok(at(city('mumbai').x, city('mumbai').z).h >= 6, 'a city is never under the sea (corridor floor)');
+  for (const n of skn) { const c = at(n.x, n.z); assert.ok(c.h >= 5, n.id + ' is on land in the grid: ' + c.h); }
+  const a = createTerrain(makeConfig({ seed: 'same' })), b = createTerrain(makeConfig({ seed: 'same' })); for (const [x, z] of [[10, 10], [900, -400], [-300, 2000]]) assert.equal(a.base(x, z), b.base(x, z), 'without a grid the land is exactly as before');
+  assert.equal(readSkeleton(new URL('../licenses.html', import.meta.url), 'utf8'), renderLicenses(), 'licenses.html is out of date: run node tools/build_licenses.mjs'); const L = renderLicenses(); for (const w of ['OpenStreetMap', 'ODbL', 'Esri', 'Impact Observatory', 'CC BY 4.0', 'USGS'.length ? 'U.S. Geological Survey' : '', 'three.js', 'Rapier', 'Poly Haven', 'ambientCG', 'Kenney']) assert.ok(L.includes(w), 'the licence page credits ' + w);
 });
 
 console.log(`\n${passed} checks passed`);

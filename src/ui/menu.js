@@ -45,6 +45,7 @@ export class Menu {
     const col = mk('div', 'm-col', p);
     btn(col, 'Play', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Location', () => this.open2('locations', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title'));
     mk('div', 'm-hint', p, 'Pick a car, truck or bike, then roam. Hold Q at any time to tune a live radio station from around the world, including India.');
+    const lic = mk('a', '', p, 'Licenses and credits'); lic.href = 'licenses.html'; lic.target = '_blank'; lic.rel = 'noopener'; lic.style.cssText = 'display:block;margin-top:14px;font-size:12px;color:#9fb0c8;text-align:center';          // every credit and licence in one page, linked from the title screen
   }
 
   garage() {
@@ -99,6 +100,7 @@ export class Menu {
       'Engine recordings: Rajul Singh. Everything else (terrain, roads, trees, buildings, signs, junctions, code): made for this project.',
       'This is a schematic impression of India, not an official map; borders and names are not authoritative.'];
     const box = mk('div', 'm-col', p); for (const t of lines) { const e = mk('p', '', box, t); e.style.cssText = 'margin:6px 0;font-size:13px;line-height:1.4;text-align:left;max-width:520px'; }
+    const more = mk('a', '', box, 'Full list of licenses and credits'); more.href = 'licenses.html'; more.target = '_blank'; more.rel = 'noopener'; more.style.cssText = 'margin:8px 0;font-size:13px;color:#8fc8ff';
     const row = mk('div', 'm-row', p); btn(row, 'Back', () => this.show(this.from || 'pause'), 'primary');
   }
 

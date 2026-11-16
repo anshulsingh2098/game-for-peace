@@ -79,7 +79,16 @@ if (q.get('india')) {
 }
 const nearestRegionId = id => { const c = CITY[id]; let best = START_LOCATION, bd = Infinity; for (const l of LOCATIONS) { const ins = l.region && l.region.inspiration; if (!ins || !c) continue; const d = Math.hypot(ins.lat - c.lat, (ins.lon - c.lon) * 0.9); if (d < bd) { bd = d; best = l.id; } } return best; };
 let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || (indiaRoute && nearestRegionId(indiaRoute.from)) || (savedLoc && (LEGACY[savedLoc] || savedLoc)) || START_LOCATION, q.get('seed') || 'peace');          // India only: an old saved choice moves to its Indian replacement
-if (indiaRoute) config.road = { ...config.road, guide: indiaRoute.pts, style: indiaRoute.kind === 'nh' ? 'highway' : 'nh6' };           // main highways get the six-lane national highway look
+if (indiaRoute) config.road = { ...config.road, guide: indiaRoute.pts, style: indiaRoute.kind === 'nh' ? 'highway' : 'nh6' };
+/* real elevation and land cover under the India roads (assets/india/terrain.bin, tools/build_india_grids.py); ?real=off keeps the procedural land. The terrain's origin is the start city. */
+if (indiaRoute && q.get('real') !== 'off') {
+  try {
+    const meta = await (await fetch('assets/india/terrain.json')).json(), buf = await (await fetch('assets/india/terrain.bin')).arrayBuffer(), N = meta.nx * meta.nz, V = 0.035, n0 = indiaRoute.net.cities.get(indiaRoute.from);
+    const macro = { cell: meta.cell, x0: meta.x0, z0: meta.z0, nx: meta.nx, nz: meta.nz, vscale: V, ox: n0.x, oz: n0.z, h: new Int16Array(buf, 0, N), rel: new Uint8Array(buf, N * 2, N), tree: new Uint8Array(buf, N * 3, N), crop: new Uint8Array(buf, N * 4, N), grass: new Uint8Array(buf, N * 5, N), bare: new Uint8Array(buf, N * 6, N), built: new Uint8Array(buf, N * 7, N) };
+    config.terrain = { ...config.terrain, seaLevel: 0, seabed: -40 }; Object.defineProperty(config.terrain, 'macro', { value: macro, enumerable: false, writable: true });      // not part of the saved/shared config (it is big)
+    config.palette = { ...config.palette, treeline: 3700 * V, snowline: 5000 * V }; config.road = { ...config.road, maxAlt: 3500 * V, maxGrade: 0.09, hardGrade: 0.12 };
+  } catch (e) { console.warn('real elevation not loaded, using the procedural land', e); }
+}           // main highways get the six-lane national highway look
 /* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
 registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES); registerRoot('handling', ARCADE); registerRoot('camera', CAMFX); registerRoot('look', LOOK);
 for (const url of ['api/settings', 'settings.json']) {             // the published settings (tuner Publish), else a settings.json committed with the site
@@ -146,7 +155,7 @@ let terrain, road, roadMesh, scatter, backdrop, landmarks, traffic = null, roadS
 const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.rings.length - 1].r * v.tile;      // far tiles leave out what the near grid is guaranteed to cover
   return { tile: f.tile, rings: [{ r: f.r, res: f.res }], budgetMs: 2, rebase: Infinity, inner: Math.floor(reach / f.tile) - 1, sink: f.sink }; };
 let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
-function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
+function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
 function makeScenery() {
