@@ -37,6 +37,7 @@ import { rumbleFor } from './input/rumble.js';
 import { loadSave, writeSave } from './core/save.js';
 import { destinationsFor, HINDI, CITY, fromGame, nearestCity } from './world/india_network.js';
 import { RoadNetwork, guidePoint } from './world/network.js';
+import { addOverpasses } from './world/interchange.js';
 import { RoadSet } from './world/roadset.js';
 import { Junction } from './traffic/junction.js';
 import { JunctionSignals } from './world/junction_signals.js';
@@ -201,7 +202,7 @@ function applyView() {
 
 /* ---------- the vehicle ---------- */
 const cam = new FlyCam(canvas), controls = new Controls(), autodrive = new Autodrive(), view = new VehicleView(scene);
-const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => { const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), ...branches.map(b => b.mesh.bridges.near(x, z, r)).flat(), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : [], rail ? rail.near(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
+const world = { height: (x, z, y) => terrain.drive(x, z, y), ground: (x, z) => terrain.drive(x, z, -Infinity), deck: (x, z) => terrain.deck(x, z), deckMesh: (x, z, h) => roadSet ? roadSet.deckMesh(x, z, h) : null, surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => { const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), ...branches.map(b => b.mesh.bridges.near(x, z, r)).flat(), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : [], rail ? rail.near(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
 const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
@@ -212,13 +213,13 @@ let menu = null; const frozen = () => !!(menu && menu.open);
 let rapier = false; const rapierReady = q.get('phys') === 'old' ? Promise.resolve() : initRapier().then(() => { rapier = true; loadState.physics = true; loadUpdate(); }).catch(e => console.warn('Rapier did not load; using the simple physics', e));
 /* put the vehicle in the left lane at road distance s, facing along the road */
 /* the player starts in the first lane of the direction of travel, on the side traffic keeps to (left in India); wide divided roads have their own lane centres */
-function placeOnRoad(s) { const p = road.at(s, {}), off = laneOffsets(road.style)[0], lat = (locationById(config.location).drive || 'right') === 'right' ? -off : off; phys.reset(p.x - p.tz * lat, p.z + p.tx * lat, p.th); view.camYaw = null; }
+function placeOnRoad(s) { const p = road.at(s, {}), off = laneOffsets(road.style)[0], lat = (locationById(config.location).drive || 'right') === 'right' ? -off : off; phys.reset(p.x - p.tz * lat, p.z + p.tx * lat, p.th, p.y); view.camYaw = null; }
 async function setVehicle(i) {
   const def = VEHICLES[i], model = await loadModel(def), old = phys; vehicle = i; await rapierReady; bus.emit('vehicle:changed', { id: def.id });
   const par = vehicleParams(def.body, def.stats);
   if (old && old.free) old.free();
   phys = rapier ? new RapierVehicle(par, def.id, world) : new VehiclePhysics(par, world);                       // Rapier ray-cast vehicle; the old bicycle model remains as a fallback (?phys=old)
-  if (old) { phys.reset(old.x, old.z, old.yaw); } else placeOnRoad(0);
+  if (old) { phys.reset(old.x, old.z, old.yaw, old.y); } else placeOnRoad(0);
   buffT = 0; buffCd = 0; $('#buff').firstChild.textContent = def.buff.label; $('#buff').title = def.buff.name + ': ' + def.buff.desc + ' (Shift)';
   if (S.paint[def.id] && S.paint[def.id] !== def.paint.colors[0]) await applyPaint(def, model, S.paint[def.id]);
   buildSwatches(def, model);
@@ -243,7 +244,7 @@ function useBuff() {
 function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 /* on foot (N14, src/player/onfoot.js): G beside a stopped vehicle gets you out; G beside the parked vehicle gets you back in. The vehicle waits on its handbrake. */
 let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0, footPitch = 0.28, lookDrag = null;
-const footWorld = { height: (x, z) => world.height(x, z), surface: (x, z) => world.surface(x, z), get seaLevel() { return world.seaLevel; },
+const footWorld = { height: (x, z, y) => world.height(x, z, y), surface: (x, z) => world.surface(x, z), get seaLevel() { return world.seaLevel; },
   near: (x, z, r) => { const l = world.near(x, z, r).slice(); if (phys && mode === 'foot') { const c = Math.cos(phys.yaw), s = Math.sin(phys.yaw), a = (phys.p.front + phys.p.rear) / 4; l.push([{ x: phys.x + c * a, z: phys.z + s * a, r: 1.15 }, { x: phys.x - c * a, z: phys.z - s * a, r: 1.15 }]); } return l; } };
 function makeFigure() { const g = new THREE.Group(), m = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }), box = (w, h, d, c, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m(c)); b.position.y = y; b.castShadow = true; g.add(b); return b; };
   box(0.5, 0.65, 0.28, 0x2f6fb5, 1.15); box(0.22, 0.8, 0.24, 0x2b2b3a, 0.4).position.x = -0.12; const l2 = box(0.22, 0.8, 0.24, 0x2b2b3a, 0.4); l2.position.x = 0.12; box(0.22, 0.24, 0.22, 0xd9a577, 1.65); g.userData.legs = g.children.slice(1, 3); return g; }
@@ -472,6 +473,19 @@ function sOfAlong(r, along) {
 }
 const roadBox = r => { const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity }, p = {}; for (let s = r.sMin; s <= r.sMax; s += 150) { r.at(s, p); b.minX = Math.min(b.minX, p.x); b.maxX = Math.max(b.maxX, p.x); b.minZ = Math.min(b.minZ, p.z); b.maxZ = Math.max(b.maxZ, p.z); } return b; };
 /* a city's crossing roads: every highway through the city that is not loaded yet is built as a road starting on a loaded road through the city, at the same height, following its own path both ways; one shared signal joins them all */
+/* a road that crosses another one (outside a city) is raised on a deck over it (src/world/interchange.js): the lift changes its heights, so the terrain under it and anything already drawn of it are rebuilt */
+const roadRank = x => ({ nh6: 3, highway: 2, boulevard: 2 })[x.style.id] ?? 1;                                    // the bigger road stays on the ground; the smaller one goes over it (equal: the newer one)
+function raiseOverpasses(r, rec) {
+  if (!indiaRoute || !roadSet || roadSet.roads.length < 2) return;
+  const lift = (road, over, recOf) => {
+    const made = addOverpasses(road, over); if (!made.length) return; const p = {};
+    for (const m of made) { const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity }; for (let s = Math.max(m.s0, road.sMin + 2); s <= Math.min(m.s1, road.sMax - 2); s += 20) { road.at(s, p); b.minX = Math.min(b.minX, p.x - 90); b.maxX = Math.max(b.maxX, p.x + 90); b.minZ = Math.min(b.minZ, p.z - 90); b.maxZ = Math.max(b.maxZ, p.z + 90); } grid.invalidate(b); }
+    if (recOf && recOf.mesh) recOf.mesh.refresh(); else if (road === (primaryRec && primaryRec.road) && roadMesh) roadMesh.refresh();
+  };
+  const others = roadSet.roads.filter(o => o !== r), higher = others.filter(o => roadRank(o) >= roadRank(r)), lower = others.filter(o => roadRank(o) < roadRank(r));
+  lift(r, higher, rec);                                                                                           // this road goes over the bigger (or equal) roads it crosses
+  for (const o of lower) lift(o, [r], recs().find(x => x.road === o));                                            // smaller roads that cross this one go over it
+}
 function buildCityRoads(city) {
   const R = indiaRoute; ensurePrimaryRec(); const anchors = recs().filter(r => r.cityAlong.has(city.id)); if (!anchors.length) return false;
   const loaded = new Set(); for (const a of anchors) for (const id of (a.roadIdsAt ? a.roadIdsAt(city.id) : [a.id])) loaded.add(id);
@@ -480,7 +494,7 @@ function buildCityRoads(city) {
     if (loaded.has(j.road)) continue; const rd = R.net.roads.get(j.road), i = rd.stops.findIndex(st => st.id === city.id), nxt = rd.stops[i + 1], prv = rd.stops[i - 1];
     let gA = nxt ? R.net.guideFor(j.road, city.id, nxt.id) : null, gB = prv ? R.net.guideFor(j.road, city.id, prv.id) : null; if (!gA) { gA = gB; gB = null; } if (!gA) continue;
     const cfg = { ...config, seed: config.seed + ':' + city.id + ':' + j.road, road: { ...config.road, guide: gA.pts, guideBack: gB ? gB.pts : null, start, style: rd.kind === 'nh' ? 'highway' : 'nh6' } };
-    const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); const along = new Map(gA.cities.map(c => [c.id, c.along])); if (gB) for (const c of gB.cities) if (!along.has(c.id)) along.set(c.id, -c.along);
+    const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); raiseOverpasses(br); const along = new Map(gA.cities.map(c => [c.id, c.along])); if (gB) for (const c of gB.cities) if (!along.has(c.id)) along.set(c.id, -c.along);
     const rec = { id: j.road, city: city.id, road: br, cityAlong: along, hint: 0, near: false, te: traffic ? traffic.addRoad(br) : null, mesh: new RoadMesh(scene, br, br.style, grid.origin, { tag: rd.nh || '', gates: [...along].filter(([id, a]) => a > 0 && id !== city.id).map(([id, a]) => ({ en: CITY[id].name, hi: HINDI[id] || '', alongM: a, sub: gateSub(R.net, id, j.road) })), dests: [...along].filter(([id, a]) => a > 0 && id !== city.id).map(([id, a]) => ({ en: CITY[id].name, hi: HINDI[id] || '', km: 0, alongM: a })) }) };
     branches.push(rec); made.push(rec);
   }
@@ -515,7 +529,7 @@ function updateBranches(px, pz, dt) {
     if (traffic) { if (!primaryOff && d > 1100) { primaryOff = true; traffic.sim.setMode('off'); } else if (primaryOff && d < 800) { primaryOff = false; traffic.sim.setMode(S.traffic); } } }      // the start road is quiet while you are far from it
   for (let i = branches.length - 1; i >= 0; i--) { const b = branches[i]; const s = b.road.closestS(px, pz, b.hint); b.hint = s; const q = b.road.at(s, tmpP), dist = Math.hypot(q.x - px, q.z - pz); b.dist = dist;
     if (indiaRoute && !b.fixed && dist > 4500) { removeRec(b); continue; }                                                    // a road that is far from you goes (it comes back with its city)
-    const box = b.road.ensure(s - 2600, s + 2600); if (box) grid.invalidate(box); b.mesh.update(s); { const sc1 = dist + (phys ? (1 - Math.abs(Math.cos((phys.yaw || 0) - q.th))) * 30 : 0); if (sc1 < bd) { bd = sc1; best = b; } }                // the road you are on: the nearest, and the one you are pointing along
+    const box = b.road.ensure(s - 2600, s + 2600); if (box) { grid.invalidate(box); raiseOverpasses(b.road, b); } b.mesh.update(s); { const sc1 = dist + (phys ? (1 - Math.abs(Math.cos((phys.yaw || 0) - q.th))) * 30 : 0); if (sc1 < bd) { bd = sc1; best = b; } }                // the road you are on: the nearest, and the one you are pointing along
     if (traffic && b.te) { b.near = b.near ? dist < 1000 : dist < 700; traffic.updateExtra(b.te, dt, { x: px, z: pz, s, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, b.near); } }
   activeRec = best;
 }
@@ -654,5 +668,5 @@ addEventListener('message', async e => {
 if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
 window.__next = { bus, runtime, get peds() { return peds; }, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
-  radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
+  radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get roadSet() { return roadSet; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, get branches() { return branches; }, get rail() { return rail; }, get railSamples() { return railSamples; }, autodrive, get activeRec() { return activeRec; }, setNav, get primaryRec() { return primaryRec; }, sectors, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };

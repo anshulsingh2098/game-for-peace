@@ -34,8 +34,8 @@ export function planPiece({ road, terrain, seed, k, s0, s1, spec, blocked = () =
       if (ok) {
         road.at(sc, p); const nx = -p.tz * side, nz = p.tx * side, d = DEPTH + (extras > 0.7 ? 4 : 0), cx = p.x + nx * (front + d / 2), cz = p.z + nz * (front + d / 2);
         plots.push({ side, s: sc, w, d, floors, style, colour, shop, extras, x: cx, z: cz, y: p.y, th: p.th, tx: p.tx, tz: p.tz, nx, nz, tx: p.tx, tz: p.tz, front });
-        for (let u = -w / 2 + 2; u <= w / 2 - 2 + 0.01; u += 4) circles.push({ x: p.x + nx * (front + 1.5) + p.tx * u, z: p.z + nz * (front + 1.5) + p.tz * u, r: 2.4, slide: true });
-        if (w < 8.5) circles.push({ x: p.x + nx * (front + 1.5), z: p.z + nz * (front + 1.5), r: 2.4, slide: true });
+        for (let u = -w / 2 + 2; u <= w / 2 - 2 + 0.01; u += 4) circles.push({ x: p.x + nx * (front + 1.5) + p.tx * u, z: p.z + nz * (front + 1.5) + p.tz * u, r: 2.4, slide: true, y: p.y });
+        if (w < 8.5) circles.push({ x: p.x + nx * (front + 1.5), z: p.z + nz * (front + 1.5), r: 2.4, slide: true, y: p.y });
       }
       s += w + gap;
     }

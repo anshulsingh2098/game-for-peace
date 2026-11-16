@@ -14,6 +14,7 @@ import { createNoise } from '../core/noise.js';
 
 export const PORTAL_W = 0.12, FACE_W = 0.55, TUBE_ROOF = 9.6;      // the tube (and its portal wall) starts where tunnelW first reaches PORTAL_W, and the hillside face stands a few metres further in (FACE_W; the terrain mesh is coarser than the road, so the face must not start before the wall); over it the land stands at least TUBE_ROOF m above the road
 const TUNNEL_DEPTH = 18, TUNNEL_MIN = 40, TUNNEL_RAMP = 14;      // a cutting deeper than this (m) for this long (m) becomes a tunnel; the hill rises over this many metres (steeply: the portal wall stands here)
+export const LIFT_DECK = 2, LIFT_LAYER = 3;                   // a lifted road is carried on a deck from LIFT_DECK metres up, and a separate layer over the ground from LIFT_LAYER metres up
 const SUB = 4;                                                  // spline samples per node step, used for distance queries
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -28,6 +29,7 @@ export class Road {
     this.maxTurn = this.step / this.c.minRadius; this.noise = createNoise(config.seed + ':road');
     this.style = roadStyleById(this.c.style); this.g = this.style.grade;       // widths come from the style
     this.wc = new Map(); this.bw = new Map(); this.dc = new Map(); this.tc = new Map();      // bridge and tunnel caches (see bridgeW, tunnelW)
+    this.lifts = []; this.set = null;                                                         // overpasses: stretches raised on a deck over another road (see addLift)
     this.cell = 32; this.reach = this.g.blend + 2; this.cells = new Map(); this.hit = { d: 0, s: 0, y: 0 };
     const sp = this.c.start, p = sp ? { x: sp.x, z: sp.z } : terrain.findSpawn(), gd = this.c.guide, gb = this.c.guideBack;            // guide (optional): a flat [x, z, x, z, ...] path relative to the start, in metres; arm A follows it (the road of a real highway, see world/network.js); guideBack: the same for arm B. start (optional) { x, y, z }: begin here at this height (a road branching off another one, see world/roadset.js)
     if (gd && gd.length >= 4) { this.guide = []; for (let i = 0; i < gd.length; i += 2) this.guide.push(p.x + gd[i], p.z + gd[i + 1]); }
@@ -173,7 +175,9 @@ export class Road {
     const ya = this.Y(g - 1), yb = this.Y(g), yd = this.Y(g + 1), ye = this.Y(g + 2);
     out.x = cr(a.x, b.x, d.x, e.x, t); out.z = cr(a.z, b.z, d.z, e.z, t); out.y = cr(ya, yb, yd, ye, t);
     const dx = crd(a.x, b.x, d.x, e.x, t), dz = crd(a.z, b.z, d.z, e.z, t), dy = crd(ya, yb, yd, ye, t), l = Math.hypot(dx, dz) || 1;
-    out.th = Math.atan2(dz, dx); out.slope = dy / l; out.tx = dx / l; out.tz = dz / l; return out;
+    out.th = Math.atan2(dz, dx); out.slope = dy / l; out.tx = dx / l; out.tz = dz / l;
+    if (this.lifts.length) { out.y += this.liftAt(s); out.slope += this.liftSlope(s); }
+    return out;
   }
   /* nearest point of the road to (x, z), if within reach. Fills this.hit {d, s, y}; returns true or false. */
   nearest(x, z) {
@@ -185,7 +189,7 @@ export class Road {
       const dx = x - ax - ex * t, dz = z - az - ez * t, d = dx * dx + dz * dz; if (d < bd) { bd = d; bq = q; bt = t; }
     }
     bd = Math.sqrt(bd); if (bd > this.reach) return false;
-    const h = this.hit; h.d = bd; h.s = (bq + bt) * this.ds; h.y = this.py(bq) + (this.py(bq + 1) - this.py(bq)) * bt; return true;
+    const h = this.hit; h.d = bd; h.s = (bq + bt) * this.ds; h.y = this.py(bq) + (this.py(bq + 1) - this.py(bq)) * bt; h.lift = 0; if (this.lifts.length) { h.lift = this.liftAt(h.s); h.y += h.lift; } return true;
   }
   /* land height with the road cut or filled in: level under the road, easing back to the natural height */
   grade(x, z, natural) {
@@ -238,7 +242,25 @@ export class Road {
   carriedW(s) { return Math.max(this.bridgeW(s), this.tunnelW(s)); }
   /* metres of mountain above the road at s when the road is in a tunnel (the tube is drawn where this is enough to cover it) */
   tunnelRise(s) { const w = this.tunnelW(s); if (!w) return 0; const p = this.at(s, this._bp || (this._bp = {})); return Math.max(0, this.t.base(p.x, p.z) - p.y) * w; }
-  bridgeW(s) {
+  /* overpasses (docs/INDIA_MAP_PLAN.md, interchanges): a lift raises a stretch of this road above its routed height: a smooth ramp up of `ramp` metres, a level deck from sa to sb at +h, a ramp down.
+     Above LIFT_DECK metres the road is carried (like a bridge: land left alone, deck, rails and piers drawn); above LIFT_LAYER metres it is a deck layer of its own, over the ground (see RoadSet.drive).
+     `cross` and `gap` (road distance and half length) keep the piers clear of the road passed over. Add lifts before the road's mesh is built (or rebuild the mesh). */
+  addLift(l) {
+    this.lifts.push(l); this.dc.clear(); this.tc.clear(); if (this.set) this.set.refresh();
+    const r = l.ramp, a = l.sa - r, b = l.sb + r; return { s0: a, s1: b };
+  }
+  liftAt(s) {
+    let h = 0; for (const l of this.lifts) { if (s <= l.sa - l.ramp || s >= l.sb + l.ramp) continue; if (s >= l.sa && s <= l.sb) { h += l.h; continue; } const t = s < l.sa ? (s - (l.sa - l.ramp)) / l.ramp : 1 - (s - l.sb) / l.ramp; h += l.h * t * t * (3 - 2 * t); }
+    return h;
+  }
+  liftSlope(s) {                                               // metres of rise per metre along the road
+    let d = 0; for (const l of this.lifts) { if (s <= l.sa - l.ramp || s >= l.sb + l.ramp || (s >= l.sa && s <= l.sb)) continue; const up = s < l.sa, t = up ? (s - (l.sa - l.ramp)) / l.ramp : 1 - (s - l.sb) / l.ramp; d += (up ? 1 : -1) * l.h * 6 * t * (1 - t) / l.ramp; }
+    return d;
+  }
+  noPier(s) { for (const l of this.lifts) if (Math.abs(s - l.cross) < l.gap) return true; return false; }
+  liftW(s) { if (!this.lifts.length) return 0; const h = this.liftAt(s); return h >= LIFT_DECK ? 1 : h <= 0.8 ? 0 : sstep(0.8, LIFT_DECK, h); }
+  bridgeW(s) { const w = this.waterW(s); return this.lifts.length ? Math.max(w, this.liftW(s)) : w; }
+  waterW(s) {                                                  // bridge over water only
     const k = Math.round(s / this.ds), c = this.bw.get(k); if (c !== undefined) return c;
     let dmin = Infinity; for (let j = -6; j <= 6 && dmin; j++) if (this.wet(k + j)) dmin = Math.min(dmin, Math.abs(j));
     const d = dmin * this.ds; let w = d <= 10 ? 1 : d >= 30 ? 0 : (30 - d) / 20; w = w * w * (3 - 2 * w);
