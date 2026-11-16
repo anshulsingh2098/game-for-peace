@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-22 18:00  City plan Phase 0: keep-out registry and the city architecture note
+Branch: claude/goofy-liskov-0a8557  Commit: see the PR
+What changed: `src/world/keepout.js` (new, pure: claims for lines, circles, rectangles and providers; rank station > landmark > rail > road > building > scenery; `railClaim`, `stationClaim`, `registerRail`, `roadProvider`). Shared or other files, each a small edit: `terrain.js` (`terrain.keepout`, `addZone` registers a landmark claim), `district_plan.js` (whole-plot rectangle check, own-piece overlap check, furniture and signals ask; new params `keepout`, `ignore`), `district.js` (registers and drops its plots), `scatter.js` (trees ask; tiles re-plant when a claim lands on them; CRLF file), `rail_view.js` (**two small edits for the railway-control session**: the constructor calls `registerRail`, and `buildStation` skips a building that would stand on a road), `main.js` (one line: `roadProvider(terrain.keepout, roadSet)` in `makeWorld`), `tools/selftest.mjs` (4 checks, 86 in all), `docs/CITY_PACK.md` (new), `docs/CITY_PLAN.md`, `docs/WORK_REMAINING.md` (section 10), `docs/DISTRICT.md`, `CHECKLIST.md`, `HANDOFF.md`.
+For the other stream: if you add anything that covers ground (a new rail object, a station, a depot, a car park, a landmark), register it: `terrain.keepout.add(owner, kind, { t: 'rect' | 'line' | 'circle', ... })`, and ask `terrain.keepout.point/rect(..., { as: 'building' | 'scenery' })` before placing. The railway-control session: keep `registerRail` and the `ko` check in `buildStation` when you change `rail_view.js`; if you change the station layout (120 m platforms, 34 x 9 m building 17 m beyond the outer track) change `STATION_HALF_LEN` and the `stationClaim` size in `keepout.js` to match. Nothing to run.
+Status: open
+
 ## 2026-11-22 15:00  City plan (docs/CITY_PLAN.md): cities one by one, Delhi NCR first
 Branch: claude/flyover-physics-262398
 What changed: `docs/CITY_PLAN.md` (new), `HANDOFF.md` (new section). No code.

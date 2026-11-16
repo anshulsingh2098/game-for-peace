@@ -25,6 +25,8 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 1.6 | Whether on-foot play is wanted on phones | |
 | 1.7 | Whether to use real elevation and land cover (NASA SRTM or Copernicus, ESA WorldCover) and approve the downloads | `docs/OPEN_DATA.md` |
 | 1.8 | The tuner page login and the live Publish setup (N5 leftovers) | |
+| 1.9 | **City scale: agree 1:1 city enclaves entered from the highway** (`docs/CITY_PACK.md` section 3), the budgets in section 4 and the pack format in section 5 | Blocks Phase 1 of `docs/CITY_PLAN.md` |
+| 1.10 | OK to download an OSM extract for Delhi NCR (file, source, size to be stated first) | CITY_PLAN Phase 1 |
 
 ## 2. Engine and phases N7 to N10
 | # | Limit | Tag |
@@ -142,3 +144,13 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 - 19 Nov 2026: real elevation and land cover downloaded and used in `?india=` mode (8.6); `licenses.html` linked from the title and Credits screens (8.9).
 - 19 Nov 2026: credits screen in the pause menu; branch-road bridges in collision; asphalt patch over lane paint at junctions; N8 sector-driven city junctions, region lookup by position and debug stats (see 2.2, 7.1, 7.2, 8.5).
 - 18 to 19 Nov 2026: tunnel doorways, mouse look on foot, plant variants, patchwork land, moving water with foam, five Indian worlds, highway furniture, toll slowing, India skeleton and map page, drive modes, guided roads, junction choice panel, multi-road engine step 1, traffic on every road, crossing behaviour (all first increments: see their limits above).
+
+## 10. City plan, Phase 0 leftovers (22 Nov 2026)
+| # | Limit | Tag |
+|---|---|---|
+| 10.1 | The keep-out registry (`world/keepout.js`) is asked by the district, scatter and station buildings only; `landmarks.js`, props and pedestrian/traffic spawn points do not ask yet. | P2 [build] |
+| 10.2 | Only Agra, Delhi and Mumbai were measured (overlap counts in `docs/CITY_PACK.md`); Kolkata and the other cities have no district region. Nobody has looked at the result from the air, in rain, or on a phone; the registry's cost per frame on a phone is not measured. | P1 [person] |
+| 10.3 | Scatter tiles are re-planted when a claim lands on them (rails register once, plots per piece): measure the hitching on a phone. | P2 [person] |
+| 10.4 | The station platforms, canopies and the roof slabs are still plain boxes at fixed size; a station only skips its building when it would stand on a road. Replace with modelled stations in Phase 5. | P3 [build] |
+| 10.5 | The provider claim (roads) is answered by point samples for a rectangle (nine points), so a thin road across the middle of a small plot can be missed; plots are at least 8 m wide and roads are at least 7 m, so a 4 m gap is the worst case. | P3 |
+| 10.6 | Stations and rail bridges still lift the railway over the road in `rail_view.js` (`BRIDGE_H`); the road should go over the rail (PR 49 note). Not touched here. | P2 [build] |
