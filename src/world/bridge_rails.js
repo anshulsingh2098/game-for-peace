@@ -20,7 +20,7 @@ export function createRails(road, deckHalf) {
     for (let s = Math.floor((bs - r - 3) / RAIL_STEP) * RAIL_STEP; s <= bs + r + 3; s += RAIL_STEP) {
       const q = clampS(s); if (road.bridgeW(q) !== 1) continue;
       road.at(q, p); const nx = -p.tz, nz = p.tx;
-      out.push({ x: p.x + nx * off, z: p.z + nz * off, r: RAIL_R, slide: true }, { x: p.x - nx * off, z: p.z - nz * off, r: RAIL_R, slide: true });
+      out.push({ x: p.x + nx * off, z: p.z + nz * off, r: RAIL_R, slide: true, y: p.y }, { x: p.x - nx * off, z: p.z - nz * off, r: RAIL_R, slide: true, y: p.y });
     }
     return lists;
   };

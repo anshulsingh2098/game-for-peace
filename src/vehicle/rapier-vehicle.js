@@ -94,19 +94,24 @@ export class RapierVehicle {
   /* heightfield under (cx, cz) in game coordinates; the old one is kept one more step so the wheels always have ground */
   buildPatch(cx, cz) {
     const n = this.N, cell = this.cell, size = n * cell, sx = Math.round(cx / cell) * cell, sz = Math.round(cz / cell) * cell, x0 = sx - size / 2, z0 = sz - size / 2;
-    const hts = new Float32Array((n + 1) * (n + 1)), W = this.world;
-    for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) hts[i + j * (n + 1)] = W.height(x0 + j * cell, z0 + i * cell);      // Rapier: z index runs fastest
+    const hts = new Float32Array((n + 1) * (n + 1)), W = this.world, gnd = W.ground || W.height;
+    for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) hts[i + j * (n + 1)] = gnd(x0 + j * cell, z0 + i * cell);      // Rapier: z index runs fastest
     const col = this.R.createCollider(RAPIER.ColliderDesc.heightfield(n, n, hts, { x: size, y: 1, z: size }).setTranslation(sx - this.ox, 0, sz - this.oz).setFriction(1).setRestitution(0));
-    if (this.old) this.R.removeCollider(this.old.col, false); this.old = this.patch; this.patch = { col, x: sx, z: sz };
+    /* the decks of overpasses over this ground (world.deckMesh, a thin ribbon of triangles per raised road: the heightfield above can hold only one surface per point). A wheel's ray finds the level the car is on:
+       the deck when the car is on it, the ground when the car is under it. */
+    let deck = null, dm = W.deckMesh ? W.deckMesh(sx, sz, size / 2) : null;
+    if (dm && dm.idx.length) { const v = new Float32Array(dm.pos.length); for (let k = 0; k < v.length; k += 3) { v[k] = dm.pos[k] - this.ox; v[k + 1] = dm.pos[k + 1]; v[k + 2] = dm.pos[k + 2] - this.oz; } deck = this.R.createCollider(RAPIER.ColliderDesc.trimesh(v, new Uint32Array(dm.idx)).setFriction(1).setRestitution(0)); }
+    if (this.old) this.dropPatch(this.old); this.old = this.patch; this.patch = { col, deck, x: sx, z: sz };
   }
-  dropOld() { if (this.old) { this.R.removeCollider(this.old.col, false); this.old = null; } }
+  dropPatch(p) { this.R.removeCollider(p.col, false); if (p.deck) this.R.removeCollider(p.deck, false); }
+  dropOld() { if (this.old) { this.dropPatch(this.old); this.old = null; } }
 
-  reset(x, z, yaw) {
-    this.ox = x; this.oz = z; if (this.patch) { this.R.removeCollider(this.patch.col, false); this.patch = null; } if (this.old) { this.R.removeCollider(this.old.col, false); this.old = null; }
+  reset(x, z, yaw, yHint) {                                                                         // yHint (optional): the height of the road to stand on, where roads cross at different heights
+    this.ox = x; this.oz = z; if (this.patch) { this.dropPatch(this.patch); this.patch = null; } if (this.old) { this.dropPatch(this.old); this.old = null; }
     this.buildPatch(x, z);
     /* stand the car on the slope: sample the land under its four wheels and tilt it to match */
     const W = this.world, pr = this.p, c0 = Math.cos(yaw), s0 = Math.sin(yaw), ht = Math.max(pr.track, 0.4) / 2, fx = x + c0 * pr.front, fz = z + s0 * pr.front, bx = x - c0 * pr.rear, bz = z - s0 * pr.rear;
-    const fl = W.height(fx + s0 * ht, fz - c0 * ht), fr = W.height(fx - s0 * ht, fz + c0 * ht), bl = W.height(bx + s0 * ht, bz - c0 * ht), br = W.height(bx - s0 * ht, bz + c0 * ht);
+    const fl = W.height(fx + s0 * ht, fz - c0 * ht, yHint), fr = W.height(fx - s0 * ht, fz + c0 * ht, yHint), bl = W.height(bx + s0 * ht, bz - c0 * ht, yHint), br = W.height(bx - s0 * ht, bz + c0 * ht, yHint);
     const gy = (fl + fr) / 2 * (pr.rear / pr.L) + (bl + br) / 2 * (pr.front / pr.L), pitch = Math.atan2((fl + fr - bl - br) / 2, pr.L), rollA = Math.atan2((fl + bl - fr - br) / 2, Math.max(pr.track, 0.4));
     const th = Math.PI / 2 - yaw, qm = (a, b) => ({ w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z, x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y, y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x, z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w });
     const q = qm(qm({ x: 0, y: Math.sin(th / 2), z: 0, w: Math.cos(th / 2) }, { x: Math.sin(-pitch / 2), y: 0, z: 0, w: Math.cos(pitch / 2) }), { x: 0, y: 0, z: Math.sin(rollA / 2), w: Math.cos(rollA / 2) });
@@ -270,10 +275,12 @@ export class RapierVehicle {
   collide() {
     const p = this.p, lists = this.world.near(this.x, this.z, p.front + p.rear + 3); if (!lists.length) return;
     const c = Math.cos(this.yaw), s = Math.sin(this.yaw); let moved = false, u = this.u, v = this.v, px = 0, pz = 0, dr = 0;
+    const dk = this.world.deck ? this.world.deck(this.x, this.z) : NaN, onDeck = dk === dk && this.y > dk - 3.2;                          // on the deck of an overpass: what stands on the ground below (trees, rocks, buildings: circles with no height) is out of reach
     for (const off of p.circles) {
       const cx = this.x + px + c * off, cz = this.z + pz + s * off;
       for (const list of lists) for (let i = 0; i < list.length; i++) {
         const o = list[i], dx = cx - o.x, dz = cz - o.z, rr = p.radius + o.r, d2 = dx * dx + dz * dz; if (d2 >= rr * rr || d2 === 0) continue;
+        if (o.y !== undefined ? Math.abs(o.y - this.y) > 3.2 : onDeck) continue;                                                       // on the other level of an overpass (rails, posts and cars carry their height y)
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, pen = rr - d; px += nx * pen; pz += nz * pen; moved = true;
         const wx = u * c - v * s, wz = u * s + v * c, vn = wx * nx + wz * nz; if (vn >= 0) continue;
         const bounce = o.slide ? 1.05 : 1.2, ax = wx - bounce * vn * nx, az = wz - bounce * vn * nz; u = (ax * c + az * s) * (o.slide ? 0.997 : 0.85); v = (-ax * s + az * c) * (o.slide ? 0.9 : 0.6);          // a rail (slide) is a long wall to scrape along: a little bounce, hardly any speed lost; a tree stops you dr += (-s * nx + c * nz) * off * -vn * (o.slide ? 0.07 : 0.02);

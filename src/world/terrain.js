@@ -67,7 +67,8 @@ export function createTerrain(config) {
     return h;
   }
   function height(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.grade(x, z, h) : h; }
-  function drive(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.drive(x, z, h) : h; }                  // what wheels roll on: the road surface itself
+  function drive(x, z, y) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.drive(x, z, h, y) : h; }                  // y (optional): the height of whoever asks, to pick the layer where roads cross at different heights (RoadSet); -Infinity: the ground only
+  function deck(x, z) { if (!road || !road.deck) return NaN; return road.deck(x, z, zones.length ? natural(x, z) : base(x, z)); }                  // the deck of a lifted road over this point, or NaN                  // what wheels roll on: the road surface itself
   function inZone(x, z, margin = 0) { for (let i = 0; i < zones.length; i++) if (Math.hypot(x - zones[i].x, z - zones[i].z) < zones[i].r + margin) return true; return false; }                  // what wheels roll on: the road surface itself
   function forest(x, z) { if (MAC) { const c = cover(x, z); return sstep(0.1, 0.5, c.tree + 0.25 * c.grass) * (1 - 0.8 * c.built); } return sstep(-0.12, 0.22, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
 
@@ -132,7 +133,7 @@ export function createTerrain(config) {
     return { x: 0, z: 0, y: Math.max(sea, base(0, 0)) };
   }
 
-  const terrain = { base, height, drive, surface, inZone, addZone: (x, z, r, y, blend = 40) => { zones.push({ x, z, r, y, blend }); }, colour, forest, findSpawn, seaLevel: sea, config,
+  const terrain = { base, height, drive, deck, surface, inZone, addZone: (x, z, r, y, blend = 40) => { zones.push({ x, z, r, y, blend }); }, colour, forest, findSpawn, seaLevel: sea, config,
     cover, regionAt, regionTint, attachRoad(r) { road = r; }, get road() { return road; },
     /* the same land without the road, for the coarse horizon tiles */
     far: { height: base, colour: (x, z, h, ny, out) => colour(x, z, h, ny, out, false) } };

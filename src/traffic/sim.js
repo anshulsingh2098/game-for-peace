@@ -179,7 +179,7 @@ export class TrafficSim {
     const out = this._out || (this._out = []), list = this._list || (this._list = [out]); out.length = 0;
     for (const c of this.cars) {
       if (Math.abs(c.x - x) > r + 8 || Math.abs(c.z - z) > r + 8) continue; const f = Math.cos(c.yaw), g = Math.sin(c.yaw), rad = c.w / 2 + 0.1, n = c.len > 6 ? 5 : 3, span = c.len / 2 - rad;
-      for (let k = 0; k < n; k++) { const o = n === 1 ? 0 : (k / (n - 1) * 2 - 1) * span; out.push({ x: c.x + f * o, z: c.z + g * o, r: rad, traffic: c.id }); }
+      for (let k = 0; k < n; k++) { const o = n === 1 ? 0 : (k / (n - 1) * 2 - 1) * span; out.push({ x: c.x + f * o, z: c.z + g * o, r: rad, traffic: c.id, y: c.y }); }
     }
     return list;
   }
