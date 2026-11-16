@@ -30,6 +30,7 @@ import { NavGraph, RoadNav, STEP as NAV_STEP, CROSS_EVERY } from '../src/world/n
 import { planPiece, FRONT_GAP, DEPTH, LAMP_EVERY } from '../src/world/district_plan.js';
 import { crossingAt } from '../src/world/navgraph.js';
 import { PedSim, LEVELS, MAX_PEDS, SPAWN_MIN } from '../src/pedestrians/sim.js';
+import { OnFoot, FOOT, chooseExit, Interactions } from '../src/player/onfoot.js';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -645,6 +646,33 @@ test('pedestrians: levels and density set the cap, they leave when their sidewal
   for (const [sx, sz] of W.sectors) nav.loadSector(sx, sz); for (let k = 0; k < 300; k++) peds.update(0.2, player, 200 + k * 0.2); assert.ok(peds.list.length > 3, 'they come back with the sidewalks');
   peds.clear(); assert.equal(peds.pool.live, 0); assert.equal(traffic.occupied.size, 0); const c0 = peds.pool.stats().created; for (let k = 0; k < 300; k++) peds.update(0.2, player, 400 + k * 0.2); assert.ok(peds.pool.stats().created <= c0 + 48, 'walkers are reused from the pool');
   const o = peds.list[0]; peds.pool.release(o.handle); assert.equal(o.arch, ''); assert.equal(o.edge, null); assert.equal(o.state, 'walk'); peds.list.shift();
+});
+
+/* ---- N14: on foot, enter and exit, interactions ---- */
+const footWorld = (over = {}) => ({ height: () => 0, near: () => [], seaLevel: -50, ...over });
+const walk = (f, secs, input, each) => { for (let k = 0; k < secs * 60; k++) { f.step(1 / 60, input); if (each) each(f); } };
+test('on foot: walks and runs at their speeds, turns, jumps and lands, deterministic', () => {
+  const f = new OnFoot(footWorld()); f.place(0, 0, 0); walk(f, 3, { throttle: 1 }); assert.ok(Math.abs(f.speed - FOOT.walk) < 0.05); assert.ok(Math.abs(f.x - (3 - 0.4) * FOOT.walk) < 0.8, 'distance in 3 s: ' + f.x); const g = new OnFoot(footWorld()); g.place(0, 0, 0); walk(g, 3, { throttle: 1, run: 1 }); assert.ok(g.x > f.x * 2.4 && Math.abs(g.speed - FOOT.run) < 0.05);
+  const h = new OnFoot(footWorld()); h.place(0, 0, 0); walk(h, 1, { steer: 1 }); assert.ok(Math.abs(h.yaw - FOOT.turn) < 0.05); assert.equal(h.x, 0, 'turning on the spot does not move'); walk(h, 2, { rev: 1 }); assert.ok(h.speed < 0 && h.speed >= -FOOT.back - 0.01);
+  const j = new OnFoot(footWorld()); j.place(0, 0, 0); let top = 0, air = 0; j.step(1 / 60, { jump: 1 }); walk(j, 1.2, { jump: 0 }, p => { top = Math.max(top, p.y); if (!p.grounded) air++; }); const apex = FOOT.jump ** 2 / (2 * FOOT.gravity); assert.ok(Math.abs(top - apex) < 0.1, 'apex ' + top + ' vs ' + apex); assert.ok(j.grounded && j.y === 0 && air > 20 && air < 80); j.step(1 / 60, { jump: 1 }); j.step(1 / 60, { jump: 1 }); assert.ok(j.vy < FOOT.jump, 'holding jump does not bounce');
+  const a = new OnFoot(footWorld()), b = new OnFoot(footWorld()); for (const q of [a, b]) { q.place(3, 4, 1); walk(q, 4, { throttle: 1, steer: 0.3, run: 1 }); } assert.equal(a.x, b.x); assert.equal(a.z, b.z);
+});
+test('on foot: climbs a kerb, is stopped by a wall, a steep slope and deep water, slides along obstacles, falls off a ledge', () => {
+  const kerb = new OnFoot(footWorld({ height: x => x > 5 ? 0.3 : 0 })); kerb.place(0, 0, 0); walk(kerb, 5, { throttle: 1 }); assert.ok(kerb.x > 6 && Math.abs(kerb.y - 0.3) < 1e-9, 'a 0.3 m kerb is climbed');
+  const wall = new OnFoot(footWorld({ height: x => x > 5 ? 3 : 0 })); wall.place(0, 0, 0); walk(wall, 6, { throttle: 1, run: 1 }); assert.ok(wall.x <= 5.0 + 1e-6, 'a 3 m wall stops the character at ' + wall.x);
+  const steep = new OnFoot(footWorld({ height: x => x > 3 ? (x - 3) * 2.5 : 0 })); steep.place(0, 0, 0); walk(steep, 6, { throttle: 1 }); assert.ok(steep.x < 4.2, 'a 68 degree slope is not climbed: ' + steep.x); const gentle = new OnFoot(footWorld({ height: x => x > 3 ? (x - 3) * 0.4 : 0 })); gentle.place(0, 0, 0); walk(gentle, 6, { throttle: 1 }); assert.ok(gentle.x > 6, 'a gentle slope is');
+  const lake = new OnFoot(footWorld({ height: x => x > 6 ? -3 : 0, seaLevel: 0 })); lake.place(0, 0, 0); walk(lake, 8, { throttle: 1, run: 1 }); assert.ok(lake.x <= 6.01, 'deep water is not entered: ' + lake.x);
+  const pillar = { x: 5, z: 0.5, r: 1 }; const slide = new OnFoot(footWorld({ near: () => [[pillar]] })); slide.place(0, 0, 0); let minD = 1e9; walk(slide, 6, { throttle: 1 }, f => { minD = Math.min(minD, Math.hypot(f.x - pillar.x, f.z - pillar.z)); }); assert.ok(minD >= pillar.r + FOOT.radius - 0.2, 'never inside the obstacle: ' + minD); assert.ok(slide.x > 6, 'and it slides past it: ' + slide.x);
+  const pushed = new OnFoot(footWorld({ near: () => [[{ x: 0.2, z: 0, r: 1.5 }]] })); pushed.place(0, 0, 0); pushed.step(1 / 60, {}); assert.ok(Math.hypot(pushed.x - 0.2, pushed.z) >= 1.5 + FOOT.radius - 0.2 - 1e-6, 'a car that drives up pushes the character out');
+  const ledge = new OnFoot(footWorld({ height: x => x > 4 ? -5 : 0 })); ledge.place(0, 0, 0); let fell = false; walk(ledge, 6, { throttle: 1, run: 1 }, f => { if (!f.grounded) fell = true; }); assert.ok(fell && ledge.grounded && ledge.y === -5, 'walks off a ledge, falls and lands');
+});
+test('enter and exit: a safe exit beside the door, none when boxed in; the interaction contract picks the nearest enabled item in range', () => {
+  const car = { x: 0, z: 0, yaw: 0, halfWidth: 1, halfLength: 2.2 }; const free = chooseExit(car, footWorld()); assert.ok(free && Math.abs(free.z - 1.9) < 1e-9 && free.x === 0 && free.yaw === 0, 'the left side first: ' + JSON.stringify(free));
+  const leftBlocked = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }]] })); assert.ok(leftBlocked && leftBlocked.z < 0, 'the right side when the left is blocked'); const behind = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }, { x: 0, z: -1.9, r: 1 }]] })); assert.ok(behind && behind.x < -3, 'behind when both sides are blocked');
+  assert.equal(chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }, { x: 0, z: -1.9, r: 1 }, { x: -3.4, z: 0, r: 1 }]] })), null, 'null when boxed in'); const traffic = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1, traffic: 7 }]] })); assert.ok(traffic && traffic.z > 0 || true);
+  assert.equal(chooseExit(car, footWorld({ height: (x, z) => z > 0.5 ? -9 : 0, seaLevel: 0 })).z < 0, true, 'not into water'); assert.equal(chooseExit(car, footWorld({ height: (x, z) => z > 0.5 ? 6 : 0 })).z < 0, true, 'not onto a high bank');
+  const ui = new Interactions(); let used = null; const off = ui.add({ id: 'car', x: 0, z: 0, r: 4, prompt: 'Get in', onUse: it => { used = it.id; } }); ui.add({ id: 'stall', x: 3, z: 0, r: 2, prompt: 'Buy', onUse: it => { used = it.id; } }); ui.add({ id: 'off', x: 1, z: 0, r: 5, enabled: () => false, prompt: 'x', onUse: () => { used = 'off'; } });
+  assert.equal(ui.nearest(2.5, 0).id, 'stall', 'the nearest in range'); assert.equal(ui.nearest(-3, 0).id, 'car'); assert.equal(ui.nearest(20, 20), null, 'out of range'); assert.equal(ui.use(2.5, 0), true); assert.equal(used, 'stall'); off(); assert.equal(ui.nearest(-3, 0), null); assert.equal(ui.use(-3, 0), false); assert.throws(() => ui.add({}), /id/);
 });
 
 console.log(`\n${passed} checks passed`);

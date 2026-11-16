@@ -16,7 +16,8 @@ import { WIND } from './world/props.js';
 import { grassTex, waterNormalTex } from './world/textures.js';
 import { makeGroundMaterial } from './world/groundmat.js';
 import { installTunnelHoles } from './world/tunnel_holes.js';
-import { GameRuntime, EventBus } from './core/runtime.js';
+import { GameRuntime, EventBus, Registry } from './core/runtime.js';
+import { OnFoot, chooseExit, Interactions } from './player/onfoot.js';
 import { AssetCache } from './core/assets.js';
 import { SectorManager } from './world/sectors.js';
 import { RoadNav } from './world/navgraph.js';
@@ -168,13 +169,30 @@ function useBuff() {
   buffT = b.secs; buffCd = b.cooldown; phys.setMod(b.mod); toast(b.name);
 }
 function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
+/* on foot (N14, src/player/onfoot.js): G beside a stopped vehicle gets you out; G beside the parked vehicle gets you back in. The vehicle waits on its handbrake. */
+let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0;
+const footWorld = { height: (x, z) => world.height(x, z), surface: (x, z) => world.surface(x, z), get seaLevel() { return world.seaLevel; },
+  near: (x, z, r) => { const l = world.near(x, z, r).slice(); if (phys && mode === 'foot') { const c = Math.cos(phys.yaw), s = Math.sin(phys.yaw), a = (phys.p.front + phys.p.rear) / 4; l.push([{ x: phys.x + c * a, z: phys.z + s * a, r: 1.15 }, { x: phys.x - c * a, z: phys.z - s * a, r: 1.15 }]); } return l; } };
+function makeFigure() { const g = new THREE.Group(), m = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }), box = (w, h, d, c, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m(c)); b.position.y = y; b.castShadow = true; g.add(b); return b; };
+  box(0.5, 0.65, 0.28, 0x2f6fb5, 1.15); box(0.22, 0.8, 0.24, 0x2b2b3a, 0.4).position.x = -0.12; const l2 = box(0.22, 0.8, 0.24, 0x2b2b3a, 0.4); l2.position.x = 0.12; box(0.22, 0.24, 0.22, 0xd9a577, 1.65); g.userData.legs = g.children.slice(1, 3); return g; }
+function exitVehicle() {
+  if (mode !== 'drive' || !phys || frozen() || Math.abs(phys.u) > 2.5) { if (mode === 'drive' && phys && Math.abs(phys.u) > 2.5) toast('Stop first to get out'); return; } setAuto(false);
+  const spot = chooseExit({ x: phys.x, z: phys.z, yaw: phys.yaw, halfWidth: 0.95, halfLength: (phys.p.front + phys.p.rear) / 2 }, footWorld); if (!spot) { toast('No room to get out here'); return; }
+  foot = new OnFoot(footWorld); foot.place(spot.x, spot.z, spot.yaw); if (!figure) { figure = makeFigure(); scene.add(figure); } figure.visible = true; parkedYaw = phys.yaw;
+  cam.yaw = -Math.PI / 2 - foot.yaw; vehicleHandle = (entities = entities || new Registry({ vehicle: 4, player: 1 }, bus)).create('vehicle', { index: vehicle }); setMode('foot'); bus.emit('vehicle:exited', { handle: vehicleHandle });
+  interactions.add({ id: 'vehicle', x: phys.x, z: phys.z, r: 3.4, prompt: 'Get in (G)', onUse: enterVehicle }); toast('On foot: W A S D walk, Shift run, Space jump, G to get back in');
+}
+function enterVehicle() { if (mode !== 'foot' || !phys) return; interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
+function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else exitVehicle(); }
+const actBtn = document.createElement('button'); actBtn.type = 'button'; actBtn.id = 'interact'; actBtn.style.cssText = 'position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:20;display:none;padding:8px 18px;border-radius:999px'; document.body.appendChild(actBtn); actBtn.addEventListener('pointerdown', e => { e.preventDefault(); useNearby(); });
+function updatePrompt() { let t = ''; if (!frozen()) { if (mode === 'foot' && foot) { const it = interactions.nearest(foot.x, foot.z); if (it) t = it.prompt; } else if (mode === 'drive' && phys && Math.abs(phys.u) < 1 && !autodrive.enabled) t = 'Get out (G)'; } if (t !== actBtn.textContent) actBtn.textContent = t; actBtn.style.display = t ? 'block' : 'none'; }
 function setMode(m) {
   if (m !== mode) bus.emit('mode:changed', { from: mode, to: m });
   if (m !== 'drive' && autodrive.enabled) { autodrive.toggle(false); $('#autoBtn').classList.remove('on'); }
   if (m === 'fly' && phys) { cam.x = phys.x - Math.cos(phys.yaw) * 14; cam.z = phys.z - Math.sin(phys.yaw) * 14; cam.y = phys.y + 7; cam.yaw = -Math.PI / 2 - phys.yaw; cam.pitch = -0.25; }
   if (m === 'ride') { roadS = road.closestS(phys ? phys.x : cam.x, phys ? phys.z : cam.z, roadS); rideYaw = phys ? -Math.PI / 2 - phys.yaw : cam.yaw; cam.speed = Math.min(cam.speed, 40); }
   if (m === 'drive' && mode === 'ride' && phys) placeOnRoad(roadS);
-  mode = m; controls.enabled = m === 'drive'; document.body.dataset.mode = m; view.root.visible = m !== 'ride'; sound.setEngineOn(m === 'drive' && !frozen());
+  mode = m; controls.enabled = m === 'drive' || m === 'foot'; document.body.dataset.mode = m; view.root.visible = m !== 'ride'; sound.setEngineOn(m === 'drive' && !frozen());
   $('#fly').classList.toggle('on', m === 'fly'); $('#ride').classList.toggle('on', m === 'ride');
 }
 function regenerate(seed, locId) {
@@ -201,7 +219,7 @@ const toggleView = () => { if (view.mode === 'cockpit') setCam(S.camBefore || 'm
 setCam(S.cam, true);
 $('#viewBtn').addEventListener('click', cycleCam); $('#reset').addEventListener('click', backToRoad);
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
-controls.on('auto', () => setAuto(!autodrive.enabled)); $('#autoBtn').addEventListener('click', () => setAuto(!autodrive.enabled)); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
+controls.on('auto', () => setAuto(!autodrive.enabled)); $('#autoBtn').addEventListener('click', () => setAuto(!autodrive.enabled)); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('interact', useNearby); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
 let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
 $('#time').value = S.time; $('#weather').value = S.weather;
@@ -309,6 +327,10 @@ function update(dt, now) {
       if (phys.stuck > 1.5) backToRoad();
     }
     px = phys.x; pz = phys.z; roadS = road.closestS(px, pz, roadS);
+  } else if (mode === 'foot' && phys && foot) {
+    if (!frozen()) { const i = controls.read(); foot.step(dt, { steer: i.steer, throttle: i.throttle, rev: i.rev, run: i.run, jump: i.brake > 0.5 }); }
+    phys.step(dt, { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }); px = foot.x; pz = foot.z; roadS = road.closestS(px, pz, roadS);
+    cam.x = foot.x - Math.cos(foot.yaw) * 4.2; cam.z = foot.z - Math.sin(foot.yaw) * 4.2; cam.y = Math.max(terrain.seaLevel, foot.y) + 2.5; cam.yaw = -Math.PI / 2 - foot.yaw; cam.pitch = -0.2;
   } else if (mode === 'ride') {
     roadS += Math.min(cam.speed, 90) * dt; road.at(roadS, rp);
     cam.x = rp.x + rp.tz * 2; cam.z = rp.z - rp.tx * 2; cam.y = rp.y + 1.6;
@@ -323,7 +345,9 @@ function update(dt, now) {
   if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
-  if (peds && traffic) peds.update(dt, { x: px, z: pz, u: phys ? phys.u : 0 }, traffic.sim.time);
+  if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
+  if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
+  updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
