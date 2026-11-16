@@ -29,6 +29,7 @@ import { readFileSync } from 'node:fs';
 import { NavGraph, RoadNav, STEP as NAV_STEP, CROSS_EVERY } from '../src/world/navgraph.js';
 import { planPiece, FRONT_GAP, DEPTH, LAMP_EVERY } from '../src/world/district_plan.js';
 import { crossingAt } from '../src/world/navgraph.js';
+import { PedSim, LEVELS, MAX_PEDS, SPAWN_MIN } from '../src/pedestrians/sim.js';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -615,6 +616,35 @@ test('traffic signals: vehicles stop at a red signalled crossing, go on green, p
   const sim2 = new TrafficSim(r, { seed: 'sig', mode: 'high', drive: 'left' }); sim2.setKinds(kinds); for (let k = 0; k < 600; k++) sim2.update(1 / 20, { x: 1e6, z: 1e6, s: 300 + k * 0.4, u: 0, yaw: 0 }); const sim3 = new TrafficSim(r, { seed: 'sig', mode: 'high', drive: 'left' }); sim3.setKinds(kinds); for (let k = 0; k < 600; k++) sim3.update(1 / 20, { x: 1e6, z: 1e6, s: 300 + k * 0.4, u: 0, yaw: 0 });
   assert.deepEqual(sim2.cars.map(c => [c.id, c.kind, Math.round(c.s * 100)]), sim3.cars.map(c => [c.id, c.kind, Math.round(c.s * 100)]), 'signals and mix keep the traffic deterministic');
   const hwy = createTerrain(locationConfig('california', 'peace')), rr = new Road(hwy, locationConfig('california', 'peace')); rr.ensure(-1000, 1000); hwy.attachRoad(rr); assert.equal(new TrafficSim(rr, { mode: 'low' }).signalled, ['boulevard', 'highway'].includes(rr.style.id));
+});
+
+/* ---- N13: pedestrians ---- */
+const pedWorld = () => { const W = navWorld('mumbai', 'peds', 'left'); for (const [sx, sz] of W.sectors) W.nav.loadSector(sx, sz); const traffic = new TrafficSim(W.r, { seed: 'peds', mode: 'mid', drive: 'left' }); const peds = new PedSim(W.nav, { seed: 'peds', density: 0.9, archetypes: ['commuter', 'vendor', 'tourist'], level: 'high', traffic }); return { ...W, traffic, peds }; };
+test('pedestrians: they walk only on sidewalks and approved crossings, wait for the signal, stay within the cap, and cars stop for them', () => {
+  const W = pedWorld(), { r, peds, traffic } = W, st = r.style, p = {}; let t = 0, ps = 300, crossed = 0, maxLive = 0, onWalk = 0, spawnDist = 1e9, redStarts = 0, badStarts = 0, carsThrough = 0, occupiedSteps = 0; const prev = new Map(), seen = new Set();
+  for (let k = 0; k < 4000; k++) {
+    ps = 300 + k * 0.1 * 3; r.at(ps, p); t += 0.1; traffic.update(0.1, { x: p.x, z: p.z, s: ps, u: 3, yaw: p.th }); peds.update(0.1, { x: p.x, z: p.z, u: 3 }, traffic.time); maxLive = Math.max(maxLive, peds.list.length); assert.ok(peds.list.length <= peds.cap, 'cap'); assert.equal(peds.pool.live, peds.list.length, 'pool matches the list');
+    for (const q of peds.list) {
+      if (!seen.has(q.id)) { seen.add(q.id); spawnDist = Math.min(spawnDist, Math.hypot(q.x - p.x, q.z - p.z)); }
+      const c = r.at(r.closestS(q.x, q.z, ps), {}), lat = Math.abs((q.x - c.x) * -c.tz + (q.z - c.z) * c.tx);
+      if (q.state === 'cross') { assert.equal(q.edge.kind, 'cross'); assert.ok(q.cross > 0 || q.cross < 0 || q.cross === 0); } else { assert.ok(q.edge.kind === 'walk' || (q.state === 'wait' && q.edge.kind === 'cross' && q.u === 0), 'only a walker waiting at the kerb or on a crossing may hold a crossing edge'); assert.ok(lat >= st.shoulder - 0.9 && lat > st.half, 'on the sidewalk, not the carriageway: ' + lat); onWalk++; }
+      const was = prev.get(q.id); if (was === 'wait' && q.state === 'cross') { crossed++; const i = q.cross; if (q.edge.signal) { redStarts++; if (signalState(i, traffic.time) !== 'red') badStarts++; } } prev.set(q.id, q.state);
+    }
+    for (const i of peds.occupied) { occupiedSteps++; for (const cc of traffic.cars) { const d = (i * 25 - cc.s) * cc.dir; if (Math.abs(i * 25 - cc.s) < 1.5 && cc.speed > 2) carsThrough++; } }
+  }
+  assert.ok(peds.stats.spawned > 30 && onWalk > 2000, JSON.stringify(peds.stats)); assert.ok(maxLive > 4 && maxLive <= Math.round(MAX_PEDS * 0.9), 'population ' + maxLive); assert.ok(spawnDist >= SPAWN_MIN - 12, 'nobody appears right next to the player: ' + spawnDist);
+  assert.ok(crossed > 5, 'pedestrians do cross: ' + crossed); assert.equal(badStarts, 0, 'nobody steps onto a signalled crossing unless the vehicle signal is red (' + redStarts + ' started)'); assert.ok(occupiedSteps > 10); assert.ok(carsThrough <= 3, 'cars do not drive through a crossing someone is on: ' + carsThrough);
+  const again = pedWorld(); let q = { x: 0, z: 0 }, tt = 0; for (let k = 0; k < 600; k++) { again.r.at(300 + k * 0.9, p); again.traffic.update(0.1, { x: p.x, z: p.z, s: 300 + k * 0.9, u: 9, yaw: p.th }); again.peds.update(0.1, { x: p.x, z: p.z, u: 9 }, again.traffic.time); } const w2 = pedWorld(); for (let k = 0; k < 600; k++) { w2.r.at(300 + k * 0.9, p); w2.traffic.update(0.1, { x: p.x, z: p.z, s: 300 + k * 0.9, u: 9, yaw: p.th }); w2.peds.update(0.1, { x: p.x, z: p.z, u: 9 }, w2.traffic.time); }
+  assert.deepEqual(again.peds.list.map(a => [a.id, a.arch, a.edge.id, Math.round(a.u * 100)]), w2.peds.list.map(a => [a.id, a.arch, a.edge.id, Math.round(a.u * 100)]), 'the same walkers every time'); void q; void tt;
+});
+test('pedestrians: levels and density set the cap, they leave when their sidewalk unloads, nothing leaks on clear', () => {
+  const W = pedWorld(), { r, peds, traffic, nav } = W, p = {}; r.at(900, p); const player = { x: p.x, z: p.z, u: 0 };
+  assert.equal(new PedSim(nav, { density: 1, level: 'off' }).cap, 0); assert.equal(new PedSim(nav, { density: 1, level: 'high' }).cap, MAX_PEDS); assert.equal(new PedSim(nav, { density: 0.5, level: 'mid' }).cap, Math.round(MAX_PEDS * 0.5 * LEVELS.mid)); assert.equal(new PedSim(nav, { density: 0, level: 'high' }).cap, 0);
+  for (let k = 0; k < 300; k++) peds.update(0.2, player, k * 0.2); assert.ok(peds.list.length > 3); const had = peds.list.length;
+  for (const c of [...nav.chunks.values()]) nav.unloadSector(c.sx, c.sz); peds.update(0.2, player, 100); assert.equal(peds.list.length, 0, 'walkers whose sidewalk chunk unloaded are removed (' + had + ' before)'); assert.equal(peds.pool.live, 0);
+  for (const [sx, sz] of W.sectors) nav.loadSector(sx, sz); for (let k = 0; k < 300; k++) peds.update(0.2, player, 200 + k * 0.2); assert.ok(peds.list.length > 3, 'they come back with the sidewalks');
+  peds.clear(); assert.equal(peds.pool.live, 0); assert.equal(traffic.occupied.size, 0); const c0 = peds.pool.stats().created; for (let k = 0; k < 300; k++) peds.update(0.2, player, 400 + k * 0.2); assert.ok(peds.pool.stats().created <= c0 + 48, 'walkers are reused from the pool');
+  const o = peds.list[0]; peds.pool.release(o.handle); assert.equal(o.arch, ''); assert.equal(o.edge, null); assert.equal(o.state, 'walk'); peds.list.shift();
 });
 
 console.log(`\n${passed} checks passed`);

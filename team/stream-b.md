@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 22:00  N13 first increment: pedestrians on the sidewalks
+Branch: feat/n13-pedestrians
+What changed: new `src/pedestrians/sim.js` (bounded pool of 48, sidewalk-only spawn, walk and cross edges of the navigation graph, kerb waiting for the signal or a gap, `occupied` crossings that stop vehicles, archetypes commuter, vendor and tourist, gap keeping, despawn), new `src/pedestrians/pedestrians.js` (instanced figures with swinging legs), `src/world/navgraph.js` `nodesNear`, `src/traffic/sim.js` (`occupied` crossings stop cars; signal cycle now 44 s with 20 s of red so a pedestrian can cross a boulevard), `main.js` wiring for regions with a district and a population (follows the traffic level). Two new self-tests (57 checks): sidewalk-only, cap, signal discipline, cars stop for people, deterministic, levels, unload, pool. Checked in Mumbai: 22 walkers, 4 crossings in 90 s, figures visible on both sidewalks, no errors. `docs/PEDESTRIANS.md`: boxes not rigged models, no reactions, not solid to the car, no phone numbers.
+For the other stream: Stream B: new `src/pedestrians/*` and a change to `traffic/sim.js` (occupied crossings, signal timing); please review.
+Status: open
+
 ## 2026-11-17 20:00  N12 first increment: Indian vehicle mix and traffic signals
 Branch: feat/n12-traffic
 What changed: `src/traffic/sim.js`: `trafficKinds(pack, mix)` (region mix adds two-wheelers and auto-rickshaws in proportion), `EXTRA_KINDS`, signals (`signalState`, 40 s cycle; cars brake to stop 1.5 m before the stop line of a signalled crossing, using the graph's `crossingAt`), two-wheelers ride at a lane edge; `src/traffic/traffic.js`: procedural motorbike and auto-rickshaw geometry, `mix` option; `main.js` passes the region's `traffic.mix`. Two new self-tests (55 checks): mix proportions, signal states, cars wait on red and rarely cross it, two-wheelers at the lane edge, deterministic. Checked in Mumbai at High: 5 two-wheelers, 2 auto-rickshaws among the cars, zebra crossing visible, no errors. `docs/TRAFFIC.md`: **no junctions or turning yet** (needs N11's junction), no overtaking, no real models or sounds.

@@ -30,8 +30,8 @@ export function trafficKinds(packKinds, mix) {
   if (!mix) return packKinds; const bulk = ['car', 'van', 'truck', 'bus'].reduce((a, k) => a + (mix[k] || 0), 0), W = packKinds.reduce((a, k) => a + k.weight, 0); if (!(bulk > 0) || !(W > 0)) return packKinds;
   const out = packKinds.slice(); for (const [name, E] of Object.entries(EXTRA_KINDS)) if (mix[name] > 0) out.push({ name, len: E.len, w: E.w, h: E.h, weight: W * mix[name] / bulk, paintable: false }); return out;
 }
-/* traffic signals: at a signalled crossing (the navigation graph's crossings on boulevards and highways) vehicles on the road get a 40 s cycle: green 24 s, amber 3 s, red 13 s, offset by crossing so they do not all change together. Pedestrians cross on red. */
-export const SIGNAL = { cycle: 40, green: 24, amber: 3 };
+/* traffic signals: at a signalled crossing (the navigation graph's crossings on boulevards and highways) vehicles on the road get a 44 s cycle: green 21 s, amber 3 s, red 20 s (long enough for a pedestrian to cross a boulevard), offset by crossing so they do not all change together. Pedestrians cross on red. */
+export const SIGNAL = { cycle: 44, green: 21, amber: 3 };
 export function signalState(i, time) { const t = (time + (i * 7) % SIGNAL.cycle) % SIGNAL.cycle; return t < SIGNAL.green ? 'green' : t < SIGNAL.green + SIGNAL.amber ? 'amber' : 'red'; }
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 const pickKind = (list, t) => { for (const k of list) { t -= k.weight; if (t < 0) return k; } return list[0]; };       // the vehicle a random number t (0..total weight) lands on
@@ -43,7 +43,8 @@ export function laneOffsets(style) {
 
 export class TrafficSim {
   constructor(road, { seed = 'traffic', mode = 'low', drive = 'right', ahead = 700, behind = 350, minSpawnGap = 150, scale = 1 } = {}) {
-    this.scale = scale; this.road = road; this.signalled = SIGNAL_STYLES.includes(road.style.id); this.crossCache = new Map(); this.seed = String(seed); this.drive = drive; this.ahead = ahead; this.behind = behind; this.minSpawnGap = minSpawnGap;
+    this.scale = scale; this.road = road; this.signalled = SIGNAL_STYLES.includes(road.style.id); this.occupied = new Set();            // crossing indices with pedestrians on them (set by the pedestrian sim): vehicles stop for them
+     this.crossCache = new Map(); this.seed = String(seed); this.drive = drive; this.ahead = ahead; this.behind = behind; this.minSpawnGap = minSpawnGap;
     this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.pool = new Pool({ cap: MODES.high + 8, make: blankCar, reset: resetCar }); this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
     this.setMode(mode);
   }
@@ -101,10 +102,10 @@ export class TrafficSim {
         if (Math.abs(pl - c.lat) < 2.2 && along > -3 && along < 80) { const same = Math.cos((player.yaw || 0) - (c.dir > 0 ? p.th : p.th + Math.PI)), pv = Math.max(0, (player.u || 0) * same); if (along < safe) want = Math.min(want, pv * clamp((along - 2) / (safe - 2), 0, 1)); if (along < 2) want = 0; }
         if (Math.hypot(player.x - c.x, player.z - c.z) < 3.4 && c.bump <= 0) { c.bump = 3; c.speed *= 0.4; }          // bumped by the player: slows, then carries on
       }
-      if (this.signalled) {                                                                                         // a red (or amber, too late to stop) signal ahead is a stopped car at the stop line
+      if (this.signalled || this.occupied.size) {                                                                                         // a red (or amber, too late to stop) signal ahead is a stopped car at the stop line
         const m = CROSS_EVERY / STEP, i0 = c.dir > 0 ? Math.ceil(c.s / STEP / m) : Math.floor(c.s / STEP / m);
         for (let n = 0; n < 3; n++) { const i = (i0 + n * c.dir) * m, sline = i * STEP - c.dir * (6 + c.len / 2), dist = (sline - c.s) * c.dir; if (dist < -1) continue; if (dist > 70) break; if (!this.isCrossing(i)) continue;
-          const st = signalState(i, this.time); if (st === 'green' || (st === 'amber' && dist < c.speed * 1.2)) continue; want = Math.min(want, Math.sqrt(2 * 3 * Math.max(0, dist - 1.5))); break; }                    // brake at 3 m/s2 to stop 1.5 m short of the line
+          const st = this.occupied.has(i) ? 'red' : this.signalled ? signalState(i, this.time) : 'green'; if (st === 'green' || (st === 'amber' && dist < c.speed * 1.2)) continue; want = Math.min(want, Math.sqrt(2 * 3 * Math.max(0, dist - 1.5))); break; }                    // brake at 3 m/s2 to stop 1.5 m short of the line
       }
       c.brake = want < c.speed - 0.3 ? 1 : 0;
       c.speed = clamp(want, c.speed - 7 * dt, c.speed + 2.5 * dt); c.speed = Math.max(0, c.speed);

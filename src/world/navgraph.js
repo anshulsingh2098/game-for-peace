@@ -56,6 +56,12 @@ export class NavGraph {
     for (let i = cx - R; i <= cx + R; i++) for (let j = cz - R; j <= cz + R; j++) { const b = this.hash.get(i + ',' + j); if (!b) continue; for (const id of b) { const n = this.nodes.get(id); if (want && n.kind !== want) continue; const d = (n.x - x) ** 2 + (n.z - z) ** 2; if (d < bd) { bd = d; best = n; } } }
     return best;
   }
+  /* the nodes of a kind ('d' or 'w') within r of a point, from the cells around it only */
+  nodesNear(x, z, r, kind) {
+    const out = [], R = Math.ceil(r / this.cell), cx = Math.floor(x / this.cell), cz = Math.floor(z / this.cell), r2 = r * r;
+    for (let i = cx - R; i <= cx + R; i++) for (let j = cz - R; j <= cz + R; j++) { const b = this.hash.get(i + ',' + j); if (!b) continue; for (const id of b) { const n = this.nodes.get(id); if (kind && n.kind !== kind) continue; if ((n.x - x) ** 2 + (n.z - z) ** 2 <= r2) out.push(n); } }
+    return out;
+  }
   /* bounded A*: at most maxNodes nodes are expanded; mode 'drive' uses 'drive' and 'lane' edges, 'walk' uses 'walk' and 'cross' edges. Results (and failures) are cached until the graph changes. */
   route(from, to, { mode = 'drive', maxNodes = 600 } = {}) {
     this.stats.routes++; const ck = from + '>' + to + '|' + mode + '|' + maxNodes; const hit = this.cache.get(ck); if (hit && hit.version === this.version) { this.stats.hits++; this.cache.delete(ck); this.cache.set(ck, hit); return hit; }
