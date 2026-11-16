@@ -13,3 +13,5 @@ Code: `src/traffic/sim.js` (simulation, pure), `src/traffic/traffic.js` (drawing
 - **Overtaking and weaving** by two-wheelers beyond their lane-edge position, horns, indicators.
 - Real models for two-wheelers and rickshaws, and engine and horn sounds for them (the asset job, `docs/ASSET_PLAN.md` to be written).
 - A phone measurement of the extra draw calls (two more instanced meshes at most).
+
+**City buses and cows (19 Nov 2026).** `bus` (10.5 m, red body, cream band, 0.85 of road speed) and `cow` (1.9 m, 0.1 of road speed, about 3 m/s, no lights) are extra kinds like the two-wheeler and the auto-rickshaw: a region's traffic mix may list them (Delhi, Agra and Bhopal have cows; most have buses). Cars do not overtake, so a cow in a lane holds up the cars behind it (the self-test checks the queue). The bus is no longer counted in the share of the model pack. Procedural shapes, not real models.

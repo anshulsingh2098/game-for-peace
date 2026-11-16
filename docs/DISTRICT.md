@@ -21,3 +21,5 @@ A region can list `junctions: [{ s, style, bearing, arm }]` (`world/regions.js`)
 
 ## Delhi, Agra and Bhopal (19 Nov 2026)
 Region data only (`world/regions.js`): Delhi (colonial and modern, 2 to 5 floors, no market, a boulevard crossing at 950 m), Agra (mughal, old-city and modern palettes, 2 to 4 floors, market, a street at 800 m), Bhopal (old-city and mixed, 2 to 4 floors, market, a street at 900 m). They use the same building kit as Mumbai, so apart from colour they look alike (arches, domes, jali screens, haveli balconies and narrow lanes are not built). Pedestrians follow because the regions now have a district and a population. Checked in the browser (Delhi, Agra).
+
+**Building styles (19 Nov 2026).** `mughal` plots get a dome on a drum and four small domed pavilions (chhatris) at the roof corners; `old-city` plots get jharokha balconies (enclosed, projecting, with a small cap) on every upper floor. Both are procedural boxes and hemispheres in the same merged mesh, so the cost is a few hundred triangles per plot. Checked in Agra.

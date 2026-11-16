@@ -26,12 +26,12 @@ export const DEFAULT_KINDS = [{ name: 'sedan', len: 4.4, w: 1.85, h: 1.45, weigh
 const blankCar = () => ({ handle: 0, id: 0, s: 0, dir: 1, lane: 0, kind: '', len: 0, w: 0, h: 0, v0: 0, speed: 0, colour: 0, lat: 0, stuck: 0, bump: 0, born: 0, bornDist: 0, x: 0, z: 0, y: 0, yaw: 0, brake: 0, turnJ: 0, fx: 0, fz: 0, fyaw: 0, blend: 0 });
 const resetCar = c => { for (const k in c) c[k] = typeof c[k] === 'string' ? '' : 0; c.dir = 1; };
 /* the two vehicle kinds the pack does not have (two-wheeler, auto-rickshaw); drawn by traffic.js from boxes until there are models */
-export const EXTRA_KINDS = { 'two-wheeler': { len: 2.0, w: 0.8, h: 1.5 }, 'auto-rickshaw': { len: 2.7, w: 1.45, h: 1.75 } };
+export const EXTRA_KINDS = { 'two-wheeler': { len: 2.0, w: 0.8, h: 1.5 }, 'auto-rickshaw': { len: 2.7, w: 1.45, h: 1.75 }, bus: { len: 10.5, w: 2.5, h: 3.1, slow: 0.85 }, cow: { len: 1.9, w: 0.7, h: 1.5, slow: 0.1 } };      // slow: share of the road's speed (a cow ambles at about 3 m/s, and the cars behind it wait)
 /* the kinds a region's traffic mix gives: the pack's vehicles keep their relative weights and together stand for the mix's car, van, truck and bus share; every other kind in the mix that
    we know (two-wheeler, auto-rickshaw) is added with a weight in proportion. No mix (a place that is not a region): the pack as it is. */
 export function trafficKinds(packKinds, mix) {
-  if (!mix) return packKinds; const bulk = ['car', 'van', 'truck', 'bus'].reduce((a, k) => a + (mix[k] || 0), 0), W = packKinds.reduce((a, k) => a + k.weight, 0); if (!(bulk > 0) || !(W > 0)) return packKinds;
-  const out = packKinds.slice(); for (const [name, E] of Object.entries(EXTRA_KINDS)) if (mix[name] > 0) out.push({ name, len: E.len, w: E.w, h: E.h, weight: W * mix[name] / bulk, paintable: false }); return out;
+  if (!mix) return packKinds; const bulk = ['car', 'van', 'truck'].reduce((a, k) => a + (mix[k] || 0), 0), W = packKinds.reduce((a, k) => a + k.weight, 0); if (!(bulk > 0) || !(W > 0)) return packKinds;
+  const out = packKinds.slice(); for (const [name, E] of Object.entries(EXTRA_KINDS)) if (mix[name] > 0) out.push({ name, len: E.len, w: E.w, h: E.h, weight: W * mix[name] / bulk, paintable: false, slow: E.slow }); return out;
 }
 /* traffic signals: at a signalled crossing (the navigation graph's crossings on boulevards and highways) vehicles on the road get a 44 s cycle: green 21 s, amber 3 s, red 20 s (long enough for a pedestrian to cross a boulevard), offset by crossing so they do not all change together. Pedestrians cross on red. */
 export const SIGNAL = { cycle: 44, green: 21, amber: 3 };
@@ -77,7 +77,7 @@ export class TrafficSim {
   spawn(slot, chance, player) {
     if (this.cars.length >= this.cap) return;
     const R = alea(this.seed, 'traffic', slot); if (R() > chance) return;
-    const s = (slot + 0.15 + R() * 0.7) * SLOT, dir = R() < 0.5 ? 1 : -1, lane = Math.floor(R() * this.lanes.length), kt = R() * this.kinds.reduce((a, k) => a + k.weight, 0), K = pickKind(this.kinds, kt), kind = K.name, v0 = this.limit * (0.7 + R() * 0.28) * (K.len > 6.5 ? 0.8 : 1), colour = Math.floor(R() * 64);
+    const s = (slot + 0.15 + R() * 0.7) * SLOT, dir = R() < 0.5 ? 1 : -1, lane = Math.floor(R() * this.lanes.length), kt = R() * this.kinds.reduce((a, k) => a + k.weight, 0), K = pickKind(this.kinds, kt), kind = K.name, v0 = this.limit * (0.7 + R() * 0.28) * (K.len > 6.5 ? 0.8 : 1) * (K.slow || 1), colour = Math.floor(R() * 64);
     if (s < this.road.sMin + 60 || s > this.road.sMax - 60 || Math.abs(s - player.s) < this.minSpawnGap) return;
     for (const c of this.cars) if (c.dir === dir && c.lane === lane && Math.abs(c.s - s) < 30) return;          // never on top of another car
     const got = this.pool.acquire(); if (!got) return; const car = got.obj;                                       // the pool is full: no spawn (the cap is lower than the pool, so this is a safety net)

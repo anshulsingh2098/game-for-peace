@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-20 00:00  Indian building styles, city buses and cows
+Branch: feat/building-styles
+What changed: `world/district.js` (domes and chhatris for `mughal`, jharokha balconies for `old-city`), `traffic/sim.js` (kinds `bus` and `cow`, `slow` speed factor, bus no longer part of the pack share), `traffic/traffic.js` (shapes, no lights on a cow; Stream B files, additive), `world/regions.js` (buses and cows in the mixes), one self-test (72 checks), docs. Checked in the browser (Agra: domes and a cow in the lane).
+For the other stream: cows hold up queues because cars do not overtake: please decide if overtaking should come next.
+Status: open
+
 ## 2026-11-19 22:00  Districts for Delhi, Agra and Bhopal
 Branch: feat/districts-2
 What changed: `world/regions.js` (district and crossing street for Delhi, Agra, Bhopal), one test updated (four regions have a district), `docs/DISTRICT.md`, `docs/WORK_REMAINING.md`. Checked in the browser (Delhi, Agra). The look is the Mumbai kit in other colours: see 3.2.
