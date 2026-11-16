@@ -36,6 +36,8 @@ import { loadSave, writeSave } from './core/save.js';
 import { destinationsFor, HINDI, CITY } from './world/india_network.js';
 import { RoadNetwork } from './world/network.js';
 import { RoadSet } from './world/roadset.js';
+import { Junction } from './traffic/junction.js';
+import { JunctionSignals } from './world/junction_signals.js';
 import { DRIVE_MODES, DRIVE_MODE_IDS } from './vehicle/physics.js';
 import { laneOffsets } from './traffic/sim.js';
 import { ActivityRunner, activitiesFor, recordResult } from './activities/activities.js';
@@ -403,11 +405,14 @@ function buildBranches(city) {
     const cfg = { ...config, seed: config.seed + ':' + city.id + ':' + j.road, road: { ...config.road, guide: gA.pts, guideBack: gB ? gB.pts : null, start, style: rd.kind === 'nh' ? 'highway' : 'nh6' } };
     const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); branches.push({ city: city.id, road: br, mesh: new RoadMesh(scene, br, br.style, grid.origin, {}), hint: 0, near: false, te: traffic ? traffic.addRoad(br) : null });
   }
+  const mine = branches.filter(b => b.city === city.id && b.te);
+  if (traffic && mine.length) { const jn = new Junction(p.x, p.z); jn.addArm(traffic.sim, road, sc); for (const b of mine) jn.addArm(b.te.sim, b.road, 0); traffic.addJunction(jn); junctionSignals.add(jn); junctionOf.set(city.id, jn); }          // the roads share one signal and cars may turn between them
   return true;
 }
-function dropBranches(cityId) { for (let i = branches.length - 1; i >= 0; i--) if (branches[i].city === cityId) { const b = branches[i]; roadSet.remove(b.road); if (traffic && b.te) traffic.removeRoad(b.te); grid.invalidate(roadBox(b.road)); b.mesh.dispose(); branches.splice(i, 1); } }
-const triedBranches = new Set(), tmpP = {};
-bus.on('world:rebuilt', () => triedBranches.clear());
+function dropBranches(cityId) { const jn = junctionOf.get(cityId); if (jn) { if (traffic) traffic.removeJunction(jn); junctionSignals.remove(jn); junctionOf.delete(cityId); } dropBranchRoads(cityId); }
+function dropBranchRoads(cityId) { for (let i = branches.length - 1; i >= 0; i--) if (branches[i].city === cityId) { const b = branches[i]; roadSet.remove(b.road); if (traffic && b.te) traffic.removeRoad(b.te); grid.invalidate(roadBox(b.road)); b.mesh.dispose(); branches.splice(i, 1); } }
+const triedBranches = new Set(), tmpP = {}, junctionOf = new Map(), junctionSignals = new JunctionSignals(scene, grid.origin);
+bus.on('world:rebuilt', () => { triedBranches.clear(); for (const j of [...junctionSignals.items.keys()]) junctionSignals.remove(j); junctionOf.clear(); });
 function updateBranches(px, pz, dt) {
   const R = indiaRoute; if (!R || !roadSet) return; const arc = road.guideArc(px, pz) || 0;
   R.cities.forEach(c => { const d = Math.abs(arc - c.along), have = branches.some(b => b.city === c.id); if (d < 2400 && !have && !triedBranches.has(c.id)) { if (buildBranches(c)) triedBranches.add(c.id); } else if (d > 3600 && (have || triedBranches.has(c.id))) { dropBranches(c.id); triedBranches.delete(c.id); } });
@@ -448,7 +453,7 @@ function update(dt, now) {
   if (navDebug && nav) navDebug.update(nav, grid.origin);
   focus.x = px; focus.z = pz; if (mode === 'drive' && phys) { focus.dx = Math.cos(phys.yaw); focus.dz = Math.sin(phys.yaw); focus.speed = Math.abs(phys.u); } else focus.speed = 0;
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
-  updateBranches(px, pz, dt);
+  updateBranches(px, pz, dt); junctionSignals.update();
   if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);

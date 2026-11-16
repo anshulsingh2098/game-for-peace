@@ -23,7 +23,7 @@ export const KINDS = { sedan: { len: 4.4, w: 1.85 }, van: { len: 5.2, w: 2.0 }, 
 /* the mix of vehicles: name, length, width, height (m) and how common it is. This plain set is used until the real models load (traffic_pack.json replaces it, see traffic.js). */
 export const DEFAULT_KINDS = [{ name: 'sedan', len: 4.4, w: 1.85, h: 1.45, weight: 70 }, { name: 'van', len: 5.2, w: 2.0, h: 2.0, weight: 18 }, { name: 'truck', len: 8.5, w: 2.5, h: 3.0, weight: 12 }];
 /* the cars are a bounded reusable pool (core/runtime.js Pool): a car that is removed is reset completely and handed back, so spawning and removing cars does not allocate */
-const blankCar = () => ({ handle: 0, id: 0, s: 0, dir: 1, lane: 0, kind: '', len: 0, w: 0, h: 0, v0: 0, speed: 0, colour: 0, lat: 0, stuck: 0, bump: 0, born: 0, bornDist: 0, x: 0, z: 0, y: 0, yaw: 0, brake: 0 });
+const blankCar = () => ({ handle: 0, id: 0, s: 0, dir: 1, lane: 0, kind: '', len: 0, w: 0, h: 0, v0: 0, speed: 0, colour: 0, lat: 0, stuck: 0, bump: 0, born: 0, bornDist: 0, x: 0, z: 0, y: 0, yaw: 0, brake: 0, turnJ: 0, fx: 0, fz: 0, fyaw: 0, blend: 0 });
 const resetCar = c => { for (const k in c) c[k] = typeof c[k] === 'string' ? '' : 0; c.dir = 1; };
 /* the two vehicle kinds the pack does not have (two-wheeler, auto-rickshaw); drawn by traffic.js from boxes until there are models */
 export const EXTRA_KINDS = { 'two-wheeler': { len: 2.0, w: 0.8, h: 1.5 }, 'auto-rickshaw': { len: 2.7, w: 1.45, h: 1.75 } };
@@ -49,7 +49,7 @@ export class TrafficSim {
   constructor(road, { seed = 'traffic', mode = 'low', drive = 'right', ahead = 700, behind = 350, minSpawnGap = 150, scale = 1 } = {}) {
     this.scale = scale; this.road = road; this.signalled = SIGNAL_STYLES.includes(road.style.id); this.occupied = new Set();            // crossing indices with pedestrians on them (set by the pedestrian sim): vehicles stop for them
      this.crossCache = new Map(); this.seed = String(seed); this.drive = drive; this.ahead = ahead; this.behind = behind; this.minSpawnGap = minSpawnGap;
-    this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.pool = new Pool({ cap: MODES.high + 8, make: blankCar, reset: resetCar }); this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
+    this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.junctions = []; this.pool = new Pool({ cap: MODES.high + 8, make: blankCar, reset: resetCar }); this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
     this.setMode(mode);
   }
   isCrossing(i) { let v = this.crossCache.get(i); if (v === undefined) { v = crossingAt(this.road, i, this._q); this.crossCache.set(i, v); } return v; }
@@ -57,6 +57,9 @@ export class TrafficSim {
   clearCars() { this.pool.releaseAll(); this.cars.length = 0; this.seen.clear(); }
   setMode(mode) { mode = MODE_ALIAS[mode] || mode; this.mode = MODES[mode] !== undefined ? mode : 'off'; this.cap = MODES[this.mode] ? Math.max(1, Math.min(MODES.high + 4, Math.round(MODES[this.mode] * this.scale))) : 0; this.clearCars(); }          // `scale` is the region's traffic density multiplier (regions.js)
   /* the signed offset from the centre line along the left normal for a car going `dir` (+1 with increasing s) in lane index k */
+  /* a junction where this road crosses others (traffic/junction.js): cars obey its signal and some turn onto another road */
+  attachJunction(j, arm) { this.junctions.push({ j, arm }); }
+  detachJunction(j) { this.junctions = this.junctions.filter(e => e.j !== j); }
   /* the toll plazas within reach of road distance s (cached per 500 m block) */
   tollsNear(s) { const b = Math.floor(s / 500), m = this.tollCache || (this.tollCache = new Map()); let v = m.get(b); if (!v) { v = validTolls(this.road, b * 500 - 140, b * 500 + 640); m.set(b, v); if (m.size > 60) m.delete(m.keys().next().value); } return v; }
   lateral(dir, k) { const off = this.lanes[k], right = this.drive === 'right'; return (dir > 0) === right ? -off : off; }
@@ -65,7 +68,7 @@ export class TrafficSim {
     this.time += dt; if (!this.cap) return;
     const ps = player.s, lo = Math.floor((ps - this.behind) / SLOT), hi = Math.floor((ps + this.ahead) / SLOT);
     for (const k of this.seen) if (k < lo || k > hi) this.seen.delete(k);                                       // slots that left the window may fill again if the player comes back
-    const keep = []; for (const c of this.cars) { if (c.s > ps - this.behind - SLOT && c.s < ps + this.ahead + SLOT && c.s > this.road.sMin + 30 && c.s < this.road.sMax - 30 && c.stuck < 12) keep.push(c); else this.pool.release(c.handle); } this.cars = keep;
+    const keep = []; for (const c of this.cars) { if (c.s > ps - this.behind - SLOT && c.s < ps + this.ahead + SLOT && c.s > this.road.sMin + 30 && c.s < this.road.sMax - 30 && c.stuck < (this.junctions.length ? 48 : 12)) keep.push(c); else this.pool.release(c.handle); } this.cars = keep;
     const chance = Math.min(1, this.cap / (((this.ahead + this.behind) / SLOT) * 0.9));
     for (let k = lo; k <= hi; k++) if (!this.seen.has(k)) { this.seen.add(k); this.spawn(k, chance, player); }
     this.step(dt, player);
@@ -85,6 +88,7 @@ export class TrafficSim {
   /* world position and heading of a car from its road distance and lane */
   place(c) {
     const p = this.road.at(c.s, this._p); c.x = p.x - p.tz * c.lat; c.z = p.z + p.tx * c.lat; c.y = p.y; c.yaw = c.dir > 0 ? p.th : p.th + Math.PI;
+    if (c.blend > 0) { const k = c.blend * c.blend * (3 - 2 * c.blend); c.x = c.fx * k + c.x * (1 - k); c.z = c.fz * k + c.z * (1 - k); c.yaw = c.fyaw + Math.atan2(Math.sin(c.yaw - c.fyaw), Math.cos(c.yaw - c.fyaw)) * (1 - k); }       // a car that just turned onto this road eases from where it was
   }
   /* the sharpest bend within 90 m ahead sets a speed limit, like the autodrive */
   curveSpeed(c) {
@@ -97,7 +101,7 @@ export class TrafficSim {
     const groups = new Map();
     for (const c of this.cars) { const key = c.dir + '|' + c.lane; (groups.get(key) || groups.set(key, []).get(key)).push(c); }
     for (const list of groups.values()) list.sort((a, b) => (a.s - b.s) * a.dir);                                // ordered along the direction of travel: the next one in the list is the leader
-    const R = this.road;
+    const R = this.road; let turns = null;
     for (const list of groups.values()) for (let i = 0; i < list.length; i++) {
       const c = list[i], lead = list[i + 1]; let want = Math.min(c.v0, this.curveSpeed(c));
       if (c.bump > 0) { c.bump -= dt; want = 0; }
@@ -114,10 +118,17 @@ export class TrafficSim {
           const st = this.occupied.has(i) ? 'red' : this.signalled ? signalState(i, this.time) : 'green'; if (st === 'green' || (st === 'amber' && dist < c.speed * 1.2)) continue; want = Math.min(want, Math.sqrt(2 * 3 * Math.max(0, dist - 1.5))); break; }                    // brake at 3 m/s2 to stop 1.5 m short of the line
       }
       if (R.style.id === 'nh6') for (const ts of this.tollsNear(c.s)) { const e = c.dir > 0 ? ts : ts + TOLL_LEN, d = (e - c.s) * c.dir; if (d >= -TOLL_LEN - 1 && d < 130) want = Math.min(want, tollCap(d)); }             // toll plazas: cars slow to walking pace through the booths
+      for (const { j, arm } of this.junctions) {                                                                              // a junction ahead: stop at its line on red (or amber when there is time), and maybe turn at its centre
+        const d = (arm.s - c.s) * c.dir, dist = d - 9 - c.len / 2; if (d < -2 || dist > 70) continue;
+        if (dist > -3) { const st = j.state(arm); if (st === 'red' || (st === 'amber' && dist > c.speed * 1.2)) want = Math.min(want, Math.sqrt(2 * 3 * Math.max(0, dist - 1.5))); }
+        if (d < 1.5 && c.turnJ !== j.num && j.arms.length > 1) { c.turnJ = j.num; const r = alea(this.seed, 'turn', c.id, j.num); if (r() < 0.22) { const others = j.arms.filter(a => a !== arm); (turns || (turns = [])).push({ c, j, from: arm, to: others[Math.floor(r() * others.length)], r }); } }
+      }
       c.brake = want < c.speed - 0.3 ? 1 : 0;
       c.speed = clamp(want, c.speed - 7 * dt, c.speed + 2.5 * dt); c.speed = Math.max(0, c.speed);
+      if (c.blend > 0) c.blend = Math.max(0, c.blend - dt / 0.9);
       c.s += c.dir * c.speed * dt; c.stuck = c.speed < 0.5 ? c.stuck + dt : 0; this.place(c);
     }
+    if (turns) for (const t of turns) if (t.j.transfer(t.c, t.from, t.to, t.r)) { this.cars = this.cars.filter(o => o !== t.c); this.pool.release(t.c.handle); }
   }
 
   /* the car in front of the player in the player's own lane, if any within `range` m: { gap (m between the bumpers), speed (its speed along the player's direction, m/s) } or null.

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 03:00  Crossing behaviour: shared signals, stopping at red, turning, signal poles
+Branch: feat/landscape-look (PR 36)
+What changed: new `traffic/junction.js` (`Junction`: shared three-phase signal, `transfer` hands a car to another road's sim), `traffic/sim.js` (junction stop and turn logic, car fields for the turn blend, stuck limit raised to 48 s at junctions; Stream B file, additive), `traffic/traffic.js` (`addJunction`, `removeJunction`, junction clock), new `world/junction_signals.js` (poles and lamps), `main.js` (junction built with the side roads). One long self-test block added (68 checks): signal phases, never green on two roads, cars stop at the line on red, turns happen, no car in two sims, car cap respected. Checked in the browser at Delhi (six-road star cycles, cars turn, poles visible, no console errors). Not done: yielding inside the crossing, avoiding a player who runs a red, turn lanes, real indicators, pedestrians and the navigation graph at junctions.
+For the other stream: please review the changes in `traffic/sim.js` and `traffic/traffic.js` (additive); the junction rules are in `traffic/junction.js`.
+Status: open
+
 ## 2026-11-19 01:00  Traffic on every road of the world
 Branch: feat/landscape-look (PR 36)
 What changed: `traffic/sim.js` (`branchMode`), `traffic/traffic.js` (`addRoad`, `removeRoad`, `updateExtra`; extra sims share the instanced meshes; `circles` and `setMode` cover them), `main.js` (each branch road gets a sim while the player is within 700 m), one self-test extension (68 checks: cars appear on the side road, keep to its lanes, live near the player, are cleared when off, circles reach physics). Checked in the browser at Delhi. Not done: cars turning between roads, giving way or traffic lights at crossings (two roads' cars can pass through each other), pedestrians and the navigation graph on side roads, continuing cars when you leave and return.

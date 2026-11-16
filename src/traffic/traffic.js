@@ -54,7 +54,7 @@ function boxGeometry(kind) {
 export class Traffic {
   /* seed: the world's seed string; origin: the render origin (grid.origin); drive: 'right' or 'left'; pack: the loaded traffic pack (or null for boxes) */
   constructor(scene, road, seed, origin, { mode = 'low', drive = 'right', pack = null, scale = 1, mix = null } = {}) {
-    this.mix = mix; this.scene = scene; this.origin = origin; this.opts = { seed, drive, scale }; this.extra = []; this.sim = new TrafficSim(road, { seed, mode, drive, scale }); this.group = new THREE.Group(); scene.add(this.group);
+    this.mix = mix; this.scene = scene; this.origin = origin; this.opts = { seed, drive, scale }; this.extra = []; this.junctions = []; this.sim = new TrafficSim(road, { seed, mode, drive, scale }); this.group = new THREE.Group(); scene.add(this.group);
     this.cap = MODES.high + 4; this.groups = {}; this.geos = [];
     this.paintMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.2 });
     this.restMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.05, envMapIntensity: 0.8 });
@@ -80,6 +80,9 @@ export class Traffic {
   /* cars on another road of the world (a road that crosses the main one): its own simulation, drawn with the same instanced meshes; it only runs while the player is near it (see branchMode) */
   addRoad(road) { const o = this.opts, sim = new TrafficSim(road, { seed: o.seed + ':' + this.extra.length, mode: 'off', drive: o.drive, scale: o.scale * 0.8 }); sim.setKinds(this.sim.kinds); const e = { road, sim }; this.extra.push(e); return e; }
   removeRoad(e) { const i = this.extra.indexOf(e); if (i >= 0) this.extra.splice(i, 1); }
+  /* a junction where roads of this world cross (traffic/junction.js): every arm's simulation obeys its signal; the clock runs with the world */
+  addJunction(j) { this.junctions.push(j); for (const arm of j.arms) arm.sim.attachJunction(j, arm); }
+  removeJunction(j) { const i = this.junctions.indexOf(j); if (i >= 0) this.junctions.splice(i, 1); for (const arm of j.arms) arm.sim.detachJunction(j); }
   updateExtra(e, dt, player, active) { const want = branchMode(this.sim.mode, active); if (e.sim.mode !== want) e.sim.setMode(want); if (want !== 'off') e.sim.update(dt, player); }
   make(geo, mat, tinted, own) {
     if (!own && !this.pack) this.geos.push(geo);
@@ -89,7 +92,7 @@ export class Traffic {
   setMode(mode) { this.sim.setMode(mode); for (const e of this.extra) e.sim.setMode('off'); this.draw(false); }
   get mode() { return this.sim.mode; }
   /* advance the cars and place the instances; `player` is { x, z, s, u, yaw }; `night`: lights on */
-  update(dt, player, night) { this.sim.update(dt, player); this.draw(night); }
+  update(dt, player, night) { for (const j of this.junctions) j.clock += dt; this.sim.update(dt, player); this.draw(night); }
   draw(night) {
     const counts = {}, o = this.origin; let nt = 0, nh = 0;
     const cars = this.extra.length ? this.sim.cars.concat(...this.extra.map(e => e.sim.cars)) : this.sim.cars;

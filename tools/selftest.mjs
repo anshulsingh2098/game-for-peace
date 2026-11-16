@@ -13,6 +13,7 @@ import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
 import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
 import { CITIES, CITY, HIGHWAYS, RAIL, COAST as INDIA_COAST, routeKm, roadGraph, shortestRoute, nearestCity, distanceKm, gameKm, driveMinutes } from '../src/world/india_network.js';
 import { validTolls, tollCap, planHighway, RAIL_STEP, GANTRY_EVERY, TOLL_EVERY, TOLL_LEN, tollAt } from '../src/world/highway_plan.js';
+import { Junction, JSIG } from '../src/traffic/junction.js';
 import { RoadSet } from '../src/world/roadset.js';
 import { RoadNetwork } from '../src/world/network.js';
 import { toGame, fromGame, smoothPath, pathLength, buildSkeleton, GAME_SCALE } from '../src/world/india_network.js';
@@ -795,6 +796,19 @@ test('road set: a road that branches off another one starts at its height, both 
   branchSim.setMode(branchMode('mid', true)); const bp = br.at(400, {}); for (let i = 0; i < 1200; i++) branchSim.update(1 / 30, { x: bp.x, z: bp.z, s: 400, u: 0, yaw: bp.th }); assert.ok(branchSim.cars.length > 0, 'cars appear on the side road: ' + branchSim.cars.length); const qq = {};
   for (const c of branchSim.cars) { br.at(c.s, qq); const lat = Math.hypot(c.x - qq.x, c.z - qq.z); assert.ok(laneOffsets(br.style).some(o => Math.abs(lat - o) < 0.6), 'a car keeps to a lane of the side road (' + lat.toFixed(1) + ' m from the centre line, lanes ' + laneOffsets(br.style).join(', ') + ')'); assert.ok(c.s > 400 - 600 && c.s < 400 + 900, 'cars live near the player'); }
   const sup = new Set(branchSim.circles(bp.x, bp.z, 400)[0].map(c => c.traffic)); assert.ok(sup.size >= 1, 'their obstacle circles reach the physics'); branchSim.setMode('off'); assert.equal(branchSim.cars.length, 0, 'switching off clears them');
+  /* a junction: shared signal, cars stop at the line on red, some turn onto the other road */
+  const mainSim = new TrafficSim(main, { seed: 'junction-main', mode: 'high', drive: 'left', scale: 1 }), jx = new Junction(jp.x, jp.z), armA = jx.addArm(mainSim, main, 1200), armB = jx.addArm(branchSim, br, 0); mainSim.attachJunction(jx, armA); branchSim.attachJunction(jx, armB);
+  assert.equal(jx.phases, 2); assert.equal(armA.phase, 0); assert.equal(armB.phase, 1); const slot = JSIG.green + JSIG.amber + JSIG.clear; assert.equal(jx.state(armA, 1), 'green'); assert.equal(jx.state(armB, 1), 'red'); assert.equal(jx.state(armA, JSIG.green + 1), 'amber'); assert.equal(jx.state(armA, JSIG.green + JSIG.amber + 0.5), 'red'); assert.equal(jx.state(armB, slot + 1), 'green'); assert.equal(jx.state(armA, 2 * slot + 1), 'green', 'the cycle repeats');
+  let bothGreen = 0, nGreen = 0; for (let tt = 0; tt < 4 * slot; tt += 0.5) { const a = jx.state(armA, tt) === 'green', b = jx.state(armB, tt) === 'green'; if (a && b) bothGreen++; if (a || b) nGreen++; } assert.equal(bothGreen, 0, 'never green on both roads at once'); assert.ok(nGreen > 0);
+  assert.equal(new Junction(0, 0).state({ phase: 0 }), 'green', 'a junction with a single road never stops anyone');
+  branchSim.setMode('mid'); mainSim.setMode('high'); const ps = { x: jp.x + 4000, z: jp.z, s: 1200, u: 0, yaw: 0 }, bs = { x: jp.x + 4000, z: jp.z, s: 0, u: 0, yaw: 0 };
+  let stopped = 0, minGap = Infinity, ok = true, passedMain = 0, seenTurn = jx.turns; const lineSpeeds = [];
+  for (let i = 0; i < 20 * 60 * 6; i++) { jx.clock += 1 / 6; mainSim.update(1 / 6, ps); branchSim.update(1 / 6, bs);
+    for (const [sim, arm] of [[mainSim, armA], [branchSim, armB]]) for (const c of sim.cars) { const d = (arm.s - c.s) * c.dir; if (d > 9 + c.len / 2 - 1 && d < 9 + c.len / 2 + 1.5 && jx.state(arm) === 'red' && c.speed < 0.3) stopped++; if (d > 0 && d < 9 + c.len / 2 - 3 && jx.state(arm) === 'red' && jx.clock % jx.cycle > slot * 0.5 && c.speed > 3) lineSpeeds.push(c.speed); }
+    const ids = new Set(); for (const c of [...mainSim.cars, ...branchSim.cars]) { if (c.handle) { if (ids.has(c.handle + ':' + (mainSim.cars.includes(c) ? 'm' : 'b'))) ok = false; ids.add(c.handle + ':' + (mainSim.cars.includes(c) ? 'm' : 'b')); } }
+  }
+  assert.ok(stopped > 10, 'cars wait at the stop line on red (samples: ' + stopped + ')'); assert.ok(lineSpeeds.length < 40, 'cars do not run the red once past the line is rare: ' + lineSpeeds.length); assert.ok(jx.turns > 0 && jx.turns > seenTurn, 'some cars turn onto the other road: ' + jx.turns); assert.ok(ok, 'no car in a sim twice'); assert.ok(mainSim.cars.length <= mainSim.cap && branchSim.cars.length <= branchSim.cap, 'turning respects the car cap');
+  for (const c of mainSim.cars) { const q2 = main.at(c.s, {}); const lat = Math.hypot(c.x - q2.x, c.z - q2.z); if (c.blend === 0) assert.ok(lat < 12, 'a turned car ends up in a lane (' + lat.toFixed(1) + ')'); } mainSim.detachJunction(jx); assert.equal(mainSim.junctions.length, 0);
   const far = t.surface(jp.x + 3000, jp.z + 3000); assert.notEqual(far, 'asphalt'); set.remove(br); assert.equal(set.roads.length, 1); set.remove(main); assert.equal(set.roads.length, 1, 'the primary road cannot be removed');
   const alone = []; for (let i = 0; i < 30; i++) { const x = i * 97 - 800, z = i * 41 - 300; alone.push([x, z, t.height(x, z), t.surface(x, z)]); } assert.deepEqual(alone, solo, 'with the branch gone the land is as before (one-road behaviour is unchanged)');
 });
