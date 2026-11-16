@@ -106,7 +106,8 @@
   .m-range { width: 100%; accent-color: var(--accent); }
   .m-keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; } .m-keys b { color: #eef2f8; white-space: nowrap; } .m-keys span { color: #b9c3d3; }
   body:not(.dev) .devonly { display: none !important; }
-  body[data-menu] #hud, body[data-menu] #pads, body[data-menu] #buff, body[data-menu] #bar, body[data-menu] #now, body[data-menu] #stats { display: none !important; }
+  body[data-menu] #hud, body[data-menu] #pads, body[data-menu] #buff, body[data-menu] #bar, body[data-menu] #now, body[data-menu] #stats, body[data-menu] #minimap { display: none !important; }
+  body.touch #minimap { bottom: 168px !important; }
   @media (max-width: 640px) { .menu[data-screen=title], .menu[data-screen=pause] { background: linear-gradient(0deg, rgba(6, 9, 16, .85), rgba(6, 9, 16, .2) 70%); align-items: flex-end; } .m-side { width: 100%; height: auto; max-height: 54%; align-self: flex-end; border-left: 0; padding: 14px 16px 18px; } .m-panel h2 { margin-bottom: 10px; font-size: 22px; } .m-desc { margin: 10px 0 6px; } .m-title { padding: 18px 20px 28px; } .menu[data-screen=garage], .menu[data-screen=settings] { align-items: flex-end; } .m-bar { grid-template-columns: 70px 1fr; } }
   body.bare .panel, body.bare #pads { display: none; }
   @media (max-width: 640px) { .keys { display: none; } #bar button { padding: 6px 8px; } #stats { font-size: 10px; } }

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-21 10:00  GPS, Indian milestones, field look, lag governor
+Branch: feat/gps-landscape
+What changed: `ui/gps.js` (new: minimap and full map, key P), `main.js` (Gps wiring, adaptive resolution governor `?gov=off`, gate board info, nav debug no longer triggered by `?nav=<city>`), `world/highway_plan.js` and `highway.js` (stones every 100 m with lettering atlas, gantries every 600 m, also on the 'highway' style, no tolls there), `road.js` (tag), `world/terrain.js` and `groundmat.js` (rectangular field parcels with real land cover, vertex colour shows through the grass), `index.html` (minimap CSS). Self-test 75.
+For the other stream: please check lag on a real phone (governor) and review the plate atlas draw call (one extra mesh per highway piece).
+Status: open
+
 ## 2026-11-20 12:00  Autodrive planner: sport no longer crashes
 Branch: feat/autodrive-modes
 What changed: `input/autodrive.js` (planner: horizon from stopping distance, bends and cars brought back with v^2 = v0^2 + 2ad, toll plazas, safe sport passing with lane checks and smooth lane slides, drop back), `traffic/sim.js` (additive: `leaderAhead(player, range, lat)` and `laneGap`), `main.js` (autodrive uses the active road's own traffic in the India world, lane count, tolls). Sport cornering budget 3.4 m/s2 (5 ran wide and hit the median at 190 km/h). 75 self-test checks (a six-run heavy-traffic test).

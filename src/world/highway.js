@@ -9,18 +9,19 @@ const colourise = (g, c) => { const n = g.attributes.position.count, a = new Flo
 const box = (parts, w, h, d, x, y, z, yaw, c) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateY(yaw); g.translate(x, y, z); parts.push(colourise(g, c)); };
 
 /* a green overhead sign: Hindi name large, English name below, distance on the right; text drawn on a canvas */
-function signTexture({ en, hi, km, kind }) {
+function signTexture({ en, hi, km, kind, sub }) {
   const W = 1024, H = 340, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
   const green = kind === 'toll' || kind === 'city' ? '#12467a' : '#0b6b3a'; x.fillStyle = green; x.fillRect(0, 0, W, H); x.strokeStyle = '#fff'; x.lineWidth = 10; x.strokeRect(14, 14, W - 28, H - 28); x.fillStyle = '#fff'; x.textBaseline = 'middle';
   const font = (px, w = 700) => `${w} ${px}px "Noto Sans Devanagari", "Kohinoor Devanagari", "Devanagari Sangam MN", "Mukta", system-ui, sans-serif`;
-  x.font = font(112); x.fillText(hi || '', 54, 98); x.font = font(104, 700).replace(/"Noto[^]*$/, 'system-ui, Arial, sans-serif'); x.fillText(en, 54, 232);
+  const up = sub ? -34 : 0; x.font = font(112); x.fillText(hi || '', 54, 98 + up); x.font = font(104, 700).replace(/"Noto[^]*$/, 'system-ui, Arial, sans-serif'); x.fillText(en, 54, 218 + up * 0.8);
+  if (sub) { x.font = '600 42px system-ui, Arial, sans-serif'; x.fillText(sub, 54, 292); }
   if (km) { x.textAlign = 'right'; x.font = '700 120px system-ui, Arial, sans-serif'; x.fillText(km + ' km', W - 56, 100); x.font = '700 90px system-ui, Arial, sans-serif'; x.fillText('↑', W - 80, 235); x.textAlign = 'left'; }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
 export class Highway {
-  constructor(scene, road, terrain, style, origin, rows, { seed = 'highway', dests = [], gates = [] } = {}) {
-    this.road = road; this.style = style; this.origin = origin; this.len = rows * road.ds * 2; this.seed = seed; this.dests = dests; this.gates = gates; this.pieces = new Map(); this.range = 1400; this.on = style.id === 'nh6';
+  constructor(scene, road, terrain, style, origin, rows, { seed = 'highway', dests = [], gates = [], tag = '' } = {}) {
+    this.road = road; this.style = style; this.origin = origin; this.len = rows * road.ds * 2; this.seed = seed; this.dests = dests; this.gates = gates; this.tag = tag; this.pieces = new Map(); this.range = 1400; this.on = style.id === 'nh6' || style.id === 'highway';
     this.furn = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.25, envMapIntensity: 0.4 });
     this.group = new THREE.Group(); scene.add(this.group);
   }
@@ -30,9 +31,19 @@ export class Highway {
     const mid = Math.floor(s / L); for (let d = 0; d <= hi - lo + 1; d++) for (const k of d ? [mid + d, mid - d] : [mid]) if (k >= lo && k <= hi && !this.pieces.has(k)) { this.pieces.set(k, this.build(k)); return; }
   }
   build(k) {
-    const r = this.road, s0 = k * this.len, s1 = s0 + this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, plan = planHighway({ road: r, seed: this.seed, k, s0, s1, dests: this.dests, arcAt: r.guide ? s => (s >= 0 ? r.arcAtS(s) : null) : null, gates: this.gates }), parts = [], grp = new THREE.Group(), textures = [];
+    const r = this.road, s0 = k * this.len, s1 = s0 + this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, plan = planHighway({ road: r, seed: this.seed, k, s0, s1, dests: this.dests, tag: this.tag, arcAt: r.guide ? s => (s >= 0 ? r.arcAtS(s) : null) : null, gates: this.gates }), parts = [], grp = new THREE.Group(), textures = [];
     for (const a of plan.rails) { const dx = a.x2 - a.x, dz = a.z2 - a.z, L = Math.hypot(dx, dz) || 1, yaw = -Math.atan2(dz, dx), my = (a.y + a.y2) / 2; box(parts, L, 0.3, 0.06, (a.x + a.x2) / 2 - ox, my + 0.72, (a.z + a.z2) / 2 - oz, yaw, 0xb9bec4); box(parts, 0.1, 0.8, 0.12, a.x - ox, a.y + 0.4, a.z - oz, yaw, 0x8c9096); }
     for (const a of plan.stones) { const yaw = -Math.atan2(a.tz, a.tx); box(parts, 0.18, 0.55, 0.36, a.x - ox, a.y + 0.27, a.z - oz, yaw, 0xf2f2ec); box(parts, 0.18, 0.14, 0.36, a.x - ox, a.y + 0.62, a.z - oz, yaw, 0xf2c230); }
+    if (plan.stones.length) {                                                                                         // the lettering on the stones: one atlas texture and one mesh for the whole piece
+      const cols = 4, cw = 256, ch = 160, cells = []; for (const a of plan.stones) { cells.push({ a, face: -1, d: a.ahead }); cells.push({ a, face: 1, d: a.behind }); }
+      const rowsN = Math.ceil(cells.length / cols), cv = document.createElement('canvas'); cv.width = cols * cw; cv.height = rowsN * ch; const cx = cv.getContext('2d'), geos = [];
+      cells.forEach((cl, i) => { const X = (i % cols) * cw, Y = Math.floor(i / cols) * ch; cx.fillStyle = '#f4f4ee'; cx.fillRect(X, Y, cw, ch); cx.fillStyle = '#f2c230'; cx.fillRect(X, Y, cw, 52); cx.fillStyle = '#111'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.font = '700 40px system-ui, Arial, sans-serif'; cx.fillText(cl.a.tag || '', X + cw / 2, Y + 27);
+        if (cl.d) { cx.font = '700 36px system-ui, Arial, sans-serif'; cx.fillText(cl.d.en, X + cw / 2, Y + 86, cw - 16); cx.font = '700 46px system-ui, Arial, sans-serif'; cx.fillText(cl.d.km + ' km', X + cw / 2, Y + 130); } cx.strokeStyle = '#999'; cx.lineWidth = 2; cx.strokeRect(X + 1, Y + 1, cw - 2, ch - 2);
+        const g = new THREE.PlaneGeometry(0.34, 0.3), uv = g.attributes.uv, u0 = (i % cols) / cols, v1 = 1 - Math.floor(i / cols) / rowsN; for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) / cols, v1 - (1 - uv.getY(k)) / rowsN);
+        // face -1 looks back along the road (seen by traffic going the road's way: it names the city ahead), face +1 looks forward (the city behind)
+        g.rotateY(Math.atan2(cl.face > 0 ? cl.a.tx : -cl.a.tx, cl.face > 0 ? cl.a.tz : -cl.a.tz)); g.translate(cl.a.x - ox + cl.a.tx * 0.095 * cl.face, cl.a.y + 0.3, cl.a.z - oz + cl.a.tz * 0.095 * cl.face); geos.push(g); });
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; textures.push(tex); const pm = new THREE.Mesh(mergeGeometries(geos), new THREE.MeshBasicMaterial({ map: tex })); grp.add(pm); for (const g of geos) g.dispose();
+    }
     const sign = (sx, sy, sz, tx, tz, w, h, tex) => { const th = Math.atan2(tx, tz); for (const f of [0, Math.PI]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, side: THREE.FrontSide })); m.rotation.y = th + f; m.position.set(sx + Math.sin(th + f) * 0.07, sy, sz + Math.cos(th + f) * 0.07); grp.add(m); } };
     for (const g of plan.gantries) {
       const lx = g.tz, lz = -g.tx, byaw = -Math.atan2(lz, lx), span = Math.abs(g.posts[2].lat - g.posts[0].lat);
@@ -44,7 +55,7 @@ export class Highway {
       const lx = g.tz, lz = -g.tx, byaw = -Math.atan2(lz, lx), span = Math.abs(g.posts[2].lat - g.posts[0].lat);
       for (const q of g.posts) box(parts, 0.45, 7.2, 0.45, q.x - ox, q.y + 3.6, q.z - oz, 0, 0x8a8f96);
       box(parts, span, 0.5, 0.5, g.posts[1].x - ox, g.y + 6.7, g.posts[1].z - oz, byaw, 0x8a8f96);
-      const tex = signTexture({ en: g.name, hi: g.hi, kind: 'city' }); textures.push(tex); sign(g.posts[1].x - ox, g.y + 5.1, g.posts[1].z - oz, g.tx, g.tz, 12, 3.6, tex);
+      const tex = signTexture({ en: g.name, hi: g.hi, kind: 'city', sub: g.sub }); textures.push(tex); sign(g.posts[1].x - ox, g.y + 5.1, g.posts[1].z - oz, g.tx, g.tz, 12, 3.6, tex);
     }
     for (const t of plan.tolls) {
       const yaw = -Math.atan2(t.tz, t.tx), cx = t.x - ox, cz = t.z - oz, w = 2 * 15.4 + 2;

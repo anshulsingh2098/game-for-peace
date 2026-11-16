@@ -13,7 +13,7 @@ const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
 const sstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 const HAY = [1.55, 1.12, 0.62], LUSH = [0.68, 1.12, 0.72];
-const DIRT = [0.55, 0.47, 0.34], BARE = [0.95, 0.72, 0.26], BUILT = [0.5, 0.48, 0.46];
+const DIRT = [0.55, 0.47, 0.34], BARE = [0.84, 0.67, 0.36], BUILT = [0.5, 0.48, 0.46];
 
 export function createTerrain(config) {
   const T = config.terrain, P = config.palette, N = createNoise(config.seed), r = alea(config.seed, 'terrain');
@@ -77,6 +77,15 @@ export function createTerrain(config) {
     const up = base(x, z) - sea; return up < 3.2 ? 'sand' : up > P.snowline + 10 ? 'snow' : up > P.treeline + 60 ? 'rock' : 'grass';
   }
 
+  /* Indian farmland from above: small rectangular parcels (about 50 to 130 m), each its own crop or stubble tone, with thin darker field bunds, laid out at an angle that changes slowly across the land.
+     Only with real land cover (India world). Returns the tone [r, g, b] and writes the bund darkening into fp.bund. */
+  const FIELD_TONES = [[0.7, 0.6, 0.4], [0.32, 0.47, 0.2], [0.36, 0.5, 0.22], [0.8, 0.69, 0.2], [0.55, 0.43, 0.3], [0.2, 0.31, 0.14], [0.66, 0.58, 0.38], [0.42, 0.52, 0.24]], fp = { r: 0, g: 0, b: 0, bund: 1 };
+  const hash2 = (i, j) => { let h = (i * 374761393 + j * 668265263 + 1274126177) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  function fieldPattern(x, z) {
+    const th = 0.35 + 1.1 * N.n2(x / 6000 + oK[0], z / 6000 + oK[1]), ct = Math.cos(th), st = Math.sin(th), wx = x + 24 * N.n2(x / 190 + oK2[0], z / 190 + oK2[1]), wz = z + 24 * N.n2(x / 170 + oK2[1], z / 170 + oK2[0]);
+    const u = (wx * ct + wz * st) / 84, v = (-wx * st + wz * ct) / 58, i = Math.floor(u), j = Math.floor(v), h = hash2(i, j), t = FIELD_TONES[Math.floor(h * FIELD_TONES.length)], b = 0.9 + 0.2 * hash2(j, i + 77);
+    fp.r = t[0] * b; fp.g = t[1] * b; fp.b = t[2] * b; const eu = Math.min(u - i, 1 - (u - i)) * 84, ev = Math.min(v - j, 1 - (v - j)) * 58; fp.bund = 1 - 0.18 * (1 - sstep(0.4, 1.6, Math.min(eu, ev))); return fp;
+  }
   /* ground colour at a point. `ny` is the y of the unit surface normal (1 = flat, 0 = vertical). Writes r, g, b into out.
      `nearRoad` false skips the roadside verge (used for the distant, coarse tiles). */
   function colour(x, z, h, ny, out, nearRoad = true) {
@@ -93,10 +102,11 @@ export function createTerrain(config) {
     const shade = 0.92 + 0.16 * n;
     /* a patchwork of fields and meadows (a few hundred metres across, fairly hard edges): hay-yellow, fresh green and deep green, so open land is not one flat colour. Only on open lowland. */
     const f1 = N.n2(x / 140 + oK2[1] * 3.1, z / 140 + oK2[0] * 2.3), f2 = N.n2(x / 240 + oK[1] * 1.7, z / 240 + oK[0] * 2.9), hay = sstep(0.04, 0.12, f1), lush = sstep(-0.02, 0.06, f2) * (1 - hay), fieldW = (1 - forest(x, z)) * (1 - alp) * (1 - rock) * (1 - beach) * 0.85 * (cv ? 0.15 + 1.1 * cv.crop : 1);                       // with real land cover the patchwork shows on farmland
+    const fpt = cv && cv.crop > 0.06 ? fieldPattern(x, z) : null, fieldAmt = fpt ? clamp01(fieldW * 0.8) : 0;
     for (let c = 0; c < 3; c++) {
       let v = lerp(lerp(PL('grass', c), PL('grass2', c), mixG), PL('dry', c), dry);
-      if (cv) v = lerp(lerp(v, BARE[c], cv.bare * 0.9), BUILT[c], cv.built * 0.55);                                   // real land cover: bare ground is ochre, built-up land grey
-      v *= 1 + fieldW * (hay * (HAY[c] - 1) + lush * (LUSH[c] - 1));
+      if (cv) v = lerp(lerp(v, BARE[c], cv.bare * 0.6), BUILT[c], cv.built * 0.55);                                   // real land cover: bare ground is ochre, built-up land grey
+      if (fpt) v = lerp(v, fpt[c === 0 ? 'r' : c === 1 ? 'g' : 'b'], fieldAmt) * (1 - fieldAmt + fieldAmt * fpt.bund); else v *= 1 + fieldW * (hay * (HAY[c] - 1) + lush * (LUSH[c] - 1));
       v = lerp(v, PL('grass2', c) * 0.62, wood);
       v = lerp(v, P.alpine[c], alp);
       v = lerp(v, P.rock[c] * (0.9 + 0.2 * n), rock);
