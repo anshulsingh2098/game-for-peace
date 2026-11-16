@@ -28,6 +28,13 @@ export function createTerrain(config) {
     const gx = (x + MAC.ox - MAC.x0) / MAC.cell - 0.5, gz = (z + MAC.oz - MAC.z0) / MAC.cell - 0.5, i0 = Math.max(0, Math.min(MAC.nx - 2, Math.floor(gx))), j0 = Math.max(0, Math.min(MAC.nz - 2, Math.floor(gz))), fx = Math.max(0, Math.min(1, gx - i0)), fz = Math.max(0, Math.min(1, gz - j0)), k = j0 * MAC.nx + i0;
     return (plane[k] * (1 - fx) + plane[k + 1] * fx) * (1 - fz) + (plane[k + MAC.nx] * (1 - fx) + plane[k + MAC.nx + 1] * fx) * fz;
   }
+  /* region blending (N9): T.macro.region = { cell, x0, z0, nx, nz, a, b, w } (nearest region index, second nearest, blend toward it 0..255) and T.macro.palettes / tints per region index:
+     the ground colours and the plants' tint change gradually from one region to the next along a long road */
+  function regionAt(x, z) {
+    const R = MAC && MAC.region; if (!R) return null; const i = Math.max(0, Math.min(R.nx - 1, Math.floor((x + MAC.ox - R.x0) / R.cell))), j = Math.max(0, Math.min(R.nz - 1, Math.floor((z + MAC.oz - R.z0) / R.cell))), k = j * R.nx + i;
+    return { a: R.a[k], b: R.b[k], w: R.w[k] / 255 };
+  }
+  function regionTint(x, z) { const r = regionAt(x, z); if (!r || !MAC.tints) return null; const A = MAC.tints[r.a], B = MAC.tints[r.b]; return [lerp(A[0], B[0], r.w), lerp(A[1], B[1], r.w), lerp(A[2], B[2], r.w)]; }
   function cover(x, z) { if (!MAC) return null; return { tree: mix(MAC.tree, x, z) / 255, crop: mix(MAC.crop, x, z) / 255, grass: mix(MAC.grass, x, z) / 255, bare: mix(MAC.bare, x, z) / 255, built: mix(MAC.built, x, z) / 255 }; }
   function baseMacro(x, z) {
     const real = mix(MAC.h, x, z), rel = clamp01(mix(MAC.rel, x, z) * 8 / 520), V = MAC.vscale, land = sstep(-30, 30, real);
@@ -75,6 +82,7 @@ export function createTerrain(config) {
   function colour(x, z, h, ny, out, nearRoad = true) {
     const n = 0.5 + 0.5 * N.n2(x / 26 + oK[0], z / 26 + oK[1]), patch = sstep(0.1, 0.6, N.n2(x / 85 + oK2[0], z / 85 + oK2[1]));
     const up = h - sea, alt = sstep(0, 160, up);
+    const rg = MAC && MAC.palettes ? regionAt(x, z) : null, PA = rg ? MAC.palettes[rg.a] : P, PB = rg ? MAC.palettes[rg.b] : P, pw = rg ? rg.w : 0, PL = (key, c) => rg ? lerp(PA[key][c], PB[key][c], pw) : P[key][c];
     const cv = MAC ? cover(x, z) : null, mixG = clamp01(n * 0.7 + alt * 0.4), dry = clamp01(patch * 0.55 + (cv ? cv.grass * 0.5 : 0));
     const alp = sstep(P.treeline - 60, P.treeline + 40, up + n * 30);
     const rock = clamp01((0.86 - ny) / 0.2) * 0.9;
@@ -86,15 +94,15 @@ export function createTerrain(config) {
     /* a patchwork of fields and meadows (a few hundred metres across, fairly hard edges): hay-yellow, fresh green and deep green, so open land is not one flat colour. Only on open lowland. */
     const f1 = N.n2(x / 140 + oK2[1] * 3.1, z / 140 + oK2[0] * 2.3), f2 = N.n2(x / 240 + oK[1] * 1.7, z / 240 + oK[0] * 2.9), hay = sstep(0.04, 0.12, f1), lush = sstep(-0.02, 0.06, f2) * (1 - hay), fieldW = (1 - forest(x, z)) * (1 - alp) * (1 - rock) * (1 - beach) * 0.85 * (cv ? 0.15 + 1.1 * cv.crop : 1);                       // with real land cover the patchwork shows on farmland
     for (let c = 0; c < 3; c++) {
-      let v = lerp(lerp(P.grass[c], P.grass2[c], mixG), P.dry[c], dry);
+      let v = lerp(lerp(PL('grass', c), PL('grass2', c), mixG), PL('dry', c), dry);
       if (cv) v = lerp(lerp(v, BARE[c], cv.bare * 0.9), BUILT[c], cv.built * 0.55);                                   // real land cover: bare ground is ochre, built-up land grey
       v *= 1 + fieldW * (hay * (HAY[c] - 1) + lush * (LUSH[c] - 1));
-      v = lerp(v, P.grass2[c] * 0.62, wood);
+      v = lerp(v, PL('grass2', c) * 0.62, wood);
       v = lerp(v, P.alpine[c], alp);
       v = lerp(v, P.rock[c] * (0.9 + 0.2 * n), rock);
       v = lerp(v, P.snow[c], snow);
       v = lerp(v, lerp(P.sand[c], P.seabed[c], deep), beach);
-      v = lerp(v, lerp(DIRT[c], P.grass2[c], 0.45), verge * 0.9);
+      v = lerp(v, lerp(DIRT[c], PL('grass2', c), 0.45), verge * 0.9);
       out[c] = v * shade;
     }
     return out;
@@ -115,7 +123,7 @@ export function createTerrain(config) {
   }
 
   const terrain = { base, height, drive, surface, inZone, addZone: (x, z, r, y, blend = 40) => { zones.push({ x, z, r, y, blend }); }, colour, forest, findSpawn, seaLevel: sea, config,
-    cover, attachRoad(r) { road = r; }, get road() { return road; },
+    cover, regionAt, regionTint, attachRoad(r) { road = r; }, get road() { return road; },
     /* the same land without the road, for the coarse horizon tiles */
     far: { height: base, colour: (x, z, h, ny, out) => colour(x, z, h, ny, out, false) } };
   return terrain;

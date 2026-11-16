@@ -41,6 +41,7 @@ import { RoadSet } from './world/roadset.js';
 import { Junction } from './traffic/junction.js';
 import { JunctionSignals } from './world/junction_signals.js';
 import { DRIVE_MODES, DRIVE_MODE_IDS } from './vehicle/physics.js';
+import { validTolls, TOLL_LEN } from './world/highway_plan.js';
 import { laneOffsets } from './traffic/sim.js';
 import { ActivityRunner, activitiesFor, recordResult } from './activities/activities.js';
 import { Traffic, loadTrafficPack } from './traffic/traffic.js';
@@ -85,6 +86,9 @@ if (indiaRoute && q.get('real') !== 'off') {
   try {
     const meta = await (await fetch('assets/india/terrain.json')).json(), buf = await (await fetch('assets/india/terrain.bin')).arrayBuffer(), N = meta.nx * meta.nz, V = 0.035, n0 = indiaRoute.net.cities.get(indiaRoute.from);
     const macro = { cell: meta.cell, x0: meta.x0, z0: meta.z0, nx: meta.nx, nz: meta.nz, vscale: V, ox: n0.x, oz: n0.z, h: new Int16Array(buf, 0, N), rel: new Uint8Array(buf, N * 2, N), tree: new Uint8Array(buf, N * 3, N), crop: new Uint8Array(buf, N * 4, N), grass: new Uint8Array(buf, N * 5, N), bare: new Uint8Array(buf, N * 6, N), built: new Uint8Array(buf, N * 7, N) };
+    { const R = { cell: 500, x0: meta.x0, z0: meta.z0, nx: Math.ceil(meta.nx * meta.cell / 500), nz: Math.ceil(meta.nz * meta.cell / 500) }, M = R.nx * R.nz; R.a = new Uint8Array(M); R.b = new Uint8Array(M); R.w = new Uint8Array(M);       // which region each 50 km square belongs to, and the blend toward the next one
+      for (let j = 0; j < R.nz; j++) for (let i = 0; i < R.nx; i++) { const ll = fromGame(R.x0 + (i + 0.5) * R.cell, R.z0 + (j + 0.5) * R.cell), r = regionAt(ll.lat, ll.lon, REGIONS), k = j * R.nx + i; R.a[k] = REGIONS.findIndex(x => x.id === r.id); R.b[k] = r.second ? REGIONS.findIndex(x => x.id === r.second) : R.a[k]; R.w[k] = Math.round(r.blend * 255); }
+      macro.region = R; macro.palettes = REGIONS.map(r => r.land.palette); macro.tints = REGIONS.map(r => r.vegetation.tint || [1, 1, 1]); }
     config.terrain = { ...config.terrain, seaLevel: 0, seabed: -40 }; Object.defineProperty(config.terrain, 'macro', { value: macro, enumerable: false, writable: true });      // not part of the saved/shared config (it is big)
     config.palette = { ...config.palette, treeline: 3700 * V, snowline: 5000 * V }; config.road = { ...config.road, maxAlt: 3500 * V, maxGrade: 0.09, hardGrade: 0.12 };
   } catch (e) { console.warn('real elevation not loaded, using the procedural land', e); }
@@ -385,11 +389,15 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) runt
 const runner = new ActivityRunner(bus), actMarks = new THREE.Group(), actHud = document.createElement('div'); let actDefs = [], actGoal = null;
 actHud.style.cssText = 'position:fixed;left:50%;top:92px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.75);border-radius:999px;padding:6px 16px;font-size:14px;pointer-events:none'; document.body.appendChild(actHud); scene.add(actMarks);
 const beacon = (color, x, z, y) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 60, 14, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide })); m.userData.w = { x, z, y }; actMarks.add(m); return m; };
+/* a drive to a city of the route (India mode): par = the guide distance at 30 m/s, limit twice that; the goal is where the road reaches the city (found when you start, extending the road if needed) */
+const indiaDrive = c => ({ id: 'india-' + (indiaRoute.roadId || 'route') + '-' + indiaRoute.from + '-' + c.id, region: '*', title: 'Drive to ' + c.name, startS: 60, distance: 0, goalAlong: c.along, limit: Math.round(c.along / 30 * 2.2), par: Math.round(c.along / 30), radius: 45 });
+function goalOfCity(d) { let guard = 0; while (guard++ < 80) { for (let s = Math.max(0, road.sMin); s < road.sMax - 20; s += 20) { const a = road.arcAtS(s); if (a !== null && a >= d.goalAlong - 10) return road.at(s, {}); } const box = road.ensure(0, road.sMax + 300); if (box) grid.invalidate(box); } return null; }
 function setupActivities() {
   runner.cancel(); for (const d of actDefs) interactions.remove('activity:' + d.id); actDefs = []; actGoal = null; while (actMarks.children.length) { const m = actMarks.children.pop(); m.geometry.dispose(); m.material.dispose(); }
-  if (!road) return; for (const d of activitiesFor(config.location)) {
-    const a = road.at(d.startS, {}), b = road.at(d.startS + d.distance, {}), start = { x: a.x + a.tz * 2, z: a.z - a.tx * 2 }, goal = { x: b.x, z: b.z }; actDefs.push({ ...d, goal }); beacon(0x40e070, start.x, start.z, terrain.drive(start.x, start.z));
-    interactions.add({ id: 'activity:' + d.id, x: start.x, z: start.z, r: 14, prompt: d.title + ': start (G)', enabled: () => runner.state !== 'running', onUse: () => { actGoal = beacon(0xffc040, goal.x, goal.z, terrain.drive(goal.x, goal.z)); runner.start(d, goal); toast(d.title + ': reach the gold beacon in ' + d.limit + ' s'); } });
+  if (!road) return; const defs = activitiesFor(config.location).slice(); if (indiaRoute) for (const c of indiaRoute.cities.filter(c => c.along > 600).slice(0, 2)) defs.push(indiaDrive(c));                       // in India mode: drive to the next cities of the route
+  for (const d of defs) {
+    const a = road.at(d.startS, {}), b = d.goalAlong ? a : road.at(d.startS + d.distance, {}), start = { x: a.x + a.tz * 2, z: a.z - a.tx * 2 }, goal = { x: b.x, z: b.z }; actDefs.push({ ...d, goal }); beacon(0x40e070, start.x, start.z, terrain.drive(start.x, start.z));
+    interactions.add({ id: 'activity:' + d.id, x: start.x, z: start.z, r: 14, prompt: d.title + ': start (G)', enabled: () => runner.state !== 'running', onUse: () => { const gl = d.goalAlong ? goalOfCity(d) : goal; if (!gl) { toast('The road ahead is still being built'); return; } actGoal = beacon(0xffc040, gl.x, gl.z, terrain.drive(gl.x, gl.z)); runner.start(d, gl); toast(d.title + ': reach the gold beacon in ' + d.limit + ' s'); } });
   }
 }
 bus.on('world:rebuilt', setupActivities);
@@ -397,8 +405,15 @@ bus.on('mode:changed', e => { if (e.to !== 'drive' && runner.state === 'running'
 bus.on('activity:finished', r => {
   if (actGoal) { actMarks.remove(actGoal); actGoal.geometry.dispose(); actGoal.material.dispose(); actGoal = null; } actHud.style.display = 'none'; if (r.outcome === 'cancelled') return;
   const rec = recordResult(S.progress, r); S.progress = rec.progress; save(); const t = actDefs.find(d => d.id === r.id);
-  toast(r.outcome === 'done' ? (t ? t.title + ': ' : '') + r.time.toFixed(1) + ' s, ' + r.rating + (rec.isBest ? ', new best' : '') : 'Out of time');
+  resultCard(t, r, rec);
 });
+/* what happened, in a card for a few seconds (replaces the toast): the time, the rating, the best time, and a hint of what to do next */
+const resultBox = document.createElement('div'); resultBox.style.cssText = 'position:fixed;left:50%;top:30%;transform:translateX(-50%);z-index:30;display:none;background:rgba(8,12,20,.9);border:1px solid #2a3a5c;border-radius:14px;padding:14px 22px;text-align:center;min-width:240px'; document.body.appendChild(resultBox); let resultT = 0;
+function resultCard(def, r, rec) {
+  const medal = { gold: '#ffd24a', silver: '#d5dbe6', bronze: '#d98c4e' }[r.rating] || '#ff6b5f', best = (S.progress.activities[r.id] || {}).best;
+  resultBox.innerHTML = '<div style="font-size:12px;color:#9fb0c8">' + (def ? def.title : 'Activity') + '</div><div style="font-size:24px;font-weight:700;margin:4px 0;color:' + medal + '">' + (r.outcome === 'done' ? r.rating.toUpperCase() : 'OUT OF TIME') + '</div><div style="font-size:15px">' + r.time.toFixed(1) + ' s' + (def ? ' <span style="color:#9fb0c8">(par ' + def.par + ' s)</span>' : '') + '</div>' + (best !== undefined ? '<div style="font-size:12px;color:#9fb0c8;margin-top:4px">Best ' + best.toFixed(1) + ' s' + (rec.isBest ? ' · new best' : '') + '</div>' : '') + '<div style="font-size:12px;color:#9fb0c8;margin-top:6px">Stop near the green beacon and press G to go again</div>';
+  resultBox.style.display = 'block'; clearTimeout(resultT); resultT = setTimeout(() => { resultBox.style.display = 'none'; }, 6000);
+}
 /* India route readout (only with ?india): the next city and the real distance left, and the OpenStreetMap credit the road data needs */
 const routeHud = document.createElement('div'); routeHud.style.cssText = 'position:fixed;left:50%;top:128px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.7);border-radius:999px;padding:5px 14px;font-size:13px;pointer-events:none'; document.body.appendChild(routeHud);
 if (indiaRoute) { const cr = document.createElement('div'); cr.textContent = 'Road shapes © OpenStreetMap contributors (ODbL)'; cr.style.cssText = 'position:fixed;right:8px;bottom:4px;font-size:10px;color:#9fb0c8;z-index:5;pointer-events:none'; document.body.appendChild(cr); }
@@ -440,6 +455,9 @@ function updateBranches(px, pz, dt) {
   for (const b of branches) { const s = b.road.closestS(px, pz, b.hint); b.hint = s; const box = b.road.ensure(s - 2600, s + 2600); if (box) grid.invalidate(box); b.mesh.update(s);
     if (traffic && b.te) { const q = b.road.at(s, tmpP), dist = Math.hypot(q.x - px, q.z - pz); b.near = b.near ? dist < 1000 : dist < 700; traffic.updateExtra(b.te, dt, { x: px, z: pz, s, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, b.near); } }
 }
+/* toll plazas on the player's road: passing through one pays the toll (a toast; two-wheelers go free, trucks pay more); no money system yet */
+let lastToll = null;
+function updateToll() { if (!road || road.style.id !== 'nh6' || mode !== 'drive' || !phys || phys.u < 1) return; for (const ts of validTolls(road, roadS - 20, roadS + 40)) { if (roadS >= ts && roadS <= ts + TOLL_LEN && lastToll !== ts) { lastToll = ts; const id = VEHICLES[vehicle].id, fare = id === 'bike' ? 0 : id === 'truck' ? 270 : 85; toast(fare ? 'Toll plaza: \u20b9' + fare + ' paid with FASTag' : 'Toll plaza: two-wheelers pass free'); } } }
 function updateRoute() { if (!indiaRoute) return; const arc = road.guideArc(phys && mode !== 'fly' ? phys.x : cam.x, phys && mode !== 'fly' ? phys.z : cam.z) || 0, nxt = indiaRoute.cities.find(c => c.along > arc + 40); routeHud.style.display = 'block'; junctionAt(arc); routeHud.textContent = nxt ? indiaRoute.name + ' · next: ' + nxt.name + ', ' + Math.max(0, Math.round((nxt.along - arc) * 100 / 1000)) + ' km' : indiaRoute.name + ' · end of the path'; }
 function updateActivities(dt, px, pz) {
   runner.update(dt, px, pz); for (const m of actMarks.children) m.position.set(m.userData.w.x - grid.origin.x, m.userData.w.y + 30, m.userData.w.z - grid.origin.z);
@@ -480,7 +498,7 @@ function update(dt, now) {
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
-  updateActivities(dt, px, pz); updateRoute(); updatePrompt();
+  updateActivities(dt, px, pz); updateRoute(); updateToll(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);

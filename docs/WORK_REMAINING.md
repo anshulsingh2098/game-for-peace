@@ -32,7 +32,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 2.1 | N7: the core-contracts note and the HUD and map layer change requests (N7a) are not written | P3 [build] |
 | 2.2 | N8: sectors now own the crossing roads, signals and traffic of each city on a route (built when a sector holding a city is within 900 m, removed beyond 1,200 m), carry a region and a blend near borders (`world/regionmap.js`), and show side-road counts in the debug panel. Terrain, plain roads and scenery still stream by tile and road piece, not by sector, and the world is still one guided road at a time. | P1 [build] |
 | 2.3 | N9: moving between regions is a full reload behind the loading screen; no seamless transition, no blending at borders | P2 [build] |
-| 2.4 | N9: regions are impressions from old terrain recipes with new colours; none uses real elevation | P2 [build] |
+| 2.4 | N9: in `?india=` mode the ground colours and plant tint now blend between regions by position (`T.regionAt`, `regionTint`: nearest and second nearest region, blend within 150 km of the border); water colour, tree species mix and road style do not change by region; the nine regions as standalone worlds are still impressions from recipes | P2 [build] |
 | 2.5 | N10: the navigation graph covers the main road only; side roads and junctions are not in it | P1 [build] [B] |
 | 2.6 | `config.road.guide` roads now run over real elevation (see 8.6); land under non-India modes is still a region recipe | P3 [build] |
 
@@ -54,8 +54,8 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 4.3 | Pedestrians are box figures: no real models, no reactions to the car or the player, not solid to the car | P2 [build] [B] [owner 1.5] |
 | 4.4 | Pedestrians and the navigation graph exist on the main road only (not on side roads or at junctions) | P1 [build] [B] |
 | 4.5 | A car that has left the 700 m window of a side road is gone; cars respawn when you return, they do not continue | P3 [build] [B] |
-| 4.6 | Cars do not give way inside a crossing, have no turn lanes or indicators, and do not avoid a player who runs a red; a turned car appears mid-road with a short blend instead of driving the curve | P2 [build] [B] |
-| 4.7 | Toll plazas slow cars to walking pace but no one pays or stops; no toll queue, no FASTag lane behaviour | P3 [build] [B] |
+| 4.6 | Cars now wait for a player standing in the crossing (even on green); they still do not give way to each other inside it, have no turn lanes or indicators, and a turned car appears mid-road with a short blend instead of driving the curve | P2 [build] [B] |
+| 4.7 | Passing a toll plaza on the player's road shows a toast (85 rupees car, 270 truck, two-wheelers free; FASTag); there is no money system, no queue and traffic only slows | P3 [build] [B] |
 | 4.8 | Traffic budgets are tuned by count (about 25 cars at High across a junction), not measured on a phone | P1 [person] |
 
 ## 5. On foot and activities (N14, N15)
@@ -64,7 +64,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 5.1 | On-foot: no interiors, only the player's own vehicle can be entered, the player is a box figure with swinging legs, the camera does not avoid walls | P2 [build] [B] |
 | 5.2 | On-foot on touch screens: only the G button and drag-to-look; walking uses the driving pads | P2 [build] [B] |
 | 5.3 | Pointer lock (mouse capture) was not tested in a real browser session | P2 [person] |
-| 5.4 | Activities: one kind (point-to-point drive), two shipped; par times are guesses, no results screen, no leaderboard, no map or route line, no points of interest from region data | P2 [build] |
+| 5.4 | Activities: the two shipped drives plus, in `?india=` mode, "Drive to <next city>" for the next two cities of the route (par = guide distance at 30 m/s); a results card shows time, rating and best. Still no other kinds, no leaderboard, no map or route line, par times are guesses | P2 [build] |
 | 5.5 | Save: no cloud save, no versioned migration beyond version 2 yet (the machinery exists) | P3 [build] |
 
 ## 6. Landscape, plants, water
@@ -95,7 +95,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 |---|---|---|
 | 8.1 | Highway numbers and the intermediate cities are from secondary sources that disagree; they are labelled approximate and must be checked against NHAI and Railways tables before being shown as fact | P1 [person] |
 | 8.2 | The skeleton roads are simplified driving routes (a waypoint every 20 to 60 real km) from the OSRM demo server over OpenStreetMap data, not surveyed alignments; they are the fastest route through each city list and can differ from the numbered highway | P2 [build] |
-| 8.3 | Some data gaps: Jaipur offers Ajmer twice (two corridors) and no Kota; only the corridors entered exist | P3 [build] |
+| 8.3 | Data gaps: Jaipur to Kota and Agra to Lucknow added (30 roads); other real links are still missing, only the corridors entered exist | P3 [build] |
 | 8.4 | One road per `?india=` drive from the player's start, plus side roads within 2.4 km of a city on the route; no free roaming across the country yet; the junction panel regenerates the world (short loading screen) | P1 [build] |
 | 8.5 | The OpenStreetMap credit now also appears under Credits in the pause menu (all asset credits summarised); the full licence list stays `assets/ASSETS.md` | P3 [done in part] |
 | 8.6 | Real elevation and land cover are in (`?india=` mode, `assets/india/terrain.bin`, 5 km cells): relief scaled to 0.08 vertically, forest, farmland, bare and built-up from the land cover. Limits: 5 km cells are coarse (no river valleys, small lakes or coast detail); the vertical scale is a taste choice (a real 6,000 m peak is 480 game m); the land cover is Esri / Impact Observatory (CC BY 4.0), not ESA WorldCover, and its year is unconfirmed; real water bodies other than the sea are not modelled; only `?india=` drives use it, the nine regions still use recipes | P2 [build] [person] |
@@ -119,6 +119,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 19 Nov 2026: cars wait for the player in a crossing (4.6 part), toll toast (4.7 part), India drive activities and a results card (5.4 part), Jaipur to Kota and Agra to Lucknow roads (8.3 part), region palette and tint blending along a route (2.4 part).
 - 19 Nov 2026: real elevation and land cover downloaded and used in `?india=` mode (8.6); `licenses.html` linked from the title and Credits screens (8.9).
 - 19 Nov 2026: credits screen in the pause menu; branch-road bridges in collision; asphalt patch over lane paint at junctions; N8 sector-driven city junctions, region lookup by position and debug stats (see 2.2, 7.1, 7.2, 8.5).
 - 18 to 19 Nov 2026: tunnel doorways, mouse look on foot, plant variants, patchwork land, moving water with foam, five Indian worlds, highway furniture, toll slowing, India skeleton and map page, drive modes, guided roads, junction choice panel, multi-road engine step 1, traffic on every road, crossing behaviour (all first increments: see their limits above).

@@ -120,6 +120,7 @@ export class TrafficSim {
       if (R.style.id === 'nh6') for (const ts of this.tollsNear(c.s)) { const e = c.dir > 0 ? ts : ts + TOLL_LEN, d = (e - c.s) * c.dir; if (d >= -TOLL_LEN - 1 && d < 130) want = Math.min(want, tollCap(d)); }             // toll plazas: cars slow to walking pace through the booths
       for (const { j, arm } of this.junctions) {                                                                              // a junction ahead: stop at its line on red (or amber when there is time), and maybe turn at its centre
         const d = (arm.s - c.s) * c.dir, dist = d - 9 - c.len / 2; if (d < -2 || dist > 70) continue;
+        if (player && d > 0 && dist < 28 && Math.hypot(player.x - j.x, player.z - j.z) < 12) want = Math.min(want, Math.sqrt(2 * 4 * Math.max(0, dist - 1.5)));      // the player is in the crossing (maybe running the red): wait for them
         if (dist > -3) { const st = j.state(arm); if (st === 'red' || (st === 'amber' && dist > c.speed * 1.2)) want = Math.min(want, Math.sqrt(2 * 3 * Math.max(0, dist - 1.5))); }
         if (d < 1.5 && c.turnJ !== j.num && j.arms.length > 1) { c.turnJ = j.num; const r = alea(this.seed, 'turn', c.id, j.num); if (r() < 0.22) { const others = j.arms.filter(a => a !== arm); (turns || (turns = [])).push({ c, j, from: arm, to: others[Math.floor(r() * others.length)], r }); } }
       }

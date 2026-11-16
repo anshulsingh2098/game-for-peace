@@ -66,7 +66,7 @@ export class Scatter {
         lists.tuft.push([x - x0, h - 0.02, z - z0, sc, rot, tall, shade]);
       }
     }
-    const g = new THREE.Group(), pr = this.props, tint = c.tint; let count = 0;
+    const g = new THREE.Group(), pr = this.props, tint = (T.regionTint && T.regionTint(x0 + Sz / 2, z0 + Sz / 2)) || c.tint; let count = 0;
     const fill = (geom, mat, arr, jitter, vt) => {
       const im = new THREE.InstancedMesh(geom, mat, arr.length);
       arr.forEach((a, n) => {
