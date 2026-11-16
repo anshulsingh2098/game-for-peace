@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 05:00  Owner approved merging PRs 27 to 36; known-limits reference file
+Branch: feat/landscape-look (PR 36)
+What changed: `docs/WORK_REMAINING.md` lists every known limit by area with a tag (person, owner, build, which stream) and priority, plus the owner decisions waiting; `HANDOFF.md` points to it. The owner asked for PRs 27 to 36 to be merged in order on 19 Nov 2026.
+For the other stream: after the merge, pull `main`, read `docs/WORK_REMAINING.md` (sections 0.2, 2.5, 4 and 9 are yours) and review the additive changes in the files named in 0.2.
+Status: open
+
 ## 2026-11-19 03:00  Crossing behaviour: shared signals, stopping at red, turning, signal poles
 Branch: feat/landscape-look (PR 36)
 What changed: new `traffic/junction.js` (`Junction`: shared three-phase signal, `transfer` hands a car to another road's sim), `traffic/sim.js` (junction stop and turn logic, car fields for the turn blend, stuck limit raised to 48 s at junctions; Stream B file, additive), `traffic/traffic.js` (`addJunction`, `removeJunction`, junction clock), new `world/junction_signals.js` (poles and lamps), `main.js` (junction built with the side roads). One long self-test block added (68 checks): signal phases, never green on two roads, cars stop at the line on red, turns happen, no car in two sims, car cap respected. Checked in the browser at Delhi (six-road star cycles, cars turn, poles visible, no console errors). Not done: yielding inside the crossing, avoiding a player who runs a red, turn lanes, real indicators, pedestrians and the navigation graph at junctions.
