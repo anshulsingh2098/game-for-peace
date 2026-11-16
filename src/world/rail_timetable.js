@@ -9,6 +9,11 @@ const hash = (a, b = 0) => { let x = (a * 2654435761 + b * 40503 + 12345) >>> 0;
 const clean = s => String(s || '').replace(/\bExpres+\b/i, 'Express').replace(/\s+/g, ' ').trim();
 export const styleOf = t => { const s = (t.name + ' ' + t.type).toLowerCase(); return /rajdhani/.test(s) ? 'rajdhani' : /vande/.test(s) ? 'vande' : 'express'; };
 
+/* how many parallel tracks a section has: single where few trains use it, double on busy lines, three and four on the busiest trunk routes (Indian Railways has multi-track corridors) */
+export const tracksFor = n => n >= 150 ? 4 : n >= 100 ? 3 : n >= 30 ? 2 : 1;
+export const TRACK_GAP = 5.3;                                                                                       // metres between track centres on Indian broad gauge
+export const laneOffsets = c => Array.from({ length: c }, (_, i) => (i - (c - 1) / 2) * TRACK_GAP);
+
 export class TrainBook {
   constructor(json, network) {
     this.cities = json.cities || {}; this.trains = json.trains.map(t => ({ ...t, name: clean(t.name) })); this.locals = json.locals || []; this.net = network; this.byEdge = new Map(); this.byCity = new Map();
@@ -17,6 +22,7 @@ export class TrainBook {
       for (let k = 1; k < stn.length; k++) { const steps = stn[k - 1].id === stn[k].id ? [] : network.route(stn[k - 1].id, stn[k].id); if (!steps) continue; for (const st of steps) { let l = this.byEdge.get(st.edge.edgeId); if (!l) this.byEdge.set(st.edge.edgeId, l = new Set()); l.add(i); } }
     });
   }
+  tracks(edgeId) { const set = this.byEdge.get(edgeId); return tracksFor(set ? set.size : 0); }
   /* the real train a physical train on edge `edgeId` stands for (seed picks one when several use the edge), or null */
   identify(edgeId, seed = 0) { const set = this.byEdge.get(edgeId); if (!set || !set.size) return null; const arr = [...set], t = this.trains[arr[Math.floor(hash(edgeId, seed) * arr.length)]]; return t; }
   destination(t, from) { const last = t.stops[t.stops.length - 1], first = t.stops[0]; const to = last[0] === from ? first[0] : last[0]; return this.cities[to] || to; }

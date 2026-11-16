@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-22 15:00  Multi-track rail, Indian train look
+Branch: feat/rail-realism (same PR 48)
+What changed: new `world/train_art.js` (canvas-textured vehicles), `world/train_consist.js` (pure), `world/rail_grade.js` (wider cutting for multi-track), `world/rail_view.js` (1 to 4 tracks, lanes, new trains), `world/rail_timetable.js` (`tracksFor`, `laneOffsets`), `main.js`; 81 self-test checks.
+For the other stream: nothing needed.
+Status: open
+
 ## 2026-11-22 09:00  Railway realism: ground, trains, timetable, boards, announcements, sound
 Branch: feat/rail-realism
 What changed: new `world/rail_grade.js`, `world/rail_timetable.js`, `ui/railboard.js`, `audio/trainsound.js`, `tools/build_india_trains.mjs`, `assets/india/trains.json` (DataMeet CC0); `world/rail.js` (STYLES, trainMotion, cached routes), `world/rail_view.js` (ballast, overhead wire, viaducts, styled trains), `world/terrain.js` (`attachRail`, one more grading hook, only where no road grades), `main.js`, licences and docs; 79 self-test checks.

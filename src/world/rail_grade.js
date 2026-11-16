@@ -6,8 +6,8 @@
 const STEP = 8, FLAT = 4.6, CUT = 1.5, FILL = 2, MAX_GRADE = 0.03, BELOW = 9, ABOVE = 12, VIADUCT = 6, CELL = 48, REACH = 40;
 
 export class RailGrade {
-  constructor({ edges, toWorld, natural }) {
-    this.edges = edges; this.natural = natural; this.pos = []; this.prof = []; this.occ = new Set(); this.cells = new Map(); this.nodeY = new Map(); this.nodes = null;
+  constructor({ edges, toWorld, natural, tracks = null }) {
+    this.tracks = tracks; this.edges = edges; this.natural = natural; this.pos = []; this.prof = []; this.occ = new Set(); this.cells = new Map(); this.nodeY = new Map(); this.nodes = null;
     edges.forEach((ln, ei) => {                                                                                    // positions every STEP m along each edge, and an index of the cells they touch
       const n = Math.max(2, Math.ceil(ln.len / STEP) + 1), P = new Float64Array(n * 2), tmp = {}; for (let i = 0; i < n; i++) { ln.at(Math.min(i * STEP, ln.len), tmp); const w = toWorld(tmp.x, tmp.z); P[i * 2] = w.x; P[i * 2 + 1] = w.z; }
       this.pos.push(P); this.prof.push(null);
@@ -36,10 +36,11 @@ export class RailGrade {
   /* what the terrain should be at (x, z) given the natural height h: flat under the track, sloped cuttings and embankments, the land itself where a viaduct stands */
   grade(x, z, h) {
     const q = this.query(x, z); if (!q) return h; const y = q.y, d = q.d;
-    if (y > h + VIADUCT && q.d < FLAT + 6) return h;                                                              // a viaduct: the valley stays
-    if (d <= FLAT) return y;
-    if (h > y) return Math.min(h, y + (d - FLAT) / CUT);                                                          // cutting
-    return Math.max(h, y - (d - FLAT) / FILL);                                                                    // embankment
+    const flat = FLAT + ((this.tracks ? this.tracks[q.ei] : 1) - 1) * 2.65;                                         // wider for a multi-track line
+    if (y > h + VIADUCT && q.d < flat + 6) return h;                                                              // a viaduct: the valley stays
+    if (d <= flat) return y;
+    if (h > y) return Math.min(h, y + (d - flat) / CUT);                                                          // cutting
+    return Math.max(h, y - (d - flat) / FILL);                                                                    // embankment
   }
   /* is the track at distance s along edge ei on a viaduct (more than VIADUCT m above the land) */
   viaduct(ei, s) { const P = this.pos[ei], i = Math.min(P.length / 2 - 1, Math.round(s / STEP)); return this.yAt(ei, s) - this.natural(P[i * 2], P[i * 2 + 1]) > VIADUCT; }
