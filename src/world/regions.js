@@ -11,7 +11,7 @@
      climate       { time, weather }          the sky it starts with
      land          { terrain, palette, water } the numbers the terrain generator, ground colours and sea take (same fields as a world config)
      vegetation    { trees, rocks, bushes, tufts, pineBias, tint, ... }  the scatter settings
-     roads         { style, maxAlt, drive: 'left' | 'right', density 0..1 }
+     roads         { style, maxAlt, drive: 'left' | 'right', density 0..1, router? }   router (optional): route-planner numbers for this land { maxGrade, hardGrade, maxCut, minRadius, tunnelName }, e.g. tighter bends for hill roads
      buildings     { styles: [names], density 0..1 }           broad character of the buildings (data for later phases)
      district      (optional) { styles: [palette names], floors: [min, max], market: bool }   turns on the built-up road edge (world/district.js): modular buildings, sidewalks, crossings, furniture
      traffic       { mix: { kind: weight }, scale 0..2 }       vehicle mix (kinds: car, van, truck, two-wheeler, auto-rickshaw, bus) and a density multiplier
@@ -24,6 +24,7 @@
    Deterministic worlds: a world is generated from the config `locationConfig(id, seed)` returns, which holds the region's id and data version (`config.region`), so the same
    region id + version + seed gives the same world and a share code carries the version it was made with (codes from before regions have no `region` key: version 0, legacy).
    Transitions: `regionTransition(fromId, toId)` says how to move between regions (today always a full reload behind the loading screen; 'seamless' is reserved for the connected map). */
+import { DEFAULT_CONFIG } from '../core/config.js';
 export const REGION_SCHEMA = 1;
 export const KNOWN_LANDMARKS = ['gateway', 'tajHotel', 'marine', 'indiaGate', 'tajMahal', 'lighthouse'];
 export const VEHICLE_KINDS = ['car', 'van', 'truck', 'two-wheeler', 'auto-rickshaw', 'bus'];
@@ -95,7 +96,89 @@ const BHOPAL = {
   provenance: { geography: 'procedural', sources: ['stylised impression: no map, survey or elevation data used'], osm: false }
 };
 
-export const REGIONS = [MUMBAI, DELHI, AGRA, BHOPAL];
+/* ---- the five Indian worlds that replace the old non-Indian ones (docs/INDIA_MAP_PLAN.md section 5). Terrain recipes come from the old worlds they replace; palettes, plants, roads and traffic are Indian. ---- */
+const copy = o => JSON.parse(JSON.stringify(o));
+const HIMACHAL = {
+  schema: 1, id: 'himachal', version: 1, name: 'Himachal', blurb: 'Deodar and pine valleys under snow peaks, and a narrow ghat road with a stone parapet climbing from Shimla towards Manali and the Atal Tunnel.', accent: '#8fc8ff',
+  inspiration: { place: 'Manali, Himachal Pradesh', lat: 32.24, lon: 77.19, boundsKm: [20, 20] },
+  transform: { anchorLat: 32.24, anchorLon: 77.19, metresPerGameMetre: 1 },
+  climate: { time: 'day', weather: 'clear' },
+  land: { terrain: { seaLevel: 470, seabed: 395, lowland: 520, continent: { scale: 6500, rise: 90 }, coast: { lo: -0.52, hi: -0.34 }, warp: { scale: 1400, amp: 260 }, hills: { scale: 1000, amp: 90, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 3400, start: -0.2, full: 0.2, scale: 6800, amp: 980, octaves: 5, gain: 0.38, sharp: 1.3 } },
+    palette: { grass: [0.48, 0.72, 0.28], grass2: [0.26, 0.48, 0.18], dry: [0.6, 0.58, 0.34], alpine: [0.52, 0.54, 0.4], rock: [0.52, 0.5, 0.48], sand: [0.7, 0.66, 0.52], treeline: 520, snowline: 760 }, water: { color: '#2a7a8a' } },
+  vegetation: { trees: 0.011, rocks: 0.0007, bushes: 0.0012, tufts: 0.009, pineBias: 0.45, tint: [0.92, 1.02, 0.95] },
+  roads: { style: 'ghat', maxAlt: 1500, drive: 'left', density: 0.5, router: { maxGrade: 0.09, hardGrade: 0.11, maxCut: 1000, minRadius: 45, tunnelName: 'ATAL TUNNEL, ROHTANG' } },
+  buildings: { styles: ['mixed'], density: 0.2 },
+  traffic: { mix: { car: 38, 'two-wheeler': 26, truck: 18, bus: 18 }, scale: 0.5 },
+  population: { density: 0.25, archetypes: ['commuter', 'tourist'] },
+  audio: { ambient: 'mountain-valley' },
+  landmarks: [],
+  provenance: { geography: 'procedural', sources: ['stylised impression: no map, survey or elevation data used'], osm: false }
+};
+const LADAKH = {
+  schema: 1, id: 'ladakh', version: 1, name: 'Ladakh', blurb: 'A thin high road through the cold desert: brown ridges, white giants, thin air, trucks and bikers on the way to Leh.', accent: '#e8e4dc',
+  inspiration: { place: 'Leh, Ladakh', lat: 34.15, lon: 77.58, boundsKm: [20, 20] },
+  transform: { anchorLat: 34.15, anchorLon: 77.58, metresPerGameMetre: 1 },
+  climate: { time: 'day', weather: 'clear' },
+  land: { terrain: { seaLevel: 0, seabed: 2500, lowland: 3000, continent: { scale: 8000, rise: 200 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1800, amp: 320 }, hills: { scale: 1300, amp: 180, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4600, start: -0.3, full: 0.15, scale: 11500, amp: 2100, octaves: 5, gain: 0.38, sharp: 1.3 } },
+    palette: { grass: [0.52, 0.5, 0.3], grass2: [0.4, 0.42, 0.24], dry: [0.62, 0.54, 0.38], alpine: [0.5, 0.45, 0.36], rock: [0.5, 0.44, 0.38], sand: [0.72, 0.64, 0.5], treeline: 3500, snowline: 3300, arid: 0.45 }, water: { color: '#2f6a78' } },
+  vegetation: { trees: 0.0006, rocks: 0.0016, bushes: 0.0008, tufts: 0.004, pineBias: 0.2, tint: [1.05, 0.98, 0.85] },
+  roads: { style: 'two-lane', maxAlt: 7500, drive: 'left', density: 0.3, router: { maxGrade: 0.1, hardGrade: 0.11, maxCut: 1000, minRadius: 55 } },
+  buildings: { styles: ['mixed'], density: 0.1 },
+  traffic: { mix: { car: 22, 'two-wheeler': 32, truck: 36, bus: 10 }, scale: 0.35 },
+  population: { density: 0.1, archetypes: ['tourist'] },
+  audio: { ambient: 'high-desert' },
+  landmarks: [],
+  provenance: { geography: 'procedural', sources: ['stylised impression: no map, survey or elevation data used'], osm: false }
+};
+const RAJASTHAN = {
+  schema: 1, id: 'rajasthan', version: 1, name: 'Rajasthan', blurb: 'Dry golden plains and low Aravalli ridges along a wide divided national highway, thorn scrub, dust and trucks, between Jaipur and Jodhpur.', accent: '#f2b84b',
+  inspiration: { place: 'Jaipur, Rajasthan', lat: 26.91, lon: 75.79, boundsKm: [20, 20] },
+  transform: { anchorLat: 26.91, anchorLon: 75.79, metresPerGameMetre: 1 },
+  climate: { time: 'day', weather: 'clear' },
+  land: { terrain: { seaLevel: 0, seabed: -14, lowland: 30, continent: { scale: 6000, rise: 20 }, coast: { lo: -1.2, hi: -0.8 }, warp: { scale: 1200, amp: 120 }, hills: { scale: 700, amp: 18, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.6, full: 1.0, scale: 3800, amp: 160, octaves: 4, gain: 0.4, sharp: 1.5 } },
+    palette: { grass: [0.95, 0.64, 0.3], grass2: [0.86, 0.56, 0.27], dry: [0.96, 0.72, 0.4], alpine: [0.6, 0.52, 0.36], rock: [0.62, 0.5, 0.4], sand: [0.92, 0.8, 0.56], treeline: 900, snowline: 4000, arid: 0.8 }, water: { color: '#3a7f8a' } },
+  vegetation: { trees: 0.0007, rocks: 0.0012, bushes: 0.0035, tufts: 0.003, pineBias: -0.5, tint: [1.15, 0.98, 0.65] },
+  roads: { style: 'nh6', maxAlt: 400, drive: 'left', density: 0.7 },
+  buildings: { styles: ['mixed', 'old-city'], density: 0.2 },
+  traffic: { mix: { car: 36, 'two-wheeler': 20, truck: 32, bus: 12 }, scale: 0.8 },
+  population: { density: 0.3, archetypes: ['commuter', 'vendor'] },
+  audio: { ambient: 'dry-plains' },
+  landmarks: [],
+  provenance: { geography: 'procedural', sources: ['stylised impression: no map, survey or elevation data used'], osm: false }
+};
+const KERALA = {
+  schema: 1, id: 'kerala', version: 1, name: 'Kerala', blurb: 'Palm-green flats, bright sand and warm water: a narrow, busy coastal road past backwaters and a lighthouse near Kochi, with auto-rickshaws and scooters everywhere.', accent: '#3ee0b0',
+  inspiration: { place: 'Kochi, Kerala', lat: 9.93, lon: 76.27, boundsKm: [20, 20] },
+  transform: { anchorLat: 9.93, anchorLon: 76.27, metresPerGameMetre: 1 },
+  climate: { time: 'day', weather: 'overcast' },
+  land: { terrain: { seaLevel: 0, lowland: 7, continent: { scale: 4200, rise: 28 }, coast: { lo: -0.28, hi: -0.1 }, warp: { scale: 1100, amp: 170 }, hills: { scale: 600, amp: 22, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.3, full: 0.75, scale: 3400, amp: 260, octaves: 5, gain: 0.4, sharp: 1.6 } },
+    palette: { grass: [0.42, 0.8, 0.2], grass2: [0.2, 0.58, 0.12], dry: [0.62, 0.62, 0.3], alpine: [0.34, 0.6, 0.22], rock: [0.48, 0.44, 0.4], sand: [0.92, 0.85, 0.66], treeline: 500, snowline: 2000 }, water: { color: '#1f93a0' } },
+  vegetation: { trees: 0.017, rocks: 0.0003, bushes: 0.003, tufts: 0.012, pineBias: -0.95, tint: [0.88, 1.12, 0.78] },
+  roads: { style: 'two-lane', maxAlt: 150, drive: 'left', density: 0.9 },
+  buildings: { styles: ['mixed'], density: 0.5 },
+  traffic: { mix: { car: 30, 'two-wheeler': 38, 'auto-rickshaw': 16, bus: 10, truck: 6 }, scale: 0.9 },
+  population: { density: 0.6, archetypes: ['commuter', 'vendor'] },
+  audio: { ambient: 'coastal-town' },
+  landmarks: [{ kind: 'lighthouse', s: 700, off: 80, sea: true, range: 3000 }],
+  provenance: { geography: 'procedural', sources: ['stylised impression: no map, survey or elevation data used'], osm: false }
+};
+const DECCAN = {
+  schema: 1, id: 'deccan', version: 1, name: 'Deccan Plateau', blurb: 'Rolling green hills, teak and banyan, farm fields and a lake or two: the six-lane expressway from Mumbai climbs onto the plateau towards Pune.', accent: '#7fd46a',
+  inspiration: { place: 'Pune, Maharashtra', lat: 18.52, lon: 73.86, boundsKm: [20, 20] },
+  transform: { anchorLat: 18.52, anchorLon: 73.86, metresPerGameMetre: 1 },
+  climate: { time: 'day', weather: 'clear' },
+  land: { terrain: copy(DEFAULT_CONFIG.terrain), palette: copy({ ...DEFAULT_CONFIG.palette }), water: { color: '#2f7f86' } },
+  vegetation: { trees: 0.0048, rocks: 0.0005, bushes: 0.0014, tufts: 0.02, pineBias: -0.4, tint: [1.05, 1.0, 0.8], clearRoad: 17 },
+  roads: { style: 'nh6', maxAlt: 190, drive: 'left', density: 0.8 },
+  buildings: { styles: ['mixed'], density: 0.3 },
+  traffic: { mix: { car: 44, truck: 26, 'two-wheeler': 20, bus: 10 }, scale: 0.8 },
+  population: { density: 0.3, archetypes: ['commuter', 'vendor'] },
+  audio: { ambient: 'open-country' },
+  landmarks: [],
+  provenance: { geography: 'procedural', sources: ['stylised impression: no map, survey or elevation data used'], osm: false }
+};
+
+export const REGIONS = [MUMBAI, DELHI, AGRA, BHOPAL, HIMACHAL, LADAKH, RAJASTHAN, KERALA, DECCAN];
 export const regionById = id => REGIONS.find(r => r.id === id) || null;
 
 /* ---------- validation ---------- */
@@ -118,6 +201,7 @@ export function validateRegion(r) {
   if (isObj(la) && isObj(la.water)) need(/^#[0-9a-fA-F]{6}$/.test(la.water.color || ''), 'water.color must be #rrggbb');
   const v = r.vegetation; need(isObj(v) && ['trees', 'rocks', 'bushes', 'tufts'].every(k => isNum(v[k]) && v[k] >= 0 && v[k] < 0.1) && Array.isArray(v.tint) && v.tint.length === 3, 'vegetation needs trees, rocks, bushes, tufts (0..0.1) and a 3-number tint');
   const ro = r.roads; need(isObj(ro) && ROAD_STYLE_IDS.includes(ro.style) && isNum(ro.maxAlt) && ro.maxAlt > 0 && (ro.drive === 'left' || ro.drive === 'right') && in01(ro.density), 'roads needs a known style, maxAlt, drive left|right and density 0..1');
+  if (isObj(ro) && ro.router !== undefined) need(isObj(ro.router) && Object.entries(ro.router).every(([k, x]) => ['maxGrade', 'hardGrade', 'maxCut', 'minRadius'].includes(k) ? isNum(x) && x > 0 : k === 'tunnelName' && isStr(x)), 'roads.router may hold maxGrade, hardGrade, maxCut, minRadius (numbers above 0) and tunnelName (text)');
   if (r.district !== undefined) { const di = r.district; need(isObj(di) && Array.isArray(di.styles) && di.styles.length > 0 && di.styles.every(x => isStr(x) && Object.prototype.hasOwnProperty.call(DISTRICT_STYLES, x)) && Array.isArray(di.floors) && di.floors.length === 2 && di.floors.every(Number.isInteger) && di.floors[0] >= 1 && di.floors[1] >= di.floors[0] && di.floors[1] <= 12 && typeof di.market === 'boolean', 'district needs known styles, floors [min, max] (1..12) and market true|false'); }
   const bu = r.buildings; need(isObj(bu) && Array.isArray(bu.styles) && bu.styles.length > 0 && bu.styles.every(isStr) && in01(bu.density), 'buildings needs styles and density 0..1');
   const tf = r.traffic; need(isObj(tf) && isObj(tf.mix) && isNum(tf.scale) && tf.scale >= 0 && tf.scale <= 2, 'traffic needs mix and scale 0..2');
@@ -140,7 +224,7 @@ export function migrateRegion(r) { if (isObj(r) && r.schema === REGION_SCHEMA) r
 export function regionToLocation(r) {
   const p = validateRegion(r); if (p.length) throw new Error('region ' + (r && r.id) + ' is not valid: ' + p.join('; '));
   return { id: r.id, name: r.name, blurb: r.blurb, accent: r.accent, drive: r.roads.drive, region: r,
-    config: { terrain: r.land.terrain, palette: r.land.palette, scatter: r.vegetation, water: r.land.water, road: { style: r.roads.style, maxAlt: r.roads.maxAlt }, region: { id: r.id, version: r.version } },
+    config: { terrain: r.land.terrain, palette: r.land.palette, scatter: r.vegetation, water: r.land.water, road: { style: r.roads.style, maxAlt: r.roads.maxAlt, ...(r.roads.router || {}) }, region: { id: r.id, version: r.version } },
     sky: { time: r.climate.time, weather: r.climate.weather }, landmarks: r.landmarks };
 }
 

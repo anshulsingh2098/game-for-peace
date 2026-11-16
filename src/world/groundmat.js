@@ -18,14 +18,14 @@ export function makeGroundMaterial(level = 'full') {
   const uniforms = {
     tGrass: { value: tex('grass_color') }, tRock: { value: tex('rock_color') }, tSnow: { value: tex('snow_color') }, tSand: { value: tex('sand_color') },
     tGrassN: { value: tex('grass_normal', false) }, tRockN: { value: tex('rock_normal', false) },
-    uSea: { value: 0 }, uTime: { value: 0 }
+    uSea: { value: 0 }, uTime: { value: 0 }, uArid: { value: 0 }
   };
   const photo = sh => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP; varying vec3 vWN;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vWN = normalize(mat3(modelMatrix) * normal);');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-uniform sampler2D tGrassN; uniform sampler2D tRockN; uniform sampler2D tGrass; uniform sampler2D tRock; uniform sampler2D tSnow; uniform sampler2D tSand; uniform float uSea; uniform float uTime; varying vec3 vWP; varying vec3 vWN;
+uniform sampler2D tGrassN; uniform sampler2D tRockN; uniform sampler2D tGrass; uniform sampler2D tRock; uniform sampler2D tSnow; uniform sampler2D tSand; uniform float uSea; uniform float uTime; uniform float uArid; varying vec3 vWP; varying vec3 vWN;
 vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z); return texture2D(tRock, p.zy / 8.0).rgb * w.x + texture2D(tRock, p.xz / 8.0).rgb * w.y + texture2D(tRock, p.xy / 8.0).rgb * w.z; }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 { ${lite ? '' : `
@@ -44,7 +44,7 @@ vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y 
   vec3 sand = texture2D(tSand, vWP.xz / 8.0).rgb * mix(vec3(1.0), tint, 0.4) * 1.15;
   vec3 rock = ${lite ? 'texture2D(tRock, vec2(vWP.x + vWP.z * 0.7, vWP.y) / 8.0).rgb' : 'triRock(vWP, n)'} * mix(vec3(1.0), tint, 0.3) * 1.7;
   vec3 snow = texture2D(tSnow, vWP.xz / 8.0).rgb * 0.95;
-  vec3 a = mix(g, sand, sandW); a = mix(a, rock, rockW); a = mix(a, snow, snowW);
+  vec3 a = mix(g, sand, max(sandW, uArid * (1.0 - rockW))); a = mix(a, rock, rockW); a = mix(a, snow, snowW);
   /* the shore: ground under the water goes from pale turquoise shallows to deep blue, wet sand darkens just above the waterline, and a moving line of foam sits on the edge */
   float dep = uSea - vWP.y, lm = dot(a, vec3(0.3, 0.59, 0.11));
   float under = smoothstep(0.0, 0.4, dep), dk = smoothstep(0.3, 7.0, dep);

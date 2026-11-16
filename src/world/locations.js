@@ -50,6 +50,11 @@ export const LOCATIONS = [
   /* ---- India's regions (Mumbai, Delhi, Agra, Bhopal) are data in world/regions.js; they are added below, in the same shape as the entries above ---- */
 ].concat(REGIONS.map(regionToLocation));
 
-export const locationById = id => LOCATIONS.find(l => l.id === id) || LOCATIONS[0];
+/* India only: the five original worlds stay loadable (old share links and saved choices) but are hidden from the picker; each has an Indian replacement */
+export const LEGACY = { default: 'deccan', alps: 'himachal', himalayas: 'ladakh', california: 'rajasthan', south: 'kerala' };
+for (const l of LOCATIONS) if (LEGACY[l.id]) l.hidden = true;
+export const START_LOCATION = 'mumbai';
+export const pickerLocations = () => LOCATIONS.filter(l => !l.hidden);
+export const locationById = id => LOCATIONS.find(l => l.id === id) || LOCATIONS.find(l => l.id === START_LOCATION) || LOCATIONS[0];
 /* the full world config for a location and seed */
 export const locationConfig = (id, seed) => makeConfig({ ...locationById(id).config, seed, location: locationById(id).id });
