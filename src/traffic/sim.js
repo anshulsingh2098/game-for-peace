@@ -13,7 +13,9 @@ import { alea } from '../core/rng.js';
 import { Pool } from '../core/runtime.js';
 import { crossingAt, STEP, SIGNAL_STYLES, CROSS_EVERY } from '../world/navgraph.js';
 
-export const MODES = { off: 0, low: 6, mid: 12, high: 20 };                    // cars alive inside the window at most, per level
+export const MODES = { off: 0, low: 6, mid: 12, high: 20 };
+/* the traffic level for a side road at a junction (a second road in the world): nothing unless the player is close to it, and a lighter level than the main road, so the cars of the whole world stay within a budget */
+export const branchMode = (level, active) => !active || level === 'off' ? 'off' : level === 'high' ? 'mid' : 'low';                    // cars alive inside the window at most, per level
 export const MODE_ALIAS = { light: 'low', busy: 'high' };                      // older saved names
 import { validTolls, tollCap, TOLL_LEN } from '../world/highway_plan.js';
 export const SLOT = 60, LIMIT = { 'two-lane': 22, highway: 30, boulevard: 16, dirt: 12, gravel: 14, nh6: 33, ghat: 13 };       // slot length (m); speed limit by road style (m/s)

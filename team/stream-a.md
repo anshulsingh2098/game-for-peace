@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 01:00  Traffic on every road of the world
+Branch: feat/landscape-look (PR 36)
+What changed: `traffic/sim.js` (`branchMode`), `traffic/traffic.js` (`addRoad`, `removeRoad`, `updateExtra`; extra sims share the instanced meshes; `circles` and `setMode` cover them), `main.js` (each branch road gets a sim while the player is within 700 m), one self-test extension (68 checks: cars appear on the side road, keep to its lanes, live near the player, are cleared when off, circles reach physics). Checked in the browser at Delhi. Not done: cars turning between roads, giving way or traffic lights at crossings (two roads' cars can pass through each other), pedestrians and the navigation graph on side roads, continuing cars when you leave and return.
+For the other stream: this touches `traffic/sim.js` and `traffic/traffic.js` (your files; additive). Please say how you want crossing behaviour done (priority, signals, turning).
+Status: open
+
 ## 2026-11-18 23:00  Multi-road engine step 1: RoadSet and branch roads at junctions
 Branch: feat/landscape-look (PR 36)
 What changed: new `world/roadset.js` (`RoadSet`: nearest, grade, drive, style over several roads; `terrain.attachRoad(roadSet)` in `main.js`), `world/router.js` (`config.road.start` and `guideBack`, `hAt` height blend: a road can start on another road; both arms can follow guides), `main.js` (branch roads built near each city of an `?india=` route and removed when far, their meshes updated and repositioned like the main road), one self-test (68 checks: branch starts at the road's height, follows its guide, nearest-road answers, one-road behaviour unchanged). Checked in the browser: six roads form a star at Delhi, no console errors, about 3 ms per headless step. Not done: traffic, pedestrians and the navigation graph on branches, interchanges and ramps, paint cut-outs, collision for branch bridges and walls, the physical choice replaced the panel only partly.

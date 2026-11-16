@@ -20,7 +20,7 @@ import { readFileSync as readSkeleton } from 'node:fs';
 import { destinationsFor, HINDI } from '../src/world/india_network.js';
 import { roadStyleById } from '../src/world/roadstyles.js';
 import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
-import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets } from '../src/traffic/sim.js';
+import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets, branchMode } from '../src/traffic/sim.js';
 import { Autodrive } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
@@ -791,6 +791,10 @@ test('road set: a road that branches off another one starts at its height, both 
   const bk = br.at(-800, {}); assert.ok(Math.abs(Math.atan2(Math.sin(Math.atan2(bk.z - jp.z, bk.x - jp.x) - (th + Math.PI)), Math.cos(Math.atan2(bk.z - jp.z, bk.x - jp.x) - (th + Math.PI)))) < 0.9, 'the other arm runs the other way across the main road (a crossroads)');
   assert.ok(set.nearest(jp.x, jp.z) && set.hit.d < 1 && set.roads.length === 2); const q = br.at(500, {}); assert.ok(set.nearest(q.x, q.z) && set.last === br && set.hit.d < 1, 'the nearest road answers on the branch'); assert.ok(set.nearest(main.at(600, {}).x, main.at(600, {}).z) && set.last === main);
   assert.ok(Math.abs(t.height(jp.x, jp.z) - jp.y) < 1.5 && Math.abs(t.drive(q.x, q.z) - q.y) < 0.6, 'the land under each road is level with it'); const surf = t.surface(q.x, q.z); assert.ok(surf === 'asphalt', 'wheels on the branch feel its surface: ' + surf);
+  const branchSim = new TrafficSim(br, { seed: 'branch-traffic', mode: 'off', drive: 'left', scale: 1 }); assert.equal(branchMode('off', true), 'off'); assert.equal(branchMode('low', false), 'off', 'nothing on a side road the player is not near'); assert.equal(branchMode('low', true), 'low'); assert.equal(branchMode('mid', true), 'low'); assert.equal(branchMode('high', true), 'mid', 'lighter than the main road');
+  branchSim.setMode(branchMode('mid', true)); const bp = br.at(400, {}); for (let i = 0; i < 1200; i++) branchSim.update(1 / 30, { x: bp.x, z: bp.z, s: 400, u: 0, yaw: bp.th }); assert.ok(branchSim.cars.length > 0, 'cars appear on the side road: ' + branchSim.cars.length); const qq = {};
+  for (const c of branchSim.cars) { br.at(c.s, qq); const lat = Math.hypot(c.x - qq.x, c.z - qq.z); assert.ok(laneOffsets(br.style).some(o => Math.abs(lat - o) < 0.6), 'a car keeps to a lane of the side road (' + lat.toFixed(1) + ' m from the centre line, lanes ' + laneOffsets(br.style).join(', ') + ')'); assert.ok(c.s > 400 - 600 && c.s < 400 + 900, 'cars live near the player'); }
+  const sup = new Set(branchSim.circles(bp.x, bp.z, 400)[0].map(c => c.traffic)); assert.ok(sup.size >= 1, 'their obstacle circles reach the physics'); branchSim.setMode('off'); assert.equal(branchSim.cars.length, 0, 'switching off clears them');
   const far = t.surface(jp.x + 3000, jp.z + 3000); assert.notEqual(far, 'asphalt'); set.remove(br); assert.equal(set.roads.length, 1); set.remove(main); assert.equal(set.roads.length, 1, 'the primary road cannot be removed');
   const alone = []; for (let i = 0; i < 30; i++) { const x = i * 97 - 800, z = i * 41 - 300; alone.push([x, z, t.height(x, z), t.surface(x, z)]); } assert.deepEqual(alone, solo, 'with the branch gone the land is as before (one-road behaviour is unchanged)');
 });

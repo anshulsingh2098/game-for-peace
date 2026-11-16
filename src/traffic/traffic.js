@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { TrafficSim, MODES, KINDS, DEFAULT_KINDS, EXTRA_KINDS, trafficKinds } from './sim.js';
+import { TrafficSim, MODES, KINDS, DEFAULT_KINDS, EXTRA_KINDS, trafficKinds, branchMode } from './sim.js';
 
 /* real-world body colours, as often as they are seen on a road: black, white, silver and grey lead; the rest are bright accents */
 const PAINT = [].concat(...[[0x16181d, 4], [0xf2f3f5, 4], [0xb9bec6, 4], [0x6b7078, 3], [0xb3141f, 2], [0x1f3f8f, 2], [0x1f5a3c, 1], [0xd8cfae, 1], [0x6b4a32, 1], [0xe08a1e, 1], [0x2a78c2, 1], [0x7a1f2a, 1]].map(([c, n]) => Array(n).fill(c)));
@@ -54,7 +54,7 @@ function boxGeometry(kind) {
 export class Traffic {
   /* seed: the world's seed string; origin: the render origin (grid.origin); drive: 'right' or 'left'; pack: the loaded traffic pack (or null for boxes) */
   constructor(scene, road, seed, origin, { mode = 'low', drive = 'right', pack = null, scale = 1, mix = null } = {}) {
-    this.mix = mix; this.scene = scene; this.origin = origin; this.sim = new TrafficSim(road, { seed, mode, drive, scale }); this.group = new THREE.Group(); scene.add(this.group);
+    this.mix = mix; this.scene = scene; this.origin = origin; this.opts = { seed, drive, scale }; this.extra = []; this.sim = new TrafficSim(road, { seed, mode, drive, scale }); this.group = new THREE.Group(); scene.add(this.group);
     this.cap = MODES.high + 4; this.groups = {}; this.geos = [];
     this.paintMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.2 });
     this.restMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.05, envMapIntensity: 0.8 });
@@ -75,20 +75,25 @@ export class Traffic {
       else { const geo = boxGeometry(k.name); this.geos.push(geo); g.rest = this.make(geo, this.restMat, false, true); }
       this.groups[k.name] = g;
     }
-    this.sim.setKinds(kinds);
+    this.sim.setKinds(kinds); for (const e of this.extra) e.sim.setKinds(kinds);
   }
+  /* cars on another road of the world (a road that crosses the main one): its own simulation, drawn with the same instanced meshes; it only runs while the player is near it (see branchMode) */
+  addRoad(road) { const o = this.opts, sim = new TrafficSim(road, { seed: o.seed + ':' + this.extra.length, mode: 'off', drive: o.drive, scale: o.scale * 0.8 }); sim.setKinds(this.sim.kinds); const e = { road, sim }; this.extra.push(e); return e; }
+  removeRoad(e) { const i = this.extra.indexOf(e); if (i >= 0) this.extra.splice(i, 1); }
+  updateExtra(e, dt, player, active) { const want = branchMode(this.sim.mode, active); if (e.sim.mode !== want) e.sim.setMode(want); if (want !== 'off') e.sim.update(dt, player); }
   make(geo, mat, tinted, own) {
     if (!own && !this.pack) this.geos.push(geo);
     const m = new THREE.InstancedMesh(geo, mat, this.cap); m.count = 0; m.visible = false; m.castShadow = true; m.frustumCulled = false;
     if (tinted) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(this.cap * 3), 3); this.group.add(m); return m;
   }
-  setMode(mode) { this.sim.setMode(mode); this.draw(false); }
+  setMode(mode) { this.sim.setMode(mode); for (const e of this.extra) e.sim.setMode('off'); this.draw(false); }
   get mode() { return this.sim.mode; }
   /* advance the cars and place the instances; `player` is { x, z, s, u, yaw }; `night`: lights on */
   update(dt, player, night) { this.sim.update(dt, player); this.draw(night); }
   draw(night) {
     const counts = {}, o = this.origin; let nt = 0, nh = 0;
-    for (const car of this.sim.cars) {
+    const cars = this.extra.length ? this.sim.cars.concat(...this.extra.map(e => e.sim.cars)) : this.sim.cars;
+    for (const car of cars) {
       const g = this.groups[car.kind]; if (!g) continue; const i = counts[car.kind] = (counts[car.kind] || 0); if (i >= this.cap) continue; counts[car.kind]++;
       this.q.setFromEuler(this.e.set(0, Math.PI / 2 - car.yaw, 0)); this.m.compose(this.v.set(car.x - o.x, car.y + 0.02, car.z - o.z), this.q, this.one);
       if (g.rest) g.rest.setMatrixAt(i, this.m); if (g.paint) { g.paint.setMatrixAt(i, this.m); g.paint.setColorAt(i, this.c.setHex(PAINT[car.colour % PAINT.length])); }
@@ -104,7 +109,7 @@ export class Traffic {
     this.tail.instanceMatrix.needsUpdate = true; this.tail.instanceColor.needsUpdate = true; this.head.instanceMatrix.needsUpdate = true;
   }
   /* obstacle circles for the player's physics (world.near contract) */
-  circles(x, z, r) { return this.sim.circles(x, z, r); }
+  circles(x, z, r) { const l = this.sim.circles(x, z, r); if (!this.extra.length) return l; const out = l.slice(); for (const e of this.extra) if (e.sim.cars.length) out.push(...e.sim.circles(x, z, r).map(a => a.slice())); return out; }
   dispose() {
     this.scene.remove(this.group); for (const g of Object.values(this.groups)) for (const m of [g.paint, g.rest]) if (m) m.dispose();
     for (const g of this.geos) g.dispose(); this.lgeo.dispose(); for (const m of [this.paintMat, this.restMat, ...this.lightMats]) m.dispose(); this.tail.dispose(); this.head.dispose();

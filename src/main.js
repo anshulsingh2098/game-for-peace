@@ -401,17 +401,18 @@ function buildBranches(city) {
     if (used.has(j.road)) continue; const rd = R.net.roads.get(j.road), i = rd.stops.findIndex(st => st.id === city.id), nxt = rd.stops[i + 1], prv = rd.stops[i - 1];
     let gA = nxt ? R.net.guideFor(j.road, city.id, nxt.id) : null, gB = prv ? R.net.guideFor(j.road, city.id, prv.id) : null; if (!gA) { gA = gB; gB = null; } if (!gA) continue;
     const cfg = { ...config, seed: config.seed + ':' + city.id + ':' + j.road, road: { ...config.road, guide: gA.pts, guideBack: gB ? gB.pts : null, start, style: rd.kind === 'nh' ? 'highway' : 'nh6' } };
-    const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); branches.push({ city: city.id, road: br, mesh: new RoadMesh(scene, br, br.style, grid.origin, {}), hint: 0 });
+    const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); branches.push({ city: city.id, road: br, mesh: new RoadMesh(scene, br, br.style, grid.origin, {}), hint: 0, near: false, te: traffic ? traffic.addRoad(br) : null });
   }
   return true;
 }
-function dropBranches(cityId) { for (let i = branches.length - 1; i >= 0; i--) if (branches[i].city === cityId) { const b = branches[i]; roadSet.remove(b.road); grid.invalidate(roadBox(b.road)); b.mesh.dispose(); branches.splice(i, 1); } }
-const triedBranches = new Set();
+function dropBranches(cityId) { for (let i = branches.length - 1; i >= 0; i--) if (branches[i].city === cityId) { const b = branches[i]; roadSet.remove(b.road); if (traffic && b.te) traffic.removeRoad(b.te); grid.invalidate(roadBox(b.road)); b.mesh.dispose(); branches.splice(i, 1); } }
+const triedBranches = new Set(), tmpP = {};
 bus.on('world:rebuilt', () => triedBranches.clear());
-function updateBranches(px, pz) {
+function updateBranches(px, pz, dt) {
   const R = indiaRoute; if (!R || !roadSet) return; const arc = road.guideArc(px, pz) || 0;
   R.cities.forEach(c => { const d = Math.abs(arc - c.along), have = branches.some(b => b.city === c.id); if (d < 2400 && !have && !triedBranches.has(c.id)) { if (buildBranches(c)) triedBranches.add(c.id); } else if (d > 3600 && (have || triedBranches.has(c.id))) { dropBranches(c.id); triedBranches.delete(c.id); } });
-  for (const b of branches) { const s = b.road.closestS(px, pz, b.hint); b.hint = s; const box = b.road.ensure(s - 2600, s + 2600); if (box) grid.invalidate(box); b.mesh.update(s); }
+  for (const b of branches) { const s = b.road.closestS(px, pz, b.hint); b.hint = s; const box = b.road.ensure(s - 2600, s + 2600); if (box) grid.invalidate(box); b.mesh.update(s);
+    if (traffic && b.te) { const q = b.road.at(s, tmpP), dist = Math.hypot(q.x - px, q.z - pz); b.near = b.near ? dist < 1000 : dist < 700; traffic.updateExtra(b.te, dt, { x: px, z: pz, s, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, b.near); } }
 }
 function updateRoute() { if (!indiaRoute) return; const arc = road.guideArc(phys && mode !== 'fly' ? phys.x : cam.x, phys && mode !== 'fly' ? phys.z : cam.z) || 0, nxt = indiaRoute.cities.find(c => c.along > arc + 40); routeHud.style.display = 'block'; junctionAt(arc); routeHud.textContent = nxt ? indiaRoute.name + ' · next: ' + nxt.name + ', ' + Math.max(0, Math.round((nxt.along - arc) * 100 / 1000)) + ' km' : indiaRoute.name + ' · end of the path'; }
 function updateActivities(dt, px, pz) {
@@ -447,7 +448,7 @@ function update(dt, now) {
   if (navDebug && nav) navDebug.update(nav, grid.origin);
   focus.x = px; focus.z = pz; if (mode === 'drive' && phys) { focus.dx = Math.cos(phys.yaw); focus.dz = Math.sin(phys.yaw); focus.speed = Math.abs(phys.u); } else focus.speed = 0;
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
-  updateBranches(px, pz);
+  updateBranches(px, pz, dt);
   if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
