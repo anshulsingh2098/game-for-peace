@@ -79,6 +79,8 @@ export class RoadMesh {
     const grp = new THREE.Group(); const rs = new THREE.Mesh(geo(pos, col, idx, uv), this.matList); rs.receiveShadow = true; grp.add(rs, new THREE.Mesh(geo(lp, lc, li), this.paint));
     grp.userData = { x: ox, z: oz }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
   }
+  /* the road's shape changed (a lift was added, see Road.addLift): throw away every drawn piece so it is rebuilt from the new heights */
+  refresh() { for (const sub of [this, this.bridges, this.tunnels, this.retaining, this.highway, this.district]) if (sub) { for (const g of sub.pieces.values()) sub.drop(g); sub.pieces.clear(); } }
   get solid() { return this.style.lines.filter(l => !l.dash).length; }
   drop(grp) { this.group.remove(grp); for (const m of grp.children) m.geometry.dispose(); }
   reposition() { for (const g of this.pieces.values()) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); this.bridges.reposition(); this.tunnels.reposition(); this.retaining.reposition(); this.highway.reposition(); if (this.district) this.district.reposition(); }

@@ -75,9 +75,9 @@ export class VehiclePhysics {
   /* apply a buff's multipliers, or clear them with no argument */
   setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; this.M = combineMods(this.mod, this.dm); }
   setDriveMode(id) { this.dm = DRIVE_MODES[id] || DRIVE_MODES.normal; this.M = combineMods(this.mod, this.dm); }
-  reset(x, z, yaw) {
+  reset(x, z, yaw, yHint) {
     Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0, afS: 0, arS: 0, axL: 0, dPitch: 0, dRoll: 0 });
-    this.y = this.world.height(x, z); this.ground(1);
+    this.y = this.world.height(x, z, yHint); this.ground(1);
   }
   get speed() { return Math.hypot(this.u, this.v); }
   get kmh() { return this.u * 3.6; }
@@ -91,7 +91,7 @@ export class VehiclePhysics {
   ground(k) {
     const p = this.p, W = this.world, c = Math.cos(this.yaw), s = Math.sin(this.yaw), ht = p.track / 2;
     const fx = this.x + c * p.front, fz = this.z + s * p.front, bx = this.x - c * p.rear, bz = this.z - s * p.rear;      // right of travel is (-s, c)
-    const fl = W.height(fx + s * ht, fz - c * ht), fr = W.height(fx - s * ht, fz + c * ht), bl = W.height(bx + s * ht, bz - c * ht), br = W.height(bx - s * ht, bz + c * ht);
+    const yh = this.y, fl = W.height(fx + s * ht, fz - c * ht, yh), fr = W.height(fx - s * ht, fz + c * ht, yh), bl = W.height(bx + s * ht, bz - c * ht, yh), br = W.height(bx - s * ht, bz + c * ht, yh);
     this.gPitch = Math.atan2((fl + fr - bl - br) / 2, p.L); this.gRoll = Math.atan2((fl + bl - fr - br) / 2, p.track);
     const y = (fl + fr) / 2 * (p.rear / p.L) + (bl + br) / 2 * (p.front / p.L);
     this.y += (y - this.y) * Math.max(k, 0.85); this.pitch += (this.gPitch - this.pitch) * Math.max(k, 0.35); this.roll += (this.gRoll - this.roll) * Math.max(k, 0.35); this.groundY = y;   // the body stays on the ground (no lag, so it never sinks into a climb); tilt eases a little
@@ -157,6 +157,7 @@ export class VehiclePhysics {
       const cx = this.x + c * off, cz = this.z + s * off;
       for (const list of lists) for (let i = 0; i < list.length; i++) {
         const o = list[i], dx = cx - o.x, dz = cz - o.z, rr = p.radius + o.r, d2 = dx * dx + dz * dz; if (d2 >= rr * rr || d2 === 0) continue;
+        if (o.y !== undefined && Math.abs(o.y - this.y) > 3.2) continue;                  // the other level of an overpass
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, pen = rr - d;
         this.x += nx * pen; this.z += nz * pen;
         const wx = this.u * c - this.v * s, wz = this.u * s + this.v * c, vn = wx * nx + wz * nz; if (vn >= 0) continue;

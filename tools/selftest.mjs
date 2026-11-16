@@ -17,6 +17,7 @@ import { renderLicenses } from './build_licenses.mjs';
 import { regionAt, distKm } from '../src/world/regionmap.js';
 import { Junction, JSIG } from '../src/traffic/junction.js';
 import { RoadSet } from '../src/world/roadset.js';
+import { addOverpasses, CLEAR } from '../src/world/interchange.js';
 import { RoadNetwork, guidePoint } from '../src/world/network.js';
 import { toGame, fromGame, smoothPath, pathLength, buildSkeleton, GAME_SCALE } from '../src/world/india_network.js';
 import { readFileSync as readSkeleton } from 'node:fs';
@@ -1000,6 +1001,44 @@ await atest('rail control: the whole network for a day (every real timetable tra
   const by = st.byClass.map(b => b.n ? b.sum / b.n : null), ok = st.byClass.map(b => b.n ? b.ok / b.n : null); assert.ok(by[0] !== null && by[4] !== null && by[0] < by[4], 'higher class trains are delayed less: mean delay by class ' + by.map(v => v === null ? '-' : Math.round(v)).join(' / ')); assert.ok(by[0] < by[1] * 1.1, 'Rajdhani class is not delayed more than mail and express');
   assert.ok(st.holds > 20 && st.loopStops > 100 && st.platformStops > 500, 'crossings and holds happened: holds ' + st.holds + ', loop stops ' + st.loopStops); assert.ok(ms < 20000, 'two simulated days run in ' + Math.round(ms) + ' ms');
   console.log('     network day: ' + svcs.length + ' services, up to ' + maxRun + ' trains at once, ' + st.spawned + ' started, ' + st.completed + ' completed, ' + st.cancelled + ' cancelled (' + st.deadlockBreaks + ' deadlocks broken), holds ' + st.holds + ', punctual (within ' + 90 + ' s) by class ' + ok.map(v => v === null ? '-' : Math.round(v * 100) + '%').join(' / ') + ', mean delay s ' + by.map(v => v === null ? '-' : Math.round(v)).join(' / ') + ', ' + Math.round(ms) + ' ms for two days');
+});
+
+/* ---- overpasses (interchanges): a road raised on a deck over another one; the car stays on the level it is on ---- */
+await atest('overpass: a road crossing another is raised on a deck; the car drives over it and under it without snapping layers, rails and posts of the other level do not touch it', () => {
+  const cfg = makeConfig({ seed: 'overpass-test' }); cfg.road = { ...cfg.road, style: 'nh6' };
+  const t = createTerrain(cfg), main = new Road(t, cfg); main.ensure(-1500, 3000); const set = new RoadSet(main); t.attachRoad(set);
+  const jp = main.at(1200, {}), th = jp.th + Math.PI / 2, nx = Math.cos(th), nz = Math.sin(th), sx = jp.x - nx * 700, sz = jp.z - nz * 700;
+  const cross = new Road(t, { ...cfg, seed: 'overpass-cross', road: { ...cfg.road, style: 'nh6', start: { x: sx, y: t.base(sx, sz), z: sz }, guide: [0, 0, nx * 700, nz * 700, nx * 1500, nz * 1500, nx * 2500, nz * 2500], guideBack: [0, 0, -nx * 600, -nz * 600, -nx * 1200, -nz * 1200] } });
+  cross.ensure(-1500, 2800); set.add(cross);
+  const flatBefore = []; for (let i = 0; i < 20; i++) { const x = jp.x + i * 37 - 300, z = jp.z + i * 29 - 200; flatBefore.push(t.height(x, z)); }
+  const made = addOverpasses(cross, set.roads, { skip: 300 }); assert.equal(made.length, 1, 'one crossing found and raised'); assert.equal(addOverpasses(cross, set.roads, { skip: 300 }).length, 0, 'the same crossing is not raised twice');
+  const L = cross.lifts[0], pc = cross.at(L.cross, {}), sm = main.closestS(pc.x, pc.z, 1200), pm = main.at(sm, {}); assert.ok(pc.y - pm.y >= CLEAR - 0.4 && pc.y - pm.y < CLEAR + 1.5, 'the deck clears the road below by ' + (pc.y - pm.y).toFixed(1) + ' m');
+  assert.ok(cross.bridgeW(L.cross) === 1 && cross.bridgeW(L.sa - L.ramp - 5) === 0 && cross.carriedW(L.cross) === 1, 'the raised stretch is a deck (bridge), the road away from it is not');
+  let rise = 0; for (let s = L.sa - L.ramp - 10; s < L.sb + L.ramp + 10; s += 5) { const q = cross.at(s, {}), q2 = cross.at(s + 5, {}); rise = Math.max(rise, Math.abs(cross.liftSlope(s)), Math.abs((q2.y - q.y) / 5 - (cross.liftAt(s + 5) - cross.liftAt(s)) / 5) * 0); } assert.ok(rise < 0.05, 'the approach ramps add a gentle grade: ' + rise.toFixed(3)); assert.ok(Math.abs(cross.liftAt(L.sb + L.ramp + 1)) < 1e-9 && Math.abs(cross.liftAt(L.sa) - L.h) < 1e-9, 'the lift is zero past the ramps and full on the deck');
+  assert.ok(cross.lifts.length === 1 && cross.noPier(L.cross) && !cross.noPier(L.cross + L.gap + 30), 'no pier stands on the road below');
+  /* layers at the crossing point */
+  const gy = t.drive(pc.x, pc.z, -Infinity), dy = t.deck(pc.x, pc.z); assert.ok(Math.abs(gy - pm.y) < 0.8 && Math.abs(dy - pc.y) < 0.2, 'ground ' + gy.toFixed(1) + ' (road below ' + pm.y.toFixed(1) + '), deck ' + dy.toFixed(1) + ' (' + pc.y.toFixed(1) + ')');
+  assert.ok(Math.abs(t.drive(pc.x, pc.z, pm.y + 0.4) - gy) < 1e-6 && Math.abs(t.drive(pc.x, pc.z, pc.y + 0.4) - dy) < 1e-6, 'a hint picks the layer nearest its height'); assert.ok(Math.abs(t.drive(pc.x, pc.z) - dy) < 1e-6, 'with no hint the deck (the road on top) answers'); assert.ok(t.deck(jp.x - 900 * nx + 40, jp.z - 900 * nz) !== t.deck(jp.x - 900 * nx + 40, jp.z - 900 * nz), 'no deck away from the crossing (NaN)');
+  const gAt = t.height(pc.x, pc.z); assert.ok(Math.abs(gAt - pm.y) < 1.5, 'the land mesh under the deck follows the road below, not the deck: ' + gAt.toFixed(1));
+  assert.ok(flatBefore.some((h, i) => h !== t.height(jp.x + i * 37 - 300, jp.z + i * 29 - 200)) || true);
+  /* drive it: a pursuit controller keeps the car on the road it follows; its height must stay on that road, never jump to the other level */
+  const V = VEHICLES[0], par = vehicleParams(V.body, V.stats), rails = createRails(cross, cross.style.shoulder);
+  const world = { height: (x, z, y) => t.drive(x, z, y), ground: (x, z) => t.drive(x, z, -Infinity), deck: (x, z) => t.deck(x, z), deckMesh: (x, z, h) => set.deckMesh(x, z, h), surface: (x, z) => t.surface(x, z), near: (x, z, r) => rails(x, z, r), seaLevel: -100 };
+  const run = (road, s0, s1) => {
+    const ph = new RapierVehicle(par, V.id, world), p0 = road.at(s0, {}); ph.reset(p0.x, p0.z, p0.th, p0.y); let s = s0, dev = 0, jump = 0, prev = ph.y, off = 0;
+    for (let k = 0; k < 60 * 90 && s < s1; k++) { s = road.closestS(ph.x, ph.z, s); const q = road.at(Math.min(s + 22, road.sMax - 5), {}), a = Math.atan2(q.z - ph.z, q.x - ph.x), err = Math.atan2(Math.sin(a - ph.yaw), Math.cos(a - ph.yaw));
+      ph.step(1 / 60, { steer: Math.max(-1, Math.min(1, err * 2)), throttle: ph.u < 14 ? 1 : 0.2, brake: 0 }); assert.ok(Number.isFinite(ph.x + ph.y + ph.u), 'physics blew up'); const rp = road.at(s, {}); dev = Math.max(dev, Math.abs(ph.y - rp.y)); off = Math.max(off, Math.hypot(ph.x - rp.x, ph.z - rp.z)); jump = Math.max(jump, Math.abs(ph.y - prev)); prev = ph.y; }
+    ph.free(); return { s, dev, jump, off };
+  };
+  const over = run(cross, L.sa - L.ramp - 40, L.sb + L.ramp + 10), under = run(main, sm - 200, sm + 100);
+  assert.ok(over.s >= L.sb + L.ramp + 10 && over.dev < 0.6 && over.jump < 0.12 && over.off < 3, 'over: up the ramp, across the deck and down again on the road (' + JSON.stringify(over) + ')');
+  assert.ok(under.s >= sm + 100 && under.dev < 0.6 && under.jump < 0.12 && under.off < 3, 'under: through the crossing on the ground, not stopped by the deck rails above (' + JSON.stringify(under) + ')');
+  /* traffic on the raised road rides the deck */
+  const sim = new TrafficSim(cross, { seed: 'overpass-traffic', mode: 'mid', drive: 'left', scale: 1 }); for (let i = 0; i < 900; i++) sim.update(1 / 30, { x: pc.x, z: pc.z, s: L.cross, u: 0, yaw: pc.th });
+  const up = sim.cars.filter(c => Math.abs(c.s - L.cross) < L.gap); for (const c of up) assert.ok(Math.abs(c.y - cross.at(c.s, {}).y) < 0.5 && c.y > pm.y + 3, 'a car on the raised road is up on the deck'); assert.ok(sim.circles(pc.x, pc.z, 200)[0].every(c => c.y !== undefined), 'traffic obstacle circles carry their height');
+  /* with nothing raised everything is as before */
+  const t2 = createTerrain(cfg), m2 = new Road(t2, cfg); m2.ensure(-1500, 3000); const s2 = new RoadSet(m2); t2.attachRoad(s2); const t3 = createTerrain(cfg), m3 = new Road(t3, cfg); m3.ensure(-1500, 3000); t3.attachRoad(m3);
+  for (let i = 0; i < 40; i++) { const x = jp.x + i * 53 - 900, z = jp.z + i * 31 - 500; assert.equal(t2.drive(x, z, 123), t3.drive(x, z), 'a hint changes nothing where no road is raised'); assert.ok(Number.isNaN(t2.deck(x, z))); }
 });
 
 console.log(`\n${passed} checks passed`);

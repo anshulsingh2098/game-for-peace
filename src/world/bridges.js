@@ -48,7 +48,7 @@ export class Bridges {
         if (Math.floor(q.s / POST_EVERY) !== Math.floor((q.s - ds) / POST_EVERY)) for (const side of [-1, 1]) posts.push([q.x + q.nx * side * (W - 0.07), q.y, q.z + q.nz * side * (W - 0.07), q.th]);
         if (Math.floor(q.s / PIER_EVERY) !== Math.floor((q.s - ds) / PIER_EVERY)) {
           const seabed = this.terrain.base(q.wx, q.wz) - 1.2, top = q.y - DECK, h = top - seabed;
-          if (h > 0.4 && !piers.some(e => e[5] === q.s)) piers.push([q.x, seabed + h / 2, q.z, q.th, h, q.s]);
+          if (h > 0.4 && !(r.noPier && r.noPier(q.s)) && !piers.some(e => e[5] === q.s)) piers.push([q.x, seabed + h / 2, q.z, q.th, h, q.s]);
         }
       }
     }
@@ -57,7 +57,7 @@ export class Bridges {
     /* a steel truss along both sides of long bridges (a pony truss: a top chord, an upright and one diagonal per bay, no bracing over the road). Bays sit at fixed road
        distances so pieces line up; a bay is built by the piece that holds its first upright. Short bridges keep just the rails. Visual only: the rails stop the car. */
     {
-      const onSpan = s => r.bridgeW(s) === 1, spanLen = s => { let a = 0, c = 0; while (a < 20 && onSpan(s - (a + 1) * TRUSS_BAY)) a++; while (c < 20 && onSpan(s + (c + 1) * TRUSS_BAY)) c++; return (a + c) * TRUSS_BAY; };
+      const onSpan = s => (r.waterW ? r.waterW(s) : r.bridgeW(s)) === 1, spanLen = s => { let a = 0, c = 0; while (a < 20 && onSpan(s - (a + 1) * TRUSS_BAY)) a++; while (c < 20 && onSpan(s + (c + 1) * TRUSS_BAY)) c++; return (a + c) * TRUSS_BAY; };
       const Wt = W - 0.1, V = THREE.Vector3, up = new V(0, 1, 0), parts = [];
       const pt = (s, side, h) => { r.at(s, p); return new V(p.x - ox - p.tz * side * Wt, p.y + h, p.z - oz + p.tx * side * Wt); };
       const member = (a, c, t) => { const d = c.clone().sub(a), len = d.length(), g = new THREE.BoxGeometry(t, len, t); g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.normalize())); g.translate((a.x + c.x) / 2, (a.y + c.y) / 2, (a.z + c.z) / 2); parts.push(g); };
