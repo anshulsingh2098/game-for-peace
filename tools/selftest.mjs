@@ -23,7 +23,7 @@ import { readFileSync as readSkeleton } from 'node:fs';
 import { destinationsFor, HINDI } from '../src/world/india_network.js';
 import { roadStyleById } from '../src/world/roadstyles.js';
 import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
-import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets, branchMode, DEFAULT_KINDS } from '../src/traffic/sim.js';
+import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets, branchMode, DEFAULT_KINDS, kindCap, isSlowKind } from '../src/traffic/sim.js';
 import { Autodrive } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
@@ -622,7 +622,7 @@ test('traffic signals: vehicles stop at a red signalled crossing, go on green, p
   let stoppedAtRed = 0, violations = 0, bikes = 0; const lane = r.style.half / sim.lanes.length;
   for (let k = 0; k < 4200; k++) {
     sim.update(1 / 20, { x: 1e6, z: 1e6, s: 300 + k * 0.4, u: 0, yaw: 0 });                                                                  // the player is far off the road, so only signals and other cars matter
-    for (const c of sim.cars) { if (c.kind === 'two-wheeler') { bikes++; const off = Math.abs(Math.abs(c.lat) - sim.lanes[c.lane]); assert.ok(off > 0.2 && off <= lane * 0.3 + 1e-6, 'a two-wheeler sits at the edge of its lane: ' + off); }
+    for (const c of sim.cars) { if (c.kind === 'two-wheeler') { bikes++; if (Math.abs(c.lat - (sim.lateral(c.dir, c.lane) + c.off)) < 0.05) { const off = Math.abs(Math.abs(c.lat) - sim.lanes[c.lane]); assert.ok(off > 0.2 && off <= lane * 0.3 + 1e-6, 'a two-wheeler sits at the edge of its lane: ' + off); } }
       const m = 6; const i = (c.dir > 0 ? Math.ceil(c.s / 25 / m) : Math.floor(c.s / 25 / m)) * m; if (!sim.isCrossing(i)) continue; const sline = i * 25 - c.dir * (6 + c.len / 2), dist = (sline - c.s) * c.dir; const st2 = signalState(i, sim.time);
       if (st2 === 'red' && dist > -0.5 && dist < 4 && c.speed < 0.3) stoppedAtRed++; if (st2 === 'red' && dist > -4 && dist < -1 && c.speed > 3 && c.stuck === 0) violations++; }
   }
@@ -857,6 +857,20 @@ test('Indian traffic kinds: buses and cows join the mix in proportion; a cow amb
   const cfg = makeConfig({ seed: 'cows' }), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-1500, 3000); t.attachRoad(r); const sim = new TrafficSim(r, { seed: 'cow-sim', mode: 'high', drive: 'left', scale: 1 }); sim.setKinds(trafficKinds(DEFAULT_KINDS, { car: 50, truck: 10, 'two-wheeler': 20, bus: 10, cow: 30 })); 
   const seen = { cow: [], sedan: [], bus: [] }; for (let i = 0; i < 1500; i++) { sim.update(1 / 10, { x: 9e5, z: 9e5, s: 800, u: 0, yaw: 0 }); if (i > 600) for (const c of sim.cars) if (seen[c.kind]) seen[c.kind].push(c.speed); }
   assert.ok(seen.cow.length > 20 && Math.max(...seen.cow) < 5, 'a cow ambles (fastest ' + Math.max(...seen.cow).toFixed(1) + ' m/s)'); assert.ok(seen.sedan.length > 20, 'cars are on the road too'); const avg = l => l.reduce((x, y) => x + y, 0) / l.length; assert.ok(avg(seen.sedan) < 14, 'cars queue behind the cows instead of driving through them (average ' + avg(seen.sedan).toFixed(1) + ' m/s)');
+});
+
+test('Indian lane discipline (3-lane road, traffic keeps left): slow kinds in the left lane, overtaking on the right and back, no collisions, cars get past cows, speed caps by class', () => {
+  assert.equal(kindCap({ name: 'truck', len: 8.5 }), 22); assert.equal(kindCap({ name: 'bus', len: 10.5 }), 25); assert.equal(kindCap({ name: 'two-wheeler', len: 2 }), 22); assert.equal(kindCap({ name: 'auto-rickshaw', len: 2.7 }), 14); assert.equal(kindCap({ name: 'sedan', len: 4.4 }), Infinity); assert.ok(isSlowKind({ name: 'cow', len: 1.9 }) && isSlowKind({ name: 'truck', len: 8.5 }) && !isSlowKind({ name: 'sedan', len: 4.4 }));
+  const cfg = makeConfig({ seed: 'discipline' }); cfg.road = { ...cfg.road, style: 'nh6' }; const t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-3000, 4000); t.attachRoad(r); const sim = new TrafficSim(r, { seed: 'keep-left', mode: 'high', drive: 'left', scale: 1 }); sim.setKinds(trafficKinds([{ name: 'sedan', len: 4.4, w: 1.85, h: 1.45, weight: 70 }, { name: 'truck', len: 8.5, w: 2.5, h: 3, weight: 12 }], { car: 60, truck: 10, 'two-wheeler': 10, cow: 14, bus: 6 }));
+  assert.equal(sim.lanes.length, 3); const n = sim.lanes.length, prev = new Map(), kindOf = new Map(); let right = 0, left = 0, overlaps = 0, cowFrames = 0, cowLeft = 0, slowLeftSpawn = 0, slowSpawn = 0, capBreaks = 0, carSpeeds = [];
+  for (let k = 0; k < 4000; k++) {
+    sim.update(1 / 10, { x: 9e5, z: 9e5, s: 600 + k * 0.6, u: 0, yaw: 0 });
+    for (const c of sim.cars) { const key = c.id; if (!prev.has(key)) { prev.set(key, c.lane); kindOf.set(key, c.kind); if (isSlowKind({ name: c.kind, len: c.len })) { slowSpawn++; if (c.lane === n - 1) slowLeftSpawn++; } } else if (prev.get(key) !== c.lane) { if (c.lane < prev.get(key)) right++; else left++; prev.set(key, c.lane); }
+      if (c.kind === 'cow') { cowFrames++; if (c.lane === n - 1) cowLeft++; } if (c.kind === 'truck' && c.speed > 22.01) capBreaks++; if (c.kind === 'two-wheeler' && c.speed > 22.01) capBreaks++; if (c.kind === 'sedan') carSpeeds.push(c.speed); }
+    for (let i = 0; i < sim.cars.length; i++) for (let j = i + 1; j < sim.cars.length; j++) { const a = sim.cars[i], b = sim.cars[j]; if (a.dir !== b.dir) continue; const along = Math.abs(a.s - b.s), lat = Math.abs(a.lat - b.lat); if (along < (a.len + b.len) / 2 - 0.3 && lat < (a.w + b.w) / 2 - 0.2) overlaps++; }
+  }
+  assert.ok(slowSpawn > 20 && slowLeftSpawn === slowSpawn, 'slow and heavy kinds enter the left lane: ' + slowLeftSpawn + ' of ' + slowSpawn); assert.ok(right > 5, 'cars move to the right lane to overtake: ' + right); assert.ok(left > 5, 'and come back to the left lane: ' + left);
+  assert.ok(cowFrames > 100 && cowLeft / cowFrames > 0.9, 'cows stay in the left lane (' + Math.round(100 * cowLeft / cowFrames) + '% of the time)'); assert.equal(overlaps, 0, 'no two vehicles overlap, also while changing lane'); assert.equal(capBreaks, 0, 'trucks and two-wheelers never exceed 80 km/h'); const avg = carSpeeds.reduce((a, b) => a + b, 0) / carSpeeds.length; assert.ok(avg > 14, 'cars are not stuck behind the cows on a three-lane road (average ' + avg.toFixed(1) + ' m/s)');
 });
 
 console.log(`\n${passed} checks passed`);

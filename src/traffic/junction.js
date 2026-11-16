@@ -20,7 +20,7 @@ export class Junction {
     const room = [R.sMax - to.s > 150 ? 1 : 0, to.s - R.sMin > 150 ? -1 : 0].filter(x => x !== 0); if (!room.length) return false; const dir = room[Math.floor(rnd() * room.length)], lane = Math.floor(rnd() * sim.lanes.length), s = to.s + dir * (8 + c.len / 2);
     for (const o of sim.cars) if (o.dir === dir && o.lane === lane && Math.abs(o.s - s) < 18) return false;
     const got = sim.pool.acquire(); if (!got) return false; const car = got.obj;
-    Object.assign(car, { handle: got.handle, id: sim.nextId++, s, dir, lane, kind: c.kind, len: c.len, w: c.w, h: c.h, v0: sim.limit * (0.7 + rnd() * 0.28) * (c.len > 6.5 ? 0.8 : 1), speed: Math.max(4, c.speed * 0.7), colour: c.colour, lat: sim.lateral(dir, lane), stuck: 0, bump: 0, born: sim.time, bornDist: 0, brake: 0, turnJ: this.num, fx: c.x, fz: c.z, fyaw: c.yaw, blend: 1 });
+    Object.assign(car, { handle: got.handle, id: sim.nextId++, s, dir, lane, kind: c.kind, len: c.len, w: c.w, h: c.h, v0: sim.limit * (0.7 + rnd() * 0.28) * (c.len > 6.5 ? 0.8 : 1), speed: Math.max(4, c.speed * 0.7), colour: c.colour, lat: sim.lateral(dir, lane), off: 0, chg: 0, stuck: 0, bump: 0, born: sim.time, bornDist: 0, brake: 0, turnJ: this.num, fx: c.x, fz: c.z, fyaw: c.yaw, blend: 1 });
     sim.place(car); sim.cars.push(car); this.turns++; return true;
   }
 }
