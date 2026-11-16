@@ -40,7 +40,7 @@ vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y 
   ${lite ? 'vec3 grass = texture2D(tGrass, vWP.xz / 2.0).rgb * 0.8; float macro = 1.0;' : `vec3 grass = texture2D(tGrass, vWP.xz / 2.0).rgb * 0.5 + texture2D(tGrass, vWP.xz / 8.0).rgb * 0.5; float gl = dot(grass, vec3(0.3, 0.59, 0.11)); grass *= pow(clamp(gl / 0.27, 0.25, 2.2), 0.9);       // finer grain, more contrast
   float macro = dot(texture2D(tGrass, vWP.xz / 64.0).rgb, vec3(0.33)) / 0.27;`}
   vec3 tint = clamp(vc / 0.62, 0.35, 1.6);
-  vec3 g = grass * mix(vec3(1.0), tint, 0.75) * mix(1.0, macro, 0.45) * 2.5;
+  vec3 g = grass * mix(vec3(1.0), tint, 0.95) * mix(1.0, macro, 0.45) * 2.5;
   vec3 sand = texture2D(tSand, vWP.xz / 8.0).rgb * mix(vec3(1.0), tint, 0.4) * 1.15;
   vec3 rock = ${lite ? 'texture2D(tRock, vec2(vWP.x + vWP.z * 0.7, vWP.y) / 8.0).rgb' : 'triRock(vWP, n)'} * mix(vec3(1.0), tint, 0.3) * 1.7;
   vec3 snow = texture2D(tSnow, vWP.xz / 8.0).rgb * 0.95;

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 23:50  Mouse look on foot, plant variety, patchwork land colour, moving water
+Branch: feat/landscape-look
+What changed: `main.js` (mouse look and touch drag in foot mode; water material now has four moving ripple layers, stronger normals), `world/nature.js` + `world/scatter.js` (each plant kind now has several variants: sizes, shapes, colours, a rare autumn tree, three wildflower cards drawn in code; variants are placed in patches, not at random), `world/terrain.js` + `world/groundmat.js` (patchwork of hay-yellow, fresh and deep green fields on open lowland). No new outside assets; the scanned art is still one broadleaf tree, six conifers, one shrub, one fern, one grass: real new species need packs the owner downloads (see `docs/ASSET_PLAN.md`). Water has no shore foam or depth colour yet.
+For the other stream: look at it on a phone (more variants cost draw calls: the low preset keeps the old few).
+Status: open
+
 ## 2026-11-17 23:00  N15 first increment: activities and a versioned save
 Branch: feat/n15-activities
 What changed: new `src/activities/activities.js` (data-driven point-to-point drives, runner, ratings, best times), `src/core/save.js` (version 2 envelope, migration, corrupt text kept in `gfp-next.bad`, newer saves never overwritten), `saved.js` (`sanitiseProgress`), `runtime.js` (events `activity:started`, `activity:finished`), `main.js` (markers, beacon, timer line, G to start, save wiring), `player/onfoot.js` (`Interactions` prefix filter). `docs/ACTIVITIES.md`. Two self-tests (62 checks). Checked in the browser: prompt, start, finish, best time saved. Par times are guesses.

@@ -9,6 +9,7 @@ Press **G** next to a stopped vehicle (under 2.5 m/s) to get out; the character 
 | Shift | run |
 | Space | jump |
 | G | interact (get in or out) |
+| Mouse | click the game to capture the mouse (Esc releases): it turns the character and tilts the camera. On a touch screen, drag on the scene. |
 
 Code: `src/player/onfoot.js` (controller, exit chooser, interaction registry), wiring in `src/main.js` (`exitVehicle`, `enterVehicle`, mode `foot`), keys in `src/input/controls.js` (`run`, `interact`).
 Events: `vehicle:exited` and `vehicle:entered` carry a Registry handle (type `vehicle`); it stops resolving when the player is back in.

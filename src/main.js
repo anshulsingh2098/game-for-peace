@@ -99,10 +99,22 @@ let nav = null, navDebug = null, peds = null;                                   
 let holes = null;                                                                                                // doorways cut through the hillside at tunnel portals (src/world/tunnel_holes.js)
 const ground = groundMat ? groundMat.material : new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
 const ripples = waterNormalTex(), RIP = 0.07;
-const waterMat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.9, normalMap: ripples, normalScale: new THREE.Vector2(0.22, 0.22), envMapIntensity: 1.5 });
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.9, normalMap: ripples, normalScale: new THREE.Vector2(0.3, 0.3), envMapIntensity: 1.5 });
 /* ripples fade out with distance (beyond a few hundred metres they only alias into a checker pattern) and the surface is calmer far off */
+const waterT = { value: 0 };
+/* four moving layers of the same ripple texture (different sizes and directions, so the surface never repeats or sits still) */
 waterMat.onBeforeCompile = sh => {
-  sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normalize(mix(nonPerturbedNormal, normal, 1.0 - smoothstep(18.0, 260.0, length(vViewPosition))));');
+  sh.uniforms.uWT = waterT;
+  sh.fragmentShader = 'uniform float uWT;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+#ifdef USE_NORMALMAP_TANGENTSPACE
+  vec3 w2 = texture2D(normalMap, vNormalMapUv * 2.3 + vec2(uWT * 0.021, uWT * 0.013)).xyz * 2.0 - 1.0;
+  vec3 w3 = texture2D(normalMap, vNormalMapUv * -0.55 + vec2(-uWT * 0.011, uWT * 0.017)).xyz * 2.0 - 1.0;
+  vec3 w4 = texture2D(normalMap, vNormalMapUv * 5.7 + vec2(uWT * 0.05, -uWT * 0.04)).xyz * 2.0 - 1.0;
+  vec3 w1 = texture2D(normalMap, vNormalMapUv + vec2(uWT * 0.008, uWT * 0.005)).xyz * 2.0 - 1.0;
+  vec2 wxy = (w1.xy + w2.xy * 0.7 + w3.xy * 0.9 + w4.xy * 0.35) * normalScale;
+  normal = normalize(tbn * vec3(wxy, 1.0));
+#endif
+  normal = normalize(mix(nonPerturbedNormal, normal, 1.0 - smoothstep(18.0, 260.0, length(vViewPosition))));`);
 };
 const water = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), waterMat); water.renderOrder = 1; scene.add(water);
 
@@ -171,7 +183,7 @@ function useBuff() {
 }
 function backToRoad() { if (!phys) return; roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 /* on foot (N14, src/player/onfoot.js): G beside a stopped vehicle gets you out; G beside the parked vehicle gets you back in. The vehicle waits on its handbrake. */
-let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0;
+let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0, footPitch = 0.28, lookDrag = null;
 const footWorld = { height: (x, z) => world.height(x, z), surface: (x, z) => world.surface(x, z), get seaLevel() { return world.seaLevel; },
   near: (x, z, r) => { const l = world.near(x, z, r).slice(); if (phys && mode === 'foot') { const c = Math.cos(phys.yaw), s = Math.sin(phys.yaw), a = (phys.p.front + phys.p.rear) / 4; l.push([{ x: phys.x + c * a, z: phys.z + s * a, r: 1.15 }, { x: phys.x - c * a, z: phys.z - s * a, r: 1.15 }]); } return l; } };
 function makeFigure() { const g = new THREE.Group(), m = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }), box = (w, h, d, c, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m(c)); b.position.y = y; b.castShadow = true; g.add(b); return b; };
@@ -185,6 +197,11 @@ function exitVehicle() {
 }
 function enterVehicle() { if (mode !== 'foot' || !phys) return; interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
 function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && interactions.use(phys.x, phys.z, 'activity:')) { /* an activity started */ } else exitVehicle(); }
+/* mouse look on foot: click the game to capture the mouse (Esc releases it), then moving the mouse turns the character and tilts the camera; on a touch screen, drag on the scene */
+const lookBy = (dx, dy) => { if (mode !== 'foot' || !foot || frozen()) return; foot.yaw += dx * 0.0035; footPitch = Math.max(-0.35, Math.min(1.1, footPitch + dy * 0.0030)); };
+canvas.addEventListener('pointerdown', e => { if (mode !== 'foot' || frozen()) return; if (e.pointerType === 'mouse') { if (document.pointerLockElement !== canvas && canvas.requestPointerLock) { try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* not allowed: drag instead */ } } lookDrag = { id: e.pointerId, x: e.clientX, y: e.clientY }; } else lookDrag = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+addEventListener('pointermove', e => { if (document.pointerLockElement === canvas) { lookBy(e.movementX, e.movementY); return; } if (lookDrag && lookDrag.id === e.pointerId) { lookBy(e.clientX - lookDrag.x, e.clientY - lookDrag.y); lookDrag.x = e.clientX; lookDrag.y = e.clientY; } });
+for (const n of ['pointerup', 'pointercancel']) addEventListener(n, e => { if (lookDrag && lookDrag.id === e.pointerId) lookDrag = null; });
 const actBtn = document.createElement('button'); actBtn.type = 'button'; actBtn.id = 'interact'; actBtn.style.cssText = 'position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:20;display:none;padding:8px 18px;border-radius:999px'; document.body.appendChild(actBtn); actBtn.addEventListener('pointerdown', e => { e.preventDefault(); useNearby(); });
 function updatePrompt() { let t = ''; if (!frozen()) { if (mode === 'foot' && foot) { const it = interactions.nearest(foot.x, foot.z); if (it) t = it.prompt; } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && !autodrive.enabled) t = (phys && interactions.nearest(phys.x, phys.z, 'activity:') || {}).prompt || 'Get out (G)'; } if (t !== actBtn.textContent) actBtn.textContent = t; actBtn.style.display = t ? 'block' : 'none'; }
 function setMode(m) {
@@ -327,7 +344,7 @@ function setupActivities() {
   }
 }
 bus.on('world:rebuilt', setupActivities);
-bus.on('mode:changed', e => { if (e.to !== 'drive' && runner.state === 'running') runner.cancel(); });
+bus.on('mode:changed', e => { if (e.to !== 'drive' && runner.state === 'running') runner.cancel(); if (e.to !== 'foot') { lookDrag = null; if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock(); } });
 bus.on('activity:finished', r => {
   if (actGoal) { actMarks.remove(actGoal); actGoal.geometry.dispose(); actGoal.material.dispose(); actGoal = null; } actHud.style.display = 'none'; if (r.outcome === 'cancelled') return;
   const rec = recordResult(S.progress, r); S.progress = rec.progress; save(); const t = actDefs.find(d => d.id === r.id);
@@ -353,7 +370,8 @@ function update(dt, now) {
   } else if (mode === 'foot' && phys && foot) {
     if (!frozen()) { const i = controls.read(); foot.step(dt, { steer: i.steer, throttle: i.throttle, rev: i.rev, run: i.run, jump: i.brake > 0.5 }); }
     phys.step(dt, { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }); px = foot.x; pz = foot.z; roadS = road.closestS(px, pz, roadS);
-    cam.x = foot.x - Math.cos(foot.yaw) * 4.2; cam.z = foot.z - Math.sin(foot.yaw) * 4.2; cam.y = Math.max(terrain.seaLevel, foot.y) + 2.5; cam.yaw = -Math.PI / 2 - foot.yaw; cam.pitch = -0.2;
+    const back = Math.cos(footPitch) * 4.2, gy = Math.max(terrain.seaLevel, terrain.height(foot.x - Math.cos(foot.yaw) * back, foot.z - Math.sin(foot.yaw) * back));          // mouse look: the camera swings up and down around the character
+    cam.x = foot.x - Math.cos(foot.yaw) * back; cam.z = foot.z - Math.sin(foot.yaw) * back; cam.y = Math.max(Math.max(terrain.seaLevel, foot.y) + 1.5 + Math.sin(footPitch) * 4.2, gy + 0.4); cam.yaw = -Math.PI / 2 - foot.yaw; cam.pitch = -footPitch * 0.85;
   } else if (mode === 'ride') {
     roadS += Math.min(cam.speed, 90) * dt; road.at(roadS, rp);
     cam.x = rp.x + rp.tz * 2; cam.z = rp.z - rp.tx * 2; cam.y = rp.y + 1.6;
@@ -378,7 +396,7 @@ function update(dt, now) {
   else if (mode === 'drive' && phys) { if (offset) { camera.clearViewOffset(); offset = 0; } view.aim(camera, phys, grid.origin, dt, (x, z) => Math.max(terrain.seaLevel, terrain.drive(x, z)), boostEase); }
   else { cam.apply(camera, grid.origin); camera.fov = 58; camera.updateProjectionMatrix(); }
   water.position.x = camera.position.x; water.position.z = camera.position.z;
-  ripples.offset.set(((camera.position.x + grid.origin.x) * RIP + now * 0.000011) % 1, (-(camera.position.z + grid.origin.z) * RIP + now * 0.000007) % 1);     // ripples stay fixed to the world while the sheet follows the camera
+  waterT.value = now / 1000; ripples.offset.set(((camera.position.x + grid.origin.x) * RIP) % 1, (-(camera.position.z + grid.origin.z) * RIP) % 1);     // ripples stay fixed to the world while the sheet follows the camera
   env.update(dt, now, camera, reach);
   if (skyLight) { scene.environment = skyLight; scene.environmentIntensity = 0.4 * Math.min(1, Math.max(0.06, 0.12 + env.sunDir.y * 1.1)); }
   { const cx = camera.position.x + grid.origin.x, cz = camera.position.z + grid.origin.z;                                              // inside a tunnel (the road says so): no rain, snow or thunder, and a roomier sound

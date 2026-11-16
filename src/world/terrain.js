@@ -12,6 +12,7 @@ import { roadSurfaceAt } from './roadstyles.js';
 const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
 const sstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
+const HAY = [1.55, 1.12, 0.62], LUSH = [0.68, 1.12, 0.72];
 const DIRT = [0.55, 0.47, 0.34];
 
 export function createTerrain(config) {
@@ -63,8 +64,11 @@ export function createTerrain(config) {
     const wood = forest(x, z) * (1 - alp) * (1 - rock) * (1 - beach) * 0.5;      // woodland floor is darker, so far forests read as forest
     const verge = nearRoad && road && road.nearest(x, z) ? 1 - sstep(5.2, 9.5, road.hit.d) : 0;
     const shade = 0.92 + 0.16 * n;
+    /* a patchwork of fields and meadows (a few hundred metres across, fairly hard edges): hay-yellow, fresh green and deep green, so open land is not one flat colour. Only on open lowland. */
+    const f1 = N.n2(x / 140 + oK2[1] * 3.1, z / 140 + oK2[0] * 2.3), f2 = N.n2(x / 240 + oK[1] * 1.7, z / 240 + oK[0] * 2.9), hay = sstep(0.04, 0.12, f1), lush = sstep(-0.02, 0.06, f2) * (1 - hay), fieldW = (1 - forest(x, z)) * (1 - alp) * (1 - rock) * (1 - beach) * 0.85;
     for (let c = 0; c < 3; c++) {
       let v = lerp(lerp(P.grass[c], P.grass2[c], mixG), P.dry[c], dry);
+      v *= 1 + fieldW * (hay * (HAY[c] - 1) + lush * (LUSH[c] - 1));
       v = lerp(v, P.grass2[c] * 0.62, wood);
       v = lerp(v, P.alpine[c], alp);
       v = lerp(v, P.rock[c] * (0.9 + 0.2 * n), rock);
