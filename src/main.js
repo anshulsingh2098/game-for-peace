@@ -552,7 +552,7 @@ function updateRailLife(dt, px, pz) {
     if (best.d < 90 && lastNearTrain !== best.tr) { lastNearTrain = best.tr; const t = best.tr.real; toast(t ? t.n + ' ' + t.name : best.tr.local ? best.tr.local.name + ' · ' + best.tr.local.kind : best.tr.style === 'freight' ? 'Goods train' : 'Passenger train'); } } else trainSound.update(dt, null, now);
   /* a station within 160 m: its board, and an announcement when the clock reaches a scheduled arrival */
   let st = null; for (const n of rail.net.stations) { if (Math.abs(n.x - pg.x) < 200 && Math.abs(n.z - pg.z) < 200 && Math.hypot(n.x - pg.x, n.z - pg.z) < 160) { st = n; break; } }
-  if (!stationBoard) { stationBoard = new StationBoard(); announcer = new Announcer(q.get('tts') === 'on'); }
+  if (!stationBoard) { stationBoard = new StationBoard(); announcer = new Announcer(q.get('tts') !== 'off', q.get('tts') === 'en'); }
   syncCrossingGates(now);
   announcer.muted = !!S.muted; if (railSamples.ok) { railSamples.loop('platform', st ? 0.55 : 0, 1.2); railSamples.loop('station', st ? 0.35 : 0, 1.5); }
   if (st && railBook) { const clock = clockMinutes(railT), city = rail.names[st.city] || { en: st.city, hi: '' }; stationBoard.show(city.en, city.hi, fmtTime(clock), railBook.departures(st.city, clock, 4));
