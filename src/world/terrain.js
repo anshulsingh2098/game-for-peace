@@ -13,15 +13,34 @@ const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
 const sstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 const HAY = [1.55, 1.12, 0.62], LUSH = [0.68, 1.12, 0.72];
-const DIRT = [0.55, 0.47, 0.34];
+const DIRT = [0.55, 0.47, 0.34], BARE = [0.95, 0.72, 0.26], BUILT = [0.5, 0.48, 0.46];
 
 export function createTerrain(config) {
   const T = config.terrain, P = config.palette, N = createNoise(config.seed), r = alea(config.seed, 'terrain');
   const off = () => [r.range(-4000, 4000), r.range(-4000, 4000)];
   const oW = off(), oW2 = off(), oC = off(), oH = off(), oM = off(), oR = off(), oD = off(), oK = off(), oK2 = off(), oF = off();
   const sea = T.seaLevel; let road = null;
+  /* Real elevation and land cover (India mode, assets/india/terrain.bin, see tools/build_india_grids.py): T.macro = { cell, x0, z0 (the grid's corner in game metres), ox, oz (add to a terrain
+     coordinate to get the game coordinate), nx, nz, vscale (game metres of height per real metre), h (real metres, Int16Array), rel (relief, real metres / 8), tree, crop, grass, bare, built (0..255) }.
+     The land is the real relief, scaled down vertically, with procedural hills and ridges on top whose strength follows the real relief, so plains stay plain and ranges stay rough. */
+  const MAC = T.macro || null;
+  function mix(plane, x, z) {
+    const gx = (x + MAC.ox - MAC.x0) / MAC.cell - 0.5, gz = (z + MAC.oz - MAC.z0) / MAC.cell - 0.5, i0 = Math.max(0, Math.min(MAC.nx - 2, Math.floor(gx))), j0 = Math.max(0, Math.min(MAC.nz - 2, Math.floor(gz))), fx = Math.max(0, Math.min(1, gx - i0)), fz = Math.max(0, Math.min(1, gz - j0)), k = j0 * MAC.nx + i0;
+    return (plane[k] * (1 - fx) + plane[k + 1] * fx) * (1 - fz) + (plane[k + MAC.nx] * (1 - fx) + plane[k + MAC.nx + 1] * fx) * fz;
+  }
+  function cover(x, z) { if (!MAC) return null; return { tree: mix(MAC.tree, x, z) / 255, crop: mix(MAC.crop, x, z) / 255, grass: mix(MAC.grass, x, z) / 255, bare: mix(MAC.bare, x, z) / 255, built: mix(MAC.built, x, z) / 255 }; }
+  function baseMacro(x, z) {
+    const real = mix(MAC.h, x, z), rel = clamp01(mix(MAC.rel, x, z) * 8 / 520), V = MAC.vscale, land = sstep(-30, 30, real);
+    let h = sea + (real >= 0 ? real * V : Math.max(real * V * 0.5, T.seabed));
+    const wx = x + T.warp.amp * 0.25 * N.n2(x / T.warp.scale + oW[0], z / T.warp.scale + oW[1]), wz = z + T.warp.amp * 0.25 * N.n2(x / T.warp.scale + oW2[0], z / T.warp.scale + oW2[1]);
+    h += N.fbm(wx / T.hills.scale + oH[0], wz / T.hills.scale + oH[1], T.hills.octaves, T.hills.lacunarity, T.hills.gain) * T.hills.amp * (0.1 + 0.6 * rel) * land;
+    if (rel > 0.2) h += Math.pow(N.ridged(wx / T.mountains.scale + oR[0], wz / T.mountains.scale + oR[1], T.mountains.octaves, 2.1, T.mountains.gain), T.mountains.sharp) * T.mountains.amp * 0.07 * (rel - 0.2) / 0.8 * land;
+    h += N.fbm(x / T.detail.scale + oD[0], z / T.detail.scale + oD[1], T.detail.octaves, 2, 0.5) * T.detail.amp * land * (0.5 + rel);
+    return h;
+  }
 
   function base(x, z) {
+    if (MAC) return baseMacro(x, z);
     const wsx = x / T.warp.scale, wsz = z / T.warp.scale;
     const wx = x + T.warp.amp * N.n2(wsx + oW[0], wsz + oW[1]), wz = z + T.warp.amp * N.n2(wsx + oW2[0], wsz + oW2[1]);
     const c = N.fbm(wx / T.continent.scale + oC[0], wz / T.continent.scale + oC[1], 3, 2, 0.5);
@@ -43,7 +62,7 @@ export function createTerrain(config) {
   function height(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.grade(x, z, h) : h; }
   function drive(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.drive(x, z, h) : h; }                  // what wheels roll on: the road surface itself
   function inZone(x, z, margin = 0) { for (let i = 0; i < zones.length; i++) if (Math.hypot(x - zones[i].x, z - zones[i].z) < zones[i].r + margin) return true; return false; }                  // what wheels roll on: the road surface itself
-  function forest(x, z) { return sstep(-0.12, 0.22, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
+  function forest(x, z) { if (MAC) { const c = cover(x, z); return sstep(0.1, 0.5, c.tree + 0.25 * c.grass) * (1 - 0.8 * c.built); } return sstep(-0.12, 0.22, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
 
   /* what the wheels are on at a point: a key of SURFACES in vehicle/physics.js */
   function surface(x, z) {
@@ -56,7 +75,7 @@ export function createTerrain(config) {
   function colour(x, z, h, ny, out, nearRoad = true) {
     const n = 0.5 + 0.5 * N.n2(x / 26 + oK[0], z / 26 + oK[1]), patch = sstep(0.1, 0.6, N.n2(x / 85 + oK2[0], z / 85 + oK2[1]));
     const up = h - sea, alt = sstep(0, 160, up);
-    const mixG = clamp01(n * 0.7 + alt * 0.4), dry = patch * 0.55;
+    const cv = MAC ? cover(x, z) : null, mixG = clamp01(n * 0.7 + alt * 0.4), dry = clamp01(patch * 0.55 + (cv ? cv.grass * 0.5 : 0));
     const alp = sstep(P.treeline - 60, P.treeline + 40, up + n * 30);
     const rock = clamp01((0.86 - ny) / 0.2) * 0.9;
     const snow = sstep(P.snowline - 25, P.snowline + 25, up + n * 40) * sstep(0.45, 0.75, ny);
@@ -65,9 +84,10 @@ export function createTerrain(config) {
     const verge = nearRoad && road && road.nearest(x, z) ? 1 - sstep(5.2, 9.5, road.hit.d) : 0;
     const shade = 0.92 + 0.16 * n;
     /* a patchwork of fields and meadows (a few hundred metres across, fairly hard edges): hay-yellow, fresh green and deep green, so open land is not one flat colour. Only on open lowland. */
-    const f1 = N.n2(x / 140 + oK2[1] * 3.1, z / 140 + oK2[0] * 2.3), f2 = N.n2(x / 240 + oK[1] * 1.7, z / 240 + oK[0] * 2.9), hay = sstep(0.04, 0.12, f1), lush = sstep(-0.02, 0.06, f2) * (1 - hay), fieldW = (1 - forest(x, z)) * (1 - alp) * (1 - rock) * (1 - beach) * 0.85;
+    const f1 = N.n2(x / 140 + oK2[1] * 3.1, z / 140 + oK2[0] * 2.3), f2 = N.n2(x / 240 + oK[1] * 1.7, z / 240 + oK[0] * 2.9), hay = sstep(0.04, 0.12, f1), lush = sstep(-0.02, 0.06, f2) * (1 - hay), fieldW = (1 - forest(x, z)) * (1 - alp) * (1 - rock) * (1 - beach) * 0.85 * (cv ? 0.15 + 1.1 * cv.crop : 1);                       // with real land cover the patchwork shows on farmland
     for (let c = 0; c < 3; c++) {
       let v = lerp(lerp(P.grass[c], P.grass2[c], mixG), P.dry[c], dry);
+      if (cv) v = lerp(lerp(v, BARE[c], cv.bare * 0.9), BUILT[c], cv.built * 0.55);                                   // real land cover: bare ground is ochre, built-up land grey
       v *= 1 + fieldW * (hay * (HAY[c] - 1) + lush * (LUSH[c] - 1));
       v = lerp(v, P.grass2[c] * 0.62, wood);
       v = lerp(v, P.alpine[c], alp);
@@ -95,7 +115,7 @@ export function createTerrain(config) {
   }
 
   const terrain = { base, height, drive, surface, inZone, addZone: (x, z, r, y, blend = 40) => { zones.push({ x, z, r, y, blend }); }, colour, forest, findSpawn, seaLevel: sea, config,
-    attachRoad(r) { road = r; }, get road() { return road; },
+    cover, attachRoad(r) { road = r; }, get road() { return road; },
     /* the same land without the road, for the coarse horizon tiles */
     far: { height: base, colour: (x, z, h, ny, out) => colour(x, z, h, ny, out, false) } };
   return terrain;

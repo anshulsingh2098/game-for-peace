@@ -25,7 +25,7 @@ export class Menu {
   get open() { return this.screen !== null; }
   show(screen) {
     const was = this.screen; this.screen = screen; this.root.hidden = false; this.root.dataset.screen = screen; this.root.textContent = '';
-    ({ title: () => this.title(), garage: () => this.garage(), locations: () => this.locations(), settings: () => this.settings(), pause: () => this.pause() })[screen]();
+    ({ title: () => this.title(), garage: () => this.garage(), locations: () => this.locations(), settings: () => this.settings(), credits: () => this.credits(), pause: () => this.pause() })[screen]();
     if (!was) this.api.onOpen(screen); else this.api.onScreen && this.api.onScreen(screen);
   }
   hide() { if (!this.screen) return; this.screen = null; this.root.hidden = true; this.api.onClose(); }
@@ -45,6 +45,7 @@ export class Menu {
     const col = mk('div', 'm-col', p);
     btn(col, 'Play', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Location', () => this.open2('locations', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title'));
     mk('div', 'm-hint', p, 'Pick a car, truck or bike, then roam. Hold Q at any time to tune a live radio station from around the world, including India.');
+    const lic = mk('a', '', p, 'Licenses and credits'); lic.href = 'licenses.html'; lic.target = '_blank'; lic.rel = 'noopener'; lic.style.cssText = 'display:block;margin-top:14px;font-size:12px;color:#9fb0c8;text-align:center';          // every credit and licence in one page, linked from the title screen
   }
 
   garage() {
@@ -91,10 +92,22 @@ export class Menu {
     const row = mk('div', 'm-row', p); btn(row, 'Back', () => this.show(this.from || 'pause'), 'primary');
   }
 
+  /* who made what (the full list with licences is assets/ASSETS.md) */
+  credits() {
+    const p = mk('div', 'm-panel', this.root); mk('h2', '', p, 'Credits');
+    const lines = ['Road shapes of the India map: simplified routes derived from OpenStreetMap data, \u00a9 OpenStreetMap contributors, licensed under the Open Database Licence (ODbL 1.0), openstreetmap.org/copyright. Routes computed with the OSRM demo server.',
+      'Textures: ambientCG (CC0). Plants, rocks and sky: Poly Haven (CC0). Traffic vehicles: Kenney Car Kit (CC0). Concept car: Khronos glTF sample assets (CC0 source model).',
+      'Engine recordings: Rajul Singh. Everything else (terrain, roads, trees, buildings, signs, junctions, code): made for this project.',
+      'This is a schematic impression of India, not an official map; borders and names are not authoritative.'];
+    const box = mk('div', 'm-col', p); for (const t of lines) { const e = mk('p', '', box, t); e.style.cssText = 'margin:6px 0;font-size:13px;line-height:1.4;text-align:left;max-width:520px'; }
+    const more = mk('a', '', box, 'Full list of licenses and credits'); more.href = 'licenses.html'; more.target = '_blank'; more.rel = 'noopener'; more.style.cssText = 'margin:8px 0;font-size:13px;color:#8fc8ff';
+    const row = mk('div', 'm-row', p); btn(row, 'Back', () => this.show(this.from || 'pause'), 'primary');
+  }
+
   pause() {
     const api = this.api, p = mk('div', 'm-panel m-title', this.root); mk('h2', '', p, 'Paused');
     const col = mk('div', 'm-col', p);
-    btn(col, 'Resume', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'pause')); btn(col, 'Location', () => this.open2('locations', 'pause')); btn(col, 'Settings', () => this.open2('settings', 'pause'));
+    btn(col, 'Resume', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'pause')); btn(col, 'Location', () => this.open2('locations', 'pause')); btn(col, 'Settings', () => this.open2('settings', 'pause')); btn(col, 'Credits', () => this.open2('credits', 'pause'));
     btn(col, 'Back to the road', () => { api.toRoad(); this.hide(); }); btn(col, 'New world', () => { api.newWorld(); this.hide(); }); btn(col, 'Title screen', () => this.show('title'));
   }
 }

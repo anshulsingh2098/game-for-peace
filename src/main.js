@@ -20,6 +20,8 @@ import { GameRuntime, EventBus, Registry } from './core/runtime.js';
 import { OnFoot, chooseExit, Interactions } from './player/onfoot.js';
 import { AssetCache } from './core/assets.js';
 import { SectorManager } from './world/sectors.js';
+import { regionAt } from './world/regionmap.js';
+import { REGIONS } from './world/regions.js';
 import { RoadNav } from './world/navgraph.js';
 import { NavDebug } from './debug/navdebug.js';
 import { Pedestrians } from './pedestrians/pedestrians.js';
@@ -33,8 +35,8 @@ import { CAMFX } from './vehicle/camfx.js';
 import { LOOK, applyLook } from './fx/grade.js';
 import { rumbleFor } from './input/rumble.js';
 import { loadSave, writeSave } from './core/save.js';
-import { destinationsFor, HINDI, CITY } from './world/india_network.js';
-import { RoadNetwork } from './world/network.js';
+import { destinationsFor, HINDI, CITY, fromGame } from './world/india_network.js';
+import { RoadNetwork, guidePoint } from './world/network.js';
 import { RoadSet } from './world/roadset.js';
 import { Junction } from './traffic/junction.js';
 import { JunctionSignals } from './world/junction_signals.js';
@@ -77,7 +79,16 @@ if (q.get('india')) {
 }
 const nearestRegionId = id => { const c = CITY[id]; let best = START_LOCATION, bd = Infinity; for (const l of LOCATIONS) { const ins = l.region && l.region.inspiration; if (!ins || !c) continue; const d = Math.hypot(ins.lat - c.lat, (ins.lon - c.lon) * 0.9); if (d < bd) { bd = d; best = l.id; } } return best; };
 let config = (q.get('c') && decodeConfig(q.get('c'))) || locationConfig(q.get('loc') || (indiaRoute && nearestRegionId(indiaRoute.from)) || (savedLoc && (LEGACY[savedLoc] || savedLoc)) || START_LOCATION, q.get('seed') || 'peace');          // India only: an old saved choice moves to its Indian replacement
-if (indiaRoute) config.road = { ...config.road, guide: indiaRoute.pts, style: indiaRoute.kind === 'nh' ? 'highway' : 'nh6' };           // main highways get the six-lane national highway look
+if (indiaRoute) config.road = { ...config.road, guide: indiaRoute.pts, style: indiaRoute.kind === 'nh' ? 'highway' : 'nh6' };
+/* real elevation and land cover under the India roads (assets/india/terrain.bin, tools/build_india_grids.py); ?real=off keeps the procedural land. The terrain's origin is the start city. */
+if (indiaRoute && q.get('real') !== 'off') {
+  try {
+    const meta = await (await fetch('assets/india/terrain.json')).json(), buf = await (await fetch('assets/india/terrain.bin')).arrayBuffer(), N = meta.nx * meta.nz, V = 0.035, n0 = indiaRoute.net.cities.get(indiaRoute.from);
+    const macro = { cell: meta.cell, x0: meta.x0, z0: meta.z0, nx: meta.nx, nz: meta.nz, vscale: V, ox: n0.x, oz: n0.z, h: new Int16Array(buf, 0, N), rel: new Uint8Array(buf, N * 2, N), tree: new Uint8Array(buf, N * 3, N), crop: new Uint8Array(buf, N * 4, N), grass: new Uint8Array(buf, N * 5, N), bare: new Uint8Array(buf, N * 6, N), built: new Uint8Array(buf, N * 7, N) };
+    config.terrain = { ...config.terrain, seaLevel: 0, seabed: -40 }; Object.defineProperty(config.terrain, 'macro', { value: macro, enumerable: false, writable: true });      // not part of the saved/shared config (it is big)
+    config.palette = { ...config.palette, treeline: 3700 * V, snowline: 5000 * V }; config.road = { ...config.road, maxAlt: 3500 * V, maxGrade: 0.09, hardGrade: 0.12 };
+  } catch (e) { console.warn('real elevation not loaded, using the procedural land', e); }
+}           // main highways get the six-lane national highway look
 /* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
 registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES); registerRoot('handling', ARCADE); registerRoot('camera', CAMFX); registerRoot('look', LOOK);
 for (const url of ['api/settings', 'settings.json']) {             // the published settings (tuner Publish), else a settings.json committed with the site
@@ -144,7 +155,7 @@ let terrain, road, roadMesh, scatter, backdrop, landmarks, traffic = null, roadS
 const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.rings.length - 1].r * v.tile;      // far tiles leave out what the near grid is guaranteed to cover
   return { tile: f.tile, rings: [{ r: f.r, res: f.res }], budgetMs: 2, rebase: Infinity, inner: Math.floor(reach / f.tile) - 1, sink: f.sink }; };
 let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
-function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
+function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
 function makeScenery() {
@@ -166,7 +177,7 @@ function applyView() {
 
 /* ---------- the vehicle ---------- */
 const cam = new FlyCam(canvas), controls = new Controls(), autodrive = new Autodrive(), view = new VehicleView(scene);
-const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => { const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
+const world = { height: (x, z) => terrain.drive(x, z), surface: (x, z) => terrain.surface(x, z), near: (x, z, r) => { const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), ...branches.map(b => b.mesh.bridges.near(x, z, r)).flat(), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
 const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
@@ -321,7 +332,7 @@ const stats = statsPanel($('#stats'), renderer, () => {
   const sm = sectors.summary(), ac = assetCache.summary(), nv = nav ? nav.summary() : null;
   return ['sectors     active ' + sm.active + ' ready ' + sm.ready + ' loading ' + sm.loading + ' queued ' + sm.queued + ' failed ' + sm.failed + '   (loaded ' + sm.loaded + ' unloaded ' + sm.unloaded + ' aborted ' + sm.aborted + ')   assets held ' + ac.held + ' idle ' + ac.idle + ' ' + (ac.bytes / 1048576).toFixed(1) + ' MB', (nv ? 'navigation  ' + nv.chunks + ' chunks, ' + nv.nodes + ' nodes, ' + nv.drive + ' drive / ' + nv.walk + ' walk / ' + nv.cross + ' crossings / ' + nv.signals + ' signals, routes ' + nv.routes + ' (cached ' + nv.hits + ')' : ''), 'tiles       ' + s.tiles + '  (' + s.lod.join(' / ') + ' by detail)   far ' + f.tiles, 'build queue ' + (s.queue + f.queue + sc.queue) + '   pooled ' + (s.pooled + f.pooled) + '   built ' + (s.built + f.built),
     'scenery     ' + sc.things.toLocaleString('en-US') + ' in ' + sc.tiles + ' tiles   road pieces ' + roadMesh.pieces.size,
-    'road        at ' + (roadS / 1000).toFixed(2) + ' km   built ' + (road.sMin / 1000).toFixed(1) + ' .. ' + (road.sMax / 1000).toFixed(1) + ' km',
+    'road        at ' + (roadS / 1000).toFixed(2) + ' km   built ' + (road.sMin / 1000).toFixed(1) + ' .. ' + (road.sMax / 1000).toFixed(1) + ' km' + (indiaRoute ? '   side roads ' + branches.length + ' in ' + junctionOf.size + ' junctions, cars on them ' + (traffic ? traffic.extra.reduce((a, e) => a + e.sim.cars.length, 0) : 0) : ''),
     'origin      ' + grid.origin.x + ', ' + grid.origin.z + '   mode ' + mode,
     phys ? 'vehicle     u ' + phys.u.toFixed(1) + '  v ' + phys.v.toFixed(2) + '  r ' + phys.r.toFixed(2) + '  slip ' + phys.slip.toFixed(2) + '  ' + phys.surface : '', 'seed        ' + config.seed + '   quality ' + quality];
 });
@@ -353,9 +364,19 @@ function step(dt, now) { update(dt, now); draw(now); }                          
 function draw(now) { if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
 /* world sectors (src/world/sectors.js): 512 m squares with their own load state, above the terrain tiles. A sector loads the shared assets its region needs (today the vehicle pack) and releases them when it goes. */
 const focus = { x: 0, z: 0, dx: 1, dz: 0, speed: 0 };
-const sectors = new SectorManager({ bus, meta: s => ({ region: config.location, assets: ['traffic:pack'] }),
-  load: async (s, signal) => { for (const k of s.meta.assets) await assetCache.acquire(k); if (nav) nav.loadSector(s.sx, s.sz); return { held: s.meta.assets.slice() }; },
-  unload: s => { if (nav) nav.unloadSector(s.sx, s.sz); if (s.data && s.data.held) for (const k of s.data.held) assetCache.release(k); } });
+/* what a sector holds (N8): the region its centre belongs to (nearest of the regions by the real place each is an impression of, with a blend near borders) and the cities of the route inside it.
+   Entering a sector that holds a city builds that city's crossing roads, signals and traffic; leaving it (past the unload distance) removes them. India mode only. */
+const guideWorld = () => (indiaRoute && road && road.guide ? road.guide : null);
+const cityNodes = () => { const g = guideWorld(); if (!g) return []; if (cityNodes.for !== g) { cityNodes.for = g; cityNodes.list = indiaRoute.cities.map(c => ({ id: c.id, name: c.name, along: c.along, ...guidePoint(g, c.along) })); } return cityNodes.list; };
+const gameFrame = (x, z) => { const g = guideWorld(), n0 = indiaRoute.net.cities.get(indiaRoute.from); return { x: n0.x + (x - g[0]), z: n0.z + (z - g[1]) }; };
+function ensureCityJunction(c) {
+  if (c.along > 0) { let guard = 0; while (guard++ < 80) { const a = road.arcAtS(road.sMax - 20); if (a !== null && a >= c.along + 20) break; const box = road.ensure(0, road.sMax + 300); if (box) grid.invalidate(box); } }
+  if (!buildBranches(c)) throw new Error('the road to ' + c.name + ' is not built yet');
+}
+const sectors = new SectorManager({ bus,
+  meta: s => { const meta = { region: config.location, assets: ['traffic:pack'], cities: [] }; if (guideWorld()) { const cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, gf = gameFrame(cx, cz), ll = fromGame(gf.x, gf.z), r = regionAt(ll.lat, ll.lon, REGIONS); if (r) { meta.region = r.id; meta.blend = r.blend; } meta.cities = cityNodes().filter(c => c.x >= s.x0 && c.x < s.x1 && c.z >= s.z0 && c.z < s.z1); } return meta; },
+  load: async (s, signal) => { for (const k of s.meta.assets) await assetCache.acquire(k); if (nav) nav.loadSector(s.sx, s.sz); for (const c of s.meta.cities) ensureCityJunction(c); return { held: s.meta.assets.slice(), cities: s.meta.cities.map(c => c.id) }; },
+  unload: s => { if (nav) nav.unloadSector(s.sx, s.sz); if (s.data && s.data.cities) for (const id of s.data.cities) dropBranches(id); if (s.data && s.data.held) for (const k of s.data.held) assetCache.release(k); } });
 bus.on('world:rebuilt', () => sectors.reset());                                                    // a new world: every sector starts again
 runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'sectors', order: 10, update: (dt, now) => sectors.update(focus.x, focus.z, focus, now) });
 runtime.add({ name: 'render', order: 100, render: now => draw(now) }); runtime.start();
@@ -406,7 +427,7 @@ function buildBranches(city) {
     const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); branches.push({ city: city.id, road: br, mesh: new RoadMesh(scene, br, br.style, grid.origin, {}), hint: 0, near: false, te: traffic ? traffic.addRoad(br) : null });
   }
   const mine = branches.filter(b => b.city === city.id && b.te);
-  if (traffic && mine.length) { const jn = new Junction(p.x, p.z); jn.addArm(traffic.sim, road, sc); for (const b of mine) jn.addArm(b.te.sim, b.road, 0); traffic.addJunction(jn); junctionSignals.add(jn); junctionOf.set(city.id, jn); }          // the roads share one signal and cars may turn between them
+  if (traffic && mine.length) { const jn = new Junction(p.x, p.z); jn.y = p.y; jn.addArm(traffic.sim, road, sc); for (const b of mine) jn.addArm(b.te.sim, b.road, 0); traffic.addJunction(jn); junctionSignals.add(jn); junctionOf.set(city.id, jn); }          // the roads share one signal and cars may turn between them
   return true;
 }
 function dropBranches(cityId) { const jn = junctionOf.get(cityId); if (jn) { if (traffic) traffic.removeJunction(jn); junctionSignals.remove(jn); junctionOf.delete(cityId); } dropBranchRoads(cityId); }
@@ -415,7 +436,7 @@ const triedBranches = new Set(), tmpP = {}, junctionOf = new Map(), junctionSign
 bus.on('world:rebuilt', () => { triedBranches.clear(); for (const j of [...junctionSignals.items.keys()]) junctionSignals.remove(j); junctionOf.clear(); });
 function updateBranches(px, pz, dt) {
   const R = indiaRoute; if (!R || !roadSet) return; const arc = road.guideArc(px, pz) || 0;
-  R.cities.forEach(c => { const d = Math.abs(arc - c.along), have = branches.some(b => b.city === c.id); if (d < 2400 && !have && !triedBranches.has(c.id)) { if (buildBranches(c)) triedBranches.add(c.id); } else if (d > 3600 && (have || triedBranches.has(c.id))) { dropBranches(c.id); triedBranches.delete(c.id); } });
+  // building and removing the crossing roads of each city is done by the sectors (see `sectors` above), not here
   for (const b of branches) { const s = b.road.closestS(px, pz, b.hint); b.hint = s; const box = b.road.ensure(s - 2600, s + 2600); if (box) grid.invalidate(box); b.mesh.update(s);
     if (traffic && b.te) { const q = b.road.at(s, tmpP), dist = Math.hypot(q.x - px, q.z - pz); b.near = b.near ? dist < 1000 : dist < 700; traffic.updateExtra(b.te, dt, { x: px, z: pz, s, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, b.near); } }
 }

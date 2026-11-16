@@ -1,0 +1,24 @@
+{
+ "version": 1,
+ "scale": 100.0,
+ "cell": 50.0,
+ "x0": -12500.0,
+ "z0": -15000.0,
+ "nx": 620,
+ "nz": 670,
+ "planes": [
+  "elevation int16 (real metres)",
+  "relief u8 (real metres / 8)",
+  "tree u8",
+  "crop u8",
+  "grass u8",
+  "bare u8",
+  "built u8"
+ ],
+ "corridorFloorM": 6,
+ "sources": {
+  "elevation": "AWS Terrain Tiles (Mapzen/Tilezen terrarium, zoom 8): SRTM, GMTED2010, ETOPO1 and others (USGS, NOAA), https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+  "landcover": "Esri / Impact Observatory / Microsoft 10 m Land Cover (Sentinel-2), CC BY 4.0, Esri public ImageServer Sentinel2_10m_LandCover"
+ },
+ "built": "2026-11-16"
+}

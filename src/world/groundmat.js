@@ -44,7 +44,8 @@ vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y 
   vec3 sand = texture2D(tSand, vWP.xz / 8.0).rgb * mix(vec3(1.0), tint, 0.4) * 1.15;
   vec3 rock = ${lite ? 'texture2D(tRock, vec2(vWP.x + vWP.z * 0.7, vWP.y) / 8.0).rgb' : 'triRock(vWP, n)'} * mix(vec3(1.0), tint, 0.3) * 1.7;
   vec3 snow = texture2D(tSnow, vWP.xz / 8.0).rgb * 0.95;
-  vec3 a = mix(g, sand, max(sandW, uArid * (1.0 - rockW))); a = mix(a, rock, rockW); a = mix(a, snow, snowW);
+  float arS = smoothstep(2.2, 3.2, vc.r / max(vc.b, 0.04));                              // bare ground (an ochre vertex colour from real land cover) shows the sand
+  vec3 a = mix(g, sand, max(sandW, max(uArid, arS) * (1.0 - rockW))); a = mix(a, rock, rockW); a = mix(a, snow, snowW);
   /* the shore: ground under the water goes from pale turquoise shallows to deep blue, wet sand darkens just above the waterline, and a moving line of foam sits on the edge */
   float dep = uSea - vWP.y, lm = dot(a, vec3(0.3, 0.59, 0.11));
   float under = smoothstep(0.0, 0.4, dep), dk = smoothstep(0.3, 7.0, dep);
