@@ -4,9 +4,9 @@
      brake     the foot brake: slows and holds the car, never reverses (Space)
      hand      the handbrake: locks the rear wheels so the tail can slide (X)
      rev       reverse: brakes first if the car is still rolling forward, then reverses (S / Down)
-   One-shot actions arrive through on(name, fn): 'view', 'reset', 'fly', 'pause', 'buff' (boost: Shift), 'auto', 'cam' (camera view: V), 'interact' (G: get in or out of a vehicle, use what is nearby). On foot (N14) the same input drives the character: steer turns, throttle walks, rev backs up, brake jumps, run (Shift) runs. */
+   One-shot actions arrive through on(name, fn): 'view', 'reset', 'fly', 'pause', 'buff' (boost: Shift), 'auto', 'cam' (camera view: V), 'interact' (G: get in or out of a vehicle, use what is nearby), 'drivemode' (N: Eco, Normal, Sport, Off-road). On foot (N14) the same input drives the character: steer turns, throttle walks, rev backs up, brake jumps, run (Shift) runs. */
 const KEYS = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', Space: 'brake', KeyX: 'hand', ShiftLeft: 'run', ShiftRight: 'run' };
-const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', ShiftLeft: 'buff', ShiftRight: 'buff', KeyE: 'auto', KeyV: 'cam', KeyG: 'interact' };
+const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', ShiftLeft: 'buff', ShiftRight: 'buff', KeyE: 'auto', KeyV: 'cam', KeyG: 'interact', KeyN: 'drivemode' };
 
 export class Controls {
   constructor() {

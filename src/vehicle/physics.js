@@ -51,10 +51,30 @@ export function makeTelemetry(ph, id) {
 /* temporary multipliers (buffs): top speed, acceleration, pull of slopes, surface drag, steering lock, grip */
 export const NO_MOD = { top: 1, accel: 1, slope: 1, drag: 1, steer: 1, grip: 1 };
 
+/* Drive modes, as on a modern car (docs/DRIVE_MODES.md). A mode is a set of multipliers plus a few settings, kept apart from a buff (boost, haul, lean) so both can be on at once.
+     cap      speed limiter, km/h (0 = none): the engine fades out as the limit nears, so the car settles at it
+     accel    engine force multiplier; pedal  throttle map exponent (above 1 = softer at part throttle, below 1 = sharper)
+     steer    steering authority at speed; shift  scales the up-shift point (below 1 = early shifts, above = holds the gear); tcs  traction limit (above 1 = traction control relaxed)
+     regen    engine-braking strength when you lift off (one-pedal feel); loose  grip multiplier on loose ground (gravel, grass, snow, sand); hdc  hill descent: speed (m/s) held on a steep
+     downhill with no pedals touched (0 = off). */
+export const DRIVE_MODES = {
+  eco:     { id: 'eco', name: 'Eco', top: 1, accel: 0.8, steer: 0.96, grip: 1, drag: 0.92, cap: 110, pedal: 1.7, shift: 0.86, tcs: 0.9, regen: 1.7, loose: 1, hdc: 0, blurb: 'Softer throttle, early shifts, stronger coasting, speed limited to 110 km/h' },
+  normal:  { id: 'normal', name: 'Normal', top: 1, accel: 1, steer: 1, grip: 1, drag: 1, cap: 0, pedal: 1, shift: 1, tcs: 1, regen: 1, loose: 1, hdc: 0, blurb: 'Balanced' },
+  sport:   { id: 'sport', name: 'Sport', top: 1, accel: 1.1, steer: 1.12, grip: 1, drag: 1, cap: 0, pedal: 0.75, shift: 1.03, tcs: 1.18, regen: 1.1, loose: 1, hdc: 0, blurb: 'Sharper throttle, holds gears, quicker steering, traction control relaxed, no limiter' },
+  offroad: { id: 'offroad', name: 'Off-road', top: 1, accel: 1.15, steer: 1, grip: 1, drag: 0.85, cap: 85, pedal: 1.3, shift: 0.85, tcs: 1.05, regen: 1.4, loose: 1.3, hdc: 3.2, blurb: 'Low-range pull, grip on loose ground, hill descent control, speed limited to 85 km/h' }
+};
+export const DRIVE_MODE_IDS = ['eco', 'normal', 'sport', 'offroad'];
+/* the multipliers physics uses: a buff's (mod) and the drive mode's together */
+export function combineMods(mod, dm) {
+  return { top: mod.top * dm.top, accel: mod.accel * dm.accel, slope: mod.slope, drag: mod.drag * dm.drag, steer: mod.steer * dm.steer, grip: mod.grip * dm.grip,
+    cap: dm.cap / 3.6, pedal: dm.pedal, shift: dm.shift, tcs: dm.tcs, regen: dm.regen, loose: dm.loose, hdc: dm.hdc };
+}
+
 export class VehiclePhysics {
-  constructor(params, world) { this.p = params; this.world = world; this.acc = 0; this.mod = NO_MOD; this.reset(0, 0, 0); }
+  constructor(params, world) { this.p = params; this.world = world; this.acc = 0; this.mod = NO_MOD; this.dm = DRIVE_MODES.normal; this.M = combineMods(NO_MOD, this.dm); this.reset(0, 0, 0); }
   /* apply a buff's multipliers, or clear them with no argument */
-  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; }
+  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; this.M = combineMods(this.mod, this.dm); }
+  setDriveMode(id) { this.dm = DRIVE_MODES[id] || DRIVE_MODES.normal; this.M = combineMods(this.mod, this.dm); }
   reset(x, z, yaw) {
     Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0, afS: 0, arS: 0, axL: 0, dPitch: 0, dRoll: 0 });
     this.y = this.world.height(x, z); this.ground(1);
@@ -77,7 +97,7 @@ export class VehiclePhysics {
     this.y += (y - this.y) * Math.max(k, 0.85); this.pitch += (this.gPitch - this.pitch) * Math.max(k, 0.35); this.roll += (this.gRoll - this.roll) * Math.max(k, 0.35); this.groundY = y;   // the body stays on the ground (no lag, so it never sinks into a climb); tilt eases a little
   }
   sub(input) {
-    const p = this.p, W = this.world, h = H, m = p.mass, M = this.mod, top = p.top * M.top;
+    const p = this.p, W = this.world, h = H, m = p.mass, M = this.M, top = Math.min(p.top * M.top, M.cap > 0 ? M.cap : Infinity);
     /* steering: the wheel is turned at a limited rate (slower at speed, quick to come back to centre), and the lock shrinks with speed like a real car's effective steering */
     const want = clamp(input.steer, -1, 1), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = back ? 8 : 5.5 / (1 + Math.abs(this.u) / 14);
     this.steer += clamp(want - this.steer, -rate * h, rate * h);

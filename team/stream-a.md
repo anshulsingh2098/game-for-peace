@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 17:00  Drive modes (Eco, Normal, Sport, Off-road) and the road network model
+Branch: feat/landscape-look (PR 36)
+What changed: owner asked for drive modes like a modern car. `vehicle/physics.js` (`DRIVE_MODES`, `combineMods`, `setDriveMode`), `vehicle/rapier-vehicle.js` (limiter, throttle map, hill descent control, loose-ground grip, shift points, traction limit, engine braking; Stream B files, smallest change, both physics classes keep one surface), `main.js` (N key and button, HUD tag, saved choice), `input/controls.js` (`drivemode`), `core/saved.js` (`driveMode`), `index.html` (button, tag), `docs/DRIVE_MODES.md`. `tools/vehicle_acceptance.mjs` now checks every mode for every vehicle (all pass). Also in this push: `world/network.js` (road network model, `cleanPath`, `guideFor`) and a `config.road.guide` option in `world/router.js` so a road can follow a real highway path (tested: it stays within 450 m of the guide); not wired into the game yet. 67 self-tests pass.
+For the other stream: please feel-test the modes on a phone and with a gamepad; the numbers are tuned by script only. Sound per mode is not done.
+Status: open
+
 ## 2026-11-18 15:00  Real road shapes (OpenStreetMap-derived) in the India skeleton
 Branch: feat/landscape-look (PR 36)
 What changed: owner approved the OSM download. `tools/fetch_india_routes.mjs` fetched 28 simplified driving routes from the OSRM demo server (OSM data, ODbL) into `assets/india/waypoints.json` (20 KB, credit and licence in `meta`); `tools/build_india_skeleton.mjs` and `buildSkeleton` use them (skeleton now 64 KB, `assets/india/skeleton.json`); `india_map.html` draws the real shapes with the credit; `.gitignore` ignores `data/`; self-tests check the waypoints (66 checks). An Overpass trial was far too big (8 MB for one highway) and was stopped and deleted. Credit line in the game itself is still to do. Not used by the game world yet.

@@ -34,6 +34,7 @@ import { LOOK, applyLook } from './fx/grade.js';
 import { rumbleFor } from './input/rumble.js';
 import { loadSave, writeSave } from './core/save.js';
 import { destinationsFor } from './world/india_network.js';
+import { DRIVE_MODES, DRIVE_MODE_IDS } from './vehicle/physics.js';
 import { laneOffsets } from './traffic/sim.js';
 import { ActivityRunner, activitiesFor, recordResult } from './activities/activities.js';
 import { Traffic, loadTrafficPack } from './traffic/traffic.js';
@@ -168,6 +169,7 @@ async function setVehicle(i) {
   if (S.paint[def.id] && S.paint[def.id] !== def.paint.colors[0]) await applyPaint(def, model, S.paint[def.id]);
   buildSwatches(def, model);
   view.realShadow = shadowsOn; view.setModel(def, model); $$('#vehicles button').forEach((b, k) => b.classList.toggle('on', k === i)); document.documentElement.style.setProperty('--accent', def.color);
+  if (phys.setDriveMode) phys.setDriveMode(S.driveMode || 'normal');
   S.vehicle = i; save(); if (sound.ctx) sound.setVehicle(def.id);
 }
 /* paint swatches for the current vehicle */
@@ -304,6 +306,10 @@ const stats = statsPanel($('#stats'), renderer, () => {
     'origin      ' + grid.origin.x + ', ' + grid.origin.z + '   mode ' + mode,
     phys ? 'vehicle     u ' + phys.u.toFixed(1) + '  v ' + phys.v.toFixed(2) + '  r ' + phys.r.toFixed(2) + '  slip ' + phys.slip.toFixed(2) + '  ' + phys.surface : '', 'seed        ' + config.seed + '   quality ' + quality];
 });
+/* drive modes (vehicle/physics.js DRIVE_MODES): N or the button cycles Eco, Normal, Sport, Off-road; the choice is saved and applies to every vehicle */
+function setDriveMode(id, quiet) { if (!DRIVE_MODES[id]) id = 'normal'; S.driveMode = id; if (phys && phys.setDriveMode) phys.setDriveMode(id); const m = DRIVE_MODES[id]; $('#modeBtn').textContent = m.name; const tag = $('#modeTag'); tag.textContent = m.name; tag.className = id; save(); if (!quiet) toast(m.name + ': ' + m.blurb); }
+const cycleDriveMode = () => setDriveMode(DRIVE_MODE_IDS[(DRIVE_MODE_IDS.indexOf(S.driveMode || 'normal') + 1) % DRIVE_MODE_IDS.length]);
+controls.on('drivemode', cycleDriveMode); $('#modeBtn').addEventListener('click', cycleDriveMode); setDriveMode(S.driveMode || 'normal', true);
 const hud = { spd: $('#spd'), unit: $('#unit'), surf: $('#surface'), sky: $('#sky'), buff: $('#buff'), cd: $('#buffCd') }; let hudT = 0;
 
 /* ---------- the camera slowly circling the vehicle behind the title screen and the garage ---------- */
@@ -409,7 +415,7 @@ function update(dt, now) {
   if (mode === 'drive' && phys && S.rumble !== 'off' && !frozen()) { const r = rumbleFor({ ...(phys.telemetry ? phys.telemetry() : { speed: Math.abs(phys.u), surface: phys.surface, slip: phys.slip }), impact: phys.impact }, 1); if (r) controls.rumble(r.strong, r.weak, r.ms); }
   if (mode === 'drive' && phys && sound.ctx) { const tel = phys.telemetry ? phys.telemetry() : { rpm01: null, gear: null }; sound.update({ tunnel: tunnelAmt, v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
     id: VEHICLES[vehicle].id, rpm01: tel.rpm01 === null ? undefined : tel.rpm01, gear: tel.gear === null ? undefined : tel.gear, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view }); }
-  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label;
+  if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label; { const tag = $('#modeTag'), lim = phys.M && phys.M.cap > 0 && Math.abs(phys.u) > phys.M.cap * 0.97; if (tag.classList.contains('limit') !== lim) tag.classList.toggle('limit', lim); }
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }
 }
 setVehicle(vehicle).then(() => { setupActivities(); setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); loadDone(); if (+q.get('bench')) setTimeout(() => startBench(+q.get('bench')), 4000); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); loadDone(); });
