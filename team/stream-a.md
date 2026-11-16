@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-21 16:00  Railways: track, trains, level crossings
+Branch: feat/rail (stacked on feat/gps-landscape)
+What changed: `world/rail.js` and `world/rail_view.js` (new), `main.js` (RailView wiring, rail obstacle circles in `world.near`, `?rail=off`), one new self-test (76 checks).
+For the other stream: the train circles are in `world.near`; road traffic does not stop at the barriers yet (a toll-style speed cap in `traffic/sim.js` would do it).
+Status: open
+
 ## 2026-11-21 10:00  GPS, Indian milestones, field look, lag governor
 Branch: feat/gps-landscape
 What changed: `ui/gps.js` (new: minimap and full map, key P), `main.js` (Gps wiring, adaptive resolution governor `?gov=off`, gate board info, nav debug no longer triggered by `?nav=<city>`), `world/highway_plan.js` and `highway.js` (stones every 100 m with lettering atlas, gantries every 600 m, also on the 'highway' style, no tolls there), `road.js` (tag), `world/terrain.js` and `groundmat.js` (rectangular field parcels with real land cover, vertex colour shows through the grass), `index.html` (minimap CSS). Self-test 75.

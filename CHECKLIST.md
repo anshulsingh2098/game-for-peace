@@ -95,3 +95,4 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - Play, then drive Mumbai to Goa on NH66 and Mumbai to Pune: do roads and crossings appear on time, no hitch at city gates, junction signals and traffic turn at a city
 - Explore cities, pick Kerala and Drive, then India map brings you back to the world
 - Autodrive: E once (Auto) drives alone, E twice (Cruise) you steer and it holds speed, in Sport it drives fast and overtakes, in Eco it is gentle; braking takes over
+- Drive near a rail line (Gwalior, Jhansi, Agra): do you see track and a train, do the barriers at a level crossing go down, can you not drive through the train

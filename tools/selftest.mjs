@@ -415,6 +415,18 @@ await atest('autodrive plans ahead: in heavy traffic on two-lane and six-lane hi
     assert.equal(hits, 0, seed + ' ' + style + ' ' + road + ': the autodrive hit traffic ' + hits + ' times'); assert.ok(s - 40 > (style === 'sport' && road === 'nh6' ? 1300 : 500), seed + ' ' + style + ' ' + road + ': it kept moving (' + (s - 40).toFixed(0) + ' m)');
   }
 });
+test('railways: lines have distance, crossings are found away from cities and parallel roads, trains run back and forth, barriers close for a train', async () => {
+  const { RailLine, segIntersect, findCrossings, trainPlace, trainSpan, crossingClosed } = await import('../src/world/rail.js');
+  const rl = new RailLine('r', [0, 0, 1000, 0, 1000, 500], ['a', 'b']); assert.equal(rl.len, 1500); const p = rl.at(1250, {}); assert.ok(Math.abs(p.x - 1000) < 1e-9 && Math.abs(p.z - 250) < 1e-9 && p.tz === 1, 'a point and a direction on the second leg'); assert.deepEqual(rl.nearest(500, 30), { s: 500, d: 30 });
+  assert.deepEqual(segIntersect(0, 0, 10, 0, 5, -5, 5, 5), { t: 0.5, u: 0.5, x: 5, z: 0 }); assert.equal(segIntersect(0, 0, 10, 0, 0, 1, 10, 1), null, 'parallel');
+  const roads = [{ id: 'x', pts: [300, -200, 300, 200] }, { id: 'par', pts: [0, 5, 900, 5] }, { id: 'city', pts: [700, -50, 700, 50] }], cr = findCrossings(rl, roads, [{ x: 700, z: 0 }]);
+  assert.equal(cr.length, 1, 'one crossing: the parallel road and the one inside a city are skipped'); assert.ok(cr[0].road === 'x' && Math.abs(cr[0].s - 300) < 1e-9 && Math.abs(cr[0].x - 300) < 1e-9);
+  for (const t of [0, 10, 37.5, 61.2]) { const a = trainPlace(1000, t, 20, 0), b = trainPlace(1000, t + 1e-3, 20, 0); assert.ok(a.s >= 0 && a.s <= 1000); assert.ok(Math.abs(a.s - b.s) < 0.05, 'continuous'); }
+  assert.deepEqual(trainPlace(1000, 10, 20, 0), { s: 200, dir: 1 }); assert.deepEqual(trainPlace(1000, 60, 20, 0), { s: 800, dir: -1 }); assert.equal(trainPlace(1000, 100, 20, 0).dir, 1, 'it comes back for another run');
+  assert.deepEqual(trainSpan(500, 1, 200), [300, 500]); assert.deepEqual(trainSpan(500, -1, 200), [500, 700]);
+  assert.ok(crossingClosed(600, [[300, 500]]) && !crossingClosed(900, [[300, 500]]) && crossingClosed(520, [[300, 500]]) && !crossingClosed(100, [[300, 500]]), 'barriers close when a train is within 110 m before or 45 m after');
+  const sk = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('../assets/india/skeleton.json', import.meta.url))); const lines = sk.rails.map(r => new RailLine(r.id, r.pts, r.cities)); let n = 0; for (const l of lines) n += findCrossings(l, sk.roads, sk.nodes).length; assert.ok(n >= 3, 'the real skeleton has level crossings: ' + n); console.log('     rail crossings in the skeleton:', n);
+});
 await atest('my music: only audio files within limits are kept, songs play in turn and are freed again (nothing leaves the device)', async () => {
   const fake = new Map(); class FakeAudio { constructor() { this.attrs = {}; this.ev = {}; this.volume = 1; this.paused = true; } addEventListener(n, f) { this.ev[n] = f; } set src(v) { this.attrs.src = v; } get src() { return this.attrs.src; } getAttribute(k) { return this.attrs[k] || null; } removeAttribute(k) { delete this.attrs[k]; } load() {} pause() { this.paused = true; } play() { this.paused = false; return Promise.resolve(); } error = null; }
   globalThis.Audio = FakeAudio; const { Radio } = await import('../src/audio/radio.js'); const { classify, cleanName, MAX_BYTES, MAX_TRACKS } = await import('../src/audio/localmusic.js');
