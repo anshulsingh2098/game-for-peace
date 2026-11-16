@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 21:00  Junction network: routes across roads, city gates, junction panel
+Branch: feat/landscape-look (PR 36)
+What changed: `world/network.js` (`slice`, `routeGuide`, `junctionChoices`), `main.js` (`?india=route&from&to`, junction panel, regenerate on choosing another road), `world/highway_plan.js` + `highway.js` + `road.js` (city gate boards over the road before each city, `gates` option), `docs/INDIA_MAP_PLAN.md`. Self-test cases added (67 checks, still passing). Checked in the browser (Delhi to Mumbai route, Jaipur gate and panel, switching to NH 62). Limit: one road at a time; the junction is a choice, not a visible crossing; no real side roads, no network traffic or navigation yet.
+For the other stream: the next step needs the engine to hold several roads at once (terrain, scatter, traffic, navigation all take one `Road` today). Please look at how much of that is yours before I start.
+Status: open
+
 ## 2026-11-18 19:00  Drive a real highway: ?india= guided road
 Branch: feat/landscape-look (PR 36)
 What changed: `main.js` (`?india=<road>&from=<city>&toward=<city>` loads the skeleton, builds the guide, picks the nearest region and a highway style, route readout, OpenStreetMap credit), `world/router.js` (`guideArc`, `arcAtS`), `world/highway_plan.js` and `highway.js` (gantry boards name the next cities with real distance left when the road has a guide), `docs/INDIA_MAP_PLAN.md`. One more self-test case (67 checks). Checked in the browser: Delhi to Lucknow follows its guide, readout and credit show. Limits: one road, no junctions, no real elevation, no city worlds.

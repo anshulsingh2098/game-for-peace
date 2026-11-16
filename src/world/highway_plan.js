@@ -5,7 +5,7 @@
    the lanes. Nothing on a bridge, in a tunnel or on a sharp bend; no rail inside or near a toll plaza. Positions are world metres; `lat` is the lateral offset from the centre line
    (positive to the right of travel, the convention of road.at's tz, -tx). Deterministic for a seed. */
 import { alea } from '../core/rng.js';
-export const RAIL_STEP = 4, STONE_EVERY = 1000, GANTRY_EVERY = 1500, TOLL_EVERY = 7000, TOLL_LEN = 16, TOLL_OFFSET = 1800, GANTRY_OFFSET = 700, RAIL_LAT_GAP = 0.45, SIGN_SCALE = 25, ROAD_SCALE = 100;
+export const RAIL_STEP = 4, STONE_EVERY = 1000, GANTRY_EVERY = 1500, TOLL_EVERY = 7000, TOLL_LEN = 16, TOLL_OFFSET = 1800, GANTRY_OFFSET = 700, RAIL_LAT_GAP = 0.45, SIGN_SCALE = 25, ROAD_SCALE = 100, GATE_GRID = 40, GATE_BEFORE = 90;
 
 const clear = (road, s) => road.bridgeW(s) <= 0 && road.tunnelW(s) <= 0.01;
 export function tollAt(s0, s1) { const out = []; for (let m = Math.floor((s0 - TOLL_LEN - TOLL_OFFSET) / TOLL_EVERY); m * TOLL_EVERY + TOLL_OFFSET < s1; m++) { const s = m * TOLL_EVERY + TOLL_OFFSET; if (s + TOLL_LEN > s0 && s < s1) out.push(s); } return out; }
@@ -17,8 +17,8 @@ export function validTolls(road, s0, s1) { const out = []; for (const s of tollA
 export const tollCap = d => d <= 0 ? 4 : Math.min(40, 4 + d * 0.3);
 
 /* road, seed, k (piece number), s0..s1, dests: [{ en, hi, km }] from india_network.destinationsFor */
-export function planHighway({ road, seed, k, s0, s1, dests = [], arcAt = null }) {
-  const st = road.style, plan = { rails: [], stones: [], gantries: [], tolls: [], circles: [] }; if (st.id !== 'nh6') return plan;
+export function planHighway({ road, seed, k, s0, s1, dests = [], arcAt = null, gates = [] }) {
+  const st = road.style, plan = { rails: [], stones: [], gantries: [], tolls: [], gates: [], circles: [] }; if (st.id !== 'nh6') return plan;
   const p = {}, tolls = validTolls(road, s0 - TOLL_LEN, s1 + TOLL_LEN);
   const nearToll = s => tolls.some(t => s > t - 36 && s < t + TOLL_LEN + 36);
   const edge = st.shoulder + RAIL_LAT_GAP, at = (s, lat) => { road.at(s, p); return { x: p.x + p.tz * lat, z: p.z - p.tx * lat, y: p.y, tx: p.tx, tz: p.tz }; };
@@ -36,6 +36,12 @@ export function planHighway({ road, seed, k, s0, s1, dests = [], arcAt = null })
     const d2 = pool.length > 1 ? (along ? pool[1] : pool[(Math.abs(m) + 1) % pool.length]) : d, kmRight = d2 ? (along ? Math.max(1, Math.round((d2.alongM - arc) * ROAD_SCALE / 1000)) : Math.max(1, Math.round(d2.km / SIGN_SCALE - ((s / 1000) % Math.max(2, d2.km / SIGN_SCALE * 0.9))))) : 0;
     plan.gantries.push({ s, posts, tx: posts[1].tx, tz: posts[1].tz, y: posts[1].y, sign: d ? { en: d.en, hi: d.hi, km: kmLeft } : null, sign2: d2 ? { en: d2.en, hi: d2.hi, km: kmRight } : null });
     for (const q of posts) plan.circles.push({ x: q.x, z: q.z, r: 0.6, slide: true });
+  }
+  /* city gates: a wide board over the road a little before each city of a route (gates: [{ en, hi, alongM }], with arcAt giving the distance along the guide), found on a fixed 40 m grid so every piece agrees */
+  if (arcAt && gates.length) for (let m = Math.ceil(Math.max(s0, 40) / GATE_GRID); m * GATE_GRID < s1; m++) {
+    const s = m * GATE_GRID, a1 = arcAt(s), a0 = arcAt(s - GATE_GRID); if (a0 === null || a1 === null) continue;
+    for (const g of gates) { const target = g.alongM - GATE_BEFORE; if (a0 < target && a1 >= target && clear(road, s) && !nearToll(s) && !plan.gantries.some(q => Math.abs(q.s - s) < 120)) {
+      const posts = [-edge - 0.8, 0, edge + 0.8].map(lat => ({ lat, ...at(s, lat) })); plan.gates.push({ s, posts, tx: posts[1].tx, tz: posts[1].tz, y: posts[1].y, name: g.en, hi: g.hi, alongM: g.alongM }); for (const q of posts) plan.circles.push({ x: q.x, z: q.z, r: 0.6, slide: true }); } }
   }
   for (const s of tolls) {
     if (s < s0 || s >= s1) continue; const lines = [2.4, 5.9, 9.4, 12.9].flatMap(l => [l, -l]), c = at(s + TOLL_LEN / 2, 0);

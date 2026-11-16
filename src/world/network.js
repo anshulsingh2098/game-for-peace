@@ -57,6 +57,28 @@ export class RoadNetwork {
     while (open.size) { let u = null; for (const n of open) if (u === null || dist.get(n) < dist.get(u)) u = n; open.delete(u); if (u === to) break; for (const e of adj.get(u) || []) { const nd = dist.get(u) + e.leg.length; if (!dist.has(e.to) || nd < dist.get(e.to)) { dist.set(e.to, nd); prev.set(e.to, { from: u, leg: e.leg }); open.add(e.to); } } }
     if (!dist.has(to)) return null; const legs = []; for (let c = to; c !== from;) { const p = prev.get(c); legs.unshift(p.leg); c = p.from; } return { legs, length: dist.get(to) };
   }
+  /* the points of road `roadId` from distance s0 to s1 (either direction), absolute game metres, ends included */
+  slice(roadId, s0, s1) {
+    const r = this.roads.get(roadId), out = [], a = this.at(roadId, s0), b = this.at(roadId, s1); out.push(a.x, a.z);
+    if (s1 >= s0) { for (let i = 0; i < r.s.length; i++) if (r.s[i] > s0 + 0.5 && r.s[i] < s1 - 0.5) out.push(r.pts[i * 2], r.pts[i * 2 + 1]); }
+    else { for (let i = r.s.length - 1; i >= 0; i--) if (r.s[i] < s0 - 0.5 && r.s[i] > s1 + 0.5) out.push(r.pts[i * 2], r.pts[i * 2 + 1]); }
+    out.push(b.x, b.z); return out;
+  }
+  /* a guide across several roads: the shortest route from city `from` to city `to`, as one path (relative to the start city) with its cities, the road legs and the junction cities where the road changes */
+  routeGuide(from, to) {
+    const r = this.route(from, to); if (!r || !r.legs.length) return null; let abs = []; const c0 = this.cities.get(from);
+    for (const leg of r.legs) { const seg = this.slice(leg.road, leg.s0, leg.s1); if (abs.length) seg.splice(0, 2); abs.push(...seg); }
+    const rel = []; for (let i = 0; i < abs.length; i += 2) rel.push(abs[i] - c0.x, abs[i + 1] - c0.z); const clean = cleanPath(rel), cs = cumulative(clean), cities = [], legs = [];
+    const stops = [from, ...r.legs.map(l => l.to)]; stops.forEach((id, i) => { const n0 = this.cities.get(id); cities.push({ id, name: n0.name, along: i === 0 ? 0 : Math.round(this.projectOnPath(clean, cs, n0.x - c0.x, n0.z - c0.z).s) }); });
+    r.legs.forEach((l, i) => { const rd = this.roads.get(l.road), prev = legs[legs.length - 1]; if (prev && prev.road === l.road) { prev.to = l.to; prev.toAlong = cities[i + 1].along; } else legs.push({ road: l.road, name: rd.name, nh: rd.nh, from: l.from, to: l.to, fromAlong: cities[i].along, toAlong: cities[i + 1].along }); });
+    return { from, to, pts: clean, cities, legs, length: cs[cs.length - 1], junctions: legs.slice(1).map(l => l.from) };
+  }
+  /* what you can do at a city: for each road through it, the next city each way. `cameFrom` (city id) leaves out the way you arrived; `onRoad` marks the choice that keeps going on your road. Each: { road, name, nh, toward, towardName, km (real), same } */
+  junctionChoices(cityId, { cameFrom = null, onRoad = null } = {}) {
+    const out = []; for (const { road: rid } of this.junction(cityId)) { const r = this.roads.get(rid), i = r.stops.findIndex(st => st.id === cityId);
+      for (const k of [i - 1, i + 1]) { const st = r.stops[k]; if (!st || st.id === cameFrom || st.id === cityId) continue; out.push({ road: rid, name: r.name, nh: r.nh, toward: st.id, towardName: this.cities.get(st.id).name, km: Math.round(Math.abs(st.s - r.stops[i].s) * 100 / 1000), same: rid === onRoad }); } }
+    return out.sort((p, q) => (q.same ? 1 : 0) - (p.same ? 1 : 0) || p.km - q.km);
+  }
   /* the path a drivable road follows from city `from` towards city `toward` along road `roadId`: points relative to the start city ([0, 0, x, z, ...], game metres), the road's cities with their
      distance along the guide, and the direction. null if the road does not pass through both cities. */
   guideFor(roadId, from, toward) {

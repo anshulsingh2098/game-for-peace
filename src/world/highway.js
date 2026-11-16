@@ -11,7 +11,7 @@ const box = (parts, w, h, d, x, y, z, yaw, c) => { const g = new THREE.BoxGeomet
 /* a green overhead sign: Hindi name large, English name below, distance on the right; text drawn on a canvas */
 function signTexture({ en, hi, km, kind }) {
   const W = 1024, H = 340, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-  const green = kind === 'toll' ? '#12467a' : '#0b6b3a'; x.fillStyle = green; x.fillRect(0, 0, W, H); x.strokeStyle = '#fff'; x.lineWidth = 10; x.strokeRect(14, 14, W - 28, H - 28); x.fillStyle = '#fff'; x.textBaseline = 'middle';
+  const green = kind === 'toll' || kind === 'city' ? '#12467a' : '#0b6b3a'; x.fillStyle = green; x.fillRect(0, 0, W, H); x.strokeStyle = '#fff'; x.lineWidth = 10; x.strokeRect(14, 14, W - 28, H - 28); x.fillStyle = '#fff'; x.textBaseline = 'middle';
   const font = (px, w = 700) => `${w} ${px}px "Noto Sans Devanagari", "Kohinoor Devanagari", "Devanagari Sangam MN", "Mukta", system-ui, sans-serif`;
   x.font = font(112); x.fillText(hi || '', 54, 98); x.font = font(104, 700).replace(/"Noto[^]*$/, 'system-ui, Arial, sans-serif'); x.fillText(en, 54, 232);
   if (km) { x.textAlign = 'right'; x.font = '700 120px system-ui, Arial, sans-serif'; x.fillText(km + ' km', W - 56, 100); x.font = '700 90px system-ui, Arial, sans-serif'; x.fillText('↑', W - 80, 235); x.textAlign = 'left'; }
@@ -19,8 +19,8 @@ function signTexture({ en, hi, km, kind }) {
 }
 
 export class Highway {
-  constructor(scene, road, terrain, style, origin, rows, { seed = 'highway', dests = [] } = {}) {
-    this.road = road; this.style = style; this.origin = origin; this.len = rows * road.ds * 2; this.seed = seed; this.dests = dests; this.pieces = new Map(); this.range = 1400; this.on = style.id === 'nh6';
+  constructor(scene, road, terrain, style, origin, rows, { seed = 'highway', dests = [], gates = [] } = {}) {
+    this.road = road; this.style = style; this.origin = origin; this.len = rows * road.ds * 2; this.seed = seed; this.dests = dests; this.gates = gates; this.pieces = new Map(); this.range = 1400; this.on = style.id === 'nh6';
     this.furn = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.25, envMapIntensity: 0.4 });
     this.group = new THREE.Group(); scene.add(this.group);
   }
@@ -30,7 +30,7 @@ export class Highway {
     const mid = Math.floor(s / L); for (let d = 0; d <= hi - lo + 1; d++) for (const k of d ? [mid + d, mid - d] : [mid]) if (k >= lo && k <= hi && !this.pieces.has(k)) { this.pieces.set(k, this.build(k)); return; }
   }
   build(k) {
-    const r = this.road, s0 = k * this.len, s1 = s0 + this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, plan = planHighway({ road: r, seed: this.seed, k, s0, s1, dests: this.dests, arcAt: r.guide ? s => r.arcAtS(s) : null }), parts = [], grp = new THREE.Group(), textures = [];
+    const r = this.road, s0 = k * this.len, s1 = s0 + this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, plan = planHighway({ road: r, seed: this.seed, k, s0, s1, dests: this.dests, arcAt: r.guide ? s => (s >= 0 ? r.arcAtS(s) : null) : null, gates: this.gates }), parts = [], grp = new THREE.Group(), textures = [];
     for (const a of plan.rails) { const dx = a.x2 - a.x, dz = a.z2 - a.z, L = Math.hypot(dx, dz) || 1, yaw = -Math.atan2(dz, dx), my = (a.y + a.y2) / 2; box(parts, L, 0.3, 0.06, (a.x + a.x2) / 2 - ox, my + 0.72, (a.z + a.z2) / 2 - oz, yaw, 0xb9bec4); box(parts, 0.1, 0.8, 0.12, a.x - ox, a.y + 0.4, a.z - oz, yaw, 0x8c9096); }
     for (const a of plan.stones) { const yaw = -Math.atan2(a.tz, a.tx); box(parts, 0.18, 0.55, 0.36, a.x - ox, a.y + 0.27, a.z - oz, yaw, 0xf2f2ec); box(parts, 0.18, 0.14, 0.36, a.x - ox, a.y + 0.62, a.z - oz, yaw, 0xf2c230); }
     const sign = (sx, sy, sz, tx, tz, w, h, tex) => { const th = Math.atan2(tx, tz); for (const f of [0, Math.PI]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, side: THREE.FrontSide })); m.rotation.y = th + f; m.position.set(sx + Math.sin(th + f) * 0.07, sy, sz + Math.cos(th + f) * 0.07); grp.add(m); } };
@@ -39,6 +39,12 @@ export class Highway {
       for (const q of g.posts) box(parts, 0.45, 7.2, 0.45, q.x - ox, q.y + 3.6, q.z - oz, 0, 0x8a8f96);
       box(parts, span, 0.5, 0.5, g.posts[1].x - ox, g.y + 6.7, g.posts[1].z - oz, byaw, 0x8a8f96);
       if (g.sign) { const t1 = signTexture(g.sign), t2 = signTexture(g.sign2 || g.sign); textures.push(t1, t2); for (const [side, tex] of [[0.5, t1], [-0.5, t2]]) sign(g.posts[1].x - ox + lx * span * side * 0.5, g.y + 5.15, g.posts[1].z - oz + lz * span * side * 0.5, g.tx, g.tz, 8, 2.6, tex); }
+    }
+    for (const g of plan.gates) {                                                                                       // the board over the road before a city: its name in Hindi and English
+      const lx = g.tz, lz = -g.tx, byaw = -Math.atan2(lz, lx), span = Math.abs(g.posts[2].lat - g.posts[0].lat);
+      for (const q of g.posts) box(parts, 0.45, 7.2, 0.45, q.x - ox, q.y + 3.6, q.z - oz, 0, 0x8a8f96);
+      box(parts, span, 0.5, 0.5, g.posts[1].x - ox, g.y + 6.7, g.posts[1].z - oz, byaw, 0x8a8f96);
+      const tex = signTexture({ en: g.name, hi: g.hi, kind: 'city' }); textures.push(tex); sign(g.posts[1].x - ox, g.y + 5.1, g.posts[1].z - oz, g.tx, g.tz, 12, 3.6, tex);
     }
     for (const t of plan.tolls) {
       const yaw = -Math.atan2(t.tz, t.tx), cx = t.x - ox, cz = t.z - oz, w = 2 * 15.4 + 2;

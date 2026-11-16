@@ -38,7 +38,7 @@ export class RoadMesh {
     this.bridges = new Bridges(scene, road, road.t, style, origin, ROWS);                     // decks, rails and piers where the road crosses water
     this.retaining = new Retaining(scene, road, road.t, style, origin, ROWS);                  // stone walls where the road is cut into a steep hill or runs along a drop
     this.district = extras.district ? new District(scene, road, road.t, style, origin, ROWS, { spec: extras.district, seed: extras.seed || 'district', blocked: extras.blocked || (() => false) }) : null;      // buildings, sidewalks, crossings and street furniture where the region is built up
-    this.highway = new Highway(scene, road, road.t, style, origin, ROWS, { seed: extras.seed || 'highway', dests: extras.dests || [] });      // guardrails, km stones, sign gantries and toll plazas on national highways
+    this.highway = new Highway(scene, road, road.t, style, origin, ROWS, { seed: extras.seed || 'highway', dests: extras.dests || [], gates: extras.gates || [] });      // guardrails, km stones, sign gantries and toll plazas on national highways
     this.tunnels = new Tunnels(scene, road, style, origin, ROWS);                              // tubes and portals where the road goes through a mountain
   }
   /* keep pieces within range of road distance s; build at most a few per frame */
