@@ -604,7 +604,7 @@ test('district: regions turn it on with data (validated), nothing in the code na
   const mumbai = REGIONS.find(r => r.id === 'mumbai'); assert.equal(mumbai.version, 2, 'the Mumbai data changed (district, clear strip), so its version moved'); assert.deepEqual(validateRegion(mumbai), []);
   const bad = JSON.parse(JSON.stringify(mumbai)); bad.district.styles = ['gothic']; assert.ok(validateRegion(bad).length > 0); bad.district = { styles: ['colonial'], floors: [5, 2], market: true }; assert.ok(validateRegion(bad).length > 0); bad.district = { styles: ['colonial'], floors: [2, 4], market: 'yes' }; assert.ok(validateRegion(bad).length > 0);
   for (const f of ['district.js', 'district_plan.js']) { const src = readFileSync(new URL('../src/world/' + f, import.meta.url), 'utf8'); assert.ok(!/mumbai|delhi|agra|bhopal/i.test(src), f + ' must not name a place'); }
-  assert.equal(REGIONS.filter(r => r.district).length, 1, 'only Mumbai has a district so far');
+  assert.deepEqual(REGIONS.filter(r => r.district).map(r => r.id).sort(), ['agra', 'bhopal', 'delhi', 'mumbai'], 'Mumbai, Delhi, Agra and Bhopal have a district');
 });
 
 /* ---- N12: Indian traffic mix and signals ---- */
