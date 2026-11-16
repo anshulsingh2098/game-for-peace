@@ -29,9 +29,10 @@ export class Road {
     this.style = roadStyleById(this.c.style); this.g = this.style.grade;       // widths come from the style
     this.wc = new Map(); this.bw = new Map(); this.dc = new Map(); this.tc = new Map();      // bridge and tunnel caches (see bridgeW, tunnelW)
     this.cell = 32; this.reach = this.g.blend + 2; this.cells = new Map(); this.hit = { d: 0, s: 0, y: 0 };
-    const p = terrain.findSpawn(), gd = this.c.guide;            // guide (optional): a flat [x, z, x, z, ...] path relative to the start, in metres; arm A follows it (the road of a real highway, see world/network.js)
+    const sp = this.c.start, p = sp ? { x: sp.x, z: sp.z } : terrain.findSpawn(), gd = this.c.guide, gb = this.c.guideBack;            // guide (optional): a flat [x, z, x, z, ...] path relative to the start, in metres; arm A follows it (the road of a real highway, see world/network.js); guideBack: the same for arm B. start (optional) { x, y, z }: begin here at this height (a road branching off another one, see world/roadset.js)
     if (gd && gd.length >= 4) { this.guide = []; for (let i = 0; i < gd.length; i += 2) this.guide.push(p.x + gd[i], p.z + gd[i + 1]); }
-    const h0 = terrain.base(p.x, p.z);
+    if (gb && gb.length >= 4) { this.guideB = []; for (let i = 0; i < gb.length; i += 2) this.guideB.push(p.x + gb[i], p.z + gb[i + 1]); }
+    this.start = sp ? { x: p.x, z: p.z, y: sp.y } : null; const h0 = sp ? sp.y : terrain.base(p.x, p.z);
     let best = 0, bestCost = Infinity;                          // first bearing: the gentlest line through the start point
     for (let a = 0; a < 16; a++) {
       const ang = a / 16 * Math.PI, dx = Math.cos(ang), dz = Math.sin(ang); let cost = 0;
@@ -40,7 +41,7 @@ export class Road {
     }
     if (this.guide) best = Math.atan2(this.guide[3] - this.guide[1], this.guide[2] - this.guide[0]);
     const arm = (dir, th) => ({ dir, th, bearing: th, axis: th, target: th, prevTurn: 0, n: [{ x: p.x, z: p.z, h: h0 }], Y: [], sx: [], sy: [], sz: [], done: 0 });
-    this.A = arm(1, best); this.B = arm(-1, best + Math.PI);
+    this.A = arm(1, best); this.B = arm(-1, this.guideB ? Math.atan2(this.guideB[3] - this.guideB[1], this.guideB[2] - this.guideB[0]) : best + Math.PI);
     const W = this.c.smooth; while (this.A.n.length < W + 4) this.grow(this.A); while (this.B.n.length < W + 4) this.grow(this.B);
     this.sMin = 0; this.sMax = 0; this.ensure(-this.step * 4, this.step * 4);
   }
@@ -49,7 +50,7 @@ export class Road {
      pick the heading with the least water, climbing and high ground. The short-range steering then aims for it. */
   /* guided arm: the bearing from the last node to a point about 350 m further along the guide path, or null when there is no guide, this is the free arm, or the path has ended */
   guideAim(arm, last) {
-    const g = this.guide; if (!g || arm.dir < 0) return null; const n = g.length / 2, d2 = (i) => (g[i * 2] - last.x) ** 2 + (g[i * 2 + 1] - last.z) ** 2;
+    const g = arm.dir > 0 ? this.guide : this.guideB; if (!g) return null; const n = g.length / 2, d2 = (i) => (g[i * 2] - last.x) ** 2 + (g[i * 2 + 1] - last.z) ** 2;
     let i = arm.gi || 0; while (i < n - 2 && d2(i + 1) < d2(i)) i++; arm.gi = i; if (i >= n - 2 && d2(n - 1) < 2500) return null;
     let j = i, acc = 0; while (j < n - 1 && acc < 350) { acc += Math.hypot(g[j * 2 + 2] - g[j * 2], g[j * 2 + 3] - g[j * 2 + 1]); j++; }
     const dx = g[j * 2] - last.x, dz = g[j * 2 + 1] - last.z; if (dx * dx + dz * dz < 900) return null; return Math.atan2(dz, dx);
@@ -78,6 +79,8 @@ export class Road {
     }
     arm.target = best;
   }
+  /* land height for a road node: natural, except near the start of a branch road, where it eases from the start height (so the branch meets the road it leaves at the same level) */
+  hAt(x, z) { const h = this.t.base(x, z), st = this.start; if (!st) return h; const w = Math.min(1, Math.hypot(x - st.x, z - st.z) / 260); return st.y + (h - st.y) * w * w * (3 - 2 * w); }
   /* one routing step for one arm */
   grow(arm) {
     const c = this.c, T = this.t, step = this.step, last = arm.n[arm.n.length - 1], sea = this.sea, wet = sea + c.clearance + 1;
@@ -101,7 +104,7 @@ export class Road {
       }
       if (cost < bestCost) { bestCost = cost; best = turn; }
     }
-    arm.th += best; arm.prevTurn = best; const x = last.x + Math.cos(arm.th) * step, z = last.z + Math.sin(arm.th) * step; arm.n.push({ x, z, h: T.base(x, z) });
+    arm.th += best; arm.prevTurn = best; const x = last.x + Math.cos(arm.th) * step, z = last.z + Math.sin(arm.th) * step; arm.n.push({ x, z, h: this.hAt(x, z) });
   }
   /* node g along the whole road: 0 is the start, positive on arm A, negative on arm B */
   raw(g) { return g >= 0 ? this.A.n[g] : this.B.n[-g]; }

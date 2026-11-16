@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 23:00  Multi-road engine step 1: RoadSet and branch roads at junctions
+Branch: feat/landscape-look (PR 36)
+What changed: new `world/roadset.js` (`RoadSet`: nearest, grade, drive, style over several roads; `terrain.attachRoad(roadSet)` in `main.js`), `world/router.js` (`config.road.start` and `guideBack`, `hAt` height blend: a road can start on another road; both arms can follow guides), `main.js` (branch roads built near each city of an `?india=` route and removed when far, their meshes updated and repositioned like the main road), one self-test (68 checks: branch starts at the road's height, follows its guide, nearest-road answers, one-road behaviour unchanged). Checked in the browser: six roads form a star at Delhi, no console errors, about 3 ms per headless step. Not done: traffic, pedestrians and the navigation graph on branches, interchanges and ramps, paint cut-outs, collision for branch bridges and walls, the physical choice replaced the panel only partly.
+For the other stream: `terrain.road` is now a `RoadSet` (it has `nearest`, `hit`, `style`, `grade`, `drive`); code that wants one Road should keep using the `road` it is given. Traffic and navigation over several roads are your area; please say how you want that shaped.
+Status: open
+
 ## 2026-11-18 21:00  Junction network: routes across roads, city gates, junction panel
 Branch: feat/landscape-look (PR 36)
 What changed: `world/network.js` (`slice`, `routeGuide`, `junctionChoices`), `main.js` (`?india=route&from&to`, junction panel, regenerate on choosing another road), `world/highway_plan.js` + `highway.js` + `road.js` (city gate boards over the road before each city, `gates` option), `docs/INDIA_MAP_PLAN.md`. Self-test cases added (67 checks, still passing). Checked in the browser (Delhi to Mumbai route, Jaipur gate and panel, switching to NH 62). Limit: one road at a time; the junction is a choice, not a visible crossing; no real side roads, no network traffic or navigation yet.

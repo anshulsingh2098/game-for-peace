@@ -35,6 +35,7 @@ import { rumbleFor } from './input/rumble.js';
 import { loadSave, writeSave } from './core/save.js';
 import { destinationsFor, HINDI, CITY } from './world/india_network.js';
 import { RoadNetwork } from './world/network.js';
+import { RoadSet } from './world/roadset.js';
 import { DRIVE_MODES, DRIVE_MODE_IDS } from './vehicle/physics.js';
 import { laneOffsets } from './traffic/sim.js';
 import { ActivityRunner, activitiesFor, recordResult } from './activities/activities.js';
@@ -140,7 +141,8 @@ const water = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2)
 let terrain, road, roadMesh, scatter, backdrop, landmarks, traffic = null, roadS = 0;
 const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.rings.length - 1].r * v.tile;      // far tiles leave out what the near grid is guaranteed to cover
   return { tile: f.tile, rings: [{ r: f.r, res: f.res }], budgetMs: 2, rebase: Infinity, inner: Math.floor(reach / f.tile) - 1, sink: f.sink }; };
-function makeWorld() { terrain = createTerrain(config); road = new Road(terrain, config); road.ensure(-2600, 2600); terrain.attachRoad(road); roadS = 0; }
+let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
+function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
 function makeScenery() {
@@ -389,6 +391,28 @@ function junctionAt(arc) {
     b.addEventListener('click', () => { if (c.same) { junctionPanel.style.display = 'none'; return; } const u = new URLSearchParams(location.search); u.set('india', c.road); u.set('from', city.id); u.set('toward', c.toward); u.delete('to'); u.delete('loc'); location.search = '?' + u.toString(); }); junctionPanel.appendChild(b); }
   junctionPanel.style.display = 'block';
 }
+/* Junction roads: near each city of the route the other roads through it are generated as real roads that cross the player's road (each follows its own highway path on both sides of the city,
+   starts on the player's road at the same height, and is graded into the land); they are removed again when the player is far away. Only the player's road has traffic and navigation. */
+const roadBox = r => { const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity }, p = {}; for (let s = r.sMin; s <= r.sMax; s += 150) { r.at(s, p); b.minX = Math.min(b.minX, p.x); b.maxX = Math.max(b.maxX, p.x); b.minZ = Math.min(b.minZ, p.z); b.maxZ = Math.max(b.maxZ, p.z); } return b; };
+function buildBranches(city) {
+  const R = indiaRoute; let sc = null; if (city.along <= 0) sc = 0; else { for (let s = Math.max(0, road.sMin); s < road.sMax; s += 20) { const a = road.arcAtS(s); if (a !== null && a >= city.along) { sc = s; break; } } } if (sc === null) return false;
+  const p = road.at(sc, {}), start = { x: p.x, y: p.y, z: p.z }, used = new Set(R.roadId ? [R.roadId] : R.legs.filter(l => l.from === city.id || l.to === city.id || (l.fromAlong <= city.along && l.toAlong >= city.along)).map(l => l.road));
+  for (const j of R.net.junction(city.id)) {
+    if (used.has(j.road)) continue; const rd = R.net.roads.get(j.road), i = rd.stops.findIndex(st => st.id === city.id), nxt = rd.stops[i + 1], prv = rd.stops[i - 1];
+    let gA = nxt ? R.net.guideFor(j.road, city.id, nxt.id) : null, gB = prv ? R.net.guideFor(j.road, city.id, prv.id) : null; if (!gA) { gA = gB; gB = null; } if (!gA) continue;
+    const cfg = { ...config, seed: config.seed + ':' + city.id + ':' + j.road, road: { ...config.road, guide: gA.pts, guideBack: gB ? gB.pts : null, start, style: rd.kind === 'nh' ? 'highway' : 'nh6' } };
+    const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); branches.push({ city: city.id, road: br, mesh: new RoadMesh(scene, br, br.style, grid.origin, {}), hint: 0 });
+  }
+  return true;
+}
+function dropBranches(cityId) { for (let i = branches.length - 1; i >= 0; i--) if (branches[i].city === cityId) { const b = branches[i]; roadSet.remove(b.road); grid.invalidate(roadBox(b.road)); b.mesh.dispose(); branches.splice(i, 1); } }
+const triedBranches = new Set();
+bus.on('world:rebuilt', () => triedBranches.clear());
+function updateBranches(px, pz) {
+  const R = indiaRoute; if (!R || !roadSet) return; const arc = road.guideArc(px, pz) || 0;
+  R.cities.forEach(c => { const d = Math.abs(arc - c.along), have = branches.some(b => b.city === c.id); if (d < 2400 && !have && !triedBranches.has(c.id)) { if (buildBranches(c)) triedBranches.add(c.id); } else if (d > 3600 && (have || triedBranches.has(c.id))) { dropBranches(c.id); triedBranches.delete(c.id); } });
+  for (const b of branches) { const s = b.road.closestS(px, pz, b.hint); b.hint = s; const box = b.road.ensure(s - 2600, s + 2600); if (box) grid.invalidate(box); b.mesh.update(s); }
+}
 function updateRoute() { if (!indiaRoute) return; const arc = road.guideArc(phys && mode !== 'fly' ? phys.x : cam.x, phys && mode !== 'fly' ? phys.z : cam.z) || 0, nxt = indiaRoute.cities.find(c => c.along > arc + 40); routeHud.style.display = 'block'; junctionAt(arc); routeHud.textContent = nxt ? indiaRoute.name + ' · next: ' + nxt.name + ', ' + Math.max(0, Math.round((nxt.along - arc) * 100 / 1000)) + ' km' : indiaRoute.name + ' · end of the path'; }
 function updateActivities(dt, px, pz) {
   runner.update(dt, px, pz); for (const m of actMarks.children) m.position.set(m.userData.w.x - grid.origin.x, m.userData.w.y + 30, m.userData.w.z - grid.origin.z);
@@ -423,7 +447,8 @@ function update(dt, now) {
   if (navDebug && nav) navDebug.update(nav, grid.origin);
   focus.x = px; focus.z = pz; if (mode === 'drive' && phys) { focus.dx = Math.cos(phys.yaw); focus.dz = Math.sin(phys.yaw); focus.speed = Math.abs(phys.u); } else focus.speed = 0;
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
-  if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
+  updateBranches(px, pz);
+  if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);

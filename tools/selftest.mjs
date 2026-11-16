@@ -13,6 +13,7 @@ import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
 import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
 import { CITIES, CITY, HIGHWAYS, RAIL, COAST as INDIA_COAST, routeKm, roadGraph, shortestRoute, nearestCity, distanceKm, gameKm, driveMinutes } from '../src/world/india_network.js';
 import { validTolls, tollCap, planHighway, RAIL_STEP, GANTRY_EVERY, TOLL_EVERY, TOLL_LEN, tollAt } from '../src/world/highway_plan.js';
+import { RoadSet } from '../src/world/roadset.js';
 import { RoadNetwork } from '../src/world/network.js';
 import { toGame, fromGame, smoothPath, pathLength, buildSkeleton, GAME_SCALE } from '../src/world/india_network.js';
 import { readFileSync as readSkeleton } from 'node:fs';
@@ -778,6 +779,20 @@ test('road network and guided road: junctions, projection, routes; a road follow
   assert.ok(n > 40 && worst < 450, 'the road stays within 450 m of its guide for the first 4.5 km (worst ' + Math.round(worst) + ' m)'); const arcOf = (x, z) => { let acc = 0, best = Infinity, arc = 0; for (let i = 0; i + 3 < sp.length; i += 2) { const dx = sp[i + 2] - sp[i], dz = sp[i + 3] - sp[i + 1], L = Math.hypot(dx, dz), f = Math.max(0, Math.min(1, ((x - sp[i]) * dx + (z - sp[i + 1]) * dz) / (L * L))), d = Math.hypot(x - (sp[i] + dx * f), z - (sp[i + 1] + dz * f)); if (d < best) { best = d; arc = acc + f * L; } acc += L; } return arc; };
   let prev = -1; for (const d of [1000, 2000, 3000, 4000, 5000]) { road.at(d, pt); const a = arcOf(pt.x, pt.z); assert.ok(a > prev + 250, 'the road keeps advancing along the guide: ' + Math.round(a) + ' after ' + d + ' m of road'); prev = a; } assert.ok(prev > g.length * 0.6 && prev < g.length + 300, 'and after 5 km of road it has covered most of the guide: ' + Math.round(prev) + ' of ' + Math.round(g.length));
   const free = new Road(createTerrain(makeConfig({ seed: 'guide-test' })), makeConfig({ seed: 'guide-test' })); assert.equal(free.guide, undefined, 'without a guide nothing changes');
+});
+
+test('road set: a road that branches off another one starts at its height, both are graded into the land, the nearest road answers', () => {
+  const cfg = makeConfig({ seed: 'branch-test' }), t = createTerrain(cfg), main = new Road(t, cfg); main.ensure(-1500, 3000); const set = new RoadSet(main); t.attachRoad(set);
+  const solo = []; for (let i = 0; i < 30; i++) { const x = i * 97 - 800, z = i * 41 - 300; solo.push([x, z, t.height(x, z), t.surface(x, z)]); } assert.ok(main.nearest(0, 0) !== undefined);
+  const jp = main.at(1200, {}), th = jp.th + Math.PI / 2, bcfg = { ...cfg, road: { ...cfg.road, start: { x: jp.x, y: jp.y, z: jp.z }, guide: [0, 0, Math.cos(th) * 600, Math.sin(th) * 600, Math.cos(th) * 1200, Math.sin(th) * 1200], guideBack: [0, 0, -Math.cos(th) * 600, -Math.sin(th) * 600, -Math.cos(th) * 1200, -Math.sin(th) * 1200] } };
+  const br = new Road(t, bcfg); br.ensure(-1500, 1500); set.add(br);
+  const b0 = br.at(0, {}); assert.ok(Math.hypot(b0.x - jp.x, b0.z - jp.z) < 1 && Math.abs(b0.y - jp.y) < 0.5, 'the branch starts on the road it leaves, at its height: ' + (b0.y - jp.y).toFixed(2));
+  let off = 0; for (const s2 of [200, 600, 1000, 1400]) { const p = br.at(s2, {}); let best = Infinity; for (let i = 0; i < br.guide.length; i += 2) best = Math.min(best, Math.hypot(br.guide[i] - p.x, br.guide[i + 1] - p.z)); off = Math.max(off, best); } assert.ok(off < 400, 'the branch follows its guide (worst ' + Math.round(off) + ' m)');
+  const bk = br.at(-800, {}); assert.ok(Math.abs(Math.atan2(Math.sin(Math.atan2(bk.z - jp.z, bk.x - jp.x) - (th + Math.PI)), Math.cos(Math.atan2(bk.z - jp.z, bk.x - jp.x) - (th + Math.PI)))) < 0.9, 'the other arm runs the other way across the main road (a crossroads)');
+  assert.ok(set.nearest(jp.x, jp.z) && set.hit.d < 1 && set.roads.length === 2); const q = br.at(500, {}); assert.ok(set.nearest(q.x, q.z) && set.last === br && set.hit.d < 1, 'the nearest road answers on the branch'); assert.ok(set.nearest(main.at(600, {}).x, main.at(600, {}).z) && set.last === main);
+  assert.ok(Math.abs(t.height(jp.x, jp.z) - jp.y) < 1.5 && Math.abs(t.drive(q.x, q.z) - q.y) < 0.6, 'the land under each road is level with it'); const surf = t.surface(q.x, q.z); assert.ok(surf === 'asphalt', 'wheels on the branch feel its surface: ' + surf);
+  const far = t.surface(jp.x + 3000, jp.z + 3000); assert.notEqual(far, 'asphalt'); set.remove(br); assert.equal(set.roads.length, 1); set.remove(main); assert.equal(set.roads.length, 1, 'the primary road cannot be removed');
+  const alone = []; for (let i = 0; i < 30; i++) { const x = i * 97 - 800, z = i * 41 - 300; alone.push([x, z, t.height(x, z), t.surface(x, z)]); } assert.deepEqual(alone, solo, 'with the branch gone the land is as before (one-road behaviour is unchanged)');
 });
 
 console.log(`\n${passed} checks passed`);
