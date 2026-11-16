@@ -24,6 +24,13 @@ function boxPart(list, w, h, d, cx, cy, cz, frame, hex, uv) {
   g.setAttribute('color', new THREE.BufferAttribute(a, 3)); g.translate(cx, cy, cz); g.rotateY(frame.yaw); g.translate(frame.x, frame.y, frame.z); list.push(g);
 }
 
+/* a hemisphere (a dome): radius r, height h, centred at (cx, cy, cz) in the plot's frame; flat colour, same attributes as boxPart so the pieces merge */
+function domePart(list, r, h, cx, cy, cz, frame, hex) {
+  const g = new THREE.SphereGeometry(r, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2), n = g.attributes.position.count, c = col(hex), a = new Float32Array(n * 3), t = g.attributes.uv; g.scale(1, h / r, 1);
+  for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; t.setXY(i, WALL_UV, WALL_UV); }
+  g.setAttribute('color', new THREE.BufferAttribute(a, 3)); g.translate(cx, cy, cz); g.rotateY(frame.yaw); g.translate(frame.x, frame.y, frame.z); list.push(g);
+}
+
 export class District {
   /* spec: the region's `district` data; seed: string; blocked(x, z): true where a landmark or the sea is; rows: road rows per piece (as RoadMesh) */
   constructor(scene, road, terrain, style, origin, rows, { spec, seed, blocked }) {
@@ -61,6 +68,13 @@ export class District {
       if (pl.style === 'colonial') for (const sx of [-1, 1]) boxPart(walls, 0.5, H, 0.5, sx * (w / 2 - 0.2), GROUND_H + H / 2, -d / 2 - 0.1, frame, 0xf0e6cf, 'plain');
       if (fl >= 3 && pl.extras > 0.25) for (let f = 2; f < fl; f += 2) { boxPart(walls, w * 0.6, 0.15, 1.0, 0, GROUND_H + f * FLOOR_H - 0.2, -d / 2 - 0.5, frame, 0xcfc8b8, 'plain'); boxPart(walls, w * 0.6, 0.9, 0.06, 0, GROUND_H + f * FLOOR_H + 0.3, -d / 2 - 1.0, frame, 0x2d3338, 'plain'); }
       if (pl.extras > 0.5) { boxPart(walls, 1.8, 1.6, 1.8, w * 0.2, GROUND_H + H + 1.3, d * 0.2, frame, 0x1b1d20, 'plain'); boxPart(walls, 0.2, 0.9, 0.2, w * 0.2, GROUND_H + H + 0.5, d * 0.2, frame, 0x3a3d40, 'plain'); }
+      if (pl.style === 'mughal') {                                                                                                                  // a central dome on a drum and four small pavilions (chhatris) at the corners of the roof
+        const top = GROUND_H + H + 0.5, dr = Math.min(w, d) * 0.26; boxPart(walls, dr * 2.1, 0.9, dr * 2.1, 0, top + 0.45, 0, frame, 0xe6d9bf, 'plain'); domePart(walls, dr, dr * 1.15, 0, top + 0.9, 0, frame, 0xf3ecdc);
+        if (w > 9) for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const px = sx * (w / 2 - 1.1), pz = sz * (d / 2 - 1.1); for (const [ax, az] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) boxPart(walls, 0.18, 1.5, 0.18, px + ax, top + 0.75, pz + az, frame, 0xd9ccb0, 'plain'); domePart(walls, 0.85, 0.7, px, top + 1.5, pz, frame, 0xf3ecdc); }
+      }
+      if (pl.style === 'old-city') {                                                                                                                // jharokha: enclosed balconies that jut out over the street, with a small cap, on the upper floors
+        const bx = w > 10 ? [-w * 0.25, w * 0.25] : [0]; for (let f = 1; f < fl; f++) for (const x0 of bx) { const y0 = GROUND_H + f * FLOOR_H; boxPart(walls, 2.1, 1.5, 0.95, x0, y0 + 0.8, -d / 2 - 0.5, frame, 0xb5654a, 'plain'); boxPart(walls, 2.4, 0.18, 1.15, x0, y0 + 1.65, -d / 2 - 0.55, frame, 0xd9a98a, 'plain'); boxPart(walls, 1.5, 0.9, 0.06, x0, y0 + 0.8, -d / 2 - 1.0, frame, 0x2a1e18, 'plain'); }
+      }
     }
     // furniture
     for (const f of plan.furniture) {

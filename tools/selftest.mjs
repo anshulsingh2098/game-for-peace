@@ -23,7 +23,7 @@ import { readFileSync as readSkeleton } from 'node:fs';
 import { destinationsFor, HINDI } from '../src/world/india_network.js';
 import { roadStyleById } from '../src/world/roadstyles.js';
 import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
-import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets, branchMode } from '../src/traffic/sim.js';
+import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets, branchMode, DEFAULT_KINDS } from '../src/traffic/sim.js';
 import { Autodrive } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
@@ -849,6 +849,14 @@ test('region junctions (N11): validated, Mumbai has crossing streets', () => {
   const m = REGIONS.find(r => r.id === 'mumbai'); assert.ok(m.junctions && m.junctions.length >= 2, 'Mumbai has crossing streets'); assert.deepEqual(validateRegion(m), []);
   const bad = (j) => validateRegion({ ...m, junctions: j }).length > 0; assert.ok(bad([{ s: 10, style: 'boulevard', bearing: 1.5, arm: 800 }]), 'too close to the start'); assert.ok(bad([{ s: 500, style: 'moon', bearing: 1.5, arm: 800 }]), 'unknown style'); assert.ok(bad([{ s: 500, style: 'boulevard', bearing: 9, arm: 800 }]), 'bearing out of range'); assert.ok(bad([{ s: 500, style: 'boulevard', bearing: 1.5, arm: 50 }]), 'street too short'); assert.ok(bad('x')); assert.ok(bad(Array(7).fill({ s: 500, style: 'boulevard', bearing: 1.5, arm: 800 })), 'at most six'); assert.ok(!bad([]), 'none is fine');
   for (const r of REGIONS) if (r.junctions) for (const j of r.junctions) assert.ok(Math.abs(Math.sin(j.bearing)) > 0.5, r.id + ' crossing streets really cross the road');
+});
+
+test('Indian traffic kinds: buses and cows join the mix in proportion; a cow ambles and the cars behind it wait', () => {
+  const kinds = trafficKinds(DEFAULT_KINDS, { car: 50, van: 0, truck: 10, 'two-wheeler': 20, bus: 10, cow: 5 }), names = kinds.map(k => k.name); assert.ok(names.includes('bus') && names.includes('cow') && names.includes('two-wheeler'), 'extras are added: ' + names.join(','));
+  const W = DEFAULT_KINDS.reduce((a, k) => a + k.weight, 0), wb = kinds.find(k => k.name === 'bus').weight, wc = kinds.find(k => k.name === 'cow').weight; assert.ok(Math.abs(wb / (W * 10 / 60) - 1) < 1e-9 && Math.abs(wc / (W * 5 / 60) - 1) < 1e-9, 'bus and cow weights follow the mix, with the bus not counted twice');
+  const cfg = makeConfig({ seed: 'cows' }), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-1500, 3000); t.attachRoad(r); const sim = new TrafficSim(r, { seed: 'cow-sim', mode: 'high', drive: 'left', scale: 1 }); sim.setKinds(trafficKinds(DEFAULT_KINDS, { car: 50, truck: 10, 'two-wheeler': 20, bus: 10, cow: 30 })); 
+  const seen = { cow: [], sedan: [], bus: [] }; for (let i = 0; i < 1500; i++) { sim.update(1 / 10, { x: 9e5, z: 9e5, s: 800, u: 0, yaw: 0 }); if (i > 600) for (const c of sim.cars) if (seen[c.kind]) seen[c.kind].push(c.speed); }
+  assert.ok(seen.cow.length > 20 && Math.max(...seen.cow) < 5, 'a cow ambles (fastest ' + Math.max(...seen.cow).toFixed(1) + ' m/s)'); assert.ok(seen.sedan.length > 20, 'cars are on the road too'); const avg = l => l.reduce((x, y) => x + y, 0) / l.length; assert.ok(avg(seen.sedan) < 14, 'cars queue behind the cows instead of driving through them (average ' + avg(seen.sedan).toFixed(1) + ' m/s)');
 });
 
 console.log(`\n${passed} checks passed`);

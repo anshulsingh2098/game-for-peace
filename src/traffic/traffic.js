@@ -40,6 +40,12 @@ function boxGeometry(kind) {
   } else if (kind === 'auto-rickshaw') {                                                                            // a three-wheeler: yellow body, black hood, open sides
     parts.push(part(0.3, 0.6, 0.6, 0, 0.32, L / 2 - 0.5, TYRE), part(0.26, 0.6, 0.6, -w / 2 + 0.15, 0.32, -L / 2 + 0.6, TYRE), part(0.26, 0.6, 0.6, w / 2 - 0.15, 0.32, -L / 2 + 0.6, TYRE));
     parts.push(part(w * 0.85, 0.55, L * 0.9, 0, 0.62, 0, 0xf2c230), part(w * 0.8, 0.12, L * 0.62, 0, 1.55, -0.25, 0x1d2024), part(0.08, 0.95, 0.08, -w * 0.4, 1.05, 0.55, 0x30363b), part(0.08, 0.95, 0.08, w * 0.4, 1.05, 0.55, 0x30363b), part(0.08, 0.95, 0.08, -w * 0.4, 1.05, -0.9, 0x30363b), part(0.08, 0.95, 0.08, w * 0.4, 1.05, -0.9, 0x30363b), part(w * 0.7, 0.4, 0.8, 0, 0.98, -0.4, 0x39414a), part(w * 0.7, 0.5, 0.12, 0, 1.15, L / 2 - 0.1, GLASS));
+  } else if (kind === 'bus') {                                                                                      // a city bus: red body, cream roof band, a row of windows, doors at the front
+    parts.push(part(w, 1.3, L, 0, 0.95, 0, 0xb5352c), part(w * 1.01, 0.9, L * 0.9, 0, 2.05, 0, GLASS), part(w, 0.45, L, 0, 2.75, 0, 0xefe6cf), part(w * 0.9, 0.12, L * 0.95, 0, 3.05, 0, 0xd9d2bf), part(w * 1.02, 1.6, 0.9, 0, 1.2, L / 2 - 1.2, 0x2a2f36));
+    for (const z of [L / 2 - 1.9, -L / 2 + 2.2]) for (const s of [-1, 1]) parts.push(part(0.3, 0.95, 0.95, s * (w / 2 - 0.05), 0.48, z, TYRE));
+  } else if (kind === 'cow') {                                                                                      // a cow: body, head with horns, four legs, a tail
+    parts.push(part(0.62, 0.7, 1.25, 0, 0.95, -0.1, 0xe8e1d2), part(0.3, 0.38, 0.45, 0, 1.2, 0.78, 0xd9d0bd), part(0.5, 0.12, 0.12, 0, 1.45, 0.78, 0xefe6cf), part(0.12, 0.45, 0.12, 0, 0.9, -0.82, 0xcfc6b2), part(0.38, 0.25, 0.5, 0, 0.9, 0.2, 0x9b7653));
+    for (const z of [0.4, -0.6]) for (const s of [-1, 1]) parts.push(part(0.14, 0.62, 0.14, s * 0.22, 0.31, z, 0xd9d0bd));
   } else if (kind === 'truck') {
     parts.push(part(w, 1.0, 2.2, 0, 1.2, L / 2 - 1.1, WHITE), part(w * 0.92, 1.0, 1.6, 0, 1.9, L / 2 - 1.1, GLASS), part(w, 2.4, L - 2.5, 0, 1.9, -1.25, 0xd9dde2));
     for (const z of [L / 2 - 1.3, -L / 2 + 1.3, -L / 2 + 2.6]) for (const s of [-1, 1]) parts.push(part(0.3, 0.9, 0.9, s * (w / 2 - 0.1), 0.45, z, TYRE));
@@ -101,6 +107,7 @@ export class Traffic {
       this.q.setFromEuler(this.e.set(0, Math.PI / 2 - car.yaw, 0)); this.m.compose(this.v.set(car.x - o.x, car.y + 0.02, car.z - o.z), this.q, this.one);
       if (g.rest) g.rest.setMatrixAt(i, this.m); if (g.paint) { g.paint.setMatrixAt(i, this.m); g.paint.setColorAt(i, this.c.setHex(PAINT[car.colour % PAINT.length])); }
       const L = car.len / 2, hy = (car.h || 1.5) * 0.42;
+      if (car.kind === 'cow') continue;                                                                                   // a cow has no lights
       for (const s of [-1, 1]) {
         this.l.compose(this.v.set(s * (car.w / 2 - 0.4), hy, -L - 0.02), this.q.identity(), this.one); this.l.premultiply(this.m); this.tail.setMatrixAt(nt, this.l); this.tail.setColorAt(nt++, this.c.setRGB(car.brake ? 1 : night ? 0.55 : 0.28, car.brake ? 0.05 : 0.02, 0.02));
         this.l.compose(this.v.set(s * (car.w / 2 - 0.4), hy, L + 0.02), this.q.identity(), this.one); this.l.premultiply(this.m); this.head.setMatrixAt(nh++, this.l);

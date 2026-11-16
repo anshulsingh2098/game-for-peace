@@ -40,7 +40,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | # | Limit | Tag |
 |---|---|---|
 | 3.1 | Mumbai district: a boulevard and a two-lane street now cross the main road (region data `junctions`, with the district, traffic and a shared signal); their corner buildings overlap the main road's plots; still no promenade, no designed route, no phone numbers | P2 [build] |
-| 3.2 | Delhi, Agra and Bhopal now have a built-up district and a crossing street (region data), but the buildings are the same procedural kit as Mumbai with other colour palettes: they look European, not Mughal or old-city; Jaipur, Kolkata, Chennai, Bengaluru, Hyderabad and the other regions have none | P2 [build] [owner 1.2] |
+| 3.2 | Delhi, Agra and Bhopal have a built-up district and a crossing street (region data). Mughal buildings now have a central dome and four corner pavilions (chhatris) and old-city buildings have projecting balconies (jharokha), so they no longer look like Mumbai; arches, jali screens, haveli courtyards, narrow lanes and minarets are not built; Jaipur, Kolkata, Chennai, Bengaluru, Hyderabad and the other regions have no district | P2 [build] [owner 1.2] |
 | 3.3 | No city worlds are inserted into the India map: a city is only a name on a gate sign and a junction | P2 [build] |
 | 3.4 | Buildings are procedural boxes with textures; no interiors | P2 [build] |
 | 3.5 | Dhabas, roadside shrines, chai stalls, truck art, market clutter are not built | P3 [build] |
@@ -49,7 +49,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 ## 4. Traffic, pedestrians, vehicles (N12, N13)
 | # | Limit | Tag |
 |---|---|---|
-| 4.1 | Two-wheelers and auto-rickshaws are procedural boxes; no buses with local liveries, cows, hand-carts, tempos, e-rickshaws | P2 [build] [owner 1.5] |
+| 4.1 | City buses (red, cream band) and cows (slow, cars queue behind them) are in the traffic mixes; two-wheelers and auto-rickshaws are procedural boxes; still no hand-carts, tempos, e-rickshaws, bus liveries by city, or real models | P2 [build] [owner 1.5] |
 | 4.2 | No horns as behaviour, no lane-less weaving, no wrong-way riders | P3 [build] [B] |
 | 4.3 | Pedestrians are box figures: no real models, no reactions to the car or the player, not solid to the car | P2 [build] [B] [owner 1.5] |
 | 4.4 | Pedestrians and the navigation graph exist on the main road only (not on side roads or at junctions) | P1 [build] [B] |
@@ -119,6 +119,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 19 Nov 2026: domes, chhatris and jharokha balconies on district buildings (3.2 part); city buses and cows in traffic (4.1 part).
 - 19 Nov 2026: districts and a crossing street for Delhi, Agra and Bhopal (3.2 part; the look is still the Mumbai kit).
 - 19 Nov 2026: Mumbai crossing streets with district, traffic and signal (3.1 part); India-mode roads allow tighter bends (7.4 part).
 - 19 Nov 2026: cars wait for the player in a crossing (4.6 part), toll toast (4.7 part), India drive activities and a results card (5.4 part), Jaipur to Kota and Agra to Lucknow roads (8.3 part), region palette and tint blending along a route (2.4 part).

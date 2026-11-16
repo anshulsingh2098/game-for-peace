@@ -28,7 +28,7 @@
 import { DEFAULT_CONFIG } from '../core/config.js';
 export const REGION_SCHEMA = 1;
 export const KNOWN_LANDMARKS = ['gateway', 'tajHotel', 'marine', 'indiaGate', 'tajMahal', 'lighthouse'];
-export const VEHICLE_KINDS = ['car', 'van', 'truck', 'two-wheeler', 'auto-rickshaw', 'bus'];
+export const VEHICLE_KINDS = ['car', 'van', 'truck', 'two-wheeler', 'auto-rickshaw', 'bus', 'cow'];
 export const ROAD_STYLE_IDS = ['two-lane', 'highway', 'boulevard', 'dirt', 'gravel', 'nh6', 'ghat'];
 export const TIME_IDS = ['dawn', 'day', 'dusk', 'night'], WEATHER_IDS = ['clear', 'overcast', 'rain', 'fog', 'storm', 'snow'];
 export const DISTRICT_STYLES = { colonial: 1, 'art-deco': 1, modern: 1, mixed: 1, mughal: 1, 'old-city': 1 };         // palette names the district builder knows (district_plan.js PALETTES)
@@ -45,7 +45,7 @@ const MUMBAI = {
   district: { styles: ['colonial', 'art-deco', 'colonial', 'mixed'], floors: [3, 7], market: true },
   junctions: [{ s: 560, style: 'boulevard', bearing: Math.PI / 2, arm: 1200 }, { s: 1300, style: 'two-lane', bearing: -Math.PI / 2 + 0.25, arm: 900 }],
   buildings: { styles: ['colonial', 'art-deco'], density: 0.8 },
-  traffic: { mix: { car: 62, 'two-wheeler': 20, 'auto-rickshaw': 14, truck: 4 }, scale: 1 },
+  traffic: { mix: { car: 62, 'two-wheeler': 20, 'auto-rickshaw': 14, truck: 4 , bus: 6, cow: 1 }, scale: 1 },
   population: { density: 0.9, archetypes: ['commuter', 'vendor', 'tourist'] },
   audio: { ambient: 'coastal-city' },
   landmarks: [{ kind: 'marine', s: 250, off: 40 }, { kind: 'gateway', s: 650, off: 70, sea: true }, { kind: 'tajHotel', after: 'gateway', gap: 130, range: 500, off: 95, sea: true }],
@@ -62,7 +62,7 @@ const DELHI = {
   district: { styles: ['colonial', 'modern', 'colonial'], floors: [2, 5], market: false },
   junctions: [{ s: 950, style: 'boulevard', bearing: Math.PI / 2, arm: 1200 }],
   buildings: { styles: ['colonial', 'modern'], density: 0.6 },
-  traffic: { mix: { car: 66, 'two-wheeler': 18, 'auto-rickshaw': 10, truck: 6 }, scale: 1 },
+  traffic: { mix: { car: 66, 'two-wheeler': 18, 'auto-rickshaw': 10, truck: 6 , bus: 5, cow: 3 }, scale: 1 },
   population: { density: 0.7, archetypes: ['commuter', 'vendor', 'tourist'] },
   audio: { ambient: 'plains-city' },
   landmarks: [{ kind: 'indiaGate', s: 500, off: 95 }],
@@ -79,7 +79,7 @@ const AGRA = {
   district: { styles: ['mughal', 'old-city', 'mughal', 'modern'], floors: [2, 4], market: true },
   junctions: [{ s: 800, style: 'two-lane', bearing: Math.PI / 2 - 0.2, arm: 1000 }],
   buildings: { styles: ['mughal', 'modern'], density: 0.4 },
-  traffic: { mix: { car: 55, 'two-wheeler': 25, 'auto-rickshaw': 14, truck: 6 }, scale: 0.7 },
+  traffic: { mix: { car: 55, 'two-wheeler': 25, 'auto-rickshaw': 14, truck: 6 , bus: 4, cow: 4 }, scale: 0.7 },
   population: { density: 0.6, archetypes: ['tourist', 'vendor', 'commuter'] },
   audio: { ambient: 'plains-town' },
   landmarks: [{ kind: 'tajMahal', s: 600, off: 250 }],
@@ -97,7 +97,7 @@ const BHOPAL = {
   district: { styles: ['old-city', 'mixed', 'old-city'], floors: [2, 4], market: true },
   junctions: [{ s: 900, style: 'two-lane', bearing: Math.PI / 2, arm: 1000 }],
   buildings: { styles: ['mixed', 'old-city'], density: 0.5 },
-  traffic: { mix: { car: 52, 'two-wheeler': 30, 'auto-rickshaw': 12, truck: 6 }, scale: 0.6 },
+  traffic: { mix: { car: 52, 'two-wheeler': 30, 'auto-rickshaw': 12, truck: 6 , bus: 4, cow: 3 }, scale: 0.6 },
   population: { density: 0.5, archetypes: ['commuter', 'vendor'] },
   audio: { ambient: 'lake-town' },
   landmarks: [],
@@ -148,7 +148,7 @@ const RAJASTHAN = {
   vegetation: { trees: 0.0007, rocks: 0.0012, bushes: 0.0035, tufts: 0.003, pineBias: -0.5, tint: [1.15, 0.98, 0.65] },
   roads: { style: 'nh6', maxAlt: 400, drive: 'left', density: 0.7 },
   buildings: { styles: ['mixed', 'old-city'], density: 0.2 },
-  traffic: { mix: { car: 36, 'two-wheeler': 20, truck: 32, bus: 12 }, scale: 0.8 },
+  traffic: { mix: { car: 36, 'two-wheeler': 20, truck: 32, bus: 12 , cow: 2 }, scale: 0.8 },
   population: { density: 0.3, archetypes: ['commuter', 'vendor'] },
   audio: { ambient: 'dry-plains' },
   landmarks: [],
@@ -164,7 +164,7 @@ const KERALA = {
   vegetation: { trees: 0.017, rocks: 0.0003, bushes: 0.003, tufts: 0.012, pineBias: -0.95, tint: [0.88, 1.12, 0.78] },
   roads: { style: 'two-lane', maxAlt: 150, drive: 'left', density: 0.9 },
   buildings: { styles: ['mixed'], density: 0.5 },
-  traffic: { mix: { car: 30, 'two-wheeler': 38, 'auto-rickshaw': 16, bus: 10, truck: 6 }, scale: 0.9 },
+  traffic: { mix: { car: 30, 'two-wheeler': 38, 'auto-rickshaw': 16, bus: 10, truck: 6 , cow: 1 }, scale: 0.9 },
   population: { density: 0.6, archetypes: ['commuter', 'vendor'] },
   audio: { ambient: 'coastal-town' },
   landmarks: [{ kind: 'lighthouse', s: 700, off: 80, sea: true, range: 3000 }],
@@ -179,7 +179,7 @@ const DECCAN = {
   vegetation: { trees: 0.0048, rocks: 0.0005, bushes: 0.0014, tufts: 0.02, pineBias: -0.4, tint: [1.05, 1.0, 0.8], clearRoad: 17 },
   roads: { style: 'nh6', maxAlt: 190, drive: 'left', density: 0.8 },
   buildings: { styles: ['mixed'], density: 0.3 },
-  traffic: { mix: { car: 44, truck: 26, 'two-wheeler': 20, bus: 10 }, scale: 0.8 },
+  traffic: { mix: { car: 44, truck: 26, 'two-wheeler': 20, bus: 10 , cow: 1 }, scale: 0.8 },
   population: { density: 0.3, archetypes: ['commuter', 'vendor'] },
   audio: { ambient: 'open-country' },
   landmarks: [],
