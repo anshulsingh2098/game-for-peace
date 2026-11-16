@@ -13,6 +13,8 @@ import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
 import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
 import { CITIES, CITY, HIGHWAYS, RAIL, COAST as INDIA_COAST, routeKm, roadGraph, shortestRoute, nearestCity, distanceKm, gameKm, driveMinutes } from '../src/world/india_network.js';
 import { validTolls, tollCap, planHighway, RAIL_STEP, GANTRY_EVERY, TOLL_EVERY, TOLL_LEN, tollAt } from '../src/world/highway_plan.js';
+import { toGame, fromGame, smoothPath, pathLength, buildSkeleton, GAME_SCALE } from '../src/world/india_network.js';
+import { readFileSync as readSkeleton } from 'node:fs';
 import { destinationsFor, HINDI } from '../src/world/india_network.js';
 import { roadStyleById } from '../src/world/roadstyles.js';
 import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
@@ -736,6 +738,17 @@ test('highway furniture (national highway): guardrails, km stones, sign gantries
   assert.deepEqual(planHighway({ road: { ...road, style: ROAD_STYLES.highway }, seed: 'x', k: 0, s0: 0, s1: 5000, dests }), { rails: [], stones: [], gantries: [], tolls: [], circles: [] }, 'other styles get nothing');
   assert.equal(tollCap(-3), 4); assert.equal(tollCap(0), 4); assert.ok(tollCap(30) > 4 && tollCap(30) < tollCap(90) && tollCap(1000) === 40, 'cars ease down to walking pace at the booths'); assert.deepEqual(validTolls(road, 0, 20000), plan.tolls.map(t => t.s), 'the traffic and the plan agree where the plazas are'); assert.equal(validTolls(line(s => (s > 1000 && s < 5000 ? 1 : 0)), 0, 8000).length, tollAt(0, 8000).filter(t => !(t + TOLL_LEN > 1000 && t < 5000)).length);
   const d = destinationsFor(18.52, 73.86); assert.ok(d.length >= 2 && d.some(x => x.id === 'mumbai') && d.every((x, i) => i === 0 || x.km >= d[i - 1].km), 'destinations near Pune, nearest first'); assert.ok(d.every(x => x.en && (x.hi || !HINDI[x.id]))); assert.equal(destinationsFor(0, 0).length >= 0, true);
+});
+
+test('India game space and skeleton (1:100): conversions round-trip, paths have the right length, the shipped skeleton file is current', () => {
+  for (const [la, lo] of [[28.61, 77.21], [8.08, 77.54], [34.08, 74.8], [26.14, 91.74]]) { const g = toGame(la, lo), b = fromGame(g.x, g.z); assert.ok(Math.abs(b.lat - la) < 1e-9 && Math.abs(b.lon - lo) < 1e-9); }
+  const d = toGame(28.61, 77.21), m = toGame(19.08, 72.88), km = Math.hypot(d.x - m.x, d.z - m.z) / 1000; assert.ok(km > 11 && km < 12.5, 'Delhi to Mumbai in a straight line is about 1,150 real km = 11.5 game km, got ' + km.toFixed(2));
+  assert.ok(toGame(30, 80).z < toGame(20, 80).z, 'north is up (smaller z)'); assert.ok(Math.abs(toGame(22.5, 80).x) < 1e-9 && Math.abs(toGame(22.5, 80).z) < 1e-9, 'the origin is the centre of India');
+  const gq = HIGHWAYS.find(h => h.id === 'gq-delhi-mumbai'), pts = smoothPath(gq.cities), len = pathLength(pts) / 1000; assert.ok(len > 12 && len < 14, 'the Delhi to Mumbai highway centre path is about 12.8 game km at 1:100 (the real road is about 10% longer: the local bends the route planner adds): ' + len.toFixed(2)); assert.ok(Math.abs(pts[0][0] - toGame(28.61, 77.21).x) < 1e-6 && Math.abs(pts.at(-1)[0] - toGame(19.08, 72.88).x) < 1e-6, 'the path starts and ends on its cities');
+  const sk = buildSkeleton(); assert.deepEqual(sk, buildSkeleton(), 'deterministic'); assert.equal(sk.roads.length, HIGHWAYS.length); assert.equal(sk.rails.length, RAIL.length); assert.equal(sk.nodes.length, CITIES.length); assert.ok(sk.bounds.x1 - sk.bounds.x0 < 30000 && sk.bounds.z1 - sk.bounds.z0 < 35000, 'India fits in about 25 x 30 game km');
+  const gqTotal = sk.roads.filter(r => r.kind === 'gq').reduce((a, r) => a + r.len, 0) / 1000; assert.ok(gqTotal > 50 && gqTotal < 57, 'the Golden Quadrilateral centre paths at 1:100 total about 53 game km (the published road is 5,846 km): ' + gqTotal.toFixed(1));
+  const wp = buildSkeleton(GAME_SCALE, { waypoints: { 'gq-delhi-mumbai': [[28.61, 77.21], [26.9, 75.8], [19.08, 72.88]] } }); assert.deepEqual(wp.roads[0].cities, gq.cities, 'waypoints replace the geometry, not the city list'); assert.notEqual(wp.roads[0].len, sk.roads[0].len);
+  const shipped = JSON.parse(readSkeleton(new URL('../assets/india/skeleton.json', import.meta.url), 'utf8')); assert.deepEqual(shipped, JSON.parse(JSON.stringify(sk)), 'assets/india/skeleton.json is out of date: run node tools/build_india_skeleton.mjs');
 });
 
 console.log(`\n${passed} checks passed`);

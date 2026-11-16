@@ -24,7 +24,7 @@ function near(e) { const r = cv.getBoundingClientRect(), d = devicePixelRatio ||
 cv.addEventListener('click', e => {
   const c = near(e); if (!c) { pick = []; route = null; info.textContent = 'Click a city, then another, to see the shortest road route.'; draw(); return; }
   if (pick.length >= 2) pick = []; pick.push(c.id); route = null;
-  if (pick.length === 2) { const r = shortestRoute(pick[0], pick[1], graph), sc = +$('sc').value || 25; route = r;
+  if (pick.length === 2) { const r = shortestRoute(pick[0], pick[1], graph), sc = +$('sc').value || 100; route = r;
     info.textContent = r ? CITY[pick[0]].name + ' to ' + CITY[pick[1]].name + ': ' + Math.round(r.km) + ' km by road, via ' + r.cities.map(i => CITY[i].name).join(', ') + '. At 1:' + sc + ' that is ' + gameKm(r.km, sc).toFixed(0) + ' game km, about ' + Math.round(driveMinutes(gameKm(r.km, sc))) + ' min at 100 km/h.' : 'No road route found.'; }
   else info.textContent = c.name + ' (' + c.state + ', ' + c.tier + (c.tags.length ? ', ' + c.tags.join(' ') : '') + '). Click a second city.';
   draw();

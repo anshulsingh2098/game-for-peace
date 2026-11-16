@@ -106,3 +106,32 @@ export function destinationsFor(lat, lon, graph = roadGraph()) {
   for (const e of graph.get(home.city.id)) { if (seen.has(e.to)) continue; seen.add(e.to); out.push({ id: e.to, en: CITY[e.to].name, hi: HINDI[e.to] || '', km: Math.round(e.km) }); }
   return out.sort((a, b) => a.km - b.km);
 }
+
+/* ---------- game space (docs/INDIA_MAP_PLAN.md section 9) ----------
+   The whole country on one flat plane, north up, metres: x east, z south (the game's z points down the map). A simple equirectangular map about the centre of India, so every distance is right to a
+   few per cent across the country. `scale` is the compression: 100 means 1 real km becomes 10 game metres, so Delhi to Mumbai (about 1,400 road km) is about 14 game km. Cities are points here;
+   the detailed city worlds are inserted at their points at a larger scale later. */
+export const GAME_SCALE = 100, ORIGIN = { lat: 22.5, lon: 80.0 };
+const KM_LAT = 110.57, KM_LON = 111.32 * Math.cos(ORIGIN.lat * RAD);                // km per degree at the origin
+export function toGame(lat, lon, scale = GAME_SCALE) { return { x: (lon - ORIGIN.lon) * KM_LON * 1000 / scale, z: -(lat - ORIGIN.lat) * KM_LAT * 1000 / scale }; }
+export function fromGame(x, z, scale = GAME_SCALE) { return { lat: ORIGIN.lat - z * scale / 1000 / KM_LAT, lon: ORIGIN.lon + x * scale / 1000 / KM_LON }; }
+
+/* a smooth path (Catmull-Rom) through the cities of a list, in game metres, with `per` points per leg; the real alignment (later: waypoints from OpenStreetMap) replaces the straight legs, and the
+   game's route planner adds the local bends */
+export function smoothPath(ids, scale = GAME_SCALE, per = 8, waypoints = null) {
+  const P = (waypoints && waypoints.length >= 2 ? waypoints.map(w => toGame(w[0], w[1], scale)) : ids.map(id => toGame(CITY[id].lat, CITY[id].lon, scale))), out = [];
+  for (let i = 0; i < P.length - 1; i++) { const a = P[Math.max(0, i - 1)], b = P[i], c = P[i + 1], d = P[Math.min(P.length - 1, i + 2)];
+    for (let k = 0; k < per; k++) { const t = k / per, t2 = t * t, t3 = t2 * t, f = (p0, p1, p2, p3) => 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3); out.push([f(a.x, b.x, c.x, d.x), f(a.z, b.z, c.z, d.z)]); } }
+  out.push([P[P.length - 1].x, P[P.length - 1].z]); return out;
+}
+export const pathLength = pts => { let d = 0; for (let i = 1; i < pts.length; i++) d += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return d; };
+
+/* the whole skeleton at a scale: nodes (cities) and roads/rails as smoothed paths in game metres. Output of tools/build_india_skeleton.mjs, which writes it to assets/india/skeleton.json */
+export function buildSkeleton(scale = GAME_SCALE, opts = {}) {
+  const r = v => Math.round(v * 10) / 10, wp = opts.waypoints || {};
+  const nodes = CITIES.map(c => { const g = toGame(c.lat, c.lon, scale); return { id: c.id, name: c.name, x: r(g.x), z: r(g.z), tier: c.tier }; });
+  const path = (l, kind) => { const pts = smoothPath(l.cities, scale, 8, wp[l.id]); return { id: l.id, name: l.name, kind, nh: l.nh || null, cities: l.cities.slice(), len: Math.round(pathLength(pts)), pts: pts.flat().map(r) }; };
+  const xs = nodes.map(n => n.x), zs = nodes.map(n => n.z);
+  return { version: 1, scale, origin: ORIGIN, bounds: { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs) }, nodes, roads: HIGHWAYS.map(h => path(h, h.kind)), rails: RAIL.map(l => path(l, 'rail')),
+    provenance: opts.provenance || 'city positions entered by hand (no outside map data); corridor lists from public descriptions; paths are smoothed straight legs, not surveyed alignments' };
+}
