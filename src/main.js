@@ -57,7 +57,7 @@ import { Radio } from './audio/radio.js';
 import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
 import { Gps } from './ui/gps.js';
-import { RailLine, findCrossings } from './world/rail.js';
+import { RailLine, RailNetwork, findCrossings } from './world/rail.js';
 import { RailView } from './world/rail_view.js';
 import { LOCATIONS, locationConfig, locationById, LEGACY, START_LOCATION, pickerLocations } from './world/locations.js';
 import { Landmarks } from './world/landmarks.js';
@@ -75,7 +75,7 @@ const wantWorld = q.get('india') === 'world' || (!q.get('india') && !q.get('loc'
 let indiaRoute = null;
 if (q.get('india') || wantWorld) {
   try {
-    const sk = await (await fetch('assets/india/skeleton.json')).json(), net = new RoadNetwork(sk);
+    const sk = await (await fetch('assets/india/skeleton.json')).json(), net = new RoadNetwork(sk); try { net.rails = await (await fetch('assets/india/rails.json')).json(); } catch (e) { net.rails = null; }
     if (wantWorld) {                                                                                                      // the free world: start in a city on the best highway through it, with a way ahead and a way behind
       const at = q.get('at') || savedCity || 'mumbai', ws = net.worldStart(at) || net.worldStart('mumbai'); if (ws) { const from = ws.gA.from; indiaRoute = { ...ws.gA, net, world: true, roadId: ws.road, name: ws.name, kind: ws.kind, nh: ws.nh, ptsBack: ws.gB ? ws.gB.pts : null, citiesBack: ws.gB ? ws.gB.cities.map(c => ({ ...c, along: -c.along })) : [], legs: [], from }; }
     } else if (q.get('india') === 'route') {                                                                                     // ?india=route&from=<city>&to=<city>: the shortest way over several roads, as one drive
@@ -561,8 +561,8 @@ function update(dt, now) {
   focus.x = px; focus.z = pz; if (mode === 'drive' && phys) { focus.dx = Math.cos(phys.yaw); focus.dz = Math.sin(phys.yaw); focus.speed = Math.abs(phys.u); } else focus.speed = 0;
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
   updateBranches(px, pz, dt); junctionSignals.update();
-  if (indiaRoute && indiaRoute.world && !rail && terrain && grid && q.get('rail') !== 'off') { const net = indiaRoute.net, g0 = guideWorld(), n0 = net.cities.get(indiaRoute.from), lines = (net.sk.rails || []).map(r => new RailLine(r.id, r.pts, r.cities)), cities = [...net.cities.values()], crossings = lines.flatMap(l => findCrossings(l, [...net.roads.values()], cities));
-    rail = new RailView({ scene, terrain, origin: grid.origin, lines, crossings, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }) }); }
+  if (indiaRoute && indiaRoute.world && !rail && terrain && grid && q.get('rail') !== 'off' && indiaRoute.net.rails) { const net = indiaRoute.net, g0 = guideWorld(), n0 = net.cities.get(indiaRoute.from), cityList = [...net.cities.values()];
+    rail = new RailView({ scene, terrain, origin: grid.origin, network: new RailNetwork(net.rails), roads: [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), cities: cityList, names: Object.fromEntries(cityList.map(c => [c.id, { en: c.name, hi: HINDI[c.id] || '' }])), toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }) }); }
   if (rail) rail.update(dt, px, pz);
   if (grid.rebase(px, pz)) { if (rail) rail.reposition(); far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
   grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);

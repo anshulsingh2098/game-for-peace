@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-21 20:00  Real railway network, stations, rail bridges
+Branch: feat/real-rail
+What changed: `tools/build_india_rails.mjs` (new), `assets/india/rails.json` (new, Natural Earth, public domain), `world/rail.js` (`RailNetwork`), `world/rail_view.js` (rewritten: edges, stations, bridges, trains), `main.js`, `ui/gps.js`, licences and docs; 77 self-test checks.
+For the other stream: please read WORK_REMAINING 7.9: road interchanges need the physics to support two ground heights at one point (`world.height`), which is in your files. That is the next engine step if you want flyovers.
+Status: open
+
 ## 2026-11-21 16:00  Railways: track, trains, level crossings
 Branch: feat/rail (stacked on feat/gps-landscape)
 What changed: `world/rail.js` and `world/rail_view.js` (new), `main.js` (RailView wiring, rail obstacle circles in `world.near`, `?rail=off`), one new self-test (76 checks).

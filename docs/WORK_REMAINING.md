@@ -87,7 +87,8 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 7.4 | The `ghat` hill road has tighter bends in Himachal (39 m minimum radius) but not the stacked hairpins seen in the tea-garden photos | P2 [build] |
 | 7.5 | Centre-line colour on Indian roads is unconfirmed (sources disagree); lane and shoulder widths follow common practice, not the IRC tables, which were not found | P3 [person] |
 | 7.6 | Sign gantries are not lit at night; Hindi text uses system fonts that may be missing on a device | P2 [person] |
-| 7.7 | Railways (first increment, 21 Nov 2026): the six trunk lines of the skeleton are track in the India world (ballast, rails, sleepers), one train runs back and forth on each (blue loco, 9 coaches, 86 km/h), 33 level crossings with barrier arms that go down for a train, trains are solid for the car. Limits: the lines are hand-entered corridors, not surveyed alignments; track is not flattened into the land and has no bridges over water (it is skipped under sea level); no stations, signals, platforms or sound; road traffic does not stop at the barriers; trains run on a timer, not a timetable, and cannot be boarded; no scatter clearing so trees can stand on the track | P2 [build] |
+| 7.7 | Railways: the real network (Natural Earth, 86 stations, 383 edges, junctions) is track in the India world, with a station (platforms, canopy, building, name boards) at each city, a train on every edge longer than 350 m that runs back and forth, rail bridges over roads away from cities (31) and level crossings with barriers near stations (95). Limits: main lines only (no branch lines), alignments are coarse; trains run on a timer on one edge each (they do not follow routes across junctions or stop at stations), cannot be boarded; no signals, points (switches), sound; barrier arms exist but road traffic does not stop at them; the road under a rail bridge is not graded for it; trees can stand on the track | P2 [build] |
+| 7.9 | Road interchanges (flyovers, ramps, cloverleafs) cannot be built yet: the car's physics reads one ground height per point (`world.height(x, z)`), so two roads cannot cross at different heights. Needs a multi-level layer (height by layer chosen from the car's own height) in the physics and the road set. Rail over road works because the rail is not driven | P1 [build] [B] |
 | 7.8 | The road is one generated path per highway; real elevation and real curves between waypoints are not used | P2 [build] |
 
 ## 8. India map and data
@@ -121,6 +122,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 21 Nov 2026: the full real railway network (7.7), stations, rail bridges and level crossings. Open: road interchanges (7.9).
 - 21 Nov 2026: railways, first increment (7.7): track, trains, level crossings.
 - 21 Nov 2026: GPS minimap and full India map (key P, tap a city to navigate); Indian km stones with city and real km every 10 km, boards listing crossing roads before cities, furniture on four-lane highways too; field parcels in Indian tones; adaptive resolution governor against lag. Still open: rail and trains (7.7), lag never measured on a real device (0.1).
 - 20 Nov 2026: one continuous India world as the main game, with the old locations list as separate Explore cities (2.3, 8.4); autodrive levels (Auto / Cruise) and drive-mode driving styles (9.5).

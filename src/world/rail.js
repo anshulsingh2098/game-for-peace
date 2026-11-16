@@ -32,14 +32,15 @@ export function segIntersect(ax, az, bx, bz, cx, cz, dx, dz) {
 
 /* level crossings: every place a rail line cuts a road (both as point lists [x, z, ...]), at least `minAngle` radians off parallel and at least `minCity` game metres from any city */
 export function findCrossings(rail, roads, cities = [], { minAngle = 0.45, minCity = 60 } = {}) {
-  const out = [], P = rail.pts;
+  const out = [], P = rail.pts; let rx0 = 1e18, rx1 = -1e18, rz0 = 1e18, rz1 = -1e18; for (let i = 0; i < P.length; i += 2) { rx0 = Math.min(rx0, P[i]); rx1 = Math.max(rx1, P[i]); rz0 = Math.min(rz0, P[i + 1]); rz1 = Math.max(rz1, P[i + 1]); }
   for (const road of roads) {
-    const Q = road.pts, rs = road.s || cum(Q);
+    const Q = road.pts; if (!road.bb) { let a = 1e18, b = -1e18, c = 1e18, d = -1e18; for (let i = 0; i < Q.length; i += 2) { a = Math.min(a, Q[i]); b = Math.max(b, Q[i]); c = Math.min(c, Q[i + 1]); d = Math.max(d, Q[i + 1]); } road.bb = [a, b, c, d]; }
+    if (road.bb[1] < rx0 || road.bb[0] > rx1 || road.bb[3] < rz0 || road.bb[2] > rz1) continue;
     for (let i = 0; i + 3 < P.length; i += 2) for (let j = 0; j + 3 < Q.length; j += 2) {
       const h = segIntersect(P[i], P[i + 1], P[i + 2], P[i + 3], Q[j], Q[j + 1], Q[j + 2], Q[j + 3]); if (!h) continue;
       const ra = Math.atan2(P[i + 3] - P[i + 1], P[i + 2] - P[i]), rb = Math.atan2(Q[j + 3] - Q[j + 1], Q[j + 2] - Q[j]); let d = Math.abs(ra - rb) % Math.PI; d = Math.min(d, Math.PI - d); if (d < minAngle) continue;
       if (cities.some(c => Math.hypot(c.x - h.x, c.z - h.z) < minCity)) continue;
-      out.push({ rail: rail.id, road: road.id, s: rail.s[i / 2] + h.t * Math.hypot(P[i + 2] - P[i], P[i + 3] - P[i + 1]), x: h.x, z: h.z, roadTx: Math.cos(rb), roadTz: Math.sin(rb), railTx: Math.cos(ra), railTz: Math.sin(ra) });
+      out.push({ rail: rail.id, road: road.id, s: rail.s[i / 2] + h.t * Math.hypot(P[i + 2] - P[i], P[i + 3] - P[i + 1]), x: h.x, z: h.z, roadTx: Math.cos(rb), roadTz: Math.sin(rb), railTx: Math.cos(ra), railTz: Math.sin(ra), sinA: Math.sin(d), kind: road.kind || '' });
     }
   }
   return out.sort((a, b) => a.s - b.s);
@@ -56,3 +57,30 @@ export function trainSpan(head, dir, length) { return dir > 0 ? [head - length, 
 export function crossingClosed(cs, spans, before = 110, after = 45) { for (const [a, b] of spans) if (b > cs - before && a < cs + after) return true; return false; }
 
 export const TRAIN = { speed: 24, coach: 22, coaches: 9, width: 3.2 };
+
+/* The real network (assets/india/rails.json, tools/build_india_rails.mjs): edges are RailLines between nodes; a node with 3 or more edges is a junction, a node with a city is a station.
+   route(a, b) is the shortest way by rail between two node ids as steps { edge, fwd }; routeLine joins the steps into one RailLine; trainRoutes picks the runs of the trains. */
+export class RailNetwork {
+  constructor(json) {
+    this.nodes = json.nodes; this.edges = json.edges.map(e => { const l = new RailLine('e' + e.id, e.pts); l.a = e.a; l.b = e.b; l.edgeId = e.id; return l; });
+    this.adj = new Map(this.nodes.map(n => [n.id, []])); for (const e of this.edges) { this.adj.get(e.a).push(e); this.adj.get(e.b).push(e); }
+    this.stations = this.nodes.filter(n => n.city); this.byCity = new Map(this.stations.map(n => [n.city, n]));
+  }
+  route(a, b) {
+    if (a === b) return []; const dist = new Map([[a, 0]]), prev = new Map(), open = new Set([a]);
+    while (open.size) { let u = null; for (const n of open) if (u === null || dist.get(n) < dist.get(u)) u = n; open.delete(u); if (u === b) break;
+      for (const e of this.adj.get(u)) { const v = e.a === u ? e.b : e.a, nd = dist.get(u) + e.len; if (!dist.has(v) || nd < dist.get(v)) { dist.set(v, nd); prev.set(v, { from: u, edge: e }); open.add(v); } } }
+    if (!dist.has(b)) return null; const steps = []; for (let c = b; c !== a;) { const p = prev.get(c); steps.unshift({ edge: p.edge, fwd: p.edge.a === p.from }); c = p.from; } return steps;
+  }
+  routeLine(steps, id = 'route') {
+    const pts = []; for (const st of steps) { const P = st.edge.pts, n = P.length / 2; for (let i = 0; i < n; i++) { const k = st.fwd ? i : n - 1 - i; if (pts.length && i === 0) continue; pts.push(P[k * 2], P[k * 2 + 1]); } }
+    const l = new RailLine(id, pts); l.steps = steps; return l;
+  }
+  /* n deterministic runs between far-apart stations; each is a RailLine (its steps say which edges it uses) with the two terminal cities */
+  trainRoutes(n = 36, minLen = 2500) {
+    const out = [], S = this.stations; if (S.length < 2) return out; let k = 0, guard = 0;
+    while (out.length < n && guard++ < n * 40) { const h = (i) => { let x = (k * 2654435761 + i * 40503 + 12345) >>> 0; x = (x ^ (x >>> 15)) >>> 0; x = Math.imul(x, 2246822519) >>> 0; x = (x ^ (x >>> 13)) >>> 0; return x / 4294967296; }; k++;
+      const a = S[Math.floor(h(1) * S.length)], b = S[Math.floor(h(2) * S.length)]; if (a === b) continue; const steps = this.route(a.id, b.id); if (!steps || !steps.length) continue; const ln = this.routeLine(steps, 'run' + out.length); if (ln.len < minLen) continue; ln.from = a.city; ln.to = b.city; out.push(ln); }
+    return out;
+  }
+}

@@ -7,7 +7,7 @@ const el = (tag, css, parent, text) => { const e = document.createElement(tag); 
 export class Gps {
   constructor({ net, parent = document.body, player, nav, pick, names = {}, size = 184 }) {
     this.net = net; this.player = player; this.nav = nav; this.pick = pick; this.names = names; this.size = size; this.t = 0; this.open = false;
-    const roads = [...net.roads.values()]; this.roads = roads; this.cities = [...net.cities.values()]; this.rails = (net.sk.rails || []);
+    const roads = [...net.roads.values()]; this.roads = roads; this.cities = [...net.cities.values()]; this.rails = net.rails ? net.rails.edges.map(e => ({ pts: e.pts })) : (net.sk.rails || []);
     let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const c of this.cities) { x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); z0 = Math.min(z0, c.z); z1 = Math.max(z1, c.z); } this.bounds = { x0: x0 - 600, x1: x1 + 600, z0: z0 - 600, z1: z1 + 600 };
     this.mini = el('canvas', `position:fixed;left:12px;bottom:76px;width:${size}px;height:${size}px;border-radius:50%;border:2px solid rgba(255,255,255,.65);box-shadow:0 2px 10px rgba(0,0,0,.45);background:#1c2a26;z-index:20;cursor:pointer;touch-action:manipulation`, parent); this.mini.id = 'minimap'; this.mini.title = 'GPS map: click or press P for the whole India map';
     const dpr = Math.min(devicePixelRatio || 1, 2); this.mini.width = size * dpr; this.mini.height = size * dpr; this.dpr = dpr; this.mctx = this.mini.getContext('2d');
