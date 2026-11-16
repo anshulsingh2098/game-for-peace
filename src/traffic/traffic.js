@@ -47,8 +47,8 @@ function boxGeometry(kind) {
 
 export class Traffic {
   /* seed: the world's seed string; origin: the render origin (grid.origin); drive: 'right' or 'left'; pack: the loaded traffic pack (or null for boxes) */
-  constructor(scene, road, seed, origin, { mode = 'low', drive = 'right', pack = null } = {}) {
-    this.scene = scene; this.origin = origin; this.sim = new TrafficSim(road, { seed, mode, drive }); this.group = new THREE.Group(); scene.add(this.group);
+  constructor(scene, road, seed, origin, { mode = 'low', drive = 'right', pack = null, scale = 1 } = {}) {
+    this.scene = scene; this.origin = origin; this.sim = new TrafficSim(road, { seed, mode, drive, scale }); this.group = new THREE.Group(); scene.add(this.group);
     this.cap = MODES.high + 4; this.groups = {}; this.geos = [];
     this.paintMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.2 });
     this.restMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.05, envMapIntensity: 0.8 });

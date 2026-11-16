@@ -7,6 +7,7 @@
      sky                 { time, weather } the place starts with
      accent              a colour for its card */
 import { makeConfig } from '../core/config.js';
+import { REGIONS, regionToLocation } from './regions.js';
 
 export const LOCATIONS = [
   { id: 'default', name: 'Green Valley', blurb: 'Rolling hills, forests and a lake or two. The original world.', accent: '#7fd46a', config: { scatter: { trees: 0.0034, tufts: 0.024, bushes: 0.0012, clearRoad: 17 } }, sky: { time: 'day', weather: 'clear' } },
@@ -46,34 +47,8 @@ export const LOCATIONS = [
       road: { maxAlt: 150 } },
     landmarks: [{ kind: 'lighthouse', s: 700, off: 80, sea: true, range: 3000 }],
     sky: { time: 'day', weather: 'clear' } },
-  /* ---- India's cities: flat ground, warm dry light, and the sights beside the road. `landmarks` are placed by world/landmarks.js ---- */
-  { id: 'mumbai', drive: 'left', name: 'Mumbai', blurb: 'the art-deco curve of Marine Drive, the Gateway of India and the Taj Mahal Palace hotel, at golden hour by the Arabian Sea.', accent: '#ff9d5c',
-    config: {
-      terrain: { seaLevel: 0, lowland: 7, continent: { scale: 3800, rise: 20 }, coast: { lo: -0.3, hi: -0.1 }, warp: { scale: 1000, amp: 150 },
-        hills: { scale: 520, amp: 9, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.6, full: 0.95, scale: 3400, amp: 120, octaves: 4, gain: 0.4, sharp: 1.5 } },
-      palette: { grass: [0.56, 0.66, 0.28], grass2: [0.36, 0.52, 0.2], dry: [0.72, 0.64, 0.4], alpine: [0.5, 0.52, 0.34], rock: [0.52, 0.47, 0.4], sand: [0.9, 0.82, 0.62], treeline: 400, snowline: 2500 },
-      scatter: { trees: 0.0042, rocks: 0.0003, bushes: 0.0016, tufts: 0.008, pineBias: -0.95, tint: [1.0, 1.04, 0.78] }, water: { color: '#2a7f8e' }, road: { style: 'boulevard', maxAlt: 150 } },
-    sky: { time: 'dusk', weather: 'clear' },
-    landmarks: [{ kind: 'marine', s: 250, off: 40 }, { kind: 'gateway', s: 650, off: 70, sea: true }, { kind: 'tajHotel', after: 'gateway', gap: 130, range: 500, off: 95, sea: true }] },
-
-  { id: 'delhi', drive: 'left', name: 'Delhi', blurb: 'India Gate rising over wide lawns, in the warm haze of the plains.', accent: '#e0a070',
-    config: {
-      terrain: { seaLevel: 0, seabed: -20, lowland: 24, continent: { scale: 6000, rise: 14 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1200, amp: 120 },
-        hills: { scale: 600, amp: 8, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.9, full: 1.4, scale: 3400, amp: 60, octaves: 3, gain: 0.4, sharp: 1.5 } },
-      palette: { grass: [0.58, 0.64, 0.3], grass2: [0.4, 0.5, 0.22], dry: [0.74, 0.64, 0.4], alpine: [0.55, 0.52, 0.34], rock: [0.56, 0.5, 0.42], sand: [0.88, 0.8, 0.6], treeline: 600, snowline: 3000 },
-      scatter: { trees: 0.0036, rocks: 0.0002, bushes: 0.0016, tufts: 0.007, pineBias: -0.95, tint: [1.0, 1.0, 0.76] }, water: { color: '#4a7f88' }, road: { style: 'boulevard', maxAlt: 200 } },
-    sky: { time: 'day', weather: 'clear' },
-    landmarks: [{ kind: 'indiaGate', s: 500, off: 95 }] },
-
-  { id: 'agra', drive: 'left', name: 'Agra', blurb: 'The Taj Mahal at sunrise: white marble, four minarets and a long reflecting pool.', accent: '#f4e9d8',
-    config: {
-      terrain: { seaLevel: 0, seabed: -20, lowland: 26, continent: { scale: 6000, rise: 12 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1200, amp: 110 },
-        hills: { scale: 620, amp: 7, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.9, full: 1.4, scale: 3400, amp: 50, octaves: 3, gain: 0.4, sharp: 1.5 } },
-      palette: { grass: [0.6, 0.64, 0.3], grass2: [0.44, 0.5, 0.22], dry: [0.78, 0.66, 0.42], alpine: [0.56, 0.52, 0.34], rock: [0.58, 0.5, 0.42], sand: [0.9, 0.82, 0.62], treeline: 600, snowline: 3000 },
-      scatter: { trees: 0.003, rocks: 0.0002, bushes: 0.0014, tufts: 0.006, pineBias: -0.95, tint: [1.0, 0.98, 0.74] }, water: { color: '#5d8f94' }, road: { style: 'boulevard', maxAlt: 200 } },
-    sky: { time: 'dawn', weather: 'clear' },
-    landmarks: [{ kind: 'tajMahal', s: 600, off: 250 }] }
-];
+  /* ---- India's regions (Mumbai, Delhi, Agra, Bhopal) are data in world/regions.js; they are added below, in the same shape as the entries above ---- */
+].concat(REGIONS.map(regionToLocation));
 
 export const locationById = id => LOCATIONS.find(l => l.id === id) || LOCATIONS[0];
 /* the full world config for a location and seed */
