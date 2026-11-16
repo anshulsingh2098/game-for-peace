@@ -32,3 +32,9 @@ Nothing here is downloaded. Every download needs the owner's yes (file, source, 
 
 ## Pipeline (build time, never at run time)
 raw files (kept out of git, in a local `data/` folder) -> `tools/` scripts -> small tiles in `assets/india/` with a source and licence line in `assets/ASSETS.md` -> the game loads tiles by sector. `tools/build_india_skeleton.mjs` is the first script; it already runs without downloads, from the hand-entered city network.
+
+## What has been downloaded (owner approved the OpenStreetMap highway extract on 18 Nov 2026)
+- **How:** a trial Overpass query for one highway (NH 48) was already over 8 MB and still growing, far more than "a few MB", so I stopped it and deleted the partial file. I used the **OSRM public demo server** instead, which routes over the same OpenStreetMap data and returns a simplified path: one request per highway, 28 requests, 1.2 s apart, about 20 KB in total. (This is a different host from the one I first named; the data and licence are the same, ODbL.)
+- **Result:** `assets/india/waypoints.json` (committed, with credit and licence in its `meta`). Real driving distances came out close to our hand estimates (Delhi to Mumbai via the corridor 1,493 km, Mumbai to Chennai 1,334 km, Chennai to Kolkata 1,709 km, Kolkata to Delhi 1,521 km). The routes are the fastest driving routes through each list of cities, so they can differ from the numbered highway in places; they are waypoints (one every 20 to 60 real km), not surveyed lines.
+- **Not done:** rails (OSRM is for roads only; railways stay hand-entered), the in-game credit line, any detailed city streets.
+- **Needs the owner:** a lawyer's reading of ODbL share-alike for this file, as before.

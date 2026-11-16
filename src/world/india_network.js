@@ -130,7 +130,7 @@ export const pathLength = pts => { let d = 0; for (let i = 1; i < pts.length; i+
 export function buildSkeleton(scale = GAME_SCALE, opts = {}) {
   const r = v => Math.round(v * 10) / 10, wp = opts.waypoints || {};
   const nodes = CITIES.map(c => { const g = toGame(c.lat, c.lon, scale); return { id: c.id, name: c.name, x: r(g.x), z: r(g.z), tier: c.tier }; });
-  const path = (l, kind) => { const pts = smoothPath(l.cities, scale, 8, wp[l.id]); return { id: l.id, name: l.name, kind, nh: l.nh || null, cities: l.cities.slice(), len: Math.round(pathLength(pts)), pts: pts.flat().map(r) }; };
+  const path = (l, kind) => { const pts = smoothPath(l.cities, scale, wp[l.id] ? 3 : 8, wp[l.id]); return { id: l.id, name: l.name, kind, nh: l.nh || null, cities: l.cities.slice(), len: Math.round(pathLength(pts)), pts: pts.flat().map(r) }; };
   const xs = nodes.map(n => n.x), zs = nodes.map(n => n.z);
   return { version: 1, scale, origin: ORIGIN, bounds: { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs) }, nodes, roads: HIGHWAYS.map(h => path(h, h.kind)), rails: RAIL.map(l => path(l, 'rail')),
     provenance: opts.provenance || 'city positions entered by hand (no outside map data); corridor lists from public descriptions; paths are smoothed straight legs, not surveyed alignments' };

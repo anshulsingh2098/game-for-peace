@@ -26,3 +26,6 @@ __pycache__/
 *.blend1
 Thumbs.db
 Desktop.ini
+
+# raw downloaded map data (OpenStreetMap etc.): licences in docs/OPEN_DATA.md; only the small derived files in assets/ are committed
+data/

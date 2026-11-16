@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 15:00  Real road shapes (OpenStreetMap-derived) in the India skeleton
+Branch: feat/landscape-look (PR 36)
+What changed: owner approved the OSM download. `tools/fetch_india_routes.mjs` fetched 28 simplified driving routes from the OSRM demo server (OSM data, ODbL) into `assets/india/waypoints.json` (20 KB, credit and licence in `meta`); `tools/build_india_skeleton.mjs` and `buildSkeleton` use them (skeleton now 64 KB, `assets/india/skeleton.json`); `india_map.html` draws the real shapes with the credit; `.gitignore` ignores `data/`; self-tests check the waypoints (66 checks). An Overpass trial was far too big (8 MB for one highway) and was stopped and deleted. Credit line in the game itself is still to do. Not used by the game world yet.
+For the other stream: ODbL share-alike on `assets/india/waypoints.json` and the skeleton: please read `docs/OPEN_DATA.md`.
+Status: open
+
 ## 2026-11-18 13:00  India game space and skeleton file; open data research
 Branch: feat/landscape-look (PR 36)
 What changed: `docs/OPEN_DATA.md` (data and open-source projects, licences, what needs approval; nothing downloaded), `src/world/india_network.js` (`toGame`, `fromGame`, `smoothPath`, `buildSkeleton`, `GAME_SCALE` 100), `tools/build_india_skeleton.mjs`, `assets/india/skeleton.json` (generated, 32 KB, listed in `assets/ASSETS.md`), `india_map.html` default 1:100, one self-test (66 checks, includes a check that the shipped skeleton is current). Not used by the game yet: the game still loads one road from the start.
