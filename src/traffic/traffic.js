@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { TrafficSim, MODES, KINDS, DEFAULT_KINDS } from './sim.js';
+import { TrafficSim, MODES, KINDS, DEFAULT_KINDS, EXTRA_KINDS, trafficKinds } from './sim.js';
 
 /* real-world body colours, as often as they are seen on a road: black, white, silver and grey lead; the rest are bright accents */
 const PAINT = [].concat(...[[0x16181d, 4], [0xf2f3f5, 4], [0xb9bec6, 4], [0x6b7078, 3], [0xb3141f, 2], [0x1f3f8f, 2], [0x1f5a3c, 1], [0xd8cfae, 1], [0x6b4a32, 1], [0xe08a1e, 1], [0x2a78c2, 1], [0x7a1f2a, 1]].map(([c, n]) => Array(n).fill(c)));
@@ -33,8 +33,14 @@ function part(w, h, d, x, y, z, hex) {
 }
 const GLASS = 0x232b36, TYRE = 0x131418, WHITE = 0xffffff;
 function boxGeometry(kind) {
-  const K = KINDS[kind], w = K.w, L = K.len, parts = [];
-  if (kind === 'truck') {
+  const K = KINDS[kind] || EXTRA_KINDS[kind], w = K.w, L = K.len, parts = [];
+  if (kind === 'two-wheeler') {                                                                                     // a motorbike or scooter with its rider
+    parts.push(part(0.22, 0.62, 0.62, 0, 0.35, L / 2 - 0.45, TYRE), part(0.22, 0.62, 0.62, 0, 0.35, -L / 2 + 0.45, TYRE), part(0.3, 0.45, 1.3, 0, 0.62, 0, 0x2f4a73), part(0.36, 0.12, 0.7, 0, 0.9, -0.25, 0x20242a), part(0.16, 0.12, 0.5, 0, 1.05, L / 2 - 0.55, 0x30363b));
+    parts.push(part(0.46, 0.62, 0.3, 0, 1.25, -0.35, 0xc94f3a), part(0.24, 0.26, 0.24, 0, 1.78, -0.35, 0xd9a273), part(0.26, 0.2, 0.28, 0, 1.92, -0.35, 0x1f2328));        // rider: back, head, helmet
+  } else if (kind === 'auto-rickshaw') {                                                                            // a three-wheeler: yellow body, black hood, open sides
+    parts.push(part(0.3, 0.6, 0.6, 0, 0.32, L / 2 - 0.5, TYRE), part(0.26, 0.6, 0.6, -w / 2 + 0.15, 0.32, -L / 2 + 0.6, TYRE), part(0.26, 0.6, 0.6, w / 2 - 0.15, 0.32, -L / 2 + 0.6, TYRE));
+    parts.push(part(w * 0.85, 0.55, L * 0.9, 0, 0.62, 0, 0xf2c230), part(w * 0.8, 0.12, L * 0.62, 0, 1.55, -0.25, 0x1d2024), part(0.08, 0.95, 0.08, -w * 0.4, 1.05, 0.55, 0x30363b), part(0.08, 0.95, 0.08, w * 0.4, 1.05, 0.55, 0x30363b), part(0.08, 0.95, 0.08, -w * 0.4, 1.05, -0.9, 0x30363b), part(0.08, 0.95, 0.08, w * 0.4, 1.05, -0.9, 0x30363b), part(w * 0.7, 0.4, 0.8, 0, 0.98, -0.4, 0x39414a), part(w * 0.7, 0.5, 0.12, 0, 1.15, L / 2 - 0.1, GLASS));
+  } else if (kind === 'truck') {
     parts.push(part(w, 1.0, 2.2, 0, 1.2, L / 2 - 1.1, WHITE), part(w * 0.92, 1.0, 1.6, 0, 1.9, L / 2 - 1.1, GLASS), part(w, 2.4, L - 2.5, 0, 1.9, -1.25, 0xd9dde2));
     for (const z of [L / 2 - 1.3, -L / 2 + 1.3, -L / 2 + 2.6]) for (const s of [-1, 1]) parts.push(part(0.3, 0.9, 0.9, s * (w / 2 - 0.1), 0.45, z, TYRE));
   } else {
@@ -47,8 +53,8 @@ function boxGeometry(kind) {
 
 export class Traffic {
   /* seed: the world's seed string; origin: the render origin (grid.origin); drive: 'right' or 'left'; pack: the loaded traffic pack (or null for boxes) */
-  constructor(scene, road, seed, origin, { mode = 'low', drive = 'right', pack = null, scale = 1 } = {}) {
-    this.scene = scene; this.origin = origin; this.sim = new TrafficSim(road, { seed, mode, drive, scale }); this.group = new THREE.Group(); scene.add(this.group);
+  constructor(scene, road, seed, origin, { mode = 'low', drive = 'right', pack = null, scale = 1, mix = null } = {}) {
+    this.mix = mix; this.scene = scene; this.origin = origin; this.sim = new TrafficSim(road, { seed, mode, drive, scale }); this.group = new THREE.Group(); scene.add(this.group);
     this.cap = MODES.high + 4; this.groups = {}; this.geos = [];
     this.paintMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.2 });
     this.restMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.05, envMapIntensity: 0.8 });
@@ -62,10 +68,10 @@ export class Traffic {
   useModels(pack) {
     for (const g of Object.values(this.groups)) for (const m of [g.paint, g.rest]) if (m) { this.group.remove(m); m.dispose(); }
     for (const g of this.geos) g.dispose(); this.geos = []; this.groups = {}; this.pack = pack || null;
-    const kinds = pack ? pack.kinds : DEFAULT_KINDS;
+    const kinds = trafficKinds(pack ? pack.kinds : DEFAULT_KINDS, this.mix);
     for (const k of kinds) {
       const g = { paint: null, rest: null };
-      if (pack) { const p = pack.parts[k.name]; g.rest = p.rest && this.make(p.rest, this.restMat, false); g.paint = p.paint && this.make(p.paint, this.paintMat, true); }
+      if (pack && pack.parts[k.name]) { const p = pack.parts[k.name]; g.rest = p.rest && this.make(p.rest, this.restMat, false); g.paint = p.paint && this.make(p.paint, this.paintMat, true); }
       else { const geo = boxGeometry(k.name); this.geos.push(geo); g.rest = this.make(geo, this.restMat, false, true); }
       this.groups[k.name] = g;
     }

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 20:00  N12 first increment: Indian vehicle mix and traffic signals
+Branch: feat/n12-traffic
+What changed: `src/traffic/sim.js`: `trafficKinds(pack, mix)` (region mix adds two-wheelers and auto-rickshaws in proportion), `EXTRA_KINDS`, signals (`signalState`, 40 s cycle; cars brake to stop 1.5 m before the stop line of a signalled crossing, using the graph's `crossingAt`), two-wheelers ride at a lane edge; `src/traffic/traffic.js`: procedural motorbike and auto-rickshaw geometry, `mix` option; `main.js` passes the region's `traffic.mix`. Two new self-tests (55 checks): mix proportions, signal states, cars wait on red and rarely cross it, two-wheelers at the lane edge, deterministic. Checked in Mumbai at High: 5 two-wheelers, 2 auto-rickshaws among the cars, zebra crossing visible, no errors. `docs/TRAFFIC.md`: **no junctions or turning yet** (needs N11's junction), no overtaking, no real models or sounds.
+For the other stream: Stream B owns the traffic files; this is a heads-up that they changed (your review please).
+Status: open
+
 ## 2026-11-17 09:00  N7 runtime and entity lifecycle built (owner asked to proceed past the gate)
 Branch: feat/n7-runtime
 What changed: new `src/core/runtime.js` (GameRuntime, FixedStepper, EventBus, Registry, Pool; design note and the kickoff report in `docs/RUNTIME.md`); `src/main.js` runs its frame through the runtime (systems `world` and `render`, frame time clamped, `visibilitychange` resets the clock) and emits `mode:changed`, `vehicle:changed`, `region:changed`, `world:rebuilt` on a bus exposed as `__next.bus`; `src/traffic/sim.js` takes its cars from a bounded Pool. Six new self-tests (39 checks): update order and teardown, clamp and no burst, events and no leaked listeners, registry stale handles, pool reset, pooled traffic deterministic. Checked in the browser: events fire, no listeners left, no errors, 10 s benchmark no regression. Physics timestep, driving and all N1 to N6 numbers unchanged (vehicle acceptance, collision audit, locations check pass).
