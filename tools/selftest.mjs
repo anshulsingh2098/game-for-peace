@@ -845,4 +845,10 @@ test('real elevation and land cover: the terrain follows a macro grid, plains st
   assert.equal(readSkeleton(new URL('../licenses.html', import.meta.url), 'utf8'), renderLicenses(), 'licenses.html is out of date: run node tools/build_licenses.mjs'); const L = renderLicenses(); for (const w of ['OpenStreetMap', 'ODbL', 'Esri', 'Impact Observatory', 'CC BY 4.0', 'USGS'.length ? 'U.S. Geological Survey' : '', 'three.js', 'Rapier', 'Poly Haven', 'ambientCG', 'Kenney']) assert.ok(L.includes(w), 'the licence page credits ' + w);
 });
 
+test('region junctions (N11): validated, Mumbai has crossing streets', () => {
+  const m = REGIONS.find(r => r.id === 'mumbai'); assert.ok(m.junctions && m.junctions.length >= 2, 'Mumbai has crossing streets'); assert.deepEqual(validateRegion(m), []);
+  const bad = (j) => validateRegion({ ...m, junctions: j }).length > 0; assert.ok(bad([{ s: 10, style: 'boulevard', bearing: 1.5, arm: 800 }]), 'too close to the start'); assert.ok(bad([{ s: 500, style: 'moon', bearing: 1.5, arm: 800 }]), 'unknown style'); assert.ok(bad([{ s: 500, style: 'boulevard', bearing: 9, arm: 800 }]), 'bearing out of range'); assert.ok(bad([{ s: 500, style: 'boulevard', bearing: 1.5, arm: 50 }]), 'street too short'); assert.ok(bad('x')); assert.ok(bad(Array(7).fill({ s: 500, style: 'boulevard', bearing: 1.5, arm: 800 })), 'at most six'); assert.ok(!bad([]), 'none is fine');
+  for (const r of REGIONS) if (r.junctions) for (const j of r.junctions) assert.ok(Math.abs(Math.sin(j.bearing)) > 0.5, r.id + ' crossing streets really cross the road');
+});
+
 console.log(`\n${passed} checks passed`);

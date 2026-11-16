@@ -90,7 +90,7 @@ if (indiaRoute && q.get('real') !== 'off') {
       for (let j = 0; j < R.nz; j++) for (let i = 0; i < R.nx; i++) { const ll = fromGame(R.x0 + (i + 0.5) * R.cell, R.z0 + (j + 0.5) * R.cell), r = regionAt(ll.lat, ll.lon, REGIONS), k = j * R.nx + i; R.a[k] = REGIONS.findIndex(x => x.id === r.id); R.b[k] = r.second ? REGIONS.findIndex(x => x.id === r.second) : R.a[k]; R.w[k] = Math.round(r.blend * 255); }
       macro.region = R; macro.palettes = REGIONS.map(r => r.land.palette); macro.tints = REGIONS.map(r => r.vegetation.tint || [1, 1, 1]); }
     config.terrain = { ...config.terrain, seaLevel: 0, seabed: -40 }; Object.defineProperty(config.terrain, 'macro', { value: macro, enumerable: false, writable: true });      // not part of the saved/shared config (it is big)
-    config.palette = { ...config.palette, treeline: 3700 * V, snowline: 5000 * V }; config.road = { ...config.road, maxAlt: 3500 * V, maxGrade: 0.09, hardGrade: 0.12 };
+    config.palette = { ...config.palette, treeline: 3700 * V, snowline: 5000 * V }; config.road = { ...config.road, maxAlt: 3500 * V, maxGrade: 0.09, hardGrade: 0.12, minRadius: Math.min(config.road.minRadius || 130, 70) };      // tighter bends are allowed, so a ghat road can wind up a real escarpment
   } catch (e) { console.warn('real elevation not loaded, using the procedural land', e); }
 }           // main highways get the six-lane national highway look
 /* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
@@ -445,12 +445,24 @@ function buildBranches(city) {
   if (traffic && mine.length) { const jn = new Junction(p.x, p.z); jn.y = p.y; jn.addArm(traffic.sim, road, sc); for (const b of mine) jn.addArm(b.te.sim, b.road, 0); traffic.addJunction(jn); junctionSignals.add(jn); junctionOf.set(city.id, jn); }          // the roads share one signal and cars may turn between them
   return true;
 }
+/* streets that cross the main road of a region (region.junctions, N11): each is a second road with the region's district along it, its own traffic, and a shared signal at the crossing */
+let regionJunctionsBuilt = false;
+function buildRegionJunctions() {
+  regionJunctionsBuilt = true; const reg = locationById(config.location).region; if (!reg || !reg.junctions || !traffic) return;
+  reg.junctions.forEach((def, n) => {
+    road.ensure(def.s - 100, def.s + 400); const p = road.at(def.s, {}), th = p.th + def.bearing, start = { x: p.x, y: p.y, z: p.z }, L = def.arm, ga = [0, 0, Math.cos(th) * L * 0.5, Math.sin(th) * L * 0.5, Math.cos(th) * L, Math.sin(th) * L], gb = ga.map(v => -v);
+    const cfg = { ...config, seed: config.seed + ':junction:' + n, road: { ...config.road, guide: ga, guideBack: gb, start, style: def.style } }, br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-600, 600); if (bx) grid.invalidate(bx);
+    const b = { city: 'region:' + n, road: br, mesh: new RoadMesh(scene, br, br.style, grid.origin, { district: reg.district, seed: config.seed + ':' + config.location + ':x' + n, blocked: (x, z) => terrain.inZone(x, z, 8) }), hint: 0, near: false, te: traffic.addRoad(br) }; branches.push(b);
+    const jn = new Junction(p.x, p.z); jn.y = p.y; jn.addArm(traffic.sim, road, def.s); jn.addArm(b.te.sim, br, 0); traffic.addJunction(jn); junctionSignals.add(jn); junctionOf.set('region:' + n, jn);
+  });
+}
 function dropBranches(cityId) { const jn = junctionOf.get(cityId); if (jn) { if (traffic) traffic.removeJunction(jn); junctionSignals.remove(jn); junctionOf.delete(cityId); } dropBranchRoads(cityId); }
 function dropBranchRoads(cityId) { for (let i = branches.length - 1; i >= 0; i--) if (branches[i].city === cityId) { const b = branches[i]; roadSet.remove(b.road); if (traffic && b.te) traffic.removeRoad(b.te); grid.invalidate(roadBox(b.road)); b.mesh.dispose(); branches.splice(i, 1); } }
 const triedBranches = new Set(), tmpP = {}, junctionOf = new Map(), junctionSignals = new JunctionSignals(scene, grid.origin);
-bus.on('world:rebuilt', () => { triedBranches.clear(); for (const j of [...junctionSignals.items.keys()]) junctionSignals.remove(j); junctionOf.clear(); });
+bus.on('world:rebuilt', () => { regionJunctionsBuilt = false; triedBranches.clear(); for (const j of [...junctionSignals.items.keys()]) junctionSignals.remove(j); junctionOf.clear(); });
 function updateBranches(px, pz, dt) {
-  const R = indiaRoute; if (!R || !roadSet) return; const arc = road.guideArc(px, pz) || 0;
+  if (!regionJunctionsBuilt && !indiaRoute && road && traffic && roadSet) buildRegionJunctions();
+  if (!roadSet) return;
   // building and removing the crossing roads of each city is done by the sectors (see `sectors` above), not here
   for (const b of branches) { const s = b.road.closestS(px, pz, b.hint); b.hint = s; const box = b.road.ensure(s - 2600, s + 2600); if (box) grid.invalidate(box); b.mesh.update(s);
     if (traffic && b.te) { const q = b.road.at(s, tmpP), dist = Math.hypot(q.x - px, q.z - pz); b.near = b.near ? dist < 1000 : dist < 700; traffic.updateExtra(b.te, dt, { x: px, z: pz, s, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, b.near); } }

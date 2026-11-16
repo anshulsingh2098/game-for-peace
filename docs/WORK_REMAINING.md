@@ -39,7 +39,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 ## 3. Cities and districts (N11)
 | # | Limit | Tag |
 |---|---|---|
-| 3.1 | Mumbai district has no junction or local street, no promenade, no designed route, no phone numbers | P2 [build] |
+| 3.1 | Mumbai district: a boulevard and a two-lane street now cross the main road (region data `junctions`, with the district, traffic and a shared signal); their corner buildings overlap the main road's plots; still no promenade, no designed route, no phone numbers | P2 [build] |
 | 3.2 | Only Mumbai has a built-up district; Delhi, Agra, Bhopal and the rest are records with no buildings | P2 [build] [owner 1.2] |
 | 3.3 | No city worlds are inserted into the India map: a city is only a name on a gate sign and a junction | P2 [build] |
 | 3.4 | Buildings are procedural boxes with textures; no interiors | P2 [build] |
@@ -119,6 +119,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 19 Nov 2026: Mumbai crossing streets with district, traffic and signal (3.1 part); India-mode roads allow tighter bends (7.4 part).
 - 19 Nov 2026: cars wait for the player in a crossing (4.6 part), toll toast (4.7 part), India drive activities and a results card (5.4 part), Jaipur to Kota and Agra to Lucknow roads (8.3 part), region palette and tint blending along a route (2.4 part).
 - 19 Nov 2026: real elevation and land cover downloaded and used in `?india=` mode (8.6); `licenses.html` linked from the title and Credits screens (8.9).
 - 19 Nov 2026: credits screen in the pause menu; branch-road bridges in collision; asphalt patch over lane paint at junctions; N8 sector-driven city junctions, region lookup by position and debug stats (see 2.2, 7.1, 7.2, 8.5).
