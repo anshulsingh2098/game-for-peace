@@ -46,6 +46,11 @@ export function findCrossings(rail, roads, cities = [], { minAngle = 0.45, minCi
   return out.sort((a, b) => a.s - b.s);
 }
 
+/* every place the railway meets a road, classed: a rail overbridge (the track passes over the highway on a long gentle rise) except within `levelNear` game metres of a station, where it is a level crossing with barriers */
+export function classifyCrossings(lines, roads, cities, stations, levelNear = 600) {
+  const out = []; for (const ln of lines) for (const c of findCrossings(ln, roads, cities, { minCity: 60 })) { if (c.sinA < 0.3) continue; const ds = stations.length ? Math.min(...stations.map(n => Math.hypot(n.x - c.x, n.z - c.z))) : 1e9; c.rail = ln.id; c.type = ds < levelNear ? 'level' : 'bridge'; c.line = ln; out.push(c); } return out;
+}
+
 /* a train that runs from one end of its line to the other and back, for ever: head distance and travel direction (+1 towards the line's end) at time t (s) */
 export function trainPlace(len, t, speed, offset = 0) {
   const span = Math.max(len, 1), d = ((speed * t + offset) % (2 * span) + 2 * span) % (2 * span);
@@ -66,6 +71,7 @@ export const STYLES = {
   vande:    { name: 'Vande Bharat', cars: 8, len: 23.5, locoLen: 0, width: 3.25, height: 4.0, body: 0xf1f3f4, lower: 0xf1f3f4, stripe: 0x1c4f8c, loco: 0, locoBand: 0, roof: 0xc9cdd1, electric: true, motor: true, windows: true, vmax: 36, accel: 0.7, brake: 0.9, dwell: 60 },
   freight:  { name: 'Freight', cars: 22, len: 10.7, locoLen: 20.6, width: 3.2, height: 3.5, body: 0x6b3b2a, lower: 0x5a3224, stripe: 0x6b3b2a, loco: 0x2f5fa0, locoBand: 0xd9d9d9, roof: 0x4a2c20, electric: true, fan: true, windows: false, vmax: 17, accel: 0.2, brake: 0.3, dwell: 70 },
   passenger:{ name: 'Passenger', cars: 11, len: 23.5, locoLen: 20.6, width: 3.25, height: 4.0, body: 0x2a4f9b, lower: 0x2a4f9b, stripe: 0xeceff1, loco: 0xf0c01f, locoBand: 0xc8261f, roof: 0xb9bec4, electric: true, fan: true, windows: true, vmax: 20, accel: 0.4, brake: 0.6, dwell: 45 },
+  maintenance: { name: 'Track maintenance', cars: 3, len: 12, locoLen: 14, width: 3.1, height: 3.6, body: 0xf0c01f, lower: 0xf0c01f, stripe: 0x6b6f75, loco: 0xf0c01f, locoBand: 0xf0c01f, roof: 0x6b6f75, electric: false, fan: false, windows: false, vmax: 12, accel: 0.3, brake: 0.5, dwell: 90 },
   emu_wr:   { name: 'Western Railway local', cars: 12, len: 20.3, locoLen: 0, width: 3.66, height: 4.27, body: 0xf1f1ee, lower: 0x2a63b0, stripe: 0xc8231f, loco: 0, locoBand: 0, roof: 0xb9bec4, electric: true, motor: true, windows: true, vmax: 24, accel: 0.8, brake: 0.9, dwell: 30 },
   emu_cr:   { name: 'Central Railway local', cars: 12, len: 20.3, locoLen: 0, width: 3.66, height: 4.27, body: 0x2557a7, lower: 0xf0f0f0, stripe: 0xf2c230, loco: 0, locoBand: 0, roof: 0xb9bec4, electric: true, motor: true, windows: true, vmax: 22, accel: 0.8, brake: 0.9, dwell: 30 },
 };

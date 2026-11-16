@@ -23,6 +23,26 @@ for (const [num, rows] of byTrain) {
   list.push({ n: num, name, type, stops, km: meta.distance || 0, rank: kindRank(name, type) });
 }
 list.sort((a, b) => a.rank - b.rank || b.stops.length - a.stops.length || b.km - a.km); const keep = list.slice(0, 700).map(({ rank, ...t }) => t);
+
+/* Vande Bharat Express services (started 2019, so not in the 2016 data): written by hand from public route lists (geeksforgeeks.org/vande-bharat-express-train-list, theweek.in, Wikipedia), facts only: train number, name, the game cities on the way and an approximate departure and running time (the real ones change). The return train is the next number, leaving in the afternoon. */
+const VANDE = [
+  ['22435', 'New Delhi - Varanasi Vande Bharat Express', ['delhi', 'kanpur', 'prayagraj', 'varanasi'], 6 * 60, 480], ['22439', 'New Delhi - Shri Mata Vaishno Devi Katra Vande Bharat Express', ['delhi', 'ambala', 'jalandhar', 'jammu'], 6 * 60, 480],
+  ['20901', 'Mumbai Central - Gandhinagar Capital Vande Bharat Express', ['mumbai', 'surat', 'vadodara', 'ahmedabad'], 6 * 60 + 10, 375], ['20607', 'Chennai Central - Mysuru Vande Bharat Express', ['chennai', 'vellore', 'bengaluru'], 5 * 60 + 50, 390],
+  ['22301', 'Howrah - New Jalpaiguri Vande Bharat Express', ['kolkata', 'siliguri'], 5 * 60 + 55, 450], ['20833', 'Visakhapatnam - Secunderabad Vande Bharat Express', ['visakhapatnam', 'rajahmundry', 'vijayawada', 'warangal', 'hyderabad'], 5 * 60 + 45, 495],
+  ['20171', 'Rani Kamalapati - Hazrat Nizamuddin Vande Bharat Express', ['bhopal', 'jhansi', 'gwalior', 'agra', 'delhi'], 6 * 60, 450], ['22225', 'Mumbai CSMT - Solapur Vande Bharat Express', ['mumbai', 'pune', 'solapur'], 6 * 60 + 5, 390],
+  ['22223', 'Mumbai CSMT - Sainagar Shirdi Vande Bharat Express', ['mumbai', 'nashik'], 6 * 60 + 15, 330], ['22229', 'Mumbai CSMT - Madgaon Vande Bharat Express', ['mumbai', 'panaji'], 5 * 60 + 25, 465],
+  ['20977', 'Ajmer - Delhi Cantt Vande Bharat Express', ['ajmer', 'jaipur', 'delhi'], 5 * 60 + 50, 330], ['20703', 'Secunderabad - Tirupati Vande Bharat Express', ['hyderabad', 'ongole', 'nellore', 'tirupati'], 6 * 60, 510],
+  ['20631', 'Mangaluru - Thiruvananthapuram Vande Bharat Express', ['mangaluru', 'kochi', 'thiruvananthapuram'], 6 * 60 + 25, 510],
+];
+const cityXY = Object.fromEntries(CITIES.map(c => [c.id, c])), vb = [];
+for (const [num, name, ids, dep, dur] of VANDE) for (const back of [false, true]) {
+  const list = back ? [...ids].reverse() : ids, start = back ? 14 * 60 + 30 : dep; let total = 0; const d = [0]; for (let i = 1; i < list.length; i++) { total += hav(cityXY[list[i - 1]], cityXY[list[i]]); d.push(total); }
+  const stops = list.map((id, i) => { const t = Math.round(start + dur * (d[i] / (total || 1))); return [id, i === 0 ? null : t - 2, i === list.length - 1 ? null : t]; });
+  const first = stops[0][2], last = stops[stops.length - 1][1]; stops[0][1] = first; stops[stops.length - 1][2] = last;
+  const nm = back ? name.split(' - ').reverse().join(' - ').replace(' Vande Bharat Express - ', ' Vande Bharat Express').replace(/^(.*) Vande Bharat Express$/, '$1 Vande Bharat Express') : name;
+  vb.push({ n: String(+num + (back ? 1 : 0)), name: back ? name.replace(/^(.+?) - (.+?) Vande Bharat Express$/, '$2 - $1 Vande Bharat Express') : name, type: 'VB', stops, km: Math.round(total * 1.12), hand: true });
+}
+keep.unshift(...vb);
 const nameOf = Object.fromEntries(CITIES.map(c => [c.id, c.name]));
 /* Mumbai suburban lines (written by hand): stops in order, the real station names, minutes of running time between them; first and last trains and headways are approximate */
 const locals = [

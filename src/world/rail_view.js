@@ -2,7 +2,7 @@
    Everything is built near the player, one piece per frame, and dropped when far. */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { findCrossings, trainSpan, crossingClosed, TRAIN, trainMotion, STYLES } from './rail.js';
+import { classifyCrossings, trainSpan, crossingClosed, TRAIN, trainMotion, STYLES } from './rail.js';
 import { styleOf, laneOffsets, TRACK_GAP } from './rail_timetable.js';
 import { TrainArt } from './train_art.js';
 import { consist, lengthOf, locoNumber, headcode } from './train_consist.js';
@@ -34,18 +34,20 @@ function nameTexture(en, hi) {
 }
 
 export class RailView {
-  constructor({ scene, terrain, origin, network, grade, book = null, tracks = null, roads, cities, toWorld, toGame, names = {} }) {
+  constructor({ scene, terrain, origin, network, grade, book = null, tracks = null, crossings = null, roads, cities, toWorld, toGame, names = {} }) {
     this.grade = grade; this.book = book; this.tracks = tracks || network.edges.map(() => 1); this.art = new TrainArt(); this.cityNames = Object.fromEntries(Object.entries(names).map(([k, v]) => [k, v.en])); this.scene = scene; this.t = terrain; this.origin = origin; this.net = network; this.lines = network.edges; this.toWorld = toWorld; this.toGame = toGame; this.names = names; this.chunks = new Map(); this.stationsBuilt = new Map(); this.time = 0;
     this.group = new THREE.Group(); scene.add(this.group); this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.15 });
     this.p = {}; this.q = {};
     /* crossings with the roads: a rail bridge over the road, or a level crossing near a station */
-    this.crossings = []; const stn = network.stations; for (const ln of this.lines) for (const c of findCrossings(ln, roads, cities, { minCity: 60 })) {
-      if (c.sinA < 0.3) continue; const ds = stn.length ? Math.min(...stn.map(n => Math.hypot(n.x - c.x, n.z - c.z))) : 1e9; c.rail = ln.id; c.type = ds < LEVEL_NEAR_STATION ? 'level' : 'bridge'; c.line = ln; this.crossings.push(c); }
+    this.crossings = crossings || classifyCrossings(this.lines, roads, cities, network.stations, LEVEL_NEAR_STATION);
     this.byEdge = new Map(); for (const c of this.crossings) { let l = this.byEdge.get(c.rail); if (!l) this.byEdge.set(c.rail, l = []); l.push(c); }
-    const mum = cities.find(c => c.id === 'mumbai'), pick = (ln, i) => { const m = ln.at(ln.len / 2, {}); if (mum && Math.hypot(m.x - mum.x, m.z - mum.z) < 1500) return m.x > mum.x ? 'emu_cr' : 'emu_wr'; return ['express', 'express', 'rajdhani', 'vande', 'freight', 'express'][i % 6]; };
+    const mum = cities.find(c => c.id === 'mumbai'), pick = (ln, i) => { const m = ln.at(ln.len / 2, {}); if (mum && Math.hypot(m.x - mum.x, m.z - mum.z) < 1500) return m.x > mum.x ? 'emu_cr' : 'emu_wr'; return ['express', 'express', 'rajdhani', 'express', 'freight', 'express'][i % 6]; };
+    /* electrification: nearly all of the network has overhead wire, but quiet branch sections do not (diesel there); a line used by a Vande Bharat, Rajdhani or Shatabdi is always electrified */
+    const eh = n => { let x = (n * 2654435761) >>> 0; x = (x ^ (x >>> 15)) >>> 0; return x / 4294967296; };
+    this.elec = this.lines.map(ln => { const set = book ? book.byEdge.get(ln.edgeId) : null, busy = set ? set.size : 0, fast = set && [...set].some(k => /vande|rajdhani|shatabdi|duronto/i.test(book.trains[k].name)); return fast || busy >= 5 || eh(ln.edgeId + 11) > 0.25; });
     this.trains = this.lines.map((ln, li) => ({ ln, li })).filter(o => o.ln.len > 350).map(({ ln, li }, i) => {
-      let style = pick(ln, i); const real = book && !style.startsWith('emu') ? book.identify(ln.edgeId, i) : null; if (real) style = styleOf(real); else if (!style.startsWith('emu')) style = i % 3 === 0 ? 'freight' : 'passenger';
-      const S = STYLES[style], seed = (i * 7919 + ln.edgeId * 31) >>> 0, cs = consist(style, real, seed), total = cs.items.reduce((sum, it) => sum + lengthOf(it.kind), 0), nt = this.tracks[li], lanes = laneOffsets(nt), left = lanes.filter(o => o < -0.1), right = lanes.filter(o => o > 0.1), mid = lanes.filter(o => Math.abs(o) <= 0.1);
+      let style = pick(ln, i); const real = book && !style.startsWith('emu') ? book.identify(ln.edgeId, i) : null; if (real) style = styleOf(real); else if (!style.startsWith('emu')) style = i % 19 === 7 ? 'maintenance' : i % 3 === 0 ? 'freight' : 'passenger';
+      const S = STYLES[style], seed = (i * 7919 + ln.edgeId * 31) >>> 0, cs = consist(style, real, seed, { diesel: !this.elec[li] }), total = cs.items.reduce((sum, it) => sum + lengthOf(it.kind), 0), nt = this.tracks[li], lanes = laneOffsets(nt), left = lanes.filter(o => o < -0.1), right = lanes.filter(o => o > 0.1), mid = lanes.filter(o => Math.abs(o) <= 0.1);
       const pickLane = (set, k) => set.length ? set[Math.floor(((seed >>> k) % 1000) / 1000 * set.length)] : (mid[0] || 0);
       return { real, local: style.startsWith('emu') ? (book ? book.locals.find(l => l.livery === style) || null : null) : null, line: ln, li, style, cs, seed, total, outLane: pickLane(left, 3), backLane: pickLane(right, 5), offset: (i * 977) % Math.max(ln.len, 1), meshes: [], vehicles: [], active: false, circles: [], dir: 1, head: 0, span: null, v: 0, mo: null };
     });
@@ -54,7 +56,7 @@ export class RailView {
   /* the height of the track at distance s along edge li: its own smooth profile (rail_grade.js), raised over a road where there is a rail bridge */
   trackY(li, s) { const ln = this.lines[li]; return (this.grade ? this.grade.yAt(li, s) : this.t.drive(...this.wxz(ln, s))) + this.lift(ln, s); }
   wxz(ln, s) { const a = ln.at(s, this.q), w = this.toWorld(a.x, a.z); return [w.x, w.z]; }
-  lift(ln, s) { const l = this.byEdge.get(ln.id); if (!l) return 0; let h = 0; for (const c of l) if (c.type === 'bridge') h = Math.max(h, BRIDGE_H * smooth(1.5 - Math.abs(s - c.s) / (BRIDGE_R * 0.5))); return h; }
+  lift() { return 0; }                                                                                              // the rise over a road is part of the track's own profile now (rail_grade.js), not an extra lift
   key(li, k) { return li * 1e6 + k; }
   build(li, k) {
     const ln = this.lines[li], s0 = k * CHUNK, s1 = Math.min(ln.len, s0 + CHUNK), W = this.toWorld, T = this.t, sea = T.seaLevel, parts = [], grp = new THREE.Group(), G = this.grade;
@@ -80,7 +82,7 @@ export class RailView {
       else if (lf > 0.5) { const h = lf + 0.2; box(parts, L + 0.1, h, 6.2 + wide + lf * 0.9, cx, y - h / 2 - 0.3, cz, yaw, 0x8a7a5c); }
     }
     /* overhead electrification (25 kV AC): a mast every 50 m (on the left of a single track; on both outer sides with a cross girder on a multi-track line), a contact wire 5.6 m over each rail and a messenger wire above */
-    { const nT = this.tracks[li], offs = laneOffsets(nT), half = (nT - 1) * TRACK_GAP / 2;
+    if (this.elec[li]) { const nT = this.tracks[li], offs = laneOffsets(nT), half = (nT - 1) * TRACK_GAP / 2;
       for (let s = Math.ceil(s0 / 50) * 50; s < s1; s += 50) {
         const y = this.trackY(li, s), y2 = this.trackY(li, Math.min(s + 50, ln.len)); if (T.base(pt(s, 0).wx, pt(s, 0).wz) < sea + 0.4) continue;
         const sides = nT === 1 ? [-3.5] : [-(half + 3.1), half + 3.1];
@@ -89,8 +91,6 @@ export class RailView {
         for (const off of nT === 1 ? [0] : offs) { const c0 = pt(s, off), c1 = pt(Math.min(s + 50, ln.len), off), dx = c1.x - c0.x, dz = c1.z - c0.z, L = Math.hypot(dx, dz) || 1, wyaw = -Math.atan2(dz, dx);
           box(parts, L, 0.05, 0.05, (c0.x + c1.x) / 2, (y + y2) / 2 + 6.0, (c0.z + c1.z) / 2, wyaw, 0x2b2b2b); box(parts, L, 0.05, 0.05, (c0.x + c1.x) / 2, (y + y2) / 2 + 6.8, (c0.z + c1.z) / 2, wyaw, 0x3a3a3a); }
       } }
-    for (const c of cross) if (c.s >= s0 && c.s < s1 && c.type === 'bridge') {
-      const wc = W(c.x, c.z), h = T.base(wc.x, wc.z), yaw = Math.atan2(-c.railTz, c.railTx); for (const side of [-1, 1]) { const off = 19 / Math.max(c.sinA, 0.5) * side; box(parts, 1.4, BRIDGE_H + 0.6, 6.8, wc.x + c.railTx * off - ox, h + (BRIDGE_H + 0.6) / 2 - 0.3, wc.z + c.railTz * off - oz, -yaw, 0xa9a69c); } }
     if (parts.length) { const m = new THREE.Mesh(mergeGeometries(parts), this.mat); m.receiveShadow = true; m.castShadow = true; grp.add(m); for (const g of parts) g.dispose(); }
     const arms = [];
     for (const c of cross) if (c.s >= s0 && c.s < s1 && c.type === 'level') {
