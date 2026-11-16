@@ -110,8 +110,8 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 9.2 | No per-mode engine sound, no raised ride height or suspension change for Off-road, no Comfort mode, no Eco efficiency score, no per-mode rumble | P3 [build] [B] |
 | 9.3 | The Eco (110 km/h) and Off-road (85 km/h) limits are the same for every vehicle; the truck's own top speed is 111 km/h so Eco barely changes it | P3 [build] [B] |
 | 9.4 | Hill descent control holds a crawl by braking; it does not shift gears | P3 [build] [B] |
-| 9.5 | Autodrive has two levels (Auto: drives and steers; Cruise: holds speed and gap, you steer) and follows the drive mode: Eco gentle (80 km/h), Normal (90), Sport fast and tight (up to 92% of top, tailgates, overtakes on the right), Off-road careful (45). It never stops for junction signals or toll queues in any mode; Eco and Normal should stop on red, Sport may run it. No indicators, no horn when sport overtakes | P2 [build] [B] |
-| 9.6 | The autodrive styles were tuned by script (selftest) and one 40 s run; nobody has felt them, and sport at 180 km/h on a narrow road is untested for pop-in of sectors | P1 [person] |
+| 9.5 | Autodrive has two levels (Auto, Cruise) and a style per drive mode, with a look-ahead planner (bends, cars, toll plazas, safe passing in Sport; see DRIVE_MODES.md). It never stops for junction signals in any mode (Eco and Normal should stop on red, Sport may run it); Sport does not pass in the oncoming lane on one-lane roads; no indicators or horn | P2 [build] [B] |
+| 9.6 | The autodrive styles are tested by script (six heavy-traffic runs, 0 hits, up to 183 km/h on six lanes) and 280 s on the Delhi road in a browser (0 hits); nobody has felt them; the traffic simulation can still spawn a car about 100 m ahead, which no planner can avoid | P1 [person] |
 
 ## 10. Assets and sound
 | # | Limit | Tag |

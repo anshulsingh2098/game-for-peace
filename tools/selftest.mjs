@@ -394,7 +394,26 @@ await atest('autodrive levels and styles: sport drives faster and tighter than e
   const { r } = world('peace'), q = r.at(40, {}), ph = { x: q.x, z: q.z, yaw: q.th, u: 10 };
   const ad = new Autodrive(); ad.setStyle('normal', 60); ad.toggle(true); ad.s = 40;
   ad.level = 'cruise'; const a = ad.update(ph, r, { steer: 0.37 }); assert.equal(a.steer, 0.37, 'cruise: the player steers'); ad.level = 'full'; const b = ad.update(ph, r, { steer: 0.37 }); assert.ok(Math.abs(b.steer) < 0.3, 'auto: the car steers itself');
-  const sp = new Autodrive(); sp.setStyle('sport', 60); sp.toggle(true); sp.s = 40; sp.leader = () => ({ gap: 20, speed: 5 }); sp.lane = (d, k) => k; sp.update(ph, r); assert.ok(sp.passing > 0, 'sport swings out round a slow car'); const nm = new Autodrive(); nm.setStyle('normal', 60); nm.toggle(true); nm.s = 40; nm.leader = sp.leader; nm.lane = sp.lane; nm.update(ph, r); assert.equal(nm.passing, 0, 'normal stays behind it');
+  const sp = new Autodrive(); sp.setStyle('sport', 60); sp.toggle(true); sp.s = 40; sp.leader = () => ({ gap: 20, speed: 5 }); sp.lane = (d, k) => k * 3.5; sp.lanesAt = () => ({ ahead: null, behind: null }); sp.update(ph, r); assert.equal(sp.laneK, 1, 'sport swings out round a slow car when the next lane is clear'); const bl = new Autodrive(); bl.setStyle('sport', 60); bl.toggle(true); bl.s = 40; bl.leader = sp.leader; bl.lane = sp.lane; bl.lanesAt = () => ({ ahead: { gap: 10, speed: 3 }, behind: null }); bl.update(ph, r); assert.equal(bl.laneK, 0, 'sport does not pull out into a lane that is not clear'); const nm = new Autodrive(); nm.setStyle('normal', 60); nm.toggle(true); nm.s = 40; nm.leader = sp.leader; nm.lane = sp.lane; nm.lanesAt = sp.lanesAt; nm.update(ph, r); assert.equal(nm.laneK, 0, 'normal stays behind it');
+});
+await atest('autodrive plans ahead: in heavy traffic on two-lane and six-lane highways the sport autodrive overtakes safely and never hits anything', () => {
+  for (const [seed, drive, style, road] of [['peace', 'right', 'sport', 'two-lane'], ['coast', 'left', 'sport', 'nh6'], ['peace', 'left', 'normal', 'nh6'], ['alps', 'left', 'sport', 'nh6'], ['delta', 'right', 'sport', 'nh6'], ['hills', 'left', 'sport', 'nh6']]) {
+    const cfg = makeConfig({ seed }); cfg.road = { ...cfg.road, style: road }; const t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-4000, 4000); t.attachRoad(r);
+    const sim = new TrafficSim(r, { seed: 'sp' + seed, mode: 'high', drive }), V = VEHICLES[0], p = vehicleParams(V.body, V.stats);
+    const ph = new RapierVehicle(p, V.id, { height: (x, z) => t.drive(x, z), surface: (x, z) => t.surface(x, z), near: (x, z, rr) => sim.circles(x, z, rr), seaLevel: t.seaLevel });
+    const q = r.at(40, {}); ph.reset(q.x - q.tz * sim.lateral(1, 0) * -1, q.z + q.tx * sim.lateral(1, 0), q.th);
+    const ad = new Autodrive(); ad.setStyle(style, p.top); ad.lanes = () => sim.lanes.length; ad.lane = (d, k = 0) => k === 1 && sim.lanes.length < 2 ? sim.lateral(-d, 0) : sim.lateral(d, sim.lanes[k] === undefined ? 0 : k);
+    ad.leader = (pp, s, range, lat) => sim.leaderAhead({ x: pp.x, z: pp.z, s, yaw: pp.yaw, u: pp.u }, range, lat); ad.lanesAt = (pp, s, lat, a, b) => sim.laneGap({ x: pp.x, z: pp.z, s, yaw: pp.yaw, u: pp.u }, lat, a, b); ad.toggle(true); ad.s = 40;
+    let s = 40, hits = 0, last = -999, topKmh = 0, passing = 0;
+    for (let k = 0; k < 60 * 100; k++) {
+      const inp = ad.update(ph, r); ph.step(1 / 60, { steer: inp.steer, throttle: inp.throttle, brake: inp.brake, hand: 0, rev: 0 }); s = ad.s;
+      sim.update(1 / 60, { x: ph.x, z: ph.z, s, u: ph.u, yaw: ph.yaw }); if (ph.impact > 1 && k - last > 60) { hits++; last = k; }
+      if (k === 0) for (const d of [150, 420, 700]) { const tr = { id: 9990 + d, s: s + d, dir: 1, lane: 0, kind: 'truck', len: 8.5, w: 2.5, v0: 7, speed: 7, colour: 0, lat: sim.lateral(1, 0), stuck: 0, bump: 0, born: 0, bornDist: d, x: 0, z: 0, y: 0, yaw: 0, brake: 0 }; sim.place(tr); sim.cars.push(tr); }   // slow trucks in the autodrive's lane
+      topKmh = Math.max(topKmh, ph.kmh); if (ad.laneK === 1) passing++;
+    }
+    console.log('     autodrive heavy traffic', seed, drive, style, road, 'progress', (s - 40).toFixed(0), 'm, top', topKmh.toFixed(0), 'km/h, passing', (passing / 60).toFixed(0), 's, hits', hits);
+    assert.equal(hits, 0, seed + ' ' + style + ' ' + road + ': the autodrive hit traffic ' + hits + ' times'); assert.ok(s - 40 > (style === 'sport' && road === 'nh6' ? 1300 : 500), seed + ' ' + style + ' ' + road + ': it kept moving (' + (s - 40).toFixed(0) + ' m)');
+  }
 });
 await atest('my music: only audio files within limits are kept, songs play in turn and are freed again (nothing leaves the device)', async () => {
   const fake = new Map(); class FakeAudio { constructor() { this.attrs = {}; this.ev = {}; this.volume = 1; this.paused = true; } addEventListener(n, f) { this.ev[n] = f; } set src(v) { this.attrs.src = v; } get src() { return this.attrs.src; } getAttribute(k) { return this.attrs[k] || null; } removeAttribute(k) { delete this.attrs[k]; } load() {} pause() { this.paused = true; } play() { this.paused = false; return Promise.resolve(); } error = null; }

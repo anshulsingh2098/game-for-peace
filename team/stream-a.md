@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-20 12:00  Autodrive planner: sport no longer crashes
+Branch: feat/autodrive-modes
+What changed: `input/autodrive.js` (planner: horizon from stopping distance, bends and cars brought back with v^2 = v0^2 + 2ad, toll plazas, safe sport passing with lane checks and smooth lane slides, drop back), `traffic/sim.js` (additive: `leaderAhead(player, range, lat)` and `laneGap`), `main.js` (autodrive uses the active road's own traffic in the India world, lane count, tolls). Sport cornering budget 3.4 m/s2 (5 ran wide and hit the median at 190 km/h). 75 self-test checks (a six-run heavy-traffic test).
+For the other stream: please read `docs/DRIVE_MODES.md` (planner section). Known: the traffic sim can spawn a car about 100 m ahead (minSpawnGap); sport therefore does not pass in the oncoming lane.
+Status: open
+
 ## 2026-11-20 09:00  Autodrive levels and drive-mode styles; PRs 42 and 43 merged
 Branch: feat/autodrive-modes
 What changed: PR 42 and 43 are merged into main. `input/autodrive.js` (Stream B area, additive): two levels, Auto (drives and steers) and Cruise (holds speed and gap, the player steers), and a style per drive mode (`STYLES`: Eco gentle, Normal 90, Sport fast, tight, overtakes on the right ignoring the rules, Off-road careful). `main.js`: E and the Auto button cycle Off, Auto, Cruise. HANDOFF.md (shared) has a new top section; docs and CHECKLIST updated; 74 self-test checks.

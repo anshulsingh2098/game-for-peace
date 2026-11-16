@@ -156,13 +156,23 @@ export class TrafficSim {
 
   /* the car in front of the player in the player's own lane, if any within `range` m: { gap (m between the bumpers), speed (its speed along the player's direction, m/s) } or null.
      A car coming the other way in the player's lane counts as a stopped obstacle. player: { x, z, s, yaw, u }. Used by the autodrive to follow traffic. */
-  leaderAhead(player, range = 90) {
-    const R = this.road, p = R.at(player.s, this._p), dirP = Math.cos((player.yaw || 0) - p.th) >= 0 ? 1 : -1, plat = (player.x - p.x) * -p.tz + (player.z - p.z) * p.tx; let best = null;
+  leaderAhead(player, range = 90, lat) {                                                     // lat: look along another lane's line (its offset from the road centre) instead of the player's own
+    const R = this.road, p = R.at(player.s, this._p), dirP = Math.cos((player.yaw || 0) - p.th) >= 0 ? 1 : -1, plat = lat === undefined ? (player.x - p.x) * -p.tz + (player.z - p.z) * p.tx : lat; let best = null;
     for (const c of this.cars) {
       const along = (c.s - player.s) * dirP - c.len / 2 - 2.3; if (along < -1 || along > range || Math.abs(c.lat - plat) > 2.4) continue;
       if (!best || along < best.gap) best = { gap: Math.max(0, along), speed: c.dir === dirP ? c.speed : 0 };
     }
     return best;
+  }
+  /* the cars in the lane line `lat` (offset from the road centre) next to or around the player: { ahead: nearest car in front within `ahead` m, behind: nearest car behind within `behind` m } each { gap, speed } (speed along the player's direction) or null. Used by the autodrive to judge whether a lane is free to move into. */
+  laneGap(player, lat, ahead = 80, behind = 40) {
+    const R = this.road, p = R.at(player.s, this._p), dirP = Math.cos((player.yaw || 0) - p.th) >= 0 ? 1 : -1; let a = null, b = null;
+    for (const c of this.cars) {
+      if (Math.abs(c.lat - lat) > 2.4) continue; const al = (c.s - player.s) * dirP, sp = c.dir === dirP ? c.speed : -c.speed;
+      if (al >= -c.len / 2 - 2.3 && al - c.len / 2 - 2.3 <= ahead) { const g = Math.max(0, al - c.len / 2 - 2.3); if (!a || g < a.gap) a = { gap: g, speed: sp }; }
+      else if (al < 0 && -al - c.len / 2 - 2.3 <= behind) { const g = Math.max(0, -al - c.len / 2 - 2.3); if (!b || g < b.gap) b = { gap: g, speed: sp }; }
+    }
+    return { ahead: a, behind: b };
   }
   /* obstacle circles for the player's physics: three per car along its length (the contract of world.near) */
   circles(x, z, r) {
