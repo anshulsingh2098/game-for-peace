@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 21:00  N14 first increment: on foot, get in and out
+Branch: feat/n14-onfoot
+What changed: new `src/player/onfoot.js` (kinematic controller, safe exit spot, interaction registry), `src/input/controls.js` (`G` interact, Shift run), `src/main.js` (mode `foot`, `exitVehicle`/`enterVehicle`, parked vehicle on handbrake, prompt button, third-person camera, Registry handle on `vehicle:exited`/`vehicle:entered`). `docs/ONFOOT.md`. Three self-tests (60 checks). Checked in the browser: exit, walk, prompt, get back in, no errors. Not built: interiors, other vehicles, a rigged model, phone on-foot controls, phone measurement.
+For the other stream: you own the vehicle side of N14 (`TouchUI` on-foot controls, occupants, camera). Nothing is required of you to merge.
+Status: open
+
 ## 2026-11-17 18:00  N11 first increment: Mumbai district (buildings, sidewalks, crossings, furniture)
 Branch: feat/n11-district
 What changed: new `src/world/district_plan.js` (pure layout: plots along both sides at the frontage line, never on bridges, tunnels, water, landmark zones or bends; lamps every 36 m, bus shelters, market stalls, signal poles; crossings shared with the navigation graph via `navgraph.crossingAt`; obstacle circles along building fronts) and `src/world/district.js` (original procedural meshes: shop fronts with awnings and signs, floors of windows, cornices, balconies, water tanks, colonial and art-deco looks, raised sidewalks, zebras, furniture; lit windows at night), wired through `road.js` (`RoadMesh` extras) and `main.js` (`world.near` gets the circles, `setNight`). The Mumbai region record turns it on (`district` field, validated; version 2, tree-clear strip 30 m). Two new self-tests (53 checks). Checked in the browser: renders, no errors, the truck stops at a building front. `docs/DISTRICT.md` lists what is built and what is not: **no junction or local street yet, no promenade, no designed route, no phone measurement.** `assets/ASSETS.md`: no external assets used.
