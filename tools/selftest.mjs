@@ -24,7 +24,7 @@ import { destinationsFor, HINDI } from '../src/world/india_network.js';
 import { roadStyleById } from '../src/world/roadstyles.js';
 import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
 import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets, branchMode, DEFAULT_KINDS, kindCap, isSlowKind } from '../src/traffic/sim.js';
-import { Autodrive } from '../src/input/autodrive.js';
+import { Autodrive, STYLES, styleFor } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
 import { RapierVehicle, initRapier, ARCADE } from '../src/vehicle/rapier-vehicle.js';
@@ -387,6 +387,14 @@ await atest('autodrive among traffic: it keeps to its lane, follows slower cars 
     assert.ok(follow > 60, seed + ': it met the slow truck (' + (follow / 60).toFixed(1) + ' s)'); assert.ok(slowest < 12, seed + ': it slowed down behind the truck (slowest ' + slowest.toFixed(1) + ' m/s)'); assert.equal(hits, 0, seed + ': the autodrive hit a traffic car ' + hits + ' times'); assert.ok(s - 40 > 500, seed + ': it made progress (' + (s - 40).toFixed(0) + ' m)');
     console.log('     autodrive+traffic', seed, drive, 'progress', (s - 40).toFixed(0), 'm, met traffic for', (follow / 60).toFixed(1), 's, closest', closest > 1e8 ? 'none' : closest.toFixed(1) + ' m, off lane', (off / 60).toFixed(1), 's'); assert.ok(off < 60 * 90 * 0.04, seed + ': it kept its lane (off the lane for ' + (off / 60).toFixed(1) + ' s)'); assert.ok(closest > 1.5, seed + ': it kept a gap behind cars (closest ' + closest.toFixed(1) + ' m)'); ph.free();
   }
+});
+await atest('autodrive levels and styles: sport drives faster and tighter than eco; cruise leaves the steering to the player; the speed never passes the vehicle top', () => {
+  assert.ok(styleFor('sport', 70).cruise > styleFor('normal', 70).cruise && styleFor('normal', 70).cruise > styleFor('eco', 70).cruise && styleFor('eco', 70).cruise > styleFor('offroad', 70).cruise, 'speed order: sport > normal > eco > off-road');
+  assert.ok(styleFor('sport', 30).cruise <= 30 * 0.92 + 1e-9, 'a slow vehicle is not asked for more than its top speed'); assert.ok(STYLES.sport.lat > STYLES.normal.lat && STYLES.sport.gap1 < STYLES.eco.gap1 && STYLES.sport.pass && !STYLES.sport.rules && STYLES.eco.rules, 'sport takes corners harder, tailgates, overtakes, ignores the rules');
+  const { r } = world('peace'), q = r.at(40, {}), ph = { x: q.x, z: q.z, yaw: q.th, u: 10 };
+  const ad = new Autodrive(); ad.setStyle('normal', 60); ad.toggle(true); ad.s = 40;
+  ad.level = 'cruise'; const a = ad.update(ph, r, { steer: 0.37 }); assert.equal(a.steer, 0.37, 'cruise: the player steers'); ad.level = 'full'; const b = ad.update(ph, r, { steer: 0.37 }); assert.ok(Math.abs(b.steer) < 0.3, 'auto: the car steers itself');
+  const sp = new Autodrive(); sp.setStyle('sport', 60); sp.toggle(true); sp.s = 40; sp.leader = () => ({ gap: 20, speed: 5 }); sp.lane = (d, k) => k; sp.update(ph, r); assert.ok(sp.passing > 0, 'sport swings out round a slow car'); const nm = new Autodrive(); nm.setStyle('normal', 60); nm.toggle(true); nm.s = 40; nm.leader = sp.leader; nm.lane = sp.lane; nm.update(ph, r); assert.equal(nm.passing, 0, 'normal stays behind it');
 });
 await atest('my music: only audio files within limits are kept, songs play in turn and are freed again (nothing leaves the device)', async () => {
   const fake = new Map(); class FakeAudio { constructor() { this.attrs = {}; this.ev = {}; this.volume = 1; this.paused = true; } addEventListener(n, f) { this.ev[n] = f; } set src(v) { this.attrs.src = v; } get src() { return this.attrs.src; } getAttribute(k) { return this.attrs[k] || null; } removeAttribute(k) { delete this.attrs[k]; } load() {} pause() { this.paused = true; } play() { this.paused = false; return Promise.resolve(); } error = null; }
