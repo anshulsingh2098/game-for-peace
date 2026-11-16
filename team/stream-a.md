@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-23 12:00  Railway control office (AI traffic control)
+Branch: claude/clever-dhawan-907ed4  Commit: see PR
+What changed: new `world/rail_signals.js`, `rail_control_graph.js`, `rail_control.js`, `rail_services.js`, `docs/RAIL_CONTROL.md`, `docs/RAIL_OPERATIONS.md`; `world/rail_view.js` (draws control office trains, signals, gates; `?control=off` = old behaviour), `main.js` (clock from `rail.clockMin()`, real platform in announcements, try/catch around RailView), `tools/selftest.mjs` (3 checks, 84 total), `docs/WORK_REMAINING.md` 7.7, `CHECKLIST.md`. Railway clock is now 1 minute per 8 s.
+For the other stream: nothing needed.
+Status: open
+
 ## 2026-11-22 15:00  Multi-track rail, Indian train look
 Branch: feat/rail-realism (same PR 48)
 What changed: new `world/train_art.js` (canvas-textured vehicles), `world/train_consist.js` (pure), `world/rail_grade.js` (wider cutting for multi-track), `world/rail_view.js` (1 to 4 tracks, lanes, new trains), `world/rail_timetable.js` (`tracksFor`, `laneOffsets`), `main.js`; 81 self-test checks.

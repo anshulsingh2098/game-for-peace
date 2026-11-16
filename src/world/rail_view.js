@@ -6,6 +6,9 @@ import { findCrossings, trainSpan, crossingClosed, TRAIN, trainMotion, STYLES } 
 import { styleOf, laneOffsets, TRACK_GAP } from './rail_timetable.js';
 import { TrainArt } from './train_art.js';
 import { consist, lengthOf, locoNumber, headcode } from './train_consist.js';
+import { ControlGraph } from './rail_control_graph.js';
+import { RailControl } from './rail_control.js';
+import { buildServices, CLOCK_K } from './rail_services.js';
 
 const CHUNK = 64, SEG = 4, RANGE = 750, STATION_LEN = 120, BRIDGE_R = 70, BRIDGE_H = 6.5, LEVEL_NEAR_STATION = 600;
 const colourise = (g, c) => { const n = g.attributes.position.count, a = new Float32Array(n * 3), r = ((c >> 16) & 255) / 255, gg = ((c >> 8) & 255) / 255, b = (c & 255) / 255; for (let i = 0; i < n; i++) { a[i * 3] = r; a[i * 3 + 1] = gg; a[i * 3 + 2] = b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
@@ -34,7 +37,7 @@ function nameTexture(en, hi) {
 }
 
 export class RailView {
-  constructor({ scene, terrain, origin, network, grade, book = null, tracks = null, roads, cities, toWorld, toGame, names = {} }) {
+  constructor({ scene, terrain, origin, network, grade, book = null, tracks = null, roads, cities, toWorld, toGame, names = {}, control = true, freight = 60 }) {
     this.grade = grade; this.book = book; this.tracks = tracks || network.edges.map(() => 1); this.art = new TrainArt(); this.cityNames = Object.fromEntries(Object.entries(names).map(([k, v]) => [k, v.en])); this.scene = scene; this.t = terrain; this.origin = origin; this.net = network; this.lines = network.edges; this.toWorld = toWorld; this.toGame = toGame; this.names = names; this.chunks = new Map(); this.stationsBuilt = new Map(); this.time = 0;
     this.group = new THREE.Group(); scene.add(this.group); this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.15 });
     this.p = {}; this.q = {};
@@ -42,8 +45,12 @@ export class RailView {
     this.crossings = []; const stn = network.stations; for (const ln of this.lines) for (const c of findCrossings(ln, roads, cities, { minCity: 60 })) {
       if (c.sinA < 0.3) continue; const ds = stn.length ? Math.min(...stn.map(n => Math.hypot(n.x - c.x, n.z - c.z))) : 1e9; c.rail = ln.id; c.type = ds < LEVEL_NEAR_STATION ? 'level' : 'bridge'; c.line = ln; this.crossings.push(c); }
     this.byEdge = new Map(); for (const c of this.crossings) { let l = this.byEdge.get(c.rail); if (!l) this.byEdge.set(c.rail, l = []); l.push(c); }
+    /* the control office (rail_control.js): every train of the whole network is simulated; only the ones near the player are drawn (updateCtl) */
+    this.control = null; this.proxies = new Map(); this.sigPool = []; this.sigT = 0;
+    if (control && book) { const lv = this.crossings.filter(c => c.type === 'level'); lv.forEach((c, i) => { c.lcId = i; }); const graph = new ControlGraph(network, this.tracks), services = buildServices(network, book, graph, { freight, k: CLOCK_K });
+      this.control = new RailControl(graph, services, { crossings: lv.map((c, i) => ({ id: i, li: this.lines.indexOf(c.line), s: c.s })), day: 1440 * CLOCK_K, days: 2 }); this.control.runTo(480 * CLOCK_K); }                  // it is 08:00 at the start, the night's trains are already on the line
     const mum = cities.find(c => c.id === 'mumbai'), pick = (ln, i) => { const m = ln.at(ln.len / 2, {}); if (mum && Math.hypot(m.x - mum.x, m.z - mum.z) < 1500) return m.x > mum.x ? 'emu_cr' : 'emu_wr'; return ['express', 'express', 'rajdhani', 'vande', 'freight', 'express'][i % 6]; };
-    this.trains = this.lines.map((ln, li) => ({ ln, li })).filter(o => o.ln.len > 350).map(({ ln, li }, i) => {
+    this.trains = this.control ? [] : this.lines.map((ln, li) => ({ ln, li })).filter(o => o.ln.len > 350).map(({ ln, li }, i) => {
       let style = pick(ln, i); const real = book && !style.startsWith('emu') ? book.identify(ln.edgeId, i) : null; if (real) style = styleOf(real); else if (!style.startsWith('emu')) style = i % 3 === 0 ? 'freight' : 'passenger';
       const S = STYLES[style], seed = (i * 7919 + ln.edgeId * 31) >>> 0, cs = consist(style, real, seed), total = cs.items.reduce((sum, it) => sum + lengthOf(it.kind), 0), nt = this.tracks[li], lanes = laneOffsets(nt), left = lanes.filter(o => o < -0.1), right = lanes.filter(o => o > 0.1), mid = lanes.filter(o => Math.abs(o) <= 0.1);
       const pickLane = (set, k) => set.length ? set[Math.floor(((seed >>> k) % 1000) / 1000 * set.length)] : (mid[0] || 0);
@@ -97,7 +104,7 @@ export class RailView {
       const wc = W(c.x, c.z), h = this.trackY(li, c.s) - 0.4, rx = c.roadTx, rz = c.roadTz, wd = Math.atan2(rz, rx);
       for (const side of [-1, 1]) { const px = wc.x + rx * 7.5 * side - ox, pz = wc.z + rz * 7.5 * side - oz, piv = new THREE.Group(); piv.position.set(px, h + 1.05, pz); piv.rotation.y = -wd + (side < 0 ? Math.PI : 0);
         const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, 0.3), this.barMat); post.position.set(px, h + 0.55, pz); grp.add(post);
-        const arm = new THREE.Group(); for (let i = 0; i < 6; i++) { const seg = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.14, 0.14), i % 2 ? this.redMat : this.barMat); seg.position.set(0.6 + i * 1.2, 0, 0); arm.add(seg); } arm.rotation.z = 1.3; piv.add(arm); grp.add(piv); arms.push({ arm, cs: c.s, side, line: ln }); }
+        const arm = new THREE.Group(); for (let i = 0; i < 6; i++) { const seg = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.14, 0.14), i % 2 ? this.redMat : this.barMat); seg.position.set(0.6 + i * 1.2, 0, 0); arm.add(seg); } arm.rotation.z = 1.3; piv.add(arm); grp.add(piv); arms.push({ arm, cs: c.s, side, line: ln, lc: c.lcId }); }
     }
     grp.userData = { x: ox, z: oz, arms }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
   }
@@ -129,8 +136,17 @@ export class RailView {
       if (!built) for (let d = 0; d <= hi - lo && !built; d++) for (const k of d ? [Math.floor(near.s / CHUNK) + d, Math.floor(near.s / CHUNK) - d] : [Math.floor(near.s / CHUNK)]) { const key = this.key(li, k); if (k >= lo && k <= hi && k * CHUNK < ln.len && !this.chunks.has(key)) { this.chunks.set(key, this.build(li, k)); built = true; break; } }
     }
     for (const n of this.net.stations) { const d = Math.hypot(n.x - pg.x, n.z - pg.z); const has = this.stationsBuilt.has(n.id); if (d < 700 && !has && !built) { const g = this.buildStation(n); if (g) this.stationsBuilt.set(n.id, g); built = true; } else if (d > 1100 && has) { this.drop(this.stationsBuilt.get(n.id)); this.stationsBuilt.delete(n.id); } }
-    this.updateTrains(dt, px, pz); this.updateBars();
+    if (this.control) { this.control.advance(dt); this.updateCtl(px, pz); this.updateSignals(px, pz, dt); } else this.updateTrains(dt, px, pz); this.updateBars();
   }
+  /* the railway clock in minutes of the day: the control office's own time, so the boards agree with when trains really leave */
+  /* trains of the control office that are about to stop at a city (within 900 m of their stop, announced once): { n, name, from, to, plat (0 if the line is not reserved yet), key } */
+  arriving(city, book) {
+    const out = [], C = this.control, nm = id => (book && book.cities && book.cities[id]) || id;
+    for (const T of C.trains) { if (T.announced === T.si || T.si === 0 || T.atStop === T.si) continue; const st = T.svc.stops[T.si]; if (st.city !== city || st.x - T.head > 900) continue; T.announced = T.si;
+      const k = C.segIndexAt(T, st.x), h = T.held[k], seg = T.segs[k], plat = h >= 0 && seg.blk && st.node ? C.g.platformNo(st.node, seg.blk, h) : 0, stops = T.svc.stops; out.push({ n: T.n, name: T.name, from: nm(stops[0].city), to: nm(stops[stops.length - 1].city), plat, key: T.id + ':' + T.si }); }
+    return out;
+  }
+  clockMin() { return this.control ? ((this.control.t / CLOCK_K) % 1440 + 1440) % 1440 : null; }
   edgeHas(li) { for (const key of this.chunks.keys()) if (Math.floor(key / 1e6) === li) return true; return false; }
   updateTrains(dt, px, pz) {
     const p = this.p;
@@ -152,7 +168,41 @@ export class RailView {
     tr.cs.items.forEach((item, i) => { item.i = i; const v = this.art.build(item, ctx); this.group.add(v.obj); tr.meshes.push(v.obj); tr.vehicles.push(v); });
   }
   release(tr) { for (const m of tr.meshes) this.group.remove(m); for (const v of tr.vehicles) v.dispose(); tr.meshes = []; tr.vehicles = []; tr.active = false; }
-  updateBars() { for (const g of this.chunks.values()) for (const b of g.userData.arms) { const spans = this.trains.filter(t => t.line === b.line && t.span).map(t => t.span), closed = crossingClosed(b.cs, spans); b.arm.rotation.z += ((closed ? 0 : 1.3) - b.arm.rotation.z) * 0.1; } }
+  updateBars() { if (this.control) { for (const g of this.chunks.values()) for (const b of g.userData.arms) { const lc = this.control.lcs[b.lc]; b.arm.rotation.z += (1.3 * (1 - (lc ? lc.frac : 0)) - b.arm.rotation.z) * 0.15; } return; } for (const g of this.chunks.values()) for (const b of g.userData.arms) { const spans = this.trains.filter(t => t.line === b.line && t.span).map(t => t.span), closed = crossingClosed(b.cs, spans); b.arm.rotation.z += ((closed ? 0 : 1.3) - b.arm.rotation.z) * 0.1; } }
+  /* trains of the control office near the player get vehicles (their textures are drawn when they come near, freed when they leave); each vehicle follows the route of its train on the track line its train holds */
+  updateCtl(px, pz) {
+    const C = this.control, pg = this.toGame(px, pz), p = this.p, tmp = this._pl || (this._pl = {}), al = C.alpha, active = [];
+    for (const T of C.trains) {
+      const hv = T.headPrev + (T.head - T.headPrev) * al; C.placeAt(T, hv, tmp); const ln = this.lines[tmp.li], a = ln.at(tmp.s, p);
+      let pr = this.proxies.get(T.id), d = Math.hypot(a.x - pg.x, a.z - pg.z);
+      if (d > 1100 + T.len) { if (pr && pr.active) { this.release(pr); } if (pr) this.proxies.delete(T.id); continue; }
+      if (!pr) { pr = { ctl: T, real: T.real, local: T.local, style: T.style, cs: T.cs, seed: T.svc.seed, total: T.len, meshes: [], vehicles: [], active: false, circles: [], v: 0, dir: 1, head: 0, line: ln, lat: [] }; this.proxies.set(T.id, pr); }
+      if (!pr.meshes.length) this.assemble(pr);
+      pr.active = true; pr.v = T.v; pr.line = ln; pr.head = tmp.s; pr.dir = tmp.fwd ? 1 : -1; pr.circles.length = 0; let back = 0;
+      for (let i = 0; i < pr.meshes.length; i++) {
+        const m = pr.meshes[i], L = pr.vehicles[i].length, x = Math.max(0, hv - back - L / 2); back += L; C.placeAt(T, x, tmp); const l2 = this.lines[tmp.li], b = l2.at(tmp.s, p), dir = tmp.fwd ? 1 : -1;
+        const cur = pr.lat[i] === undefined ? tmp.lane : pr.lat[i]; pr.lat[i] = cur + (tmp.lane - cur) * 0.08;                      // changes of line are eased, not jumped
+        const w = this.toWorld(b.x - b.tz * pr.lat[i], b.z + b.tx * pr.lat[i]), y = this.trackY(tmp.li, tmp.s) + 0.35;
+        m.visible = true; m.position.set(w.x - this.origin.x, y, w.z - this.origin.z); m.rotation.y = -Math.atan2(b.tz * dir, b.tx * dir); const yw = -m.rotation.y, half = L / 2 - 1.5, f = Math.cos(yw), g = Math.sin(yw); for (let c = -2; c <= 2; c++) pr.circles.push({ x: w.x + f * c * half / 2, z: w.z + g * c * half / 2, r: 1.8, train: true });
+      }
+      active.push(pr);
+    }
+    this.trains = active;
+  }
+  /* colour light signals near the player: a post at the entry of each block, in the colour the control office shows (red, yellow, double yellow = two lamps, green) */
+  updateSignals(px, pz, dt) {
+    this.sigT += dt; if (this.sigT < 0.25) return; this.sigT = 0; const C = this.control, pg = this.toGame(px, pz), pool = this.sigPool, p = this.p, q = this.q; let n = 0;
+    if (!this.sigMat) { const mk = c => new THREE.MeshBasicMaterial({ color: c }); this.sigMat = { R: mk(0xff2a1a), Y: mk(0xffc20a), G: mk(0x2bd45a), off: mk(0x1a1a1a), post: new THREE.MeshStandardMaterial({ color: 0x6a6f75, roughness: 0.7 }), geoP: new THREE.BoxGeometry(0.2, 5.2, 0.2), geoH: new THREE.BoxGeometry(0.5, 1.5, 0.4), geoL: new THREE.SphereGeometry(0.16, 6, 4) }; }
+    for (const [li, near] of this.nearEdge) { if (!near || near.d > 380) continue; const e = C.g.edges[li], ln = this.lines[li];
+      for (const blk of e.blocks) for (const dirw of e.nT === 1 ? [1, -1] : [1, -1]) {
+        if (blk.stub) continue; const s = dirw > 0 ? blk.a : blk.b; if (Math.abs(s - near.s) > 420) continue; if (e.nT > 1 && !blk.lines.some(l => l.kind === 'track' && l.dir === dirw)) continue; if (n >= 48) break;
+        const a = ln.at(s, p), lat = (e.nT === 1 ? 3.1 : (e.nT - 1) * 2.65 + 3.1) * (dirw > 0 ? -1 : 1) * 1, w = this.toWorld(a.x - a.tz * lat, a.z + a.tx * lat), asp = C.aspectAt(blk, dirw);
+        let g = pool[n]; if (!g) { g = new THREE.Group(); const post = new THREE.Mesh(this.sigMat.geoP, this.sigMat.post), head = new THREE.Mesh(this.sigMat.geoH, this.sigMat.post), l1 = new THREE.Mesh(this.sigMat.geoL, this.sigMat.off), l2 = new THREE.Mesh(this.sigMat.geoL, this.sigMat.off); post.position.y = 2.6; head.position.set(0, 4.9, 0); l1.position.set(-0.27, 5.3, 0); l2.position.set(-0.27, 4.6, 0); g.add(post, head, l1, l2); g.userData = { l1, l2 }; this.group.add(g); pool.push(g); }
+        g.visible = true; g.position.set(w.x - this.origin.x, this.trackY(li, s), w.z - this.origin.z); g.rotation.y = -Math.atan2(a.tz * dirw, a.tx * dirw);
+        const { l1, l2 } = g.userData; l1.material = asp === 'R' ? this.sigMat.R : asp === 'G' ? this.sigMat.G : this.sigMat.Y; l2.material = asp === 'YY' ? this.sigMat.Y : this.sigMat.off; void q; n++;
+      } }
+    for (let i = n; i < pool.length; i++) pool[i].visible = false;
+  }
   near(x, z, r) { const out = this._out || (this._out = [[]]), l = out[0]; l.length = 0; for (const tr of this.trains) if (tr.active) for (const c of tr.circles) if (Math.abs(c.x - x) < r + 4 && Math.abs(c.z - z) < r + 4) l.push(c); return out; }
   dispose() { for (const g of this.chunks.values()) this.drop(g); this.chunks.clear(); for (const g of this.stationsBuilt.values()) this.drop(g); this.stationsBuilt.clear(); for (const t of this.trains) if (t.active) this.release(t); this.group.parent && this.group.parent.remove(this.group); this.mat.dispose(); }
 }
