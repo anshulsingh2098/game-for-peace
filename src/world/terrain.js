@@ -8,6 +8,7 @@
 import { createNoise } from '../core/noise.js';
 import { alea } from '../core/rng.js';
 import { roadSurfaceAt } from './roadstyles.js';
+import { KeepOut } from './keepout.js';
 
 const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
 const sstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
@@ -60,7 +61,7 @@ export function createTerrain(config) {
     return h;
   }
   /* flat zones: ground levelled for a landmark. The land eases from `y` to its natural height between r and r + blend metres out. They affect what is built and driven on, not the road routing. */
-  const zones = [];
+  const zones = [], keepout = new KeepOut();          // keepout: the shared registry of ground that is taken (keepout.js); zones register themselves, main.js adds roads, rails and stations
   function natural(x, z) {
     let h = base(x, z);
     for (let i = 0; i < zones.length; i++) { const q = zones[i], d = Math.hypot(x - q.x, z - q.z); if (d < q.r + q.blend) h = q.y + (h - q.y) * sstep(q.r, q.r + q.blend, d); }
@@ -134,7 +135,7 @@ export function createTerrain(config) {
     return { x: 0, z: 0, y: Math.max(sea, base(0, 0)) };
   }
 
-  const terrain = { base, height, drive, deck, surface, inZone, addZone: (x, z, r, y, blend = 40) => { zones.push({ x, z, r, y, blend }); }, colour, forest, findSpawn, seaLevel: sea, config,
+  const terrain = { base, height, drive, deck, surface, inZone, addZone: (x, z, r, y, blend = 40) => { zones.push({ x, z, r, y, blend }); keepout.add('zone', 'landmark', { t: 'circle', x, z, r }); }, keepout, colour, forest, findSpawn, seaLevel: sea, config,
     cover, regionAt, regionTint, attachRoad(r) { road = r; }, attachRail(g) { railG = g; }, get road() { return road; },
     /* the same land without the road, for the coarse horizon tiles */
     far: { height: base, colour: (x, z, h, ny, out) => colour(x, z, h, ny, out, false) } };

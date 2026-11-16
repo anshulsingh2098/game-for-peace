@@ -42,6 +42,7 @@ import { REGIONS, KNOWN_LANDMARKS, validateRegion, regionToLocation, regionTrans
 import { readFileSync } from 'node:fs';
 import { NavGraph, RoadNav, STEP as NAV_STEP, CROSS_EVERY } from '../src/world/navgraph.js';
 import { planPiece, FRONT_GAP, DEPTH, LAMP_EVERY } from '../src/world/district_plan.js';
+import { KeepOut, RANK, railClaim, stationClaim, registerRail, roadProvider } from '../src/world/keepout.js';
 import { crossingAt } from '../src/world/navgraph.js';
 import { PedSim, LEVELS, MAX_PEDS, SPAWN_MIN } from '../src/pedestrians/sim.js';
 import { OnFoot, FOOT, chooseExit, Interactions } from '../src/player/onfoot.js';
@@ -466,6 +467,30 @@ await atest('Indian trains: consists look like the real thing (LHB sleepers and 
   const rj = consist('rajdhani', null, 1); assert.ok(!rj.items.some(i => i.kind === 'sleeper' || i.kind === 'general') && rj.items.some(i => i.label === 'B1') && rj.items.some(i => i.label === 'H1'), 'a Rajdhani is all air-conditioned'); const fr = consist('freight', null, 5); assert.equal(fr.items[0].kind, 'loco'); assert.equal(fr.items[fr.items.length - 1].kind, 'brake', 'a goods train ends with a brake van'); assert.ok(fr.items.length >= 18 && fr.items.every(i => ['loco', 'boxn', 'tank', 'container', 'brake'].includes(i.kind)));
   const em = consist('emu_wr', null, 2); assert.equal(em.items.length, 12); assert.equal(em.items[0].end, 1); assert.equal(em.items[11].end, -1); assert.equal(consist('passenger', null, 3).livery, 'icf'); assert.equal(lengthOf('coach'), LEN.coach); assert.equal(lengthOf('boxn'), 10.7);
   assert.equal(headcode('rajdhani', null), 'RAJDHANI EXPRESS'); assert.equal(headcode('express', { name: 'Punjab Mail' }), 'MAIL EXPRESS'); assert.equal(headcode('express', {}), 'SUPERFAST EXPRESS'); assert.ok(locoNumber(3, 'express') >= 30000 && locoNumber(3, 'express') < 39000);
+});
+await atest('rail over road: the track rises over a highway on a long gentle ramp (no steeper than 3 percent), level crossings stay level', async () => {
+  const { RailLine } = await import('../src/world/rail.js'), { RailGrade, RAIL_GRADE } = await import('../src/world/rail_grade.js'), flat = () => 30, ln = new RailLine('e', [0, 0, 3000, 0]); ln.a = 0; ln.b = 1;
+  const mk = crossings => new RailGrade({ edges: [ln], toWorld: (x, z) => ({ x, z }), natural: flat, crossings }), c = (type, s) => ({ rail: 'e', type, s, x: s, z: 0 });
+  const g = mk([c('bridge', 1500)]), pr = g.profile(0); assert.ok(g.yAt(0, 1500) >= 30 + RAIL_GRADE.CLEARANCE - 0.2, 'over the road with clearance: ' + g.yAt(0, 1500).toFixed(1)); let worst = 0; for (let i = 1; i < pr.length; i++) worst = Math.max(worst, Math.abs(pr[i] - pr[i - 1]) / RAIL_GRADE.STEP); assert.ok(worst <= RAIL_GRADE.MAX_GRADE + 1e-6, 'a gentle ramp: ' + worst.toFixed(4));
+  assert.ok(g.yAt(0, 1500 - 400) < g.yAt(0, 1500 - 100), 'it climbs towards the road'); assert.ok(g.yAt(0, 100) < 30 + 2, 'far away it is back at the ground'); assert.ok(mk([c('level', 1500)]).yAt(0, 1500) < 33, 'a level crossing stays at the ground');
+});
+await atest('locomotive liveries do not show the service; diesel where not electrified; Vande Bharat only on its routes; maintenance trains are yellow', async () => {
+  const { consist, locoSpec, lengthOf } = await import('../src/world/train_consist.js'), { TrainBook, styleOf } = await import('../src/world/rail_timetable.js'), { RailNetwork } = await import('../src/world/rail.js'), fs = await import('node:fs/promises'), rd = f => fs.readFile(new URL('../assets/india/' + f, import.meta.url)).then(b => JSON.parse(b));
+  const seen = { express: new Set(), freight: new Set(), passenger: new Set() }; for (let sd = 0; sd < 300; sd++) for (const st of Object.keys(seen)) seen[st].add(locoSpec(st, sd, false).livery); for (const st of Object.keys(seen)) assert.ok(seen[st].size >= 2, st + ' locos come in several liveries: ' + [...seen[st]]);
+  assert.ok([...seen.express].every(l => ['blue', 'red', 'green'].includes(l)), 'electric liveries are blue, red or green'); const dz = new Set(); for (let sd = 0; sd < 300; sd++) { const l = locoSpec('freight', sd, true); assert.ok(l.diesel && /^WD/.test(l.model)); dz.add(l.livery); } assert.ok(dz.has('brown'), 'diesel freight locos are often brown');
+  assert.equal(consist('freight', null, 4, { diesel: true }).items[0].diesel, true); assert.ok(!consist('freight', null, 4, {}).items[0].diesel); assert.equal(consist('maintenance', null, 1).loco, 'yellow'); assert.ok(consist('maintenance', null, 1).items.every(i => i.kind.startsWith('maint')) && lengthOf('maint') > 8); assert.ok([8, 16].includes(consist('vande', null, 7).items.length));
+  const rn = new RailNetwork(await rd('rails.json')), book = new TrainBook(await rd('trains.json'), rn), vb = book.trains.filter(t => /vande/i.test(t.name)); assert.ok(vb.length >= 20 && vb.every(t => styleOf(t) === 'vande' && t.stops.length >= 2), 'Vande Bharat services: ' + vb.length); const v1 = vb.find(t => t.n === '20901'); assert.ok(v1 && v1.stops[0][0] === 'mumbai' && v1.stops.some(x => x[0] === 'ahmedabad') && v1.stops[0][2] === 6 * 60 + 10, 'Mumbai Central to Gandhinagar leaves at 06:10 through Surat and Vadodara');
+  const dep = book.departures('delhi', 5 * 60, 300); assert.ok(dep.some(d => /Vande/.test(d.name)), 'a Vande Bharat is on the Delhi board in the early morning');
+});
+await atest('railway signals and crossings: signals stand where the rules put them and show the right aspect; an expressway is never crossed on the level; gates and traffic', async () => {
+  const { planSignals, aspectOf, HOME_BEFORE, DISTANT_BEFORE } = await import('../src/world/rail_signals.js'), { classifyCrossings, RailLine } = await import('../src/world/rail.js');
+  const sg = planSignals(2400, true, true, [1200]), home = sg.filter(x => x.kind === 'home'); assert.equal(home.length, 2, 'a home signal at each end'); assert.ok(home.some(x => x.dir === -1 && x.s === HOME_BEFORE) && home.some(x => x.dir === 1 && x.s === 2400 - HOME_BEFORE), 'homes stand before the node for trains arriving there');
+  for (const d of sg.filter(x => x.kind === 'distant')) assert.ok(Math.abs(d.s - (d.dir > 0 ? 2400 - DISTANT_BEFORE : DISTANT_BEFORE)) < 1, 'a distant stands further back than its home'); assert.equal(sg.filter(x => x.kind === 'gate').length, 2, 'a gate signal for each direction before the level crossing'); assert.ok(sg.every(x => x.s > 0 && x.s < 2400));
+  const occ = (a, b) => (a, b, 1200 >= a && 1200 < b ? true : false); const up = sg.filter(x => x.dir === 1); const kHome = sg.indexOf(up.find(x => x.kind === 'home')); assert.equal(aspectOf(sg, kHome, 2400, () => false), 'green', 'free line: green'); assert.equal(aspectOf(sg, kHome, 2400, (a, b) => b > 2300), 'red', 'a train in the block: red');
+  const kBlock = sg.indexOf(up.find(x => x.kind === 'block')), blockAhead = up.filter(x => x.s > sg[kBlock].s)[0]; const occAfter = (a, b) => blockAhead && b > blockAhead.s + 5 && a >= blockAhead.s - 1 && a < blockAhead.s + 5; assert.ok(['yellow', 'green', 'red'].includes(aspectOf(sg, kBlock, 2400, occAfter)));
+  const kGate = sg.indexOf(up.find(x => x.kind === 'gate')); assert.equal(aspectOf(sg, kGate, 2400, () => false, false), 'red', 'a gate signal stays red until the gate is shut'); assert.equal(aspectOf(sg, kGate, 2400, () => false, true), 'green');
+  const rail = new RailLine('r', [0, 0, 4000, 0]); const roads = [{ id: 'a', kind: 'gq', pts: [1000, -300, 1000, 300] }, { id: 'b', kind: 'nh', pts: [3000, -300, 3000, 300] }, { id: 'c', kind: 'ew', pts: [1800, -300, 1800, 300] }], stations = [{ x: 1000, z: 0 }, { x: 3000, z: 0 }];
+  const cr = classifyCrossings([rail], roads, [], stations); const by = Object.fromEntries(cr.map(c => [c.road, c.type])); assert.equal(by.a, 'bridge', 'an expressway next to a station is still crossed on a bridge'); assert.equal(by.b, 'level', 'a plain national highway next to a station may have a level crossing'); assert.equal(by.c, 'bridge', 'away from stations it is a bridge');
 });
 await atest('my music: only audio files within limits are kept, songs play in turn and are freed again (nothing leaves the device)', async () => {
   const fake = new Map(); class FakeAudio { constructor() { this.attrs = {}; this.ev = {}; this.volume = 1; this.paused = true; } addEventListener(n, f) { this.ev[n] = f; } set src(v) { this.attrs.src = v; } get src() { return this.attrs.src; } getAttribute(k) { return this.attrs[k] || null; } removeAttribute(k) { delete this.attrs[k]; } load() {} pause() { this.paused = true; } play() { this.paused = false; return Promise.resolve(); } error = null; }
@@ -993,6 +1018,56 @@ await atest('overpass: a road crossing another is raised on a deck; the car driv
   /* with nothing raised everything is as before */
   const t2 = createTerrain(cfg), m2 = new Road(t2, cfg); m2.ensure(-1500, 3000); const s2 = new RoadSet(m2); t2.attachRoad(s2); const t3 = createTerrain(cfg), m3 = new Road(t3, cfg); m3.ensure(-1500, 3000); t3.attachRoad(m3);
   for (let i = 0; i < 40; i++) { const x = jp.x + i * 53 - 900, z = jp.z + i * 31 - 500; assert.equal(t2.drive(x, z, 123), t3.drive(x, z), 'a hint changes nothing where no road is raised'); assert.ok(Number.isNaN(t2.deck(x, z))); }
+});
+
+/* ---- CITY_PLAN Phase 0: the shared keep-out and ownership registry ---- */
+test('keepout: lines, circles and rectangles answer points and rectangles; rank, ignore and layer decide who is blocked by whom', () => {
+  const ko = new KeepOut(); ko.add('rail:1', 'rail', { t: 'line', pts: [0, 0, 100, 0, 200, 50], hw: 4 }); ko.add('zone', 'landmark', { t: 'circle', x: 0, z: 300, r: 20 }); ko.add('station:9', 'station', { t: 'rect', x: 500, z: 500, hx: 60, hz: 20, yaw: Math.PI / 4 });
+  assert.ok(ko.point(50, 3, 0), 'on the rail bed'); assert.ok(!ko.point(50, 6, 0), 'beside the bed'); assert.ok(ko.point(50, 6, 3), 'the margin grows the asker'); assert.ok(ko.point(0, 318, 0), 'inside the landmark circle'); assert.ok(!ko.point(0, 330, 5));
+  assert.ok(ko.point(500, 500, 0), 'inside the station'); const cs = Math.cos(Math.PI / 4); assert.ok(ko.point(500 + 55 * cs, 500 + 55 * cs, 0), 'along the rotated station'); assert.ok(!ko.point(500 + 40 * cs + 25 * cs, 500 + 40 * cs - 25 * cs + 40, 0), 'off its side');
+  assert.ok(ko.rect(50, 20, 10, 5, 0, 0) === null, 'a plot clear of the rail'); assert.ok(ko.rect(50, 8, 10, 5, 0, 0), 'a plot reaching into the rail bed'); assert.ok(ko.rect(50, 10, 10, 5, 0, 0) === null && ko.rect(50, 10, 10, 5, 0, 2), 'and the margin makes a near miss a hit'); assert.ok(ko.rect(100, 2, 3, 1, 0.5, 0), 'a plot on the rail');
+  assert.ok(ko.rect(150, 40, 5, 5, 0, 0) === null, 'the corner of a diagonal segment is measured by distance, not by its box'); assert.ok(ko.rect(200, 55, 3, 3, 0.3, 0), 'at the end of the rail');
+  assert.ok(ko.rect(0, 300, 1, 1, 0, 0), 'a plot inside the landmark circle');
+  assert.ok(ko.rect(520, 520, 10, 10, 0.2, 0), 'a plot on the station'); assert.ok(ko.rect(500, 590, 10, 10, 0, 0) === null, 'a plot beyond the station');
+  /* rank: a thing is blocked by claims of its own rank or higher */
+  const b = ko.add('plot:1', 'building', { t: 'rect', x: 1000, z: 0, hx: 6, hz: 6, yaw: 0 }); assert.ok(ko.point(1000, 0, 0, { as: 'building' }), 'a building blocks another building'); assert.ok(ko.point(1000, 0, 0, { as: 'scenery' }), 'and a tree'); assert.ok(!ko.point(1000, 0, 0, { as: 'road' }), 'but not a road, which outranks it'); assert.ok(!ko.point(1000, 0, 0, { as: 'station' }));
+  assert.ok(!ko.point(1000, 0, 0, { as: 'building', ignore: 'plot:1' }), 'ignore: a thing does not hear about itself'); assert.ok(!ko.rect(1000, 0, 6, 6, 0, 0, { ignore: ['plot:1'] }));
+  assert.ok(RANK.station > RANK.landmark && RANK.landmark > RANK.rail && RANK.rail > RANK.road && RANK.road > RANK.building && RANK.building > RANK.scenery, 'the rank order');
+  /* layers: a flyover and the road under it coexist; remove; listeners */
+  const k2 = new KeepOut(), seen = []; k2.listeners.push(bb => seen.push(bb)); k2.add('deck', 'road', { t: 'line', pts: [0, 0, 100, 0], hw: 8 }, { layer: 1 }); assert.equal(seen.length, 1, 'listeners hear new claims'); assert.ok(k2.point(50, 0, 0, { as: 'building' }) && !k2.point(50, 0, 0, { as: 'building', layer: 0 }), 'a claim on another layer is skipped by an asker on layer 0');
+  k2.removeOwner('deck'); assert.equal(k2.size, 0); assert.ok(!k2.point(50, 0, 0), 'removed'); assert.throws(() => k2.add('x', 'tree', { t: 'circle', x: 0, z: 0, r: 1 }), /unknown kind/);
+  /* providers (the RoadSet) */
+  const road = { nearest: (x, z) => { road.hit = { d: Math.abs(z) }; return Math.abs(z) < 50; }, hit: { d: 0 }, style: { outer: 7 } }, ko3 = new KeepOut(); roadProvider(ko3, { roads: [road] });
+  assert.ok(ko3.point(0, 8, 0, { as: 'building' }) && !ko3.point(0, 12, 0, { as: 'building' }), 'a road provider answers within its width'); assert.ok(!ko3.point(0, 0, 0, { as: 'building', ignore: ko3.nameOf(road, 'road') }), 'a road ignores itself when named'); assert.ok(ko3.rect(0, 10, 3, 3, 0, 0, { as: 'building' }), 'a plot reaching onto the road, by the provider'); assert.ok(!ko3.rect(0, 30, 3, 3, 0, 0, { as: 'building' }));
+});
+test('keepout: railClaim splits long lines, registerRail turns a network into beds and stations, determinism', () => {
+  const ko = new KeepOut(), pts = []; for (let i = 0; i <= 40; i++) pts.push(i * 100, Math.sin(i / 5) * 60); const c = railClaim(ko, 7, pts, 2); assert.ok(c.length >= 10 && c.length <= 16, 'a 4 km line is split in claims of about 300 m (' + c.length + ')'); assert.ok(c.every(x => x.hw === 5.3 / 2 + 4.2), 'two tracks make a wider bed');
+  const probe = ko.point(2000, Math.sin(20 / 5) * 60 + 2, 0); assert.ok(probe && probe.owner === 'rail:7', 'on the bed far along');
+  const net = { edges: [{ id: 1, a: 1, b: 2, pts: [0, 0, 400, 0] }, { id: 2, a: 2, b: 3, pts: [400, 0, 400, 800] }], stations: [{ id: 2, x: 400, z: 0 }], adj: new Map() }; net.adj.set(2, [net.edges[1], net.edges[0]]);
+  const k2 = new KeepOut(); registerRail(k2, { network: net, tracks: [1, 2], toWorld: (x, z) => ({ x: x + 10, z: z + 10 }) }); assert.ok(k2.point(210, 10, 0, { as: 'scenery' }) && !k2.point(210, 30, 0, { as: 'scenery' }), 'edges are moved into world metres');
+  assert.ok(k2.byOwner.has('station:2') && k2.rect(410, 20, 20, 5, 0, 0, { as: 'building' }), 'the station claims its platforms'); assert.ok(!k2.rect(410, 20, 20, 5, 0, 0, { as: 'building', ignore: ['station:2', 'rail:1', 'rail:2'] }), 'and a station asks without hearing about itself and its own rails');
+  const st = stationClaim(new KeepOut(), 5, 0, 0, 1, 0, 1); assert.equal(st.kind, 'station'); assert.ok(st.hx > 60 && st.hz > 20, 'a station covers its platforms, canopy and building');
+});
+test('keepout + district: no building stands on a railway, a station, a landmark or a second road, and every plot is clear of every other plot', () => {
+  const loc = LOCATIONS.find(l => l.id === 'mumbai'), spec = loc.region.district, cfg = locationConfig('mumbai', 'peace'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-2500, 2500); t.attachRoad(r);
+  const ko = t.keepout; assert.ok(ko instanceof KeepOut, 'the terrain owns a registry');
+  const L = 200, k0 = Math.ceil((r.sMin + 100) / L), k1 = Math.floor((r.sMax - 100) / L) - 1, mid = r.at(0, {}), tx = mid.tx, tz = mid.tz;
+  /* a railway running right along the road (30 m to the left) and one crossing it, a station on the road, a landmark zone, and a second road crossing */
+  const nx = -tz, nz = tx; railClaim(ko, 'along', [mid.x + nx * 30 - tx * 700, mid.z + nz * 30 - tz * 700, mid.x + nx * 30 + tx * 700, mid.z + nz * 30 + tz * 700], 2); railClaim(ko, 'across', [mid.x + tx * 300 - nx * 200, mid.z + tz * 300 - nz * 200, mid.x + tx * 300 + nx * 200, mid.z + tz * 300 + nz * 200], 1);
+  stationClaim(ko, 'agra', mid.x - tx * 400 + nx * 35, mid.z - tz * 400 + nz * 35, tx, tz, 2); t.addZone(mid.x + tx * 500 - nx * 50, mid.z + tz * 500 - nz * 50, 40, mid.y, 20);
+  const second = { nearest: (x, z) => { const d = Math.abs((x - mid.x) * tx + (z - mid.z) * tz - 600); second.hit = { d }; return d < 100; }, hit: { d: 0 }, style: { outer: 8 } }; roadProvider(ko, { roads: [second] });
+  const me = ko.nameOf(r, 'road'); let free = 0, kept = 0, hit = 0; const placed = [];
+  for (let k = k0; k <= k1; k++) {
+    const base = { road: r, terrain: t, seed: 'peace:mumbai', k, s0: k * L, s1: (k + 1) * L, spec }, a = planPiece(base), b = planPiece({ ...base, keepout: ko, ignore: me }), c = planPiece({ ...base, keepout: ko, ignore: me });
+    assert.deepEqual(b, c, 'with the registry the plan is still deterministic'); free += a.plots.length; kept += b.plots.length;
+    for (const pl of b.plots) { const claim = ko.rect(pl.x, pl.z, pl.w / 2, pl.d / 2, Math.atan2(pl.tz, pl.tx), 0, { as: 'road', ignore: me }); if (claim) hit++; placed.push(pl); }
+    for (const f of b.furniture) assert.ok(!ko.point(f.x, f.z, 0, { as: 'road', ignore: me }), 'no lamp, shelter, stall or signal on a rail, station, landmark or road (' + f.type + ')');
+  }
+  assert.equal(hit, 0, 'no plot overlaps a rail, station, landmark or second road'); assert.ok(kept < free && free - kept >= 8, 'the registry bites: ' + free + ' plots without it, ' + kept + ' with it');
+  for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) { const p = placed[i], q = placed[j]; if (Math.hypot(p.x - q.x, p.z - q.z) < 30) { const k3 = new KeepOut(); k3.add('a', 'building', { t: 'rect', x: p.x, z: p.z, hx: p.w / 2 - 0.05, hz: p.d / 2 - 0.05, yaw: Math.atan2(p.tz, p.tx) }); assert.ok(!k3.rect(q.x, q.z, q.w / 2 - 0.05, q.d / 2 - 0.05, Math.atan2(q.tz, q.tx), 0), 'two plots of one road never overlap ' + JSON.stringify([p.side, q.side, p.s, q.s, p.w, q.w, p.d, q.d].map(v => Math.round(v * 10) / 10))); } }
+});
+test('keepout: scatter respects claims (terrain.addZone registers a landmark; a plot claim removes the trees under it)', () => {
+  const cfg = locationConfig('mumbai', 'peace'), t = createTerrain(cfg); t.addZone(100, 100, 30, 5, 10); assert.ok(t.keepout.point(110, 100, 0, { as: 'scenery' }) && !t.keepout.point(160, 100, 0, { as: 'scenery' }), 'a levelled landmark zone is a claim'); assert.ok(t.keepout.point(100, 100, 0, { as: 'landmark' }) && !t.keepout.point(100, 100, 0, { as: 'station' }));
 });
 
 console.log(`\n${passed} checks passed`);

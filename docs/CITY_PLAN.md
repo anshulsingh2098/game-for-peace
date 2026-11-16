@@ -32,6 +32,12 @@ Rules that always apply: every download needs the owner's yes (file, source, siz
 4. Fix the existing Agra mess with the registry as proof; a visual check list per city (see the "city card" below).
 Done when: nothing is built through a road, rail or station in any current city; the architecture note is agreed by the owner.
 
+**Status (22 Nov 2026, PR from `claude/goofy-liskov-0a8557`): items 1, 2 and 4 are built, item 3 is written and waits for the owner.**
+- Item 1: the audit of who places what is in `docs/CITY_PACK.md` section 1 (with the measured overlaps: in Agra 143 of 430 planned plots, in Delhi 184 of 469, in Mumbai 101 of 247 stood on a rail bed, a station or another road).
+- Item 2: `src/world/keepout.js`, the registry, wired into the district, scatter and station buildings; 4 new self-test checks (86 in all). After it, no plot touches a rail, station, landmark zone or second road in Agra, Delhi or Mumbai, plots no longer overlap each other on bends, and trees keep off rails and stations. Not yet asking the registry: `landmarks.js` and props.
+- Item 3: `docs/CITY_PACK.md` (recommendation: 1:1 city enclaves entered from the highway gates, budgets, the pack format). **Open for the owner: agree enclaves (question 1 below).**
+- Item 4: Agra, Delhi and Mumbai are fixed by the registry as measured; Kolkata has no district of its own yet and was not measured. Nobody has looked at it from the air or on a phone; `CHECKLIST.md` has a line for it. The station canopies and buildings are still plain boxes (Phase 5).
+
 ### Phase 1: the city pipeline (offline tool, one pilot: Delhi NCR)
 1. `tools/build_city.mjs` (or python): input an OSM extract and a bounding box or polygon, output a city pack: street graph with classes and names, blocks, building footprints with levels/height/use, landuse, parks and water, metro and rail, POIs and landmarks, one-way and lane counts where tagged. Deterministic, documented, with the attribution file.
 2. Validation script in `tools/` (counts, bounds, no self-overlap, sizes) and a self-test that checks the shipped pack is current.
@@ -76,3 +82,8 @@ Order: Delhi NCR, Mumbai, Kolkata, Chennai, Bengaluru, Hyderabad, then Ahmedabad
 2. OK to download an OSM extract for Delhi NCR (Geofabrik north zone is a few hundred MB; a bounding box through Overpass is much smaller)?
 3. Which Delhi landmarks and places matter most to you, in order?
 4. Real names on shops and brands: use real brand names (legal risk) or invented look-alikes?
+## Owner answers (22 Nov 2026, relayed by the session "Multi-level road physics for flyovers", quoting the owner)
+1. **City scale:** "entered from highway like a bypass in real world": 1:1 city enclaves entered from the highway, as a bypass or exit would be (`docs/CITY_PACK.md` section 3). **Agreed.**
+2. **Downloads:** "yes download all maps you need": OSM extracts and the other open data in the table above are approved. Still required: a note of each file (source, size, licence, date, sha256) in `docs/OPEN_DATA.md`; ODbL credit on screen; no Google data. Phase 1 does not start until Phase 0 (PR 51) is merged.
+3. **Places:** "every significant place that stays in hot topic and conversation but logically arranged as the real world": cover all well-known landmarks and areas of a city, not a short list, placed where they really are (from OSM and Wikidata positions). Phase 4's "first ten" is the first milestone, not the scope.
+4. **Brands and shop names:** "invented lookalikes", never real brand names or logos (shop signs, hotels, malls, fuel stations, vehicles).
