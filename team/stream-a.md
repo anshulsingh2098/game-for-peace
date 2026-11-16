@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 15:00  N10 navigation graph built
+Branch: feat/n10-nav
+What changed: new `src/world/navgraph.js` (generic `NavGraph` with spatial hash, bounded cached A*, validate and recover; `RoadNav` builds lane, lane-change, sidewalk and crossing edges from the road in sector chunks, with bridge and tunnel flags, grade, curvature, speed targets, signalled crossings and stop-line marks), new `src/debug/navdebug.js` (`?nav` view); `src/main.js` builds the graph per world, loads and unloads chunks from the sector manager and shows a `navigation` line in `?debug`. Four new self-tests (51 checks): lanes on the right side of travel for both drive sides, sidewalks never on the carriageway, vehicle and pedestrian routes use only their own edges, bounded and cached search, chunks join in any loading order, routes invalidate and recover when a sector unloads, bridges and tunnels keep a walkway, roundabout, dead end and flyover on synthetic graphs. Contract and measurements in `docs/NAVIGATION.md`. The generated road has no junctions yet (N11).
+For the other stream: consumers (traffic N12, pedestrians N13): use the query contract in `docs/NAVIGATION.md`; do not read nodes by scanning the graph per frame.
+Status: open
+
 ## 2026-11-17 13:00  N9 region model built (Mumbai, Delhi, Agra, Bhopal as data)
 Branch: feat/n9-regions
 What changed: new `src/world/regions.js` (versioned schema, validator, migration hook, `regionToLocation`, `regionTransition`) with Mumbai, Delhi and Agra moved out of `locations.js` into region records (their worlds are byte-identical: config hash before and after matched) and a new procedural Bhopal profile (lakes, bridges, two-lane roads, lighter traffic); `locations.js` appends `REGIONS.map(regionToLocation)`; configs now carry `region: { id, version }` (share codes carry it; older codes still load); traffic density takes the region's `traffic.scale` (`sim.js` and `traffic.js` accept `scale`, `main.js` passes it). Three new self-tests (47 checks): validation and rejection of 15 kinds of bad data, two regions through the same code deterministically with share-code round trip and a legacy code, and traffic scale. Decisions (geography mapping, OSM policy, elevation, determinism, transitions) in `docs/REGIONS.md`. OSM is NOT used; the owner must decide on ODbL before it is.

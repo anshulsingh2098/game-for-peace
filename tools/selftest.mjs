@@ -26,6 +26,7 @@ import { AssetCache } from '../src/core/assets.js';
 import { SectorManager, SECTOR_SIZE, sectorId } from '../src/world/sectors.js';
 import { REGIONS, KNOWN_LANDMARKS, validateRegion, regionToLocation, regionTransition, migrateRegion } from '../src/world/regions.js';
 import { readFileSync } from 'node:fs';
+import { NavGraph, RoadNav, STEP as NAV_STEP, CROSS_EVERY } from '../src/world/navgraph.js';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -517,6 +518,49 @@ test('regions: traffic density comes from the region data, not from a place name
   const cfg = locationConfig('california', 'scale'), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-1000, 1000); t.attachRoad(r);
   const full = new TrafficSim(r, { seed: 's', mode: 'high', scale: 1 }), part = new TrafficSim(r, { seed: 's', mode: 'high', scale: 0.6 }), none = new TrafficSim(r, { seed: 's', mode: 'off', scale: 0.6 });
   assert.equal(full.cap, MODES.high); assert.equal(part.cap, Math.round(MODES.high * 0.6)); assert.equal(none.cap, 0); assert.ok(new TrafficSim(r, { mode: 'low', scale: 0.01 }).cap >= 1);
+});
+
+/* ---- N10: navigation graph ---- */
+const navWorld = (loc, seed, drive) => { const cfg = locationConfig(loc, seed), t = createTerrain(cfg), r = new Road(t, cfg); r.ensure(-2500, 2500); t.attachRoad(r); const nav = new RoadNav(r, { drive }); const sectors = new Map(), p = {};
+  for (let s = r.sMin + 40; s < r.sMax - 40; s += 20) { r.at(s, p); const sx = Math.floor(p.x / 512), sz = Math.floor(p.z / 512); sectors.set(sx + ',' + sz, [sx, sz]); } return { cfg, r, nav, sectors: [...sectors.values()] }; };
+test('navgraph: lanes follow the road on the right side of travel, sidewalks stay off the carriageway, crossings only at crossing nodes', () => {
+  for (const [loc, seed, drive] of [['california', 'peace', 'right'], ['mumbai', 'peace', 'left']]) {
+    const W = navWorld(loc, seed, drive); for (const [sx, sz] of W.sectors) W.nav.loadSector(sx, sz); const G = W.nav.graph, sum = W.nav.summary(); assert.ok(sum.nodes > 500 && sum.drive > 200 && sum.walk > 200 && sum.cross >= 4, JSON.stringify(sum));
+    const st = W.r.style, p = {}; let lanePts = 0;
+    for (const n of G.nodes.values()) {
+      W.r.at(n.s, p); const lat = (n.x - p.x) * -p.tz + (n.z - p.z) * p.tx;                                                // signed offset from the centre line along the left normal
+      if (n.kind === 'd') { const want = W.nav.lateral(n.dir, n.lane); assert.ok(Math.abs(lat - want) < 1e-6, 'lane node off its lane'); assert.ok(Math.abs(lat) <= st.half + 1e-6, 'lane node outside the carriageway'); if (drive === 'right') assert.ok((n.dir > 0) === (lat < 0)); else assert.ok((n.dir > 0) === (lat > 0)); lanePts++; }
+      else assert.ok(Math.abs(lat) >= st.shoulder - 0.8 - 1e-6 && Math.abs(lat) > st.half, 'sidewalk node on the carriageway: ' + lat);
+    }
+    for (const e of G.edges.values()) { const A = G.node(e.a), B = G.node(e.b); if (e.kind === 'drive') { assert.ok(A.kind === 'd' && B.kind === 'd' && A.dir === B.dir && A.lane === B.lane); assert.ok((B.i - A.i) * A.dir === 1, 'a drive edge goes the way its lane travels'); } else if (e.kind === 'walk') assert.ok(A.kind === 'w' && B.kind === 'w' && A.side === B.side);
+      else if (e.kind === 'cross') { assert.ok(A.kind === 'w' && B.kind === 'w' && A.i === B.i && A.side !== B.side && A.crossing && B.crossing, 'crossing between crossing nodes'); assert.ok(A.i % (CROSS_EVERY / NAV_STEP) === 0); assert.ok(!A.carried); } }
+    assert.ok(lanePts > 0); if (['boulevard', 'highway'].includes(st.id)) { assert.ok(W.nav.signals.size > 0); assert.ok([...G.nodes.values()].some(n => n.stopFor), 'stop lines are marked before signalled crossings'); }
+  }
+});
+test('navgraph: vehicle routes use drive and lane edges, pedestrian routes use sidewalks and approved crossings, search is bounded and cached', () => {
+  const W = navWorld('california', 'peace', 'right'); for (const [sx, sz] of W.sectors) W.nav.loadSector(sx, sz); const G = W.nav.graph; const ids = [...G.nodes.values()].filter(n => n.kind === 'd' && n.dir > 0 && n.lane === 0).sort((a, b) => a.i - b.i); const A = ids[2], B = ids[Math.min(ids.length - 1, 60)];
+  const r1 = G.route(A.id, B.id, { mode: 'drive' }); assert.ok(r1.ok, r1.reason); assert.ok(r1.edges.every(e => e.kind === 'drive' || e.kind === 'lane')); assert.ok(r1.length >= (B.i - A.i) * NAV_STEP * 0.99 && r1.length < (B.i - A.i) * NAV_STEP * 1.2);
+  const rev = G.route(B.id, A.id, { mode: 'drive' }); assert.equal(rev.ok, false, 'a lane cannot be driven the wrong way (no path back in the same direction without a lane to switch to)' ) || 0;
+  const walkA = [...G.nodes.values()].find(n => n.kind === 'w' && n.side === 1 && n.i === A.i), walkB = [...G.nodes.values()].find(n => n.kind === 'w' && n.side === -1 && n.i === B.i); const r2 = G.route(walkA.id, walkB.id, { mode: 'walk' }); assert.ok(r2.ok, r2.reason); assert.ok(r2.edges.every(e => e.kind === 'walk' || e.kind === 'cross')); assert.ok(r2.edges.filter(e => e.kind === 'cross').length === 1, 'exactly one crossing is used to change side'); assert.ok(r2.nodes.every(id => G.node(id).kind === 'w'));
+  const before = G.stats.expanded; const again = G.route(A.id, B.id, { mode: 'drive' }); assert.equal(again, r1, 'the same answer comes from the cache'); assert.equal(G.stats.expanded, before, 'a cached query expands nothing');
+  const tiny = G.route(A.id, B.id, { mode: 'drive', maxNodes: 5 }); assert.equal(tiny.ok, false); assert.match(tiny.reason, /limit/); assert.ok(tiny.expanded <= 6, 'the search stops at the limit');
+  assert.equal(G.route(A.id, 'nope', {}).ok, false); const near = G.nearestNode(A.x + 1, A.z + 1, 'drive'); assert.ok(near && Math.hypot(near.x - A.x, near.z - A.z) < NAV_STEP); assert.equal(G.nearestNode(1e7, 1e7, 'drive'), null);
+});
+test('navgraph: chunks join across sector boundaries in any loading order, and routes recover when a sector unloads', () => {
+  const W = navWorld('california', 'peace', 'right'); assert.ok(W.sectors.length >= 3, 'the road crosses several sectors: ' + W.sectors.length); const R = alea('nav-order'); const order = W.sectors.slice().sort(() => R() - 0.5);
+  for (const [sx, sz] of order) W.nav.loadSector(sx, sz); const full = W.nav.summary(); const W2 = navWorld('california', 'peace', 'right'); for (const [sx, sz] of W2.sectors) W2.nav.loadSector(sx, sz); const s2 = W2.nav.summary(); assert.equal(full.nodes, s2.nodes); assert.equal(full.drive, s2.drive); assert.equal(full.walk, s2.walk); assert.equal(full.cross, s2.cross, 'the graph does not depend on the order chunks loaded in');
+  const G = W.nav.graph, ds = [...G.nodes.values()].filter(n => n.kind === 'd' && n.dir > 0 && n.lane === 0).sort((a, b) => a.i - b.i), A = ds[0], B = ds[ds.length - 1]; const route = G.route(A.id, B.id, { mode: 'drive', maxNodes: 5000 }); assert.ok(route.ok, 'one continuous route over the whole built road: ' + route.reason); assert.ok(W.sectors.length < 2 || new Set(route.nodes.map(id => G.node(id).sector)).size >= 2);
+  const mid = route.nodes[Math.floor(route.nodes.length / 2)], midSector = G.node(mid).sector.split(',').map(Number), v = G.version; assert.ok(W.nav.unloadSector(midSector[0], midSector[1]) > 0); assert.ok(G.version > v); assert.equal(G.validateRoute(route), false, 'a route through an unloaded sector is no longer valid');
+  const x = G.node(route.nodes[0]).x, z = G.node(route.nodes[0]).z; const rec = G.recoverRoute(route, x, z, { maxNodes: 5000 }); assert.equal(rec.ok, false, 'no way through the gap'); W.nav.loadSector(midSector[0], midSector[1]); const rec2 = G.recoverRoute(route, x, z, { maxNodes: 5000 }); assert.ok(rec2.ok && G.validateRoute(rec2), 'reloading the sector restores the route'); assert.equal(G.validateRoute(null), false);
+  W.nav.unloadAll(); assert.equal(G.nodes.size, 0); assert.equal(G.edges.size, 0); assert.equal([...G.hash.values()].length, 0);
+});
+test('navgraph: bridges and tunnels carry lanes and a walkway, roundabouts loop, dead ends fail cleanly, flyovers only join where an edge joins them', () => {
+  for (const [loc, seed] of [['alps', 'alps'], ['himalayas', 'hill']]) { const W = navWorld(loc, seed, 'right'); for (const [sx, sz] of W.sectors) W.nav.loadSector(sx, sz); const G = W.nav.graph; const carried = [...G.nodes.values()].filter(n => n.carried); assert.ok(carried.length > 0, loc + ' has carried stretches');
+    const byKind = k => [...G.nodes.values()].filter(n => n.carried === k); for (const k of ['bridge', 'tunnel']) { const list = byKind(k); if (!list.length) continue; const w = list.filter(n => n.kind === 'w'); assert.ok(w.length > 0, k + ' has a pedestrian way'); const e = [...G.edges.values()].find(e => e.carried === k && e.kind === 'walk'); assert.ok(e, k + ' walkway edges exist'); } }
+  const g = new NavGraph(); const ring = 8; for (let k = 0; k < ring; k++) g.addNode({ id: 'r' + k, kind: 'd', x: Math.cos(k / ring * 6.283) * 20, z: Math.sin(k / ring * 6.283) * 20 }); for (let k = 0; k < ring; k++) g.addEdge({ id: 're' + k, a: 'r' + k, b: 'r' + (k + 1) % ring, kind: 'drive' });
+  g.addNode({ id: 'in', kind: 'd', x: -40, z: 0 }); g.addNode({ id: 'out', kind: 'd', x: 0, z: 40 }); g.addEdge({ id: 'ein', a: 'in', b: 'r4', kind: 'drive' }); g.addEdge({ id: 'eout', a: 'r2', b: 'out', kind: 'drive' }); const rr = g.route('in', 'out', {}); assert.ok(rr.ok && rr.nodes.includes('r7') && rr.nodes.includes('r0') && !rr.nodes.includes('r3') && rr.nodes.length === 9, 'goes round the roundabout the way it flows (r4 to r2 through r5, r6, r7, r0, r1)');
+  g.addNode({ id: 'dead', kind: 'd', x: 100, z: 100 }); g.addEdge({ id: 'edead', a: 'r0', b: 'dead', kind: 'drive' }); const back = g.route('dead', 'in', {}); assert.equal(back.ok, false); assert.equal(back.reason, 'no path'); assert.ok(back.expanded <= 2, 'a dead end is detected after expanding almost nothing');
+  const f = new NavGraph(); for (const [id, x, z] of [['a0', 0, 0], ['a1', 50, 0], ['b0', 25, -25], ['b1', 25, 25]]) f.addNode({ id, kind: 'd', x, z }); f.addEdge({ id: 'ea', a: 'a0', b: 'a1', kind: 'drive', level: 0 }); f.addEdge({ id: 'eb', a: 'b0', b: 'b1', kind: 'drive', level: 1 }); assert.equal(f.route('a0', 'b1', {}).ok, false, 'a flyover does not join the road under it'); f.addNode({ id: 'ramp', kind: 'd', x: 40, z: 0 }); f.addEdge({ id: 'e1', a: 'a1', b: 'ramp', kind: 'drive' }); f.addEdge({ id: 'e2', a: 'ramp', b: 'b1', kind: 'drive', level: 1 }); assert.ok(f.route('a0', 'b1', {}).ok, 'it joins through a ramp');
 });
 
 console.log(`\n${passed} checks passed`);

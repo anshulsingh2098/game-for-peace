@@ -19,6 +19,8 @@ import { installTunnelHoles } from './world/tunnel_holes.js';
 import { GameRuntime, EventBus } from './core/runtime.js';
 import { AssetCache } from './core/assets.js';
 import { SectorManager } from './world/sectors.js';
+import { RoadNav } from './world/navgraph.js';
+import { NavDebug } from './debug/navdebug.js';
 import { WALL, ARCH } from './world/tunnels.js';
 import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
@@ -90,6 +92,7 @@ const assetCache = new AssetCache({ load: async key => { if (key === 'traffic:pa
 let trafficPack = null; assetCache.acquire('traffic:pack').then(p => { trafficPack = p; if (p && typeof traffic !== 'undefined' && traffic) traffic.useModels(p); }).catch(() => {});          // the traffic vehicles load in the background; plain boxes until they are there
 let nature = null; if (natureLevel !== 'flat') loadNature(natureLevel).then(p => { nature = p; loadState.scenery = true; loadUpdate(); if (p && typeof scatter !== 'undefined' && scatter) scatter.setProps(p); });       // real-scan trees, plants and rocks (src/world/nature.js); ?nature=flat keeps the drawn ones
 const photoGround = groundLevel !== 'flat', groundMat = photoGround ? makeGroundMaterial(groundLevel) : null;                // photographic ground (src/world/groundmat.js); ?ground=flat for the old drawn texture
+let nav = null, navDebug = null;                                                                                 // the navigation graph of the current road (src/world/navgraph.js), built a sector at a time; ?nav draws it
 let holes = null;                                                                                                // doorways cut through the hillside at tunnel portals (src/world/tunnel_holes.js)
 const ground = groundMat ? groundMat.material : new THREE.MeshLambertMaterial({ vertexColors: true, map: grassTex() });
 const ripples = waterNormalTex(), RIP = 0.07;
@@ -112,6 +115,7 @@ function makeScenery() {
   backdrop = new Backdrop(scene, terrain, config);
   if (landmarks) landmarks.dispose(); landmarks = new Landmarks(scene, terrain, road, config, grid.origin, locationById(config.location).landmarks);       // sights beside the road; they also level the land under them
   roadMesh = new RoadMesh(scene, road, road.style, grid.origin); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
+  if (nav) nav.unloadAll(); nav = new RoadNav(road, { drive: locationById(config.location).drive || 'right' }); if (q.has('nav') && !navDebug) navDebug = new NavDebug(scene);
   if (traffic) traffic.dispose(); traffic = new Traffic(scene, road, config.seed, grid.origin, { mode: S.traffic, drive: locationById(config.location).drive || 'right', scale: (locationById(config.location).region || { traffic: { scale: 1 } }).traffic.scale, pack: trafficPack });          // cars on the road (src/traffic), on the right or the left as the place drives
   env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); } if (!holes) holes = installTunnelHoles(ground, WALL, ARCH); waterMat.color.set(config.water.color);
 }
@@ -251,8 +255,8 @@ addEventListener('resize', resize); resize();
 
 const stats = statsPanel($('#stats'), renderer, () => {
   const s = grid.stats(), f = far.stats(), sc = scatter.stats();
-  const sm = sectors.summary(), ac = assetCache.summary();
-  return ['sectors     active ' + sm.active + ' ready ' + sm.ready + ' loading ' + sm.loading + ' queued ' + sm.queued + ' failed ' + sm.failed + '   (loaded ' + sm.loaded + ' unloaded ' + sm.unloaded + ' aborted ' + sm.aborted + ')   assets held ' + ac.held + ' idle ' + ac.idle + ' ' + (ac.bytes / 1048576).toFixed(1) + ' MB', 'tiles       ' + s.tiles + '  (' + s.lod.join(' / ') + ' by detail)   far ' + f.tiles, 'build queue ' + (s.queue + f.queue + sc.queue) + '   pooled ' + (s.pooled + f.pooled) + '   built ' + (s.built + f.built),
+  const sm = sectors.summary(), ac = assetCache.summary(), nv = nav ? nav.summary() : null;
+  return ['sectors     active ' + sm.active + ' ready ' + sm.ready + ' loading ' + sm.loading + ' queued ' + sm.queued + ' failed ' + sm.failed + '   (loaded ' + sm.loaded + ' unloaded ' + sm.unloaded + ' aborted ' + sm.aborted + ')   assets held ' + ac.held + ' idle ' + ac.idle + ' ' + (ac.bytes / 1048576).toFixed(1) + ' MB', (nv ? 'navigation  ' + nv.chunks + ' chunks, ' + nv.nodes + ' nodes, ' + nv.drive + ' drive / ' + nv.walk + ' walk / ' + nv.cross + ' crossings / ' + nv.signals + ' signals, routes ' + nv.routes + ' (cached ' + nv.hits + ')' : ''), 'tiles       ' + s.tiles + '  (' + s.lod.join(' / ') + ' by detail)   far ' + f.tiles, 'build queue ' + (s.queue + f.queue + sc.queue) + '   pooled ' + (s.pooled + f.pooled) + '   built ' + (s.built + f.built),
     'scenery     ' + sc.things.toLocaleString('en-US') + ' in ' + sc.tiles + ' tiles   road pieces ' + roadMesh.pieces.size,
     'road        at ' + (roadS / 1000).toFixed(2) + ' km   built ' + (road.sMin / 1000).toFixed(1) + ' .. ' + (road.sMax / 1000).toFixed(1) + ' km',
     'origin      ' + grid.origin.x + ', ' + grid.origin.z + '   mode ' + mode,
@@ -283,8 +287,8 @@ function draw(now) { if (fx) fx.render(); else renderer.render(scene, camera); s
 /* world sectors (src/world/sectors.js): 512 m squares with their own load state, above the terrain tiles. A sector loads the shared assets its region needs (today the vehicle pack) and releases them when it goes. */
 const focus = { x: 0, z: 0, dx: 1, dz: 0, speed: 0 };
 const sectors = new SectorManager({ bus, meta: s => ({ region: config.location, assets: ['traffic:pack'] }),
-  load: async (s, signal) => { for (const k of s.meta.assets) await assetCache.acquire(k); return { held: s.meta.assets.slice() }; },
-  unload: s => { if (s.data && s.data.held) for (const k of s.data.held) assetCache.release(k); } });
+  load: async (s, signal) => { for (const k of s.meta.assets) await assetCache.acquire(k); if (nav) nav.loadSector(s.sx, s.sz); return { held: s.meta.assets.slice() }; },
+  unload: s => { if (nav) nav.unloadSector(s.sx, s.sz); if (s.data && s.data.held) for (const k of s.data.held) assetCache.release(k); } });
 bus.on('world:rebuilt', () => sectors.reset());                                                    // a new world: every sector starts again
 runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'sectors', order: 10, update: (dt, now) => sectors.update(focus.x, focus.z, focus, now) });
 runtime.add({ name: 'render', order: 100, render: now => draw(now) }); runtime.start();
@@ -310,6 +314,7 @@ function update(dt, now) {
   } else {
     cam.update(dt, (x, z) => Math.max(terrain.seaLevel, terrain.height(x, z)) + 1.7); px = cam.x; pz = cam.z; roadS = road.closestS(px, pz, roadS);
   }
+  if (navDebug && nav) navDebug.update(nav, grid.origin);
   focus.x = px; focus.z = pz; if (mode === 'drive' && phys) { focus.dx = Math.cos(phys.yaw); focus.dz = Math.sin(phys.yaw); focus.speed = Math.abs(phys.u); } else focus.speed = 0;
   const box = road.ensure(roadS - 2600, roadS + 2600); if (box) grid.invalidate(box);        // the road keeps growing ahead of you, in both directions
   if (grid.rebase(px, pz)) { far.reposition(); roadMesh.reposition(); scatter.reposition(); }
@@ -366,6 +371,6 @@ addEventListener('message', async e => {
 });
 if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
-window.__next = { bus, runtime, sectors, assetCache, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
+window.__next = { bus, runtime, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
