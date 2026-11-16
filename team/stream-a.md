@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 01:00  Landscape pass 2: tree species built in code, shore and depth on water, sharper forests
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: new `world/species.js` (oak, birch, poplar, cypress, a rare autumn maple: trunk, branches and a crown of leaf clusters, leaf textures drawn on a canvas, no outside assets; mixed into the scanned trees by `nature.js`, two kept on the low preset), `world/groundmat.js` (ground under water goes from pale turquoise shallows to deep blue, wet sand, a moving line of foam at the shore; new `uTime` uniform), `main.js` (water opacity 0.74 so the bed shows), `terrain.js` (sharper forest edges). Looked at in the browser only. Cost: each species adds about 300 triangles and two draw calls per variant per tile; not measured on a phone.
+For the other stream: phone frame rate and memory check on the mid and low presets.
+Status: open
+
 ## 2026-11-17 23:50  Mouse look on foot, plant variety, patchwork land colour, moving water
 Branch: feat/landscape-look
 What changed: `main.js` (mouse look and touch drag in foot mode; water material now has four moving ripple layers, stronger normals), `world/nature.js` + `world/scatter.js` (each plant kind now has several variants: sizes, shapes, colours, a rare autumn tree, three wildflower cards drawn in code; variants are placed in patches, not at random), `world/terrain.js` + `world/groundmat.js` (patchwork of hay-yellow, fresh and deep green fields on open lowland). No new outside assets; the scanned art is still one broadleaf tree, six conifers, one shrub, one fern, one grass: real new species need packs the owner downloads (see `docs/ASSET_PLAN.md`). Water has no shore foam or depth colour yet.

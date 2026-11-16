@@ -43,7 +43,7 @@ export function createTerrain(config) {
   function height(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.grade(x, z, h) : h; }
   function drive(x, z) { const h = zones.length ? natural(x, z) : base(x, z); return road ? road.drive(x, z, h) : h; }                  // what wheels roll on: the road surface itself
   function inZone(x, z, margin = 0) { for (let i = 0; i < zones.length; i++) if (Math.hypot(x - zones[i].x, z - zones[i].z) < zones[i].r + margin) return true; return false; }                  // what wheels roll on: the road surface itself
-  function forest(x, z) { return sstep(-0.18, 0.32, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
+  function forest(x, z) { return sstep(-0.12, 0.22, N.fbm(x / 430 + oF[0], z / 430 + oF[1], 3, 2, 0.5)); }
 
   /* what the wheels are on at a point: a key of SURFACES in vehicle/physics.js */
   function surface(x, z) {

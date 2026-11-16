@@ -7,6 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { sway } from './props.js';
 import { alea } from '../core/rng.js';
+import { speciesList } from './species.js';
 
 const tl = new THREE.TextureLoader();
 function card(tex, meta, tall, count) {                                  // `count` planes crossed around the vertical axis, upright, base at y = 0
@@ -56,7 +57,7 @@ export async function loadNature(level = 'full') {            // level 'low': fe
     return {
       pine: fewer([conifer('fir_sapling_0', 13), conifer('fir_sapling_1', 11), conifer('fir_sapling_2', 9), conifer('pine_sapling_small_0', 13), conifer('pine_sapling_small_1', 11), conifer('pine_sapling_small_2', 9)], [0, 4]),
       /* one scanned broadleaf tree and one shrub is all the outside art there is; the variety comes from sizes, shapes (different heights, 3 or 4 crossed cards) and colours (fresh green, deep green, yellow-green, rust in autumn), placed in patches (scatter.js) */
-      round: fewer([bro(10, [1, 1, 1], 3), bro(13, [0.88, 1.0, 0.88], 2), bro(7, [1.12, 1.08, 0.78], 2), bro(11, [0.78, 0.9, 0.8], 2, 4), bro(8.5, [1.32, 1.0, 0.62], 0.4), bro(15, [0.95, 1.05, 0.98], 1, 4)], [0, 2, 3]),
+      round: low ? speciesList(material, 'low').concat([bro(10, [1, 1, 1], 2)]) : speciesList(material).concat([bro(10, [1, 1, 1], 2), bro(13, [0.88, 1.0, 0.88], 1.5), bro(7, [1.12, 1.08, 0.78], 1.5)]),
       bush: fewer([shr(1.0, [1, 1, 1], 3), shr(1.5, [0.85, 0.95, 0.75], 2), shr(0.7, [1.2, 0.95, 0.75], 1.5), shr(1.2, [1.35, 0.85, 0.7], 0.5), fern(1.0, [1, 1, 1], 2), fern(0.7, [0.85, 1.05, 0.8], 1.5), flowers('white', ['#f4f4ee', '#ffffff', '#ece8d8'], 1.2), flowers('yellow', ['#f2d230', '#f7e463'], 1), flowers('purple', ['#8a63c8', '#b58ae0', '#e0a6d8'], 0.8)], [0, 4, 6]),
       tuft: fewer([tuft(0.9, [1, 1, 1], 3), tuft(1.2, [1.28, 1.12, 0.72], 1.5), tuft(0.7, [0.82, 1.0, 0.82], 2), tuft(1.5, [1.1, 1.08, 0.85], 1)], [0, 1]),
       rock: fewer(rocks, [0])

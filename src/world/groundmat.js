@@ -18,14 +18,14 @@ export function makeGroundMaterial(level = 'full') {
   const uniforms = {
     tGrass: { value: tex('grass_color') }, tRock: { value: tex('rock_color') }, tSnow: { value: tex('snow_color') }, tSand: { value: tex('sand_color') },
     tGrassN: { value: tex('grass_normal', false) }, tRockN: { value: tex('rock_normal', false) },
-    uSea: { value: 0 }
+    uSea: { value: 0 }, uTime: { value: 0 }
   };
   const photo = sh => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP; varying vec3 vWN;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vWN = normalize(mat3(modelMatrix) * normal);');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-uniform sampler2D tGrassN; uniform sampler2D tRockN; uniform sampler2D tGrass; uniform sampler2D tRock; uniform sampler2D tSnow; uniform sampler2D tSand; uniform float uSea; varying vec3 vWP; varying vec3 vWN;
+uniform sampler2D tGrassN; uniform sampler2D tRockN; uniform sampler2D tGrass; uniform sampler2D tRock; uniform sampler2D tSnow; uniform sampler2D tSand; uniform float uSea; uniform float uTime; varying vec3 vWP; varying vec3 vWN;
 vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z); return texture2D(tRock, p.zy / 8.0).rgb * w.x + texture2D(tRock, p.xz / 8.0).rgb * w.y + texture2D(tRock, p.xy / 8.0).rgb * w.z; }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 { ${lite ? '' : `
@@ -45,6 +45,14 @@ vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y 
   vec3 rock = ${lite ? 'texture2D(tRock, vec2(vWP.x + vWP.z * 0.7, vWP.y) / 8.0).rgb' : 'triRock(vWP, n)'} * mix(vec3(1.0), tint, 0.3) * 1.7;
   vec3 snow = texture2D(tSnow, vWP.xz / 8.0).rgb * 0.95;
   vec3 a = mix(g, sand, sandW); a = mix(a, rock, rockW); a = mix(a, snow, snowW);
+  /* the shore: ground under the water goes from pale turquoise shallows to deep blue, wet sand darkens just above the waterline, and a moving line of foam sits on the edge */
+  float dep = uSea - vWP.y, lm = dot(a, vec3(0.3, 0.59, 0.11));
+  float under = smoothstep(0.0, 0.4, dep), dk = smoothstep(0.3, 7.0, dep);
+  vec3 bed = mix(vec3(0.30, 0.62, 0.60) * (0.55 + lm), vec3(0.03, 0.14, 0.24), dk);
+  a = mix(a, bed, under * 0.85);
+  a *= mix(1.0, 0.72, (1.0 - smoothstep(0.0, 0.7, -dep)) * step(dep, 0.0));
+  float wv = 0.5 + 0.5 * sin(vWP.x * 1.7 + uTime * 1.3) * sin(vWP.z * 1.3 - uTime * 1.1), edge = 1.0 - smoothstep(0.0, 0.32 + 0.2 * wv, abs(dep - 0.12 * sin(uTime * 0.8 + vWP.x * 0.5)));
+  a = mix(a, vec3(0.92, 0.95, 0.95), edge * (0.35 + 0.5 * wv) * 0.8 * step(abs(vWP.y - uSea), 2.0));
   diffuseColor.rgb = a;
 }`);
   };
