@@ -88,3 +88,4 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] Everything committed and pushed (branch, then a pull request into `main`).
 - [ ] New checks added to this file.
 - [ ] `HANDOFF.md` updated if the state changed; a team-log entry for anything the other person needs.
+- [ ] **On foot and activities (N14, N15), on a real phone too**: stop the vehicle, press G (or the button) to get out, walk with W A S D, Shift runs, Space jumps, G beside the vehicle gets you in. Near the green beacon beside the road in Mumbai a "start" prompt appears; reach the gold beacon in time; the toast gives the time and rating; reload and the best time is kept. Not yet measured on a phone; par times are guesses.

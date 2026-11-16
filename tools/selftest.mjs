@@ -9,7 +9,9 @@ import { fillTile, tileIndex, vertexCount, skirtDepth } from '../src/world/tiled
 import { Road } from '../src/world/router.js';
 import { createRails, RAIL_R } from '../src/world/bridge_rails.js';
 import { rumbleFor } from '../src/input/rumble.js';
-import { sanitiseSaved } from '../src/core/saved.js';
+import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
+import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
+import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
 import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL } from '../src/traffic/sim.js';
 import { Autodrive } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
@@ -314,7 +316,7 @@ test('saved choices: rubbish in storage never gets into the game (null, text, wr
     for (const k of ['radioVol', 'vehicle', 'time', 'weather', 'lights', 'muted']) assert.ok(!(k in s), k + ' dropped for ' + JSON.stringify(bad));
   }
   const good = sanitiseSaved({ time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 3, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C', truck: 'red', ghost: '#ffffff', bike: '#12' }, extra: 'ignored' }, ctx);
-  assert.deepEqual(good, { time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 1, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C' } });
+  assert.deepEqual(good, { time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 1, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C' }, progress: { activities: {} } });
   assert.equal(sanitiseSaved({ location: 'atlantis' }, ctx).location, undefined);
   assert.equal(sanitiseSaved({ traffic: 'mid' }, ctx).traffic, 'mid'); assert.equal(sanitiseSaved({ traffic: 'light' }, ctx).traffic, 'low'); assert.equal(sanitiseSaved({ traffic: 'busy' }, ctx).traffic, 'high'); assert.equal(sanitiseSaved({ traffic: 'lots' }, ctx).traffic, undefined);
 });
@@ -673,6 +675,29 @@ test('enter and exit: a safe exit beside the door, none when boxed in; the inter
   assert.equal(chooseExit(car, footWorld({ height: (x, z) => z > 0.5 ? -9 : 0, seaLevel: 0 })).z < 0, true, 'not into water'); assert.equal(chooseExit(car, footWorld({ height: (x, z) => z > 0.5 ? 6 : 0 })).z < 0, true, 'not onto a high bank');
   const ui = new Interactions(); let used = null; const off = ui.add({ id: 'car', x: 0, z: 0, r: 4, prompt: 'Get in', onUse: it => { used = it.id; } }); ui.add({ id: 'stall', x: 3, z: 0, r: 2, prompt: 'Buy', onUse: it => { used = it.id; } }); ui.add({ id: 'off', x: 1, z: 0, r: 5, enabled: () => false, prompt: 'x', onUse: () => { used = 'off'; } });
   assert.equal(ui.nearest(2.5, 0).id, 'stall', 'the nearest in range'); assert.equal(ui.nearest(-3, 0).id, 'car'); assert.equal(ui.nearest(20, 20), null, 'out of range'); assert.equal(ui.use(2.5, 0), true); assert.equal(used, 'stall'); off(); assert.equal(ui.nearest(-3, 0), null); assert.equal(ui.use(-3, 0), false); assert.throws(() => ui.add({}), /id/);
+});
+
+const fakeStore = (init = {}) => { const m = { ...init }; return { m, getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; };
+test('save (N15): version, migration of old saves, corrupt text kept aside, newer saves never overwritten, bad progress dropped', () => {
+  assert.equal(parseSave(null).status, 'empty'); assert.equal(parseSave('{{nope').status, 'corrupt'); assert.equal(parseSave('[1,2]').status, 'corrupt'); assert.equal(parseSave('"x"').status, 'corrupt');
+  const old = fakeStore({ [SAVE_KEY]: JSON.stringify({ time: 'dusk', vehicle: 1 }) }); const l1 = loadSave(old, { vehicles: 3 }); assert.equal(l1.status, 'migrated'); assert.equal(l1.data.time, 'dusk'); assert.deepEqual(l1.data.progress, { activities: {} }, 'old saves gain empty progress');
+  assert.ok(writeSave(old, { time: 'dusk', progress: l1.data.progress }, l1)); assert.equal(JSON.parse(old.m[SAVE_KEY]).v, SAVE_VERSION, 'rewritten at the current version'); assert.equal(loadSave(old, {}).status, 'ok');
+  const bad = fakeStore({ [SAVE_KEY]: '{"time": "day", broken' }); const l2 = loadSave(bad, {}); assert.equal(l2.status, 'corrupt'); assert.ok(bad.m[BAD_KEY].includes('broken'), 'damaged text kept for support'); assert.equal(SAVE_KEY in bad.m, false, 'and removed from the live key'); assert.deepEqual(l2.data.paint, {});
+  const future = fakeStore({ [SAVE_KEY]: JSON.stringify({ v: SAVE_VERSION + 3, time: 'night', progress: { activities: { 'road-sprint': { plays: 2, best: 61.5, rating: 'gold' } } }, newThing: 1 }) }); const l3 = loadSave(future, {});
+  assert.equal(l3.status, 'newer'); assert.equal(l3.readOnly, true); assert.equal(l3.data.time, 'night'); assert.equal(l3.data.progress.activities['road-sprint'].best, 61.5); const before = future.m[SAVE_KEY]; assert.equal(writeSave(future, { time: 'day' }, l3), false, 'a newer save is never written over'); assert.equal(future.m[SAVE_KEY], before);
+  const broke = { getItem() { throw new Error('denied'); }, setItem() { throw new Error('full'); }, removeItem() {} }; assert.equal(loadSave(broke, {}).status, 'empty', 'storage that throws means defaults'); assert.equal(writeSave(broke, {}, null), false);
+  const p = sanitiseProgress({ activities: { 'ok-one': { plays: 3, best: 70.2, rating: 'silver' }, 'Bad Id': { plays: 1 }, neg: { plays: -4, best: -1, rating: 'platinum' }, nan: { plays: 1.5, best: NaN }, huge: { best: 1e9 }, str: 'x' } });
+  assert.deepEqual(p.activities['ok-one'], { plays: 3, best: 70.2, rating: 'silver' }); assert.equal('Bad Id' in p.activities, false); assert.deepEqual(p.activities.neg, { plays: 0 }); assert.deepEqual(p.activities.nan, { plays: 0 }); assert.deepEqual(p.activities.huge, { plays: 0 }); assert.equal('str' in p.activities, false);
+  const many = {}; for (let i = 0; i < 500; i++) many['a' + i] = { plays: 1 }; assert.equal(Object.keys(sanitiseProgress({ activities: many }).activities).length, 200, 'capped'); assert.deepEqual(sanitiseProgress(null), { activities: {} }); assert.deepEqual(sanitiseSaved(null).progress, { activities: {} });
+});
+test('activities (N15): the shipped definitions are valid, a drive can be done, failed, cancelled; ratings and best times are kept', () => {
+  for (const a of ACTIVITIES) assert.deepEqual(validateActivity(a), [], a.id); assert.ok(validateActivity({ id: 'X', title: '', region: 1, startS: -1, distance: 5, limit: 1, par: 99, radius: 0 }).length >= 6); assert.ok(activitiesFor('mumbai').some(a => a.id === 'mumbai-marine-dash') && activitiesFor('mumbai').some(a => a.region === '*') && !activitiesFor('delhi').some(a => a.region === 'mumbai'));
+  const ev = []; const bus = { emit: (n, d) => ev.push([n, d]) }; const r = new ActivityRunner(bus), def = { id: 'run', title: 'Run', limit: 30, par: 10, radius: 5 };
+  assert.equal(r.start(def, { x: 100, z: 0 }), true); assert.equal(r.start(def, { x: 1, z: 1 }), false, 'one at a time'); r.update(5, 0, 0); assert.equal(r.state, 'running'); assert.ok(Math.abs(r.dist - 100) < 1e-9); r.update(4, 96, 0); assert.equal(r.state, 'idle'); assert.equal(r.result.outcome, 'done'); assert.equal(r.result.rating, 'gold'); assert.equal(r.result.time, 9);
+  r.start(def, { x: 100, z: 0 }); r.update(31, 0, 0); assert.equal(r.result.outcome, 'failed'); assert.equal(r.result.rating, null); r.start(def, { x: 100, z: 0 }); r.cancel(); assert.equal(r.result.outcome, 'cancelled'); r.cancel(); assert.deepEqual(ev.map(e => e[0]), ['activity:started', 'activity:finished', 'activity:started', 'activity:finished', 'activity:started', 'activity:finished'], 'cancel with nothing running is silent');
+  assert.equal(rate(def, 10), 'gold'); assert.equal(rate(def, 12.5), 'silver'); assert.equal(rate(def, 12.6), 'bronze');
+  let pr = { activities: {} }, o = recordResult(pr, { id: 'run', outcome: 'done', time: 12, rating: 'silver' }); assert.equal(o.isBest, true); o = recordResult(o.progress, { id: 'run', outcome: 'done', time: 14, rating: 'bronze' }); assert.equal(o.isBest, false); assert.equal(o.progress.activities.run.best, 12); assert.equal(o.progress.activities.run.rating, 'silver', 'the best rating stays');
+  o = recordResult(o.progress, { id: 'run', outcome: 'done', time: 9, rating: 'gold' }); assert.deepEqual(o.progress.activities.run, { plays: 3, best: 9, rating: 'gold' }); o = recordResult(o.progress, { id: 'run', outcome: 'failed', time: 31, rating: null }); assert.equal(o.progress.activities.run.plays, 4); o = recordResult(o.progress, { id: 'run', outcome: 'cancelled', time: 3, rating: null }); assert.equal(o.progress.activities.run.plays, 4, 'cancelled is not a play'); assert.deepEqual(sanitiseProgress(o.progress), o.progress, 'what we write we can read back');
 });
 
 console.log(`\n${passed} checks passed`);

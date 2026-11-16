@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 23:00  N15 first increment: activities and a versioned save
+Branch: feat/n15-activities
+What changed: new `src/activities/activities.js` (data-driven point-to-point drives, runner, ratings, best times), `src/core/save.js` (version 2 envelope, migration, corrupt text kept in `gfp-next.bad`, newer saves never overwritten), `saved.js` (`sanitiseProgress`), `runtime.js` (events `activity:started`, `activity:finished`), `main.js` (markers, beacon, timer line, G to start, save wiring), `player/onfoot.js` (`Interactions` prefix filter). `docs/ACTIVITIES.md`. Two self-tests (62 checks). Checked in the browser: prompt, start, finish, best time saved. Par times are guesses.
+For the other stream: nothing needed to merge. Later: points of interest for activities from region data (yours to supply), a map/route layer, more kinds.
+Status: open
+
 ## 2026-11-17 21:00  N14 first increment: on foot, get in and out
 Branch: feat/n14-onfoot
 What changed: new `src/player/onfoot.js` (kinematic controller, safe exit spot, interaction registry), `src/input/controls.js` (`G` interact, Shift run), `src/main.js` (mode `foot`, `exitVehicle`/`enterVehicle`, parked vehicle on handbrake, prompt button, third-person camera, Registry handle on `vehicle:exited`/`vehicle:entered`). `docs/ONFOOT.md`. Three self-tests (60 checks). Checked in the browser: exit, walk, prompt, get back in, no errors. Not built: interiors, other vehicles, a rigged model, phone on-foot controls, phone measurement.
