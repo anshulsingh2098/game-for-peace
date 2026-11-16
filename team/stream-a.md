@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 07:00  Highway details on six-lane national highways
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: new `world/highway_plan.js` (pure rules) and `world/highway.js` (meshes): guardrails, km stones, bilingual green sign gantries, toll plazas on `nh6` roads only; wired into `road.js` (`RoadMesh.highway`, `extras.dests`) and `main.js` (`world.near` gets the circles; `placeOnRoad` now starts the player in the first lane on the traffic side for the region's drive side, which also fixes a start on the wrong side of two-lane roads in left-hand regions), `india_network.js` (`HINDI`, `destinationsFor`). One self-test (65 checks). Looked at in the browser in the Deccan world: gantry, guardrail, toll plaza, bridge rails visible. Not done: traffic does not slow for the toll plaza, service roads, interchanges, night lighting of signs, nothing measured on a phone. Merged-mesh cost: a few thousand triangles per piece of road in range.
+For the other stream: the Indian signs use system fonts for Devanagari; check they show on a phone.
+Status: open
+
 ## 2026-11-18 05:00  India-only worlds: five Indian regions replace the old picker
 Branch: feat/landscape-look (PR 36, more commits)
 What changed: `world/regions.js` (regions himachal, ladakh, rajasthan, kerala, deccan; optional `roads.router` numbers passed to the route planner; DEFAULT_CONFIG import), `world/locations.js` (old five ids hidden from the picker, `LEGACY` map, `START_LOCATION` mumbai, `pickerLocations()`), `main.js` (start in Mumbai, old saved choice moves to its replacement, picker shows India only, `uArid`), `world/groundmat.js` (optional palette `arid` mixes sand into the ground so Rajasthan and Ladakh look dry). Old ids and share codes still load. Looked at in the browser (Rajasthan closely, the others only loaded without errors). 64 checks pass.

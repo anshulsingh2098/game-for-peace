@@ -12,6 +12,8 @@ import { rumbleFor } from '../src/input/rumble.js';
 import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
 import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
 import { CITIES, CITY, HIGHWAYS, RAIL, COAST as INDIA_COAST, routeKm, roadGraph, shortestRoute, nearestCity, distanceKm, gameKm, driveMinutes } from '../src/world/india_network.js';
+import { planHighway, RAIL_STEP, GANTRY_EVERY, TOLL_EVERY, TOLL_LEN, tollAt } from '../src/world/highway_plan.js';
+import { destinationsFor, HINDI } from '../src/world/india_network.js';
 import { roadStyleById } from '../src/world/roadstyles.js';
 import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
 import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets } from '../src/traffic/sim.js';
@@ -717,6 +719,22 @@ test('road styles (Indian highway and ghat road): cross-sections are symmetric, 
   for (const id of ['nh6', 'ghat']) { const st = ROAD_STYLES[id]; assert.equal(roadStyleById(id).id, id); const xs = st.cols.map(c => c[0]); assert.ok(Math.abs(Math.min(...xs) + Math.max(...xs)) < 1e-9, id + ' is symmetric'); assert.ok(st.strips.every(([a, b]) => a >= 0 && b < st.cols.length)); for (const l of st.lines) assert.ok(Math.abs(l.t) <= st.outer); }
   const nh = ROAD_STYLES.nh6, lanes = laneOffsets(nh); assert.equal(lanes.length, 3, 'three lanes each way'); assert.ok(lanes.every((x, i) => x > 2.4 && x < 12.9 && (i === 0 || x > lanes[i - 1])), 'inside the carriageway, in order'); assert.ok(Math.abs(lanes[1] - lanes[0] - 3.5) < 1e-9, '3.5 m lanes');
   assert.equal(laneOffsets(ROAD_STYLES.ghat).length, 1); assert.equal(laneOffsets(ROAD_STYLES['two-lane']).length, 1); assert.equal(laneOffsets(ROAD_STYLES.highway).length, 2, 'older styles unchanged');
+});
+
+test('highway furniture (national highway): guardrails, km stones, sign gantries and toll plazas are placed by rule, never on bridges, never in the way of a lane', () => {
+  const line = (bridge = () => 0) => ({ style: ROAD_STYLES.nh6, ds: 5, at(s, p) { p.x = s; p.z = 0; p.y = 0; p.tx = 1; p.tz = 0; p.th = 0; return p; }, bridgeW: bridge, tunnelW: () => 0 });
+  const dests = [{ en: 'Pune', hi: 'पुणे', km: 133 }, { en: 'Mumbai', hi: 'मुंबई', km: 150 }], road = line();
+  const plan = planHighway({ road, seed: 'x', k: 0, s0: 0, s1: 20000, dests }), again = planHighway({ road, seed: 'x', k: 0, s0: 0, s1: 20000, dests }); assert.deepEqual(plan, again, 'deterministic');
+  assert.ok(plan.stones.length >= 36 && plan.stones.length <= 40, 'a stone per kilometre on both sides (minus any inside a toll plaza): ' + plan.stones.length);
+  assert.ok(plan.gantries.length >= 12 && plan.gantries.length <= 14, 'a gantry about every 1.5 km: ' + plan.gantries.length); for (let i = 1; i < plan.gantries.length; i++) assert.ok(plan.gantries[i].s - plan.gantries[i - 1].s >= GANTRY_EVERY - 1);
+  assert.ok(plan.gantries.every(g => g.sign && g.sign.km >= 1 && g.sign2 && g.posts.length === 3 && g.posts[1].lat === 0), 'every gantry has two destination boards and three posts');
+  assert.equal(plan.tolls.length, tollAt(0, 20000).length); assert.ok(plan.tolls.length >= 2 && plan.tolls.length <= 3); for (const t of plan.tolls) { assert.equal(t.islands.length, 8); assert.equal(t.len, TOLL_LEN); }
+  const lanes = laneOffsets(ROAD_STYLES.nh6); for (const c of plan.circles) for (const l of lanes.flatMap(x => [x, -x])) if (Math.abs(c.x - plan.tolls[0].x) < TOLL_LEN) assert.ok(Math.abs(Math.abs(c.z) - l) > c.r + 0.95 || false, 'a toll island or post must leave the lane clear (circle at ' + c.z.toFixed(2) + ' vs lane ' + l + ')');
+  const railsInToll = plan.rails.filter(r => plan.tolls.some(t => r.x > t.s - 36 && r.x < t.s + TOLL_LEN + 36)); assert.equal(railsInToll.length, 0, 'no guardrail in or near a toll plaza'); assert.ok(plan.rails.length > 4000, 'rails along both edges');
+  assert.ok(plan.rails.every(r => Math.abs(Math.abs(r.z) - (ROAD_STYLES.nh6.shoulder + 0.45)) < 1e-9), 'rails stand just outside the shoulder');
+  const onBridge = planHighway({ road: line(s => (s > 1000 && s < 5000 ? 1 : 0)), seed: 'x', k: 0, s0: 0, s1: 8000, dests }); assert.ok([...onBridge.rails, ...onBridge.stones, ...onBridge.gantries].every(o => !(o.s > 1000 && o.s < 5000)), 'nothing on a bridge');
+  assert.deepEqual(planHighway({ road: { ...road, style: ROAD_STYLES.highway }, seed: 'x', k: 0, s0: 0, s1: 5000, dests }), { rails: [], stones: [], gantries: [], tolls: [], circles: [] }, 'other styles get nothing');
+  const d = destinationsFor(18.52, 73.86); assert.ok(d.length >= 2 && d.some(x => x.id === 'mumbai') && d.every((x, i) => i === 0 || x.km >= d[i - 1].km), 'destinations near Pune, nearest first'); assert.ok(d.every(x => x.en && (x.hi || !HINDI[x.id]))); assert.equal(destinationsFor(0, 0).length >= 0, true);
 });
 
 console.log(`\n${passed} checks passed`);

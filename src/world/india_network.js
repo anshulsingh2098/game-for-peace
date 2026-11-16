@@ -96,3 +96,13 @@ export function shortestRoute(from, to, graph = roadGraph()) {
   if (!dist.has(to)) return null; const path = [to]; while (path[0] !== from) path.unshift(prev.get(path[0])); return { cities: path, km: dist.get(to) };
 }
 export function nearestCity(lat, lon, tiers = null) { let best = null, bd = Infinity; for (const c of CITIES) { if (tiers && !tiers.includes(c.tier)) continue; const d = distanceKm({ lat, lon }, c); if (d < bd) { bd = d; best = c; } } return best ? { city: best, km: bd } : null; }
+
+/* names in Devanagari for signs (a city missing here is shown in English only) */
+export const HINDI = { delhi: 'दिल्ली', mumbai: 'मुंबई', kolkata: 'कोलकाता', chennai: 'चेन्नई', bengaluru: 'बेंगलुरु', hyderabad: 'हैदराबाद', ahmedabad: 'अहमदाबाद', pune: 'पुणे', jaipur: 'जयपुर', lucknow: 'लखनऊ', kanpur: 'कानपुर', nagpur: 'नागपुर', bhopal: 'भोपाल', patna: 'पटना', agra: 'आगरा', varanasi: 'वाराणसी', prayagraj: 'प्रयागराज', amritsar: 'अमृतसर', srinagar: 'श्रीनगर', jammu: 'जम्मू', chandigarh: 'चंडीगढ़', gwalior: 'ग्वालियर', jhansi: 'झाँसी', udaipur: 'उदयपुर', ajmer: 'अजमेर', vadodara: 'वडोदरा', surat: 'सूरत', kolhapur: 'कोल्हापुर', jodhpur: 'जोधपुर', jaisalmer: 'जैसलमेर', shimla: 'शिमला', manali: 'मनाली', dehradun: 'देहरादून', leh: 'लेह', kochi: 'कोच्चि', thiruvananthapuram: 'तिरुवनंतपुरम', mangaluru: 'मंगलुरु', panaji: 'पणजी', coimbatore: 'कोयंबटूर', madurai: 'मदुरै', vijayawada: 'विजयवाड़ा', visakhapatnam: 'विशाखापत्तनम', bhubaneswar: 'भुवनेश्वर', indore: 'इंदौर', raipur: 'रायपुर', ranchi: 'राँची', kota: 'कोटा', solapur: 'सोलापुर', nashik: 'नासिक', rajkot: 'राजकोट', chittorgarh: 'चित्तौड़गढ़', ooty: 'उदगमंडलम', munnar: 'मुन्नार', gangtok: 'गंगटोक', guwahati: 'गुवाहाटी', siliguri: 'सिलीगुड़ी', tirupati: 'तिरुपति', salem: 'सेलम', tumkur: 'तुमकुरु', belgaum: 'बेलगावी', hubli: 'हुब्बल्ली' };
+
+/* the destinations a highway sign near a point would show: the cities next to the nearest city on any highway, with the real road distance (km) */
+export function destinationsFor(lat, lon, graph = roadGraph()) {
+  const home = nearestCity(lat, lon); if (!home || !graph.has(home.city.id)) return []; const seen = new Set(), out = [];
+  for (const e of graph.get(home.city.id)) { if (seen.has(e.to)) continue; seen.add(e.to); out.push({ id: e.to, en: CITY[e.to].name, hi: HINDI[e.to] || '', km: Math.round(e.km) }); }
+  return out.sort((a, b) => a.km - b.km);
+}
