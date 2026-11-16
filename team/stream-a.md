@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-22 19:00  Owner answers recorded (CITY_PLAN, CITY_PACK)
+Branch: claude/goofy-liskov-0a8557
+What changed: docs only: enclave entry like a bypass, downloads approved (log each file), all well-known places, invented look-alike brands.
+For the other stream: nothing.
+Status: done
+
 ## 2026-11-22 18:00  City plan Phase 0: keep-out registry and the city architecture note
 Branch: claude/goofy-liskov-0a8557  Commit: see the PR
 What changed: `src/world/keepout.js` (new, pure: claims for lines, circles, rectangles and providers; rank station > landmark > rail > road > building > scenery; `railClaim`, `stationClaim`, `registerRail`, `roadProvider`). Shared or other files, each a small edit: `terrain.js` (`terrain.keepout`, `addZone` registers a landmark claim), `district_plan.js` (whole-plot rectangle check, own-piece overlap check, furniture and signals ask; new params `keepout`, `ignore`), `district.js` (registers and drops its plots), `scatter.js` (trees ask; tiles re-plant when a claim lands on them; CRLF file), `rail_view.js` (**two small edits for the railway-control session**: the constructor calls `registerRail`, and `buildStation` skips a building that would stand on a road), `main.js` (one line: `roadProvider(terrain.keepout, roadSet)` in `makeWorld`), `tools/selftest.mjs` (4 checks, 86 in all), `docs/CITY_PACK.md` (new), `docs/CITY_PLAN.md`, `docs/WORK_REMAINING.md` (section 10), `docs/DISTRICT.md`, `CHECKLIST.md`, `HANDOFF.md`.

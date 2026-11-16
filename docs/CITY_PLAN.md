@@ -77,8 +77,8 @@ Order: Delhi NCR, Mumbai, Kolkata, Chennai, Bengaluru, Hyderabad, then Ahmedabad
 - [ ] Phone and desktop frame rate measured (`?bench=30`); `CHECKLIST.md` line added; self-test checks added.
 - [ ] The owner (or someone from that city) judged it: a short list of what feels wrong.
 
-## Open questions for the owner
-1. City scale: 1:1 enclaves entered from the highway (recommended) or a larger scale for the whole map?
-2. OK to download an OSM extract for Delhi NCR (Geofabrik north zone is a few hundred MB; a bounding box through Overpass is much smaller)?
-3. Which Delhi landmarks and places matter most to you, in order?
-4. Real names on shops and brands: use real brand names (legal risk) or invented look-alikes?
+## Owner answers (22 Nov 2026, relayed by the session "Multi-level road physics for flyovers", quoting the owner)
+1. **City scale:** "entered from highway like a bypass in real world": 1:1 city enclaves entered from the highway, as a bypass or exit would be (`docs/CITY_PACK.md` section 3). **Agreed.**
+2. **Downloads:** "yes download all maps you need": OSM extracts and the other open data in the table above are approved. Still required: a note of each file (source, size, licence, date, sha256) in `docs/OPEN_DATA.md`; ODbL credit on screen; no Google data. Phase 1 does not start until Phase 0 (PR 51) is merged.
+3. **Places:** "every significant place that stays in hot topic and conversation but logically arranged as the real world": cover all well-known landmarks and areas of a city, not a short list, placed where they really are (from OSM and Wikidata positions). Phase 4's "first ten" is the first milestone, not the scope.
+4. **Brands and shop names:** "invented lookalikes", never real brand names or logos (shop signs, hotels, malls, fuel stations, vehicles).

@@ -25,8 +25,8 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 1.6 | Whether on-foot play is wanted on phones | |
 | 1.7 | Whether to use real elevation and land cover (NASA SRTM or Copernicus, ESA WorldCover) and approve the downloads | `docs/OPEN_DATA.md` |
 | 1.8 | The tuner page login and the live Publish setup (N5 leftovers) | |
-| 1.9 | **City scale: agree 1:1 city enclaves entered from the highway** (`docs/CITY_PACK.md` section 3), the budgets in section 4 and the pack format in section 5 | Blocks Phase 1 of `docs/CITY_PLAN.md` |
-| 1.10 | OK to download an OSM extract for Delhi NCR (file, source, size to be stated first) | CITY_PLAN Phase 1 |
+| 1.9 | (answered 22 Nov: agreed) **City scale: 1:1 city enclaves entered from the highway** (`docs/CITY_PACK.md` section 3), the budgets in section 4 and the pack format in section 5 | Blocks Phase 1 of `docs/CITY_PLAN.md` |
+| 1.10 | (answered 22 Nov: yes, download the maps needed; log each file in OPEN_DATA.md) OSM extract for Delhi NCR | CITY_PLAN Phase 1 |
 
 ## 2. Engine and phases N7 to N10
 | # | Limit | Tag |
