@@ -56,6 +56,7 @@ import { Sound } from './audio/engine.js';
 import { Radio } from './audio/radio.js';
 import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
+import { Gps } from './ui/gps.js';
 import { LOCATIONS, locationConfig, locationById, LEGACY, START_LOCATION, pickerLocations } from './world/locations.js';
 import { Landmarks } from './world/landmarks.js';
 import { FlyCam } from './debug/flycam.js';
@@ -165,6 +166,7 @@ const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.ring
 /* Travel (menu): the nearest city to where you are (in an India drive, to the player; in a region world, to the place it is an impression of) and a new drive from there to another city over the highway network */
 function currentCityId() { try { if (indiaRoute && phys) { const gf = gameFrame(phys.x, phys.z), ll = fromGame(gf.x, gf.z), c = nearestCity(ll.lat, ll.lon); if (c) return c.city.id; } const ins = (locationById(config.location).region || {}).inspiration; if (ins) { const c = nearestCity(ins.lat, ins.lon); if (c) return c.city.id; } } catch (e) { /* fall through */ } return 'delhi'; }
 let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
+const gateSub = (net, cityId, roadId) => { try { return net.junctionChoices(cityId).filter(c => c.road !== roadId).slice(0, 2).map(c => (c.nh || c.name) + ' \u2192 ' + c.towardName).join('   '); } catch (e) { return ''; } };       // the roads that cross at a city, for the board over the road before it
 function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.length = 0; terrain = createTerrain(config); if (indiaRoute && config.terrain.macro) config.road = { ...config.road, start: { x: 0, z: 0, y: terrain.base(0, 0) } }; road = new Road(terrain, config); road.ensure(-2600, 2600); roadSet = new RoadSet(road); terrain.attachRoad(roadSet); roadS = 0; }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
@@ -172,8 +174,8 @@ function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
   if (landmarks) landmarks.dispose(); landmarks = new Landmarks(scene, terrain, road, config, grid.origin, locationById(config.location).landmarks);       // sights beside the road; they also level the land under them
-  roadMesh = new RoadMesh(scene, road, road.style, grid.origin, { gates: indiaRoute ? indiaRoute.cities.filter(c => c.along > 0).map(c => ({ en: c.name, hi: HINDI[c.id] || '', alongM: c.along })) : [], dests: indiaRoute ? indiaRoute.cities.filter(c => c.along > 0).map(c => ({ en: c.name, hi: HINDI[c.id] || '', km: 0, alongM: c.along })) : (() => { const ins = (locationById(config.location).region || {}).inspiration; return ins ? destinationsFor(ins.lat, ins.lon) : []; })(), district: (locationById(config.location).region || {}).district, seed: config.seed + ':' + config.location, blocked: (x, z) => terrain.inZone(x, z, 8) }); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
-  if (nav) nav.unloadAll(); nav = new RoadNav(road, { drive: locationById(config.location).drive || 'right' }); if (q.has('nav') && !navDebug) navDebug = new NavDebug(scene);
+  roadMesh = new RoadMesh(scene, road, road.style, grid.origin, { tag: indiaRoute ? (indiaRoute.nh || '') : '', gates: indiaRoute ? indiaRoute.cities.filter(c => c.along > 0).map(c => ({ en: c.name, hi: HINDI[c.id] || '', alongM: c.along, sub: gateSub(indiaRoute.net, c.id, indiaRoute.roadId) })) : [], dests: indiaRoute ? indiaRoute.cities.filter(c => c.along > 0).map(c => ({ en: c.name, hi: HINDI[c.id] || '', km: 0, alongM: c.along })) : (() => { const ins = (locationById(config.location).region || {}).inspiration; return ins ? destinationsFor(ins.lat, ins.lon) : []; })(), district: (locationById(config.location).region || {}).district, seed: config.seed + ':' + config.location, blocked: (x, z) => terrain.inZone(x, z, 8) }); scatter = new Scatter(scene, terrain, config, grid.origin); if (nature) scatter.setProps(nature);
+  if (nav) nav.unloadAll(); nav = new RoadNav(road, { drive: locationById(config.location).drive || 'right' }); if (q.has('nav') && !CITY[q.get('nav')] && !navDebug) navDebug = new NavDebug(scene);
   if (peds) { peds.dispose(); peds = null; }
   if (traffic) traffic.dispose(); traffic = new Traffic(scene, road, config.seed, grid.origin, { mode: S.traffic, drive: locationById(config.location).drive || 'right', scale: (locationById(config.location).region || { traffic: { scale: 1 } }).traffic.scale, mix: (locationById(config.location).region || { traffic: {} }).traffic.mix || null, pack: trafficPack });          // cars on the road (src/traffic), on the right or the left as the place drives
   { const reg = locationById(config.location).region; if (reg && reg.district && reg.population && reg.population.density > 0) peds = new Pedestrians(scene, nav, config.seed + ':' + config.location, grid.origin, { density: reg.population.density, archetypes: reg.population.archetypes, level: S.traffic, traffic: traffic.sim }); }          // people on the sidewalks of a built-up region (src/pedestrians); their number follows the traffic setting
@@ -382,7 +384,16 @@ const rp = {};
 const bus = new EventBus(), runtime = new GameRuntime({ maxFrame: 0.05, bus });
 function frame(now) { requestAnimationFrame(frame); runtime.frame(now); }
 function step(dt, now) { update(dt, now); draw(now); }                                    // one whole frame (also used by the headless checks through __next.step)
-function draw(now) { if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
+/* adaptive resolution: when frames take too long the game lowers its render resolution step by step (and the shadows at the last steps), and raises it again when there is room; ?gov=off turns it off */
+const gov = { ema: 16.7, last: 0, level: 0, t: 0, on: q.get('gov') !== 'off', base: Math.min(devicePixelRatio, phone ? 1 : 1.5), mul: [1, 0.8, 0.65, 0.52, 0.42], told: false };
+function governor(now) {
+  if (!gov.on) return; const dt = now - gov.last; gov.last = now; if (dt <= 0 || dt > 250 || document.hidden) return;                  // a stall or a hidden tab says nothing about the load
+  gov.ema += (dt - gov.ema) * 0.06; gov.t += dt; if (gov.t < 2000) return;
+  const up = gov.ema < 15 && gov.level > 0 && gov.t > 9000, down = gov.ema > 30 && gov.level < gov.mul.length - 1; if (!up && !down) return;
+  gov.level += down ? 1 : -1; gov.t = 0; renderer.setPixelRatio(Math.max(0.4, gov.base * gov.mul[gov.level])); resize(); if (shadowsOn) env.setShadows(gov.level >= 3 ? 0 : (quality === 'high' ? 4096 : 2048), quality === 'high' ? 90 : 70);
+  if (down && !gov.told) { gov.told = true; toast('Resolution lowered to keep the game smooth (see Settings for a lower quality tier)'); }
+}
+function draw(now) { governor(now); if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
 /* world sectors (src/world/sectors.js): 512 m squares with their own load state, above the terrain tiles. A sector loads the shared assets its region needs (today the vehicle pack) and releases them when it goes. */
 const focus = { x: 0, z: 0, dx: 1, dz: 0, speed: 0 };
 /* what a sector holds (N8): the region its centre belongs to (nearest of the regions by the real place each is an impression of, with a blend near borders) and the cities of the route inside it.
@@ -458,7 +469,7 @@ function buildCityRoads(city) {
     let gA = nxt ? R.net.guideFor(j.road, city.id, nxt.id) : null, gB = prv ? R.net.guideFor(j.road, city.id, prv.id) : null; if (!gA) { gA = gB; gB = null; } if (!gA) continue;
     const cfg = { ...config, seed: config.seed + ':' + city.id + ':' + j.road, road: { ...config.road, guide: gA.pts, guideBack: gB ? gB.pts : null, start, style: rd.kind === 'nh' ? 'highway' : 'nh6' } };
     const br = new Road(terrain, cfg); roadSet.add(br); const bx = br.ensure(-500, 900); if (bx) grid.invalidate(bx); const along = new Map(gA.cities.map(c => [c.id, c.along])); if (gB) for (const c of gB.cities) if (!along.has(c.id)) along.set(c.id, -c.along);
-    const rec = { id: j.road, city: city.id, road: br, cityAlong: along, hint: 0, near: false, te: traffic ? traffic.addRoad(br) : null, mesh: new RoadMesh(scene, br, br.style, grid.origin, { gates: [...along].filter(([id, a]) => a > 0 && id !== city.id).map(([id, a]) => ({ en: CITY[id].name, hi: HINDI[id] || '', alongM: a })), dests: [...along].filter(([id, a]) => a > 0 && id !== city.id).map(([id, a]) => ({ en: CITY[id].name, hi: HINDI[id] || '', km: 0, alongM: a })) }) };
+    const rec = { id: j.road, city: city.id, road: br, cityAlong: along, hint: 0, near: false, te: traffic ? traffic.addRoad(br) : null, mesh: new RoadMesh(scene, br, br.style, grid.origin, { tag: rd.nh || '', gates: [...along].filter(([id, a]) => a > 0 && id !== city.id).map(([id, a]) => ({ en: CITY[id].name, hi: HINDI[id] || '', alongM: a, sub: gateSub(R.net, id, j.road) })), dests: [...along].filter(([id, a]) => a > 0 && id !== city.id).map(([id, a]) => ({ en: CITY[id].name, hi: HINDI[id] || '', km: 0, alongM: a })) }) };
     branches.push(rec); made.push(rec);
   }
   if (traffic && !junctionOf.has(city.id)) {
@@ -499,15 +510,17 @@ function updateBranches(px, pz, dt) {
 /* toll plazas on the player's road: passing through one pays the toll (a toast; two-wheelers go free, trucks pay more); no money system yet */
 let lastToll = null;
 function updateToll() { const tr = activeRec ? activeRec.road : road, ts0 = activeRec ? activeRec.hint : roadS; if (!tr || tr.style.id !== 'nh6' || mode !== 'drive' || !phys || phys.u < 1) return; for (const ts of validTolls(tr, ts0 - 20, ts0 + 40)) { if (ts0 >= ts && ts0 <= ts + TOLL_LEN && lastToll !== ts) { lastToll = ts; const id = VEHICLES[vehicle].id, fare = id === 'bike' ? 0 : id === 'truck' ? 270 : 85; toast(fare ? 'Toll plaza: \u20b9' + fare + ' paid with FASTag' : 'Toll plaza: two-wheelers pass free'); } } }
-let navDest = q.get('nav') && CITY[q.get('nav')] ? q.get('nav') : null, lastCityToast = '';
+let gps = null, gpsNext = null; let navDest = q.get('nav') && CITY[q.get('nav')] ? q.get('nav') : null, lastCityToast = '';
 function setNav(id) { navDest = id && CITY[id] ? id : null; toast(navDest ? 'Navigating to ' + CITY[navDest].name : 'Navigation off'); }
 /* the readout on an India drive: the road you are on, the next city ahead and how far (real km), and, with a destination set, what to do at that city */
 function updateRoute() {
   if (!indiaRoute) return; const rec = activeRec; if (!rec) return; const px = phys && mode !== 'fly' ? phys.x : cam.x, pz = phys && mode !== 'fly' ? phys.z : cam.z, arc = rec.road.guideArcSigned(px, pz); if (arc === null) return;
-  const net = indiaRoute.net, p = rec.road.at(rec.hint, tmpP), dirS = phys && mode !== 'fly' ? (Math.cos((phys.yaw || 0) - p.th) >= 0 ? 1 : -1) : 1; let nc = null, nd = Infinity, here = null;
+  const net = indiaRoute.net; if (!gps) gps = new Gps({ net, player: () => { const o = phys && mode !== 'fly' ? phys : cam, g = gameFrame(o.x, o.z); return { x: g.x, z: g.z, yaw: o.yaw || 0 }; }, nav: () => ({ dest: navDest, next: gpsNext }), pick: id => setNav(id), names: Object.fromEntries([...net.cities.values()].map(c => [c.id, c.name])), size: touchUI ? 150 : 184 });
+  const p = rec.road.at(rec.hint, tmpP), dirS = phys && mode !== 'fly' ? (Math.cos((phys.yaw || 0) - p.th) >= 0 ? 1 : -1) : 1; let nc = null, nd = Infinity, here = null;
   for (const [id, a] of rec.cityAlong) { const d = (a - arc) * dirS; if (d > 40 && d < nd) { nd = d; nc = id; } if (Math.abs(a - arc) < 120) here = id; }
   if (here && here !== lastCityToast) { lastCityToast = here; S.city = here; save(); const ch = net.junctionChoices(here).filter(c => c.road !== rec.id).slice(0, 3).map(c => (c.nh || c.name) + ' to ' + c.towardName); toast(CITY[here].name + (HINDI[here] ? ' · ' + HINDI[here] : '') + (ch.length ? '  — also: ' + ch.join(', ') : '')); if (navDest === here) { navDest = null; setTimeout(() => toast('You have arrived in ' + CITY[here].name), 2200); } }
   else if (!here && lastCityToast) lastCityToast = '';
+  gpsNext = nc || here;
   const road1 = net.roads.get(rec.id), name = road1 ? (road1.nh ? road1.nh + ' · ' : '') + road1.name : indiaRoute.name; let t = name + (nc ? ' · next: ' + CITY[nc].name + ', ' + Math.max(0, Math.round(nd * 100 / 1000)) + ' km' : ' · end of this road');
   if (navDest && nc) { if (nc === navDest) t += '\n→ ' + CITY[navDest].name + ' is next'; else { const rt = net.route(nc, navDest); if (rt && rt.legs.length) { const l0 = rt.legs[0], r0 = net.roads.get(l0.road); t += '\n→ ' + CITY[navDest].name + ' (' + Math.round(rt.length * 100 / 1000) + ' km): ' + (l0.road === rec.id ? 'keep on this road' : 'at ' + CITY[nc].name + ' take ' + (r0.nh || r0.name) + ' toward ' + CITY[l0.to].name); } else t += '\n→ no road route to ' + CITY[navDest].name; } }
   routeHud.style.display = 'block'; routeHud.style.whiteSpace = 'pre-line'; routeHud.style.borderRadius = '14px'; routeHud.style.textAlign = 'center'; routeHud.textContent = t;
@@ -551,7 +564,7 @@ function update(dt, now) {
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
-  updateActivities(dt, px, pz); updateRoute(); updateToll(); updatePrompt();
+  updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } updateToll(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);

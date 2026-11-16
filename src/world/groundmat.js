@@ -41,10 +41,11 @@ vec3 triRock(vec3 p, vec3 n) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y 
   float macro = dot(texture2D(tGrass, vWP.xz / 64.0).rgb, vec3(0.33)) / 0.27;`}
   vec3 tint = clamp(vc / 0.62, 0.35, 1.6);
   vec3 g = grass * mix(vec3(1.0), tint, 0.95) * mix(1.0, macro, 0.45) * 2.5;
+  { float gd = clamp(dot(grass, vec3(0.3, 0.59, 0.11)) / 0.2, 0.6, 1.5); g = mix(g, vc * gd * 1.25, 0.5); }                    // the vertex colour (field parcels, crops, stubble) shows through the grass texture, not only as a tint
   vec3 sand = texture2D(tSand, vWP.xz / 8.0).rgb * mix(vec3(1.0), tint, 0.4) * 1.15;
   vec3 rock = ${lite ? 'texture2D(tRock, vec2(vWP.x + vWP.z * 0.7, vWP.y) / 8.0).rgb' : 'triRock(vWP, n)'} * mix(vec3(1.0), tint, 0.3) * 1.7;
   vec3 snow = texture2D(tSnow, vWP.xz / 8.0).rgb * 0.95;
-  float arS = smoothstep(2.2, 3.2, vc.r / max(vc.b, 0.04));                              // bare ground (an ochre vertex colour from real land cover) shows the sand
+  float arS = smoothstep(2.05, 2.7, vc.r / max(vc.b, 0.04));                              // bare ground (an ochre vertex colour from real land cover) shows the sand
   vec3 a = mix(g, sand, max(sandW, max(uArid, arS) * (1.0 - rockW))); a = mix(a, rock, rockW); a = mix(a, snow, snowW);
   /* the shore: ground under the water goes from pale turquoise shallows to deep blue, wet sand darkens just above the waterline, and a moving line of foam sits on the edge */
   float dep = uSea - vWP.y, lm = dot(a, vec3(0.3, 0.59, 0.11));

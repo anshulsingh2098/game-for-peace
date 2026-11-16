@@ -121,6 +121,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.3 | Cleaner engine recordings and a second sound pass (N1) are still open | P2 [person] |
 
 ## Done (move lines here with the date)
+- 21 Nov 2026: GPS minimap and full India map (key P, tap a city to navigate); Indian km stones with city and real km every 10 km, boards listing crossing roads before cities, furniture on four-lane highways too; field parcels in Indian tones; adaptive resolution governor against lag. Still open: rail and trains (7.7), lag never measured on a real device (0.1).
 - 20 Nov 2026: one continuous India world as the main game, with the old locations list as separate Explore cities (2.3, 8.4); autodrive levels (Auto / Cruise) and drive-mode driving styles (9.5).
 - 20 Nov 2026: Travel screen (reach any city from any world over the highways); Indian lane discipline and class speed limits in traffic (4.2, 4.6 part).
 - 19 Nov 2026: domes, chhatris and jharokha balconies on district buildings (3.2 part); city buses and cows in traffic (4.1 part).
