@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>India network map</title>
+<style>
+  :root { color-scheme: dark; --bg: #0e1522; --fg: #e6edf7; --mut: #8da0bd; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px system-ui, sans-serif; }
+  #wrap { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+  header { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; border-bottom: 1px solid #243049; }
+  h1 { font-size: 16px; margin: 0; }
+  label { color: var(--mut); display: flex; gap: 6px; align-items: center; }
+  #info { color: var(--mut); flex: 1 1 320px; min-width: 240px; }
+  canvas { width: 100%; height: 100%; display: block; }
+</style></head><body>
+<div id="wrap"><header><h1>India: roads and railways (schematic)</h1>
+  <label><input type="checkbox" id="hw" checked> highways</label><label><input type="checkbox" id="rl" checked> railways</label><label><input type="checkbox" id="mi"> minor towns</label>
+  <label>scale 1:<input type="number" id="sc" value="25" min="5" max="100" style="width:56px"></label>
+  <span id="info">Click a city, then another, to see the shortest road route.</span></header>
+  <canvas id="c"></canvas></div>
+<script type="module" src="src/debug/indiamap.js"></script>
+</body></html>

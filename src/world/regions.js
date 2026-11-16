@@ -27,7 +27,7 @@
 export const REGION_SCHEMA = 1;
 export const KNOWN_LANDMARKS = ['gateway', 'tajHotel', 'marine', 'indiaGate', 'tajMahal', 'lighthouse'];
 export const VEHICLE_KINDS = ['car', 'van', 'truck', 'two-wheeler', 'auto-rickshaw', 'bus'];
-export const ROAD_STYLE_IDS = ['two-lane', 'highway', 'boulevard', 'dirt', 'gravel'];
+export const ROAD_STYLE_IDS = ['two-lane', 'highway', 'boulevard', 'dirt', 'gravel', 'nh6', 'ghat'];
 export const TIME_IDS = ['dawn', 'day', 'dusk', 'night'], WEATHER_IDS = ['clear', 'overcast', 'rain', 'fog', 'storm', 'snow'];
 export const DISTRICT_STYLES = { colonial: 1, 'art-deco': 1, modern: 1, mixed: 1, mughal: 1, 'old-city': 1 };         // palette names the district builder knows (district_plan.js PALETTES)
 const INDIA = { lat: [6, 36], lon: [68, 98] };

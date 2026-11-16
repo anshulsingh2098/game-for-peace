@@ -10,7 +10,7 @@ import { PORTAL_W } from './router.js';
 export { TWO_LANE } from './roadstyles.js';          // styles are data in roadstyles.js: see there for the cross-section format
 
 /* texture sets: material key -> [file in assets (CC0, ambientCG), metres one texture tile covers] */
-const MATERIALS = { asphalt: ['roads/asphalt', 3], gravel: ['roads/gravel', 1.8], dirt: ['ground/sand', 2], pave: ['roads/pavement', 2] };
+const MATERIALS = { asphalt: ['roads/asphalt', 3], gravel: ['roads/gravel', 1.8], dirt: ['ground/sand', 2], pave: ['roads/pavement', 2], grass: ['ground/grass', 2.5] };
 const loader = new THREE.TextureLoader();
 function roadMaterial(key) {
   const [file, size] = MATERIALS[key], load = (kind, srgb) => {

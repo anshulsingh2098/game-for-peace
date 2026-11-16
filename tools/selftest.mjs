@@ -11,8 +11,10 @@ import { createRails, RAIL_R } from '../src/world/bridge_rails.js';
 import { rumbleFor } from '../src/input/rumble.js';
 import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
 import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
+import { CITIES, CITY, HIGHWAYS, RAIL, COAST as INDIA_COAST, routeKm, roadGraph, shortestRoute, nearestCity, distanceKm, gameKm, driveMinutes } from '../src/world/india_network.js';
+import { roadStyleById } from '../src/world/roadstyles.js';
 import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
-import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL } from '../src/traffic/sim.js';
+import { TrafficSim, MODES, SLOT, trafficKinds, EXTRA_KINDS, signalState, SIGNAL, laneOffsets } from '../src/traffic/sim.js';
 import { Autodrive } from '../src/input/autodrive.js';
 import { VehiclePhysics, vehicleParams, SURFACES } from '../src/vehicle/physics.js';
 import { VEHICLES } from '../src/vehicle/defs.js';
@@ -698,6 +700,23 @@ test('activities (N15): the shipped definitions are valid, a drive can be done, 
   assert.equal(rate(def, 10), 'gold'); assert.equal(rate(def, 12.5), 'silver'); assert.equal(rate(def, 12.6), 'bronze');
   let pr = { activities: {} }, o = recordResult(pr, { id: 'run', outcome: 'done', time: 12, rating: 'silver' }); assert.equal(o.isBest, true); o = recordResult(o.progress, { id: 'run', outcome: 'done', time: 14, rating: 'bronze' }); assert.equal(o.isBest, false); assert.equal(o.progress.activities.run.best, 12); assert.equal(o.progress.activities.run.rating, 'silver', 'the best rating stays');
   o = recordResult(o.progress, { id: 'run', outcome: 'done', time: 9, rating: 'gold' }); assert.deepEqual(o.progress.activities.run, { plays: 3, best: 9, rating: 'gold' }); o = recordResult(o.progress, { id: 'run', outcome: 'failed', time: 31, rating: null }); assert.equal(o.progress.activities.run.plays, 4); o = recordResult(o.progress, { id: 'run', outcome: 'cancelled', time: 3, rating: null }); assert.equal(o.progress.activities.run.plays, 4, 'cancelled is not a play'); assert.deepEqual(sanitiseProgress(o.progress), o.progress, 'what we write we can read back');
+});
+
+test('India network: cities, highways and trunk railways are consistent, the Golden Quadrilateral has its published length, every region sits at its city', () => {
+  const ids = new Set(); for (const c of CITIES) { assert.ok(!ids.has(c.id), 'unique id ' + c.id); ids.add(c.id); assert.ok(c.lat > 6 && c.lat < 37 && c.lon > 68 && c.lon < 98, c.id + ' is inside India\'s box'); assert.ok(['metro', 'major', 'city', 'town'].includes(c.tier)); }
+  const lists = [...HIGHWAYS, ...RAIL]; for (const r of lists) { assert.ok(r.cities.length >= 2, r.id); for (const id of r.cities) assert.ok(CITY[id], r.id + ' names unknown city ' + id); for (let i = 1; i < r.cities.length; i++) { const d = distanceKm(CITY[r.cities[i - 1]], CITY[r.cities[i]]); assert.ok(d > 10 && d < 700, r.id + ' leg ' + r.cities[i - 1] + '-' + r.cities[i] + ' is ' + Math.round(d) + ' km'); } }
+  assert.equal(new Set(lists.map(r => r.id)).size, lists.length, 'unique route ids'); assert.equal(RAIL.length, 6, 'four sides and two diagonals');
+  const gq = HIGHWAYS.filter(h => h.kind === 'gq'); assert.equal(gq.length, 4); const total = gq.reduce((a, h) => a + routeKm(h.cities), 0); assert.ok(total > 5500 && total < 6200, 'the Golden Quadrilateral is about 5,846 km, ours ' + Math.round(total));
+  for (const m of ['delhi', 'mumbai', 'kolkata', 'chennai']) assert.ok(gq.filter(h => h.cities.includes(m)).length >= 2, m + ' is a corner');
+  const g = roadGraph(); for (const c of CITIES) assert.ok(g.has(c.id), c.id + ' is on no highway'); const reach = new Set(['delhi']), q = ['delhi']; while (q.length) for (const e of g.get(q.pop())) if (!reach.has(e.to)) { reach.add(e.to); q.push(e.to); } assert.equal(reach.size, CITIES.length, 'every city can be reached by road from Delhi');
+  const dm = shortestRoute('delhi', 'mumbai', g); assert.ok(dm && dm.km > 1300 && dm.km < 1800 && dm.cities[0] === 'delhi' && dm.cities.at(-1) === 'mumbai', 'Delhi to Mumbai is about 1,400 to 1,500 km by road'); assert.equal(shortestRoute('delhi', 'atlantis', g), null);
+  for (const r of REGIONS) { const c = nearestCity(r.inspiration.lat, r.inspiration.lon); assert.ok(c.km < 40, r.id + ' is ' + Math.round(c.km) + ' km from ' + c.city.id); }
+  assert.ok(INDIA_COAST.every(p => p[0] > 6 && p[0] < 37)); assert.ok(Math.abs(gameKm(1400, 25) - 56) < 1e-9); assert.ok(driveMinutes(56, 100) > 30 && driveMinutes(56, 100) < 40);
+});
+test('road styles (Indian highway and ghat road): cross-sections are symmetric, lanes sit inside the carriageway, traffic uses them', () => {
+  for (const id of ['nh6', 'ghat']) { const st = ROAD_STYLES[id]; assert.equal(roadStyleById(id).id, id); const xs = st.cols.map(c => c[0]); assert.ok(Math.abs(Math.min(...xs) + Math.max(...xs)) < 1e-9, id + ' is symmetric'); assert.ok(st.strips.every(([a, b]) => a >= 0 && b < st.cols.length)); for (const l of st.lines) assert.ok(Math.abs(l.t) <= st.outer); }
+  const nh = ROAD_STYLES.nh6, lanes = laneOffsets(nh); assert.equal(lanes.length, 3, 'three lanes each way'); assert.ok(lanes.every((x, i) => x > 2.4 && x < 12.9 && (i === 0 || x > lanes[i - 1])), 'inside the carriageway, in order'); assert.ok(Math.abs(lanes[1] - lanes[0] - 3.5) < 1e-9, '3.5 m lanes');
+  assert.equal(laneOffsets(ROAD_STYLES.ghat).length, 1); assert.equal(laneOffsets(ROAD_STYLES['two-lane']).length, 1); assert.equal(laneOffsets(ROAD_STYLES.highway).length, 2, 'older styles unchanged');
 });
 
 console.log(`\n${passed} checks passed`);

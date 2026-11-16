@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 03:00  India-only direction: network data, map page, two Indian road styles
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: `docs/INDIA_MAP_PLAN.md` (research, scale, what makes an Indian game, order of work, owner decisions), `src/world/india_network.js` (98 cities, 28 highways including the Golden Quadrilateral, North-South and East-West corridors, the six rail trunk routes, route and distance helpers; calibrated so the four GQ sides total about 5,800 km), `india_map.html` + `src/debug/indiamap.js` (draws it, plans a route between two clicked cities), `roadstyles.js` (new `nh6` six-lane divided highway and `ghat` mountain road; styles may now list their own `lanes`), small additions in `road.js`, `traffic/sim.js`, `world/navgraph.js`, `regions.js`. Two self-tests (64 checks). Not done: hairpin routing for ghat roads, service roads, gantry signs, toll plazas, interchanges, the five non-India worlds are still there, no real alignments (needs the OSM decision).
+For the other stream: nothing required. `lanes` on a road style is new (see `laneOffsets`).
+Status: open
+
 ## 2026-11-18 01:00  Landscape pass 2: tree species built in code, shore and depth on water, sharper forests
 Branch: feat/landscape-look (PR 36, more commits)
 What changed: new `world/species.js` (oak, birch, poplar, cypress, a rare autumn maple: trunk, branches and a crown of leaf clusters, leaf textures drawn on a canvas, no outside assets; mixed into the scanned trees by `nature.js`, two kept on the low preset), `world/groundmat.js` (ground under water goes from pale turquoise shallows to deep blue, wet sand, a moving line of foam at the shore; new `uTime` uniform), `main.js` (water opacity 0.74 so the bed shows), `terrain.js` (sharper forest edges). Looked at in the browser only. Cost: each species adds about 300 triangles and two draw calls per variant per tile; not measured on a phone.

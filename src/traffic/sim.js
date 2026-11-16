@@ -15,7 +15,7 @@ import { crossingAt, STEP, SIGNAL_STYLES, CROSS_EVERY } from '../world/navgraph.
 
 export const MODES = { off: 0, low: 6, mid: 12, high: 20 };                    // cars alive inside the window at most, per level
 export const MODE_ALIAS = { light: 'low', busy: 'high' };                      // older saved names
-export const SLOT = 60, LIMIT = { 'two-lane': 22, highway: 30, boulevard: 16, dirt: 12, gravel: 14 };       // slot length (m); speed limit by road style (m/s)
+export const SLOT = 60, LIMIT = { 'two-lane': 22, highway: 30, boulevard: 16, dirt: 12, gravel: 14, nh6: 33, ghat: 13 };       // slot length (m); speed limit by road style (m/s)
 export const KINDS = { sedan: { len: 4.4, w: 1.85 }, van: { len: 5.2, w: 2.0 }, truck: { len: 8.5, w: 2.5 } };
 /* the mix of vehicles: name, length, width, height (m) and how common it is. This plain set is used until the real models load (traffic_pack.json replaces it, see traffic.js). */
 export const DEFAULT_KINDS = [{ name: 'sedan', len: 4.4, w: 1.85, h: 1.45, weight: 70 }, { name: 'van', len: 5.2, w: 2.0, h: 2.0, weight: 18 }, { name: 'truck', len: 8.5, w: 2.5, h: 3.0, weight: 12 }];
@@ -38,6 +38,7 @@ const pickKind = (list, t) => { for (const k of list) { t -= k.weight; if (t < 0
 
 /* lane centre offsets (m from the centre line, on one side) for a road style */
 export function laneOffsets(style) {
+  if (style.lanes) return style.lanes.slice();
   const n = style.half >= 8 ? 2 : 1, w = style.half / n, out = []; for (let k = 0; k < n; k++) out.push(w * (k + 0.5)); return out;
 }
 
