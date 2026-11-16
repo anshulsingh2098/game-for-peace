@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-19 22:00  Districts for Delhi, Agra and Bhopal
+Branch: feat/districts-2
+What changed: `world/regions.js` (district and crossing street for Delhi, Agra, Bhopal), one test updated (four regions have a district), `docs/DISTRICT.md`, `docs/WORK_REMAINING.md`. Checked in the browser (Delhi, Agra). The look is the Mumbai kit in other colours: see 3.2.
+For the other stream: pedestrians now spawn in those three worlds too.
+Status: open
+
 ## 2026-11-19 20:00  N11 junction: crossing streets in region worlds
 Branch: feat/n11-junction
 What changed: `world/regions.js` (optional `junctions`, validated; Mumbai has two), `main.js` (`buildRegionJunctions`: a second road with the district along it, traffic and a shared signal; side roads of region worlds now grow and draw: `updateBranches` no longer returns early outside `?india=`; India-mode roads may bend tighter), `docs/DISTRICT.md`, `docs/WORK_REMAINING.md`. One new self-test (71 checks). Checked in the browser: both Mumbai streets draw, cars run on them. Limits are in `docs/DISTRICT.md`.
