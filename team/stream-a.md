@@ -6,6 +6,17 @@ Newest entries first. Format is in `CLAUDE.md`.
 Branch: claude/flyover-physics-262398
 What changed: `world/interchange.js` (new, pure: crossings and overpasses), `world/router.js` (`Road.addLift`, lift in `at`/`nearest`/`bridgeW`, `waterW`), `world/roadset.js` (layers: `drive(x, z, natural, y)`, `deck`, `deckMesh`, `grade` follows the ground road), `world/terrain.js` (`drive(x, z, y)`, `deck`), `world/road.js` (`RoadMesh.refresh`), `world/bridges.js` (no pier on the road below, truss only over water), `world/bridge_rails.js`, `world/highway_plan.js`, `world/district_plan.js` (circles carry `y`). Your files, small edits: `vehicle/rapier-vehicle.js` (`buildPatch` makes a deck trimesh beside the ground heightfield; `reset(x, z, yaw, yHint)`; `collide` skips circles of the other level), `vehicle/physics.js` (hint passed), `traffic/sim.js` (car circles carry `y`). `main.js` (shared): `world.height(x, z, y)`, `world.ground`, `world.deck`, `world.deckMesh`, `raiseOverpasses` in `buildCityRoads` and `updateBranches`, `placeOnRoad` passes the road height, `__next.roadSet`. Self-test: one new check (78 checks): a car drives over and under a crossing, no layer snapping, traffic on the deck. `tools/vehicle_acceptance.mjs` passes. India world: two highways cross at Agra (`?play&q=med&india=world&at=agra`, the North-South road goes over the Golden Quadrilateral twice, at about 1.4 and 1.7 km from the start point; use the browser console `__next.branches` to find them: the road `ns` has two `lifts`).
 For the other stream: please review the vehicle changes (they are yours). Any new world object that stands on a road should give its obstacle circles a `y` (the road height) so a car on the other level does not hit it. Known: the autodrive planner does not know about layers (it follows the road it is on, which works); slip roads are not built, so you cannot change roads at an overpass.
+
+## 2026-11-22 15:00  Multi-track rail, Indian train look
+Branch: feat/rail-realism (same PR 48)
+What changed: new `world/train_art.js` (canvas-textured vehicles), `world/train_consist.js` (pure), `world/rail_grade.js` (wider cutting for multi-track), `world/rail_view.js` (1 to 4 tracks, lanes, new trains), `world/rail_timetable.js` (`tracksFor`, `laneOffsets`), `main.js`; 81 self-test checks.
+For the other stream: nothing needed.
+Status: open
+
+## 2026-11-22 09:00  Railway realism: ground, trains, timetable, boards, announcements, sound
+Branch: feat/rail-realism
+What changed: new `world/rail_grade.js`, `world/rail_timetable.js`, `ui/railboard.js`, `audio/trainsound.js`, `tools/build_india_trains.mjs`, `assets/india/trains.json` (DataMeet CC0); `world/rail.js` (STYLES, trainMotion, cached routes), `world/rail_view.js` (ballast, overhead wire, viaducts, styled trains), `world/terrain.js` (`attachRail`, one more grading hook, only where no road grades), `main.js`, licences and docs; 79 self-test checks.
+For the other stream: terrain.height/drive now also ask the rail grader (a Set lookup first, so cheap). The multi-level road session must not break that order (road grade first, then rail where the road did not change the height).
 Status: open
 
 ## 2026-11-21 20:00  Real railway network, stations, rail bridges
