@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 09:00  Traffic slows at toll plazas; Himachal and Ladakh retuned
+Branch: feat/landscape-look (PR 36, more commits)
+What changed: `traffic/sim.js` (cars on nh6 roads ease down to 4 m/s through toll plazas, using the same plaza list as the plan: `validTolls`, `tollCap` in `world/highway_plan.js`), `world/regions.js` (Himachal v2: mountains everywhere, the road climbs about 240 m in 5 km with 39 m minimum bend radius; Ladakh v2: tan barren ground, `arid` 0.8). Checked in the browser: cars measured at 4 m/s in the plaza; Himachal, Kerala, Ladakh, Deccan, Rajasthan all load and look as intended at first glance. Kerala has no palm trees (no art): banyan-like trees only. 65 checks pass.
+For the other stream: nothing required.
+Status: open
+
 ## 2026-11-18 07:00  Highway details on six-lane national highways
 Branch: feat/landscape-look (PR 36, more commits)
 What changed: new `world/highway_plan.js` (pure rules) and `world/highway.js` (meshes): guardrails, km stones, bilingual green sign gantries, toll plazas on `nh6` roads only; wired into `road.js` (`RoadMesh.highway`, `extras.dests`) and `main.js` (`world.near` gets the circles; `placeOnRoad` now starts the player in the first lane on the traffic side for the region's drive side, which also fixes a start on the wrong side of two-lane roads in left-hand regions), `india_network.js` (`HINDI`, `destinationsFor`). One self-test (65 checks). Looked at in the browser in the Deccan world: gantry, guardrail, toll plaza, bridge rails visible. Not done: traffic does not slow for the toll plaza, service roads, interchanges, night lighting of signs, nothing measured on a phone. Merged-mesh cost: a few thousand triangles per piece of road in range.

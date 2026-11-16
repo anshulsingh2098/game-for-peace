@@ -99,11 +99,11 @@ const BHOPAL = {
 /* ---- the five Indian worlds that replace the old non-Indian ones (docs/INDIA_MAP_PLAN.md section 5). Terrain recipes come from the old worlds they replace; palettes, plants, roads and traffic are Indian. ---- */
 const copy = o => JSON.parse(JSON.stringify(o));
 const HIMACHAL = {
-  schema: 1, id: 'himachal', version: 1, name: 'Himachal', blurb: 'Deodar and pine valleys under snow peaks, and a narrow ghat road with a stone parapet climbing from Shimla towards Manali and the Atal Tunnel.', accent: '#8fc8ff',
+  schema: 1, id: 'himachal', version: 2, name: 'Himachal', blurb: 'Deodar and pine valleys under snow peaks, and a narrow ghat road with a stone parapet climbing from Shimla towards Manali and the Atal Tunnel.', accent: '#8fc8ff',
   inspiration: { place: 'Manali, Himachal Pradesh', lat: 32.24, lon: 77.19, boundsKm: [20, 20] },
   transform: { anchorLat: 32.24, anchorLon: 77.19, metresPerGameMetre: 1 },
   climate: { time: 'day', weather: 'clear' },
-  land: { terrain: { seaLevel: 470, seabed: 395, lowland: 520, continent: { scale: 6500, rise: 90 }, coast: { lo: -0.52, hi: -0.34 }, warp: { scale: 1400, amp: 260 }, hills: { scale: 1000, amp: 90, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 3400, start: -0.2, full: 0.2, scale: 6800, amp: 980, octaves: 5, gain: 0.38, sharp: 1.3 } },
+  land: { terrain: { seaLevel: 470, seabed: 395, lowland: 520, continent: { scale: 6500, rise: 90 }, coast: { lo: -0.52, hi: -0.34 }, warp: { scale: 1400, amp: 260 }, hills: { scale: 1000, amp: 90, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 3400, start: -0.7, full: -0.2, scale: 5200, amp: 820, octaves: 5, gain: 0.38, sharp: 1.3 } },
     palette: { grass: [0.48, 0.72, 0.28], grass2: [0.26, 0.48, 0.18], dry: [0.6, 0.58, 0.34], alpine: [0.52, 0.54, 0.4], rock: [0.52, 0.5, 0.48], sand: [0.7, 0.66, 0.52], treeline: 520, snowline: 760 }, water: { color: '#2a7a8a' } },
   vegetation: { trees: 0.011, rocks: 0.0007, bushes: 0.0012, tufts: 0.009, pineBias: 0.45, tint: [0.92, 1.02, 0.95] },
   roads: { style: 'ghat', maxAlt: 1500, drive: 'left', density: 0.5, router: { maxGrade: 0.09, hardGrade: 0.11, maxCut: 1000, minRadius: 45, tunnelName: 'ATAL TUNNEL, ROHTANG' } },
@@ -115,12 +115,12 @@ const HIMACHAL = {
   provenance: { geography: 'procedural', sources: ['stylised impression: no map, survey or elevation data used'], osm: false }
 };
 const LADAKH = {
-  schema: 1, id: 'ladakh', version: 1, name: 'Ladakh', blurb: 'A thin high road through the cold desert: brown ridges, white giants, thin air, trucks and bikers on the way to Leh.', accent: '#e8e4dc',
+  schema: 1, id: 'ladakh', version: 2, name: 'Ladakh', blurb: 'A thin high road through the cold desert: brown ridges, white giants, thin air, trucks and bikers on the way to Leh.', accent: '#e8e4dc',
   inspiration: { place: 'Leh, Ladakh', lat: 34.15, lon: 77.58, boundsKm: [20, 20] },
   transform: { anchorLat: 34.15, anchorLon: 77.58, metresPerGameMetre: 1 },
   climate: { time: 'day', weather: 'clear' },
   land: { terrain: { seaLevel: 0, seabed: 2500, lowland: 3000, continent: { scale: 8000, rise: 200 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1800, amp: 320 }, hills: { scale: 1300, amp: 180, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4600, start: -0.3, full: 0.15, scale: 11500, amp: 2100, octaves: 5, gain: 0.38, sharp: 1.3 } },
-    palette: { grass: [0.52, 0.5, 0.3], grass2: [0.4, 0.42, 0.24], dry: [0.62, 0.54, 0.38], alpine: [0.5, 0.45, 0.36], rock: [0.5, 0.44, 0.38], sand: [0.72, 0.64, 0.5], treeline: 3500, snowline: 3300, arid: 0.45 }, water: { color: '#2f6a78' } },
+    palette: { grass: [0.8, 0.62, 0.36], grass2: [0.62, 0.5, 0.3], dry: [0.7, 0.58, 0.4], alpine: [0.5, 0.45, 0.36], rock: [0.5, 0.44, 0.38], sand: [0.72, 0.62, 0.48], treeline: 3500, snowline: 3300, arid: 0.8 }, water: { color: '#2f6a78' } },
   vegetation: { trees: 0.0006, rocks: 0.0016, bushes: 0.0008, tufts: 0.004, pineBias: 0.2, tint: [1.05, 0.98, 0.85] },
   roads: { style: 'two-lane', maxAlt: 7500, drive: 'left', density: 0.3, router: { maxGrade: 0.1, hardGrade: 0.11, maxCut: 1000, minRadius: 55 } },
   buildings: { styles: ['mixed'], density: 0.1 },

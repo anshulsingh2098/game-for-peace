@@ -11,11 +11,15 @@ const clear = (road, s) => road.bridgeW(s) <= 0 && road.tunnelW(s) <= 0.01;
 export function tollAt(s0, s1) { const out = []; for (let m = Math.floor((s0 - TOLL_LEN - TOLL_OFFSET) / TOLL_EVERY); m * TOLL_EVERY + TOLL_OFFSET < s1; m++) { const s = m * TOLL_EVERY + TOLL_OFFSET; if (s + TOLL_LEN > s0 && s < s1) out.push(s); } return out; }
 export function bendAt(road, s, len) { const p = {}, q = {}; road.at(s, p); road.at(s + len, q); return Math.abs(Math.atan2(Math.sin(q.th - p.th), Math.cos(q.th - p.th))); }
 
+/* the toll plazas of the road within [s0, s1) that can really be built (level, no bridge, no tunnel, no bend): shared by the plan and by the traffic, so cars slow where the plaza is */
+export function validTolls(road, s0, s1) { const out = []; for (const s of tollAt(s0 - TOLL_LEN, s1 + TOLL_LEN)) if (clear(road, s) && clear(road, s + TOLL_LEN) && clear(road, s + TOLL_LEN / 2) && bendAt(road, s, TOLL_LEN) < 0.03) out.push(s); return out; }
+/* speed limit (m/s) for a car whose distance ahead to the plaza entrance is d (negative: already inside): 4 m/s through the booths, easing back to free speed 120 m before */
+export const tollCap = d => d <= 0 ? 4 : Math.min(40, 4 + d * 0.3);
+
 /* road, seed, k (piece number), s0..s1, dests: [{ en, hi, km }] from india_network.destinationsFor */
 export function planHighway({ road, seed, k, s0, s1, dests = [] }) {
   const st = road.style, plan = { rails: [], stones: [], gantries: [], tolls: [], circles: [] }; if (st.id !== 'nh6') return plan;
-  const p = {}, tolls = [];
-  for (let s of tollAt(s0 - TOLL_LEN, s1 + TOLL_LEN)) { if (clear(road, s) && clear(road, s + TOLL_LEN) && clear(road, s + TOLL_LEN / 2) && bendAt(road, s, TOLL_LEN) < 0.03) tolls.push(s); }
+  const p = {}, tolls = validTolls(road, s0 - TOLL_LEN, s1 + TOLL_LEN);
   const nearToll = s => tolls.some(t => s > t - 36 && s < t + TOLL_LEN + 36);
   const edge = st.shoulder + RAIL_LAT_GAP, at = (s, lat) => { road.at(s, p); return { x: p.x + p.tz * lat, z: p.z - p.tx * lat, y: p.y, tx: p.tx, tz: p.tz }; };
   for (let s = Math.ceil(s0 / RAIL_STEP) * RAIL_STEP; s < s1; s += RAIL_STEP) {

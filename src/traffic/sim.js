@@ -15,6 +15,7 @@ import { crossingAt, STEP, SIGNAL_STYLES, CROSS_EVERY } from '../world/navgraph.
 
 export const MODES = { off: 0, low: 6, mid: 12, high: 20 };                    // cars alive inside the window at most, per level
 export const MODE_ALIAS = { light: 'low', busy: 'high' };                      // older saved names
+import { validTolls, tollCap, TOLL_LEN } from '../world/highway_plan.js';
 export const SLOT = 60, LIMIT = { 'two-lane': 22, highway: 30, boulevard: 16, dirt: 12, gravel: 14, nh6: 33, ghat: 13 };       // slot length (m); speed limit by road style (m/s)
 export const KINDS = { sedan: { len: 4.4, w: 1.85 }, van: { len: 5.2, w: 2.0 }, truck: { len: 8.5, w: 2.5 } };
 /* the mix of vehicles: name, length, width, height (m) and how common it is. This plain set is used until the real models load (traffic_pack.json replaces it, see traffic.js). */
@@ -54,6 +55,8 @@ export class TrafficSim {
   clearCars() { this.pool.releaseAll(); this.cars.length = 0; this.seen.clear(); }
   setMode(mode) { mode = MODE_ALIAS[mode] || mode; this.mode = MODES[mode] !== undefined ? mode : 'off'; this.cap = MODES[this.mode] ? Math.max(1, Math.min(MODES.high + 4, Math.round(MODES[this.mode] * this.scale))) : 0; this.clearCars(); }          // `scale` is the region's traffic density multiplier (regions.js)
   /* the signed offset from the centre line along the left normal for a car going `dir` (+1 with increasing s) in lane index k */
+  /* the toll plazas within reach of road distance s (cached per 500 m block) */
+  tollsNear(s) { const b = Math.floor(s / 500), m = this.tollCache || (this.tollCache = new Map()); let v = m.get(b); if (!v) { v = validTolls(this.road, b * 500 - 140, b * 500 + 640); m.set(b, v); if (m.size > 60) m.delete(m.keys().next().value); } return v; }
   lateral(dir, k) { const off = this.lanes[k], right = this.drive === 'right'; return (dir > 0) === right ? -off : off; }
 
   update(dt, player) {
@@ -108,6 +111,7 @@ export class TrafficSim {
         for (let n = 0; n < 3; n++) { const i = (i0 + n * c.dir) * m, sline = i * STEP - c.dir * (6 + c.len / 2), dist = (sline - c.s) * c.dir; if (dist < -1) continue; if (dist > 70) break; if (!this.isCrossing(i)) continue;
           const st = this.occupied.has(i) ? 'red' : this.signalled ? signalState(i, this.time) : 'green'; if (st === 'green' || (st === 'amber' && dist < c.speed * 1.2)) continue; want = Math.min(want, Math.sqrt(2 * 3 * Math.max(0, dist - 1.5))); break; }                    // brake at 3 m/s2 to stop 1.5 m short of the line
       }
+      if (R.style.id === 'nh6') for (const ts of this.tollsNear(c.s)) { const e = c.dir > 0 ? ts : ts + TOLL_LEN, d = (e - c.s) * c.dir; if (d >= -TOLL_LEN - 1 && d < 130) want = Math.min(want, tollCap(d)); }             // toll plazas: cars slow to walking pace through the booths
       c.brake = want < c.speed - 0.3 ? 1 : 0;
       c.speed = clamp(want, c.speed - 7 * dt, c.speed + 2.5 * dt); c.speed = Math.max(0, c.speed);
       c.s += c.dir * c.speed * dt; c.stuck = c.speed < 0.5 ? c.stuck + dt : 0; this.place(c);

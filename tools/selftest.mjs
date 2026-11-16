@@ -12,7 +12,7 @@ import { rumbleFor } from '../src/input/rumble.js';
 import { sanitiseSaved, sanitiseProgress } from '../src/core/saved.js';
 import { parseSave, loadSave, writeSave, SAVE_VERSION, SAVE_KEY, BAD_KEY } from '../src/core/save.js';
 import { CITIES, CITY, HIGHWAYS, RAIL, COAST as INDIA_COAST, routeKm, roadGraph, shortestRoute, nearestCity, distanceKm, gameKm, driveMinutes } from '../src/world/india_network.js';
-import { planHighway, RAIL_STEP, GANTRY_EVERY, TOLL_EVERY, TOLL_LEN, tollAt } from '../src/world/highway_plan.js';
+import { validTolls, tollCap, planHighway, RAIL_STEP, GANTRY_EVERY, TOLL_EVERY, TOLL_LEN, tollAt } from '../src/world/highway_plan.js';
 import { destinationsFor, HINDI } from '../src/world/india_network.js';
 import { roadStyleById } from '../src/world/roadstyles.js';
 import { ActivityRunner, ACTIVITIES, activitiesFor, rate, recordResult, validateActivity } from '../src/activities/activities.js';
@@ -734,6 +734,7 @@ test('highway furniture (national highway): guardrails, km stones, sign gantries
   assert.ok(plan.rails.every(r => Math.abs(Math.abs(r.z) - (ROAD_STYLES.nh6.shoulder + 0.45)) < 1e-9), 'rails stand just outside the shoulder');
   const onBridge = planHighway({ road: line(s => (s > 1000 && s < 5000 ? 1 : 0)), seed: 'x', k: 0, s0: 0, s1: 8000, dests }); assert.ok([...onBridge.rails, ...onBridge.stones, ...onBridge.gantries].every(o => !(o.s > 1000 && o.s < 5000)), 'nothing on a bridge');
   assert.deepEqual(planHighway({ road: { ...road, style: ROAD_STYLES.highway }, seed: 'x', k: 0, s0: 0, s1: 5000, dests }), { rails: [], stones: [], gantries: [], tolls: [], circles: [] }, 'other styles get nothing');
+  assert.equal(tollCap(-3), 4); assert.equal(tollCap(0), 4); assert.ok(tollCap(30) > 4 && tollCap(30) < tollCap(90) && tollCap(1000) === 40, 'cars ease down to walking pace at the booths'); assert.deepEqual(validTolls(road, 0, 20000), plan.tolls.map(t => t.s), 'the traffic and the plan agree where the plazas are'); assert.equal(validTolls(line(s => (s > 1000 && s < 5000 ? 1 : 0)), 0, 8000).length, tollAt(0, 8000).filter(t => !(t + TOLL_LEN > 1000 && t < 5000)).length);
   const d = destinationsFor(18.52, 73.86); assert.ok(d.length >= 2 && d.some(x => x.id === 'mumbai') && d.every((x, i) => i === 0 || x.km >= d[i - 1].km), 'destinations near Pune, nearest first'); assert.ok(d.every(x => x.en && (x.hi || !HINDI[x.id]))); assert.equal(destinationsFor(0, 0).length >= 0, true);
 });
 
