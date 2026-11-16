@@ -5,7 +5,7 @@ Newest entries first. Format is in `CLAUDE.md`.
 ## 2026-11-17 23:00  N15 first increment: activities and a versioned save
 Branch: feat/n15-activities
 What changed: new `src/activities/activities.js` (data-driven point-to-point drives, runner, ratings, best times), `src/core/save.js` (version 2 envelope, migration, corrupt text kept in `gfp-next.bad`, newer saves never overwritten), `saved.js` (`sanitiseProgress`), `runtime.js` (events `activity:started`, `activity:finished`), `main.js` (markers, beacon, timer line, G to start, save wiring), `player/onfoot.js` (`Interactions` prefix filter). `docs/ACTIVITIES.md`. Two self-tests (62 checks). Checked in the browser: prompt, start, finish, best time saved. Par times are guesses.
-For the other stream: nothing needed to merge. Later: points of interest for activities from region data (yours to supply), a map/route layer, more kinds.
+Also: `HANDOFF.md` (shared) got a post-N6 section for N7 to N15 and `docs/ASSET_PLAN.md` was written (no assets downloaded). For the other stream: nothing needed to merge. Later: points of interest for activities from region data (yours to supply), a map/route layer, more kinds.
 Status: open
 
 ## 2026-11-17 21:00  N14 first increment: on foot, get in and out
