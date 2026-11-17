@@ -125,10 +125,10 @@ export class GameRuntime {
   initOne(e) { if (e.inited) return; e.inited = true; if (e.sys.init) e.sys.init(this); }
   start() { this.started = true; for (const e of this.sorted) this.initOne(e); return this; }
   /* remove one system now (its dispose runs) */
-  remove(name) { const i = this.systems.findIndex(s => s.sys.name === name); if (i < 0) return false; const [e] = this.systems.splice(i, 1); this.sorted = this.sorted.filter(x => x !== e); if (e.inited && e.sys.dispose) e.sys.dispose(this); return true; }
-  /* forget the last frame time: the next frame has dt 0. Call it when the tab was hidden or the game was paused, so no time spike follows. */
+  remove(name) { const i = this.systems.findIndex(s => s.sys.name === name); if (i < 0) return false; const [e] = this.systems.splice(i, 1); this.sorted = this.sorted.filter(x => x !== e); const was = e.inited; e.inited = false; if (was && e.sys.dispose) e.sys.dispose(this); return true; }        // inited goes false first: a frame already running keeps its old list and must not update or render a disposed system
   /* all wall time thrown away so far (seconds): frame gaps clamped here plus what the stepper dropped (audit R16) */
   get droppedTime() { return this.stepper.dropped + this.discarded; }
+  /* forget the last frame time: the next frame has dt 0. Call it when the tab was hidden or the game was paused, so no time spike follows. */
   resetClock() { this.last = null; this.stepper.reset(); this.bus.emit('runtime:resumed', {}); }
   /* run one frame at time nowMs (performance.now() style). Returns { dt, steps }. */
   frame(nowMs) {

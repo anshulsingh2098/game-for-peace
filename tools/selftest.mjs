@@ -794,6 +794,14 @@ test('on foot: climbs a kerb, is stopped by a wall, a steep slope and deep water
   const pushed = new OnFoot(footWorld({ near: () => [[{ x: 0.2, z: 0, r: 1.5 }]] })); pushed.place(0, 0, 0); pushed.step(1 / 60, {}); assert.ok(Math.hypot(pushed.x - 0.2, pushed.z) >= 1.5 + FOOT.radius - 0.2 - 1e-6, 'a car that drives up pushes the character out');
   const ledge = new OnFoot(footWorld({ height: x => x > 4 ? -5 : 0 })); ledge.place(0, 0, 0); let fell = false; walk(ledge, 6, { throttle: 1, run: 1 }, f => { if (!f.grounded) fell = true; }); assert.ok(fell && ledge.grounded && ledge.y === -5, 'walks off a ledge, falls and lands');
 });
+test('on foot: jumping at a wall taller than a step does not land you on top of it (audit B5)', () => {
+  let maxY = 0, maxX = 0; for (let tj = 0; tj < 120; tj += 2) { const f = new OnFoot(footWorld({ height: x => x > 5 ? 3 : 0 })); f.place(0, 0, 0); for (let k = 0; k < 360; k++) { f.step(1 / 60, { throttle: 1, run: 1, jump: k === tj ? 1 : 0 }); maxY = Math.max(maxY, f.y); maxX = Math.max(maxX, f.x); } } assert.ok(maxX <= 5.0 + 1e-6, 'stopped at the wall whatever the jump timing: ' + maxX); assert.ok(maxY < 1.5, 'never popped up onto the 3 m top: ' + maxY);
+  const g = new OnFoot(footWorld({ height: x => x > 5 ? 0.9 : 0 })); g.place(0, 0, 0); let top = false; for (let k = 0; k < 600; k++) { g.step(1 / 60, { throttle: 1, run: 1, jump: (k % 40) < 3 ? 1 : 0 }); if (g.x > 5.5 && Math.abs(g.y - 0.9) < 1e-6) top = true; } assert.ok(top, 'a jump still gets you onto a 0.9 m ledge');
+});
+test('runtime: a system removed during a frame is not updated or rendered after its dispose', () => {
+  const log = []; const rt = new GameRuntime(); rt.add({ name: 'a', order: 0, update: () => { rt.remove('b'); } }); rt.add({ name: 'b', order: 1, update: () => log.push('update'), render: () => log.push('render'), dispose: () => log.push('dispose') }); rt.start(); rt.frame(0); rt.frame(16);
+  assert.deepEqual(log, ['dispose'], 'only the dispose ran: ' + log.join(','));
+});
 test('audit R05: a handle only resolves in the registry or pool that made it; a long stall is counted as dropped time (R16)', () => {
   const A = new Registry({ car: 4 }), B = new Registry({ car: 4 }), ha = A.create('car', { n: 'a' }), hb = B.create('car', { n: 'b' });
   assert.notEqual(ha, hb, 'two registries never hand out the same number'); assert.equal(B.get(ha), null, 'a foreign handle does not resolve'); assert.equal(B.destroy(ha), null); assert.equal(A.get(ha).n, 'a'); assert.equal(B.get(hb).n, 'b');

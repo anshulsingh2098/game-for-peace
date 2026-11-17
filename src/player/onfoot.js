@@ -39,7 +39,7 @@ export class OnFoot {
   /* try to stand at (nx, nz): refused if it is too steep, a step too high, or deep water */
   tryMove(nx, nz) {
     this.hit = null;
-    const W = this.world, F = FOOT, h = W.height(nx, nz), cur = this.grounded ? W.height(this.x, this.z) : this.y; if (h - cur > F.maxStep && this.grounded) return false;
+    const W = this.world, F = FOOT, h = W.height(nx, nz), cur = this.grounded ? W.height(this.x, this.z) : this.y; if (h - cur > F.maxStep) return false;                // a rise taller than a step stops you in the air too: jumping at a cliff face must not land you on top of it
     const run = Math.hypot(nx - this.x, nz - this.z); if (run > 1e-6 && this.grounded) { const px = nx + (nx - this.x) / run * 0.5, pz = nz + (nz - this.z) / run * 0.5; if ((W.height(px, pz) - h) / 0.5 > F.maxSlope && W.height(px, pz) > h + 0.12) return false; }          // too steep: judged over the next half metre, so a kerb is a step but a cliff face is not
     if (h < W.seaLevel - F.wade && (this.grounded || this.y < W.seaLevel)) return false;
     for (const l of W.near(nx, nz, F.radius + 4)) for (const c of l) if (this.blocks(c, cur) && Math.hypot(nx - c.x, nz - c.z) < c.r + F.radius - 0.15 && Math.hypot(this.x - c.x, this.z - c.z) > Math.hypot(nx - c.x, nz - c.z)) { this.hit = c; return false; }     // moving deeper into an obstacle

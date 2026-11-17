@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18  B5 findings 1, 2 and 4 fixed (runtime.remove, airborne cliff climb)
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: `src/core/runtime.js`: `remove()` now clears `inited` before `dispose`, so a system removed during a frame is not updated or rendered afterwards (reproduced: old code logged `dispose,update`); the misplaced `resetClock` comment is back above `resetClock`. `src/player/onfoot.js`: `tryMove` refuses a rise taller than `maxStep` in the air too (reproduced: with a jump at frame 32 the old code put the character on top of a 3 m wall; now it stops at the wall). Shared file `tools/selftest.mjs`: two new tests (on foot: jump timing swept against a 3 m wall, and a 0.9 m ledge is still jumpable; runtime: remove during a frame); both fail on the old code and pass now. Finding 3 (`chooseExit` ignores `y0`/`y1`) is left: it fails safe.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-18  B4, B5 and B12 done (provenance, review, log tidy); B1 and B2 waiting for a person
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed:
