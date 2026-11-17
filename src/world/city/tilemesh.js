@@ -74,6 +74,41 @@ function guessHeight(b, hash) {
   return Math.max(1, Math.min(lv, 25)) * 3.2;
 }
 export function buildTile(tile, ctx) { const g = buildTileSteps(tile, { ...ctx, yieldNow: null }); let r; while (!(r = g.next()).done); return r.value; }
+/* Junction shaping. Each street is a rectangle that ends at the node, so where roads meet the corners are sharp (and at a bend the outside has a notch). For every node with two or more ground roads, taken in order
+   round the node: where two neighbouring roads meet at an angle under 180 degrees the corner gets a fillet (asphalt between the two road edges and an arc of radius 3 to 7 m tangent to both, a kerb along the arc and
+   a pavement ring outside it); where they are more than 180 degrees apart (the outside of a bend) the notch is filled with a triangle. Pure geometry into the tile's meshes. J: Map of records { x, z, dx, dz (unit,
+   away from the node), hw (half carriageway), rc (road colour), len (piece length) } per node. */
+function junctionShapes(J, M, X, Z, gy, out) {
+  const KC = col(0xb4b0a6); let nf = 0, nn = 0;
+  const rv = (x, y, z, c) => M.road.v(X(x), gy + y, Z(z), 0, 1, 0, c, X(x) / TEX_ROAD, Z(z) / TEX_ROAD), wv = (x, y, z, c, nx = 0, ny = 1, nz = 0) => M.walk.v(X(x), gy + y, Z(z), nx, ny, nz, c, X(x) / TEX_WALK, Z(z) / TEX_WALK);
+  for (const l of J.values()) {
+    if (l.length < 2) continue; l.sort((p, q) => Math.atan2(p.dz, p.dx) - Math.atan2(q.dz, q.dx));
+    for (let k = 0; k < l.length; k++) {
+      const a = l[k], b = l[(k + 1) % l.length]; let g = Math.atan2(b.dz, b.dx) - Math.atan2(a.dz, a.dx); if (g <= 0) g += Math.PI * 2;
+      const nax = -a.dz, naz = a.dx, nbx = -b.dz, nbz = b.dx, hwa = a.hw, hwb = b.hw, rc = a.hw >= b.hw ? a.rc : b.rc;
+      if (g > Math.PI + 0.05) {                                                               // the outside of a bend: fill the notch
+        const qa = [a.x + nax * hwa, a.z + naz * hwa], qb = [b.x - nbx * hwb, b.z - nbz * hwb], v0 = rv(a.x, LIFT.road, a.z, rc), v1 = rv(qa[0], LIFT.road, qa[1], rc), v2 = rv(qb[0], LIFT.road, qb[1], rc); M.road.tri(v0, v1, v2, 0, 1, 0); nn++; continue;
+      }
+      if (g >= Math.PI - 0.05 || g < 0.35) continue;
+      const rx = -nbx * hwb - nax * hwa, rz = -nbz * hwb - naz * hwa, det = -a.dx * b.dz + b.dx * a.dz; if (Math.abs(det) < 1e-6) continue;
+      const t = (-rx * b.dz + b.dx * rz) / det, u = (a.dx * rz - a.dz * rx) / det; if (!(t > 0.2 && u > 0.2)) continue;
+      const px = a.x + nax * hwa + a.dx * t, pz = a.z + naz * hwa + a.dz * t; let r = Math.min(7, Math.max(3, 1.1 * Math.max(hwa, hwb) + 1.2)), q = r / Math.tan(g / 2);
+      const qmax = Math.min(a.len * 0.9 - t, b.len * 0.9 - u); if (q > qmax) { if (qmax < 1.0) continue; q = qmax; r = q * Math.tan(g / 2); }
+      const tax = px + a.dx * q, taz = pz + a.dz * q, tbx = px + b.dx * q, tbz = pz + b.dz * q; let bx = a.dx + b.dx, bz = a.dz + b.dz; const bl = Math.hypot(bx, bz); if (bl < 1e-6) continue; bx /= bl; bz /= bl;
+      const cx = px + bx * (r / Math.sin(g / 2)), cz = pz + bz * (r / Math.sin(g / 2)), A0 = Math.atan2(taz - cz, tax - cx); let d = Math.atan2(tbz - cz, tbx - cx) - A0; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+      const S = Math.max(3, Math.ceil(Math.abs(d) / 0.45)), arc = []; for (let i = 0; i <= S; i++) { const an = A0 + d * i / S; arc.push([cx + r * Math.cos(an), cz + r * Math.sin(an), Math.cos(an), Math.sin(an)]); }
+      const vp = rv(px, LIFT.road, pz, rc), av = arc.map(p => rv(p[0], LIFT.road, p[1], rc)); for (let i = 0; i < S; i++) M.road.tri(vp, av[i], av[i + 1], 0, 1, 0);       // the asphalt between the corner and the arc
+      const ri = Math.max(0.2, r - 0.3), ro = Math.max(0.1, r - 2.1);                           // kerb (0.3 m wide, 12 cm high) and the pavement ring outside the arc, toward the centre of the circle
+      for (let i = 0; i < S; i++) {
+        const p0 = arc[i], p1 = arc[i + 1], f0 = wv(p0[0], 0, p0[1], KC, p0[2], 0, p0[3]), f1 = wv(p1[0], 0, p1[1], KC, p1[2], 0, p1[3]), f2 = wv(p1[0], 0.12, p1[1], KC, p1[2], 0, p1[3]), f3 = wv(p0[0], 0.12, p0[1], KC, p0[2], 0, p0[3]); M.walk.tri(f0, f1, f2, p0[2], 0, p0[3]); M.walk.tri(f0, f2, f3, p0[2], 0, p0[3]);
+        const k0 = wv(p0[0], 0.12, p0[1], KC), k1 = wv(p1[0], 0.12, p1[1], KC), k2 = wv(cx + (p1[0] - cx) * ri / r, 0.12, cz + (p1[1] - cz) * ri / r, KC), k3 = wv(cx + (p0[0] - cx) * ri / r, 0.12, cz + (p0[1] - cz) * ri / r, KC); M.walk.tri(k0, k1, k2, 0, 1, 0); M.walk.tri(k0, k2, k3, 0, 1, 0);
+        const w0 = wv(cx + (p0[0] - cx) * ri / r, LIFT.walk + 0.025, cz + (p0[1] - cz) * ri / r, WALK), w1 = wv(cx + (p1[0] - cx) * ri / r, LIFT.walk + 0.025, cz + (p1[1] - cz) * ri / r, WALK), w2 = wv(cx + (p1[0] - cx) * ro / r, LIFT.walk + 0.025, cz + (p1[1] - cz) * ro / r, WALK), w3 = wv(cx + (p0[0] - cx) * ro / r, LIFT.walk + 0.025, cz + (p0[1] - cz) * ro / r, WALK); M.walk.tri(w0, w1, w2, 0, 1, 0); M.walk.tri(w0, w2, w3, 0, 1, 0);
+      }
+      nf++;
+    }
+  }
+  out.nFillets = nf; out.nNotches = nn;
+}
 export function* buildTileSteps(tile, ctx) {
   const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
@@ -123,6 +158,9 @@ export function* buildTileSteps(tile, ctx) {
     }
     if (roofIdx.length) out.decks.push({ pos: roofPos, idx: roofIdx, hw: hw + 1.2, id, lay, roof: true }); void rd;
   };
+  /* junctions (see junctionShapes below): every ground road end, grouped by the node it ends at */
+  const J = new Map(), ROADJ = new Set(['primary', 'secondary', 'tertiary', 'residential']);
+  const addJ = (p, hw, rc, cls) => { const n2 = p.length / 2; let len = 0; for (let i = 0; i + 3 < p.length; i += 2) len += Math.hypot(p[i + 2] - p[i], p[i + 3] - p[i + 1]); if (len < 6) return; for (const [i0, i1] of [[0, 1], [n2 - 1, n2 - 2]]) { const x = p[i0 * 2], z = p[i0 * 2 + 1]; let j = i1; while (j >= 0 && j < n2 && Math.hypot(p[j * 2] - x, p[j * 2 + 1] - z) < 0.5) j += i1 > i0 ? 1 : -1; if (j < 0 || j >= n2) continue; const dx = p[j * 2] - x, dz = p[j * 2 + 1] - z, L = Math.hypot(dx, dz), k = Math.round(x * 10) + ',' + Math.round(z * 10); let l = J.get(k); if (!l) J.set(k, l = []); l.push({ x, z, dx: dx / L, dz: dz / L, hw, rc, len, cls }); } };
   /* the list of streets sorted so that small roads are drawn first (their order only matters for z fighting at junctions, which the offsets below settle) */
   for (const s of tile.streets) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
@@ -149,7 +187,7 @@ export function* buildTileSteps(tile, ctx) {
       }
       out.nStreets++; continue;
     }
-    strip(M.road, -hw, hw, rc, 0);
+    strip(M.road, -hw, hw, rc, 0); if (lay === 0 && !sunk && ROADJ.has(cls) && s.pts.length >= 4) addJ(s.pts, hw, rc, cls);
     if (sunk) { underpass(pts, F, H, hw, id, lay); if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) { /* lane marks below */ } } else
     if (walk > 0) { const wl = 1.8; strip(M.walk, hw, hw + wl, WALK, 0); if (walk > 1 || two) strip(M.walk, -hw - wl, -hw, WALK, 0); if (!deck) { kerb(pts, F, hw, 1, id); if (walk > 1 || two) kerb(pts, F, hw, -1, id); } }
     /* sidewalks are painted flat (the car physics has no kerb yet); a flyover gets edges, an underside and piers */
@@ -186,6 +224,7 @@ export function* buildTileSteps(tile, ctx) {
   }
   /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */
   const B = M.bldg;
+  junctionShapes(J, M, X, Z, gy, out); yield;
   for (const b of tile.buildings) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     const r = b.ring, n = r.length / 2; if (n < 3) continue; const L = b.landmark ? lm.get(b.landmark) : null, kit = L && L.type ? 'gov' : { office: 'off', hotel: 'off', civic: 'gov', religious: 'gov', transit: 'gov' }[b.use] || 'res', B = kit === 'off' ? M.bldgO : kit === 'gov' ? M.bldgG : M.bldg, shopB = !L && (b.use === 'commercial' || b.use === 'retail') && (b.height || 9) >= 5, hgt = Math.max(3, (L && L.height) || guessHeight(b, hash)), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
