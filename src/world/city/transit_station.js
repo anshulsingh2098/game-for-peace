@@ -6,6 +6,7 @@
    (docs/DELHI_TRANSIT.md section 9). Browser only. */
 import * as THREE from 'three';
 import { Soup, C, fbox, frame, pt, slab, extrude } from './transit_geo.js';
+import { buildUnderground } from './transit_underground.js';
 import { kitOf, platformLen, lineColour, nextArrival, DWELL, RAIL_H, GIRDER } from './transit_plan.js';
 
 const PLAT = C(0xa7a29a), PLAT_SIDE = C(0x8f8b83), PLAT_DK = C(0x6f6c66), TACTILE = C(0xe6b800), ROOF = [C(0x4b525a), C(0x7b848c)], COL = C(0x2e3a52), STEEL = C(0x9aa0a6), GLASS = C(0xa8d4e6), GLAZE = C(0x7e9db0), WALL = C(0xd8d2c4), BAND = C(0x9a968e), DARK = C(0x0d0f12), STAIR = C(0x6d6a65), STAIR_T = C(0xcfd5d9);
@@ -33,7 +34,7 @@ function roundTexture(st, colour) {
 export class StationKit {
   constructor(T, e) {
     this.T = T; this.e = e; this.group = new THREE.Group(); this.circles = []; this.access = []; this.tris = 0; this.calls = 0; this.lastDep = -9; this.tex = []; this.geos = []; this.walk = [];
-    const st = e.st, ox = st.x, oz = st.z, solid = new Soup(ox, oz), glass = new Soup(ox, oz), names = new Soup(ox, oz), dep = new Soup(ox, oz), signs = new Soup(ox, oz), claims = [];
+    const st = e.st, ox = st.x, oz = st.z, solid = new Soup(ox, oz), glass = new Soup(ox, oz), names = new Soup(ox, oz), dep = new Soup(ox, oz), signs = new Soup(ox, oz), lit = new Soup(ox, oz), claims = [];
     this.items = []; for (const per of st.per) { const calls = e.calls.filter(c => c.R.line === per.line); if (!calls.length) continue; const tr = []; for (const c of calls) { const p = c.R.at(c.s); if (!tr.some(q => Math.hypot(q.p.x - p.x, q.p.z - p.z) < 2.5)) tr.push({ R: c.R, s: c.s, p: { ...p } }); } this.items.push({ per, line: T.lineOf.get(per.line), kit: kitOf(per), tracks: tr, colour: lineColour(T.lineOf.get(per.line)) }); }
     if (!this.items.length) return;
     this.colours = [...new Set(this.items.map(i => i.colour))]; this.nameTex = nameTexture(st, this.colours); this.tex.push(this.nameTex);
@@ -103,6 +104,7 @@ export class StationKit {
       this.towers = placedT;
     }
 
+    const ugItems = this.items.filter(i => i.kit === 'underground'); this.ug = null; if (ugItems.length) buildUnderground(this, T, ugItems, { lit, glass, names, signs, bq, depQuads, claims });
     /* the entrance kiosks at the OSM entrance positions (shifted off streets and buildings) */
     const yaw = Math.atan2(Fa.tz, Fa.tx), ents = st.entrances.length ? st.entrances : [[Fa.x - Fa.tz * 16, Fa.z + Fa.tx * 16], [Fa.x + Fa.tz * 16, Fa.z - Fa.tx * 16]], hx = up ? 3.8 : 2.8, hz = up ? 2.8 : 2.2; this.blocked = 0;
     for (const [ex, ez] of ents) {
@@ -112,13 +114,13 @@ export class StationKit {
       for (const sg of [-1, 1]) { const l = sg * (hz + 0.02); solid.quad(pt(F, -hx + 0.8, l, 0.05), pt(F, hx - 0.8, l, 0.05), pt(F, hx - 0.8, l, 2.6), pt(F, -hx + 0.8, l, 2.6), DARK); bq(names, sg > 0 ? pt(F, -1.8, hz + 0.45, 3.75) : pt(F, 1.8, -hz - 0.45, 3.75), sg > 0 ? pt(F, 1.8, hz + 0.45, 3.75) : pt(F, -1.8, -hz - 0.45, 3.75), 0.9); }
       if (up) { solid.quad(pt(F, -1.4, hz + 0.6, 0.03), pt(F, 1.4, hz + 0.6, 0.03), pt(F, 1.4, hz + 4.2, 0.03), pt(F, -1.4, hz + 4.2, 0.03), DARK); solid.quad(pt(F, -1.4, -hz - 0.6, 0.03), pt(F, 1.4, -hz - 0.6, 0.03), pt(F, 1.4, -hz - 4.2, 0.03), pt(F, -1.4, -hz - 4.2, 0.03), DARK); }
       claims.push({ kind: 'station', layer: 0, shape: { t: 'rect', x: best.x, z: best.z, hx, hz, yaw } }); this.access.push({ x: best.x, z: best.z });
-      for (const u of [-hx * 0.5, hx * 0.5]) this.circles.push({ x: best.x + Fa.tx * u, z: best.z + Fa.tz * u, r: hz + 0.4 });
+      if (this.ug) this.ug.connect(best.x, best.z, lit); else for (const u of [-hx * 0.5, hx * 0.5]) this.circles.push({ x: best.x + Fa.tx * u, z: best.z + Fa.tz * u, r: hz + 0.4 });
     }
     T.claim('metro:st:' + st.id, claims);
 
     /* meshes: solid, glass, name boards (one texture), departure board (a second texture, redrawn live) */
     const add = (S, mat, shadow) => { if (S.empty) return null; const g = S.geometry(); this.geos.push(g); const m = new THREE.Mesh(g, mat); m.matrixAutoUpdate = true; m.castShadow = !!shadow; m.receiveShadow = true; this.group.add(m); this.tris += S.tris; this.calls++; return m; };
-    add(solid, T.mat, true); add(glass, T.glassMat);
+    add(solid, T.mat, true); add(glass, T.glassMat); add(lit, T.litMat);
     if (!signs.empty) { this.signTex = roundTexture(st, this.colours[0]); this.tex.push(this.signTex); this.signMat = new THREE.MeshBasicMaterial({ map: this.signTex, side: THREE.FrontSide, alphaTest: 0.5, toneMapped: false }); add(signs, this.signMat); }
     this.boardMat = new THREE.MeshBasicMaterial({ map: this.nameTex, side: THREE.FrontSide, toneMapped: false }); add(names, this.boardMat);
     if (depQuads.length) { this.depCanvas = document.createElement('canvas'); this.depCanvas.width = 512; this.depCanvas.height = 256; this.depTex = new THREE.CanvasTexture(this.depCanvas); this.depTex.colorSpace = THREE.SRGBColorSpace; this.tex.push(this.depTex);

@@ -20,10 +20,12 @@ export class CityTransit {
     this.chunks = new Map(); this.runs = new Map(); this.stations = new Map(); this.circ = new Map(); this.onTeleport = null;
     this.stats = { chunks: 0, stations: 0, tris: 0, calls: 0, piers: 0, pierMoved: 0, pierBlocked: 0, trains: 0, ms: 0 };
     this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.05, side: THREE.DoubleSide, envMapIntensity: 0.3, emissive: 0x24262a });
+    this.litMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide, emissive: 0x606060 });       // below ground: lit from itself
     this.glassMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 0.6 });
   }
   async init(url = 'assets/cities/delhi/transit.json') {
     try { const r = await fetch(url); if (!r.ok) throw new Error(r.status); this.data = await r.json(); } catch (e) { console.warn('transit.json not loaded, no Metro:', e); return this; }
+    for (const k of ['ground', 'park', 'walk', 'road', 'mark']) this.city.mats[k].side = THREE.DoubleSide;       // seen from below (inside an underground station) the street is the ceiling
     this.net = buildNetwork(this.data); this.lineOf = this.net.lineOf; this.tt = new Map(); this.zones = new Map();
     for (const R of this.net.routes) { R.spec = specOf(R.line); this.tt.set(R.id, buildTimetable(R, R.spec.vmax)); this.zones.set(R.id, []); }
     for (const [, e] of this.net.stations) for (const c of e.calls) { const per = e.st.per.find(p => p.line === c.R.line); if (per && kitOf(per) === 'elevated') this.zones.get(c.R.id).push([c.s - platformLen(c.R.line) / 2 - 12, c.s + platformLen(c.R.line) / 2 + 12]); }
@@ -135,7 +137,7 @@ export class CityTransit {
       for (let k = 0; k < tt.n; k++) {
         const tau = (this.t + k * tt.headway) % tt.period, s = tt.state(tau); if (!s) continue; R.at(s.s, this.p0); if (Math.hypot(this.p0.x - px, this.p0.z - pz) > TRAIN_RAD || f.n + nc > f.cap) continue;
         for (let j = 0; j < nc; j++) {
-          const sc = s.s + ((nc - 1) / 2 - j) * pitch; R.at(sc, this.p0); if (this.p0.h < -1.5 || !pack.hasTile(Math.floor(this.p0.x / S), Math.floor(this.p0.z / S))) continue;
+          const sc = s.s + ((nc - 1) / 2 - j) * pitch; R.at(sc, this.p0); if ((this.p0.h < -1.5 && !(this.footY < this.city.gy - 2 && Math.hypot(this.p0.x - px, this.p0.z - pz) < 250)) || !pack.hasTile(Math.floor(this.p0.x / S), Math.floor(this.p0.z / S))) continue;
           R.at(sc + 7.2, this.p1); R.at(sc - 7.2, this.p2); const fx = this.p1.x - this.p2.x, fy = this.p1.h - this.p2.h, fz = this.p1.z - this.p2.z, L = Math.hypot(fx, fy, fz) || 1;
           this.vx.set(fx / L, fy / L, fz / L); this.vz.set(-fz / L, 0, fx / L).normalize(); this.vy.crossVectors(this.vz, this.vx);
           this.m4.makeBasis(this.vx, this.vy, this.vz); this.m4.setPosition(this.p0.x - ox, this.city.gy + this.p0.h, this.p0.z - oz); f.mesh.setMatrixAt(f.n++, this.m4); cars++;
