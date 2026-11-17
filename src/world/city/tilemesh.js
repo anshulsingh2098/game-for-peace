@@ -7,6 +7,7 @@ import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './p
 import { buildStreetLife } from './streetlife.js';
 
 /* layers that lie in the ground plane are given real height steps (metres over the ground: it was 0 for all of them and only depth offsets told them apart, which shimmers with distance): ground 0, parks and water, pavement, road, markings */
+const TEX_ROAD = 5, TEX_WALK = 4;       // metres one tile of the road and pavement textures covers (a divisor of 1000, so tiles meet without a seam)
 const LIFT = { park: 0.015, walk: 0.03, road: 0.05, mark: 0.07 };
 const WALL_R = 1.1;                   // a wall circle's radius, and how far its centre sits inside the footprint edge: the circle ends exactly at the drawn wall (it was 1.25 m wide, 0.7 m inside: an invisible 0.55 m of wall in the street)
 export class Mesher {
@@ -129,10 +130,10 @@ export function* buildTileSteps(tile, ctx) {
     const w = pieceWidth(G, s), walk = pieceSidewalk(G, s), clip = s.clip || 0, deck = lay > 0, rank = RANKOF[cls] || 0, rc = ROAD[cls] || ROAD.residential, two = G.oneway[id] === 0, lanes = G.lanes[id];
     const sunk = lay < 0; let pts = s.pts; if (deck) pts = densify(pts, 5); else if (sunk) pts = densify(pts, 4); const F = frames(pts), hAt = (x, z) => (deck ? deckHeight(G, id, x, z) : sunk ? -underDepth(G, id, x, z) : 0), H = new Float32Array(F.n);
     for (let i = 0; i < F.n; i++) H[i] = hAt(pts[i * 2], pts[i * 2 + 1]);
-    const m0 = (m, x, y, z, c) => m.v(x, y, z, 0, 1, 0, c);
+    const m0 = (m, x, y, z, c) => m.v(x, y, z, 0, 1, 0, c, x / TEX_WALK, z / TEX_WALK);
     const strip = (m, a, b, c, dy, hExtra = 0) => {                                                 // a strip between lateral offsets a and b along the whole piece
       let prev = -1; for (let i = 0; i < F.n; i++) {
-        const x = pts[i * 2], z = pts[i * 2 + 1], y = gy + H[i] + dy + hExtra + (m === M.road ? LIFT.road : m === M.walk ? LIFT.walk : m === M.mark ? LIFT.mark : 0), k = F.sc[i]; const va = m.v(X(x + F.nx[i] * a * k), y, Z(z + F.nz[i] * a * k), 0, 1, 0, c), vb = m.v(X(x + F.nx[i] * b * k), y, Z(z + F.nz[i] * b * k), 0, 1, 0, c);
+        const x = pts[i * 2], z = pts[i * 2 + 1], y = gy + H[i] + dy + hExtra + (m === M.road ? LIFT.road : m === M.walk ? LIFT.walk : m === M.mark ? LIFT.mark : 0), k = F.sc[i]; const ua = X(x + F.nx[i] * a * k), wa = Z(z + F.nz[i] * a * k), ub = X(x + F.nx[i] * b * k), wb = Z(z + F.nz[i] * b * k), TS = m === M.road ? TEX_ROAD : TEX_WALK, va = m.v(ua, y, wa, 0, 1, 0, c, ua / TS, wa / TS), vb = m.v(ub, y, wb, 0, 1, 0, c, ub / TS, wb / TS);
         if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va;
       }
     };
@@ -248,7 +249,8 @@ export function makeMaterials() {
   const noise = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#d8d8d8'; g.fillRect(0, 0, 128, 128); for (let i = 0; i < 700; i++) { const v = 170 + Math.floor(rnd() * 80), r = 2 + rnd() * 9; g.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',0.35)'; g.beginPath(); g.arc(rnd() * 128, rnd() * 128, r, 0, 7); g.fill(); } const t = tex(c); t.anisotropy = 2; return t; })();
   const flat = (f, u, map) => new THREE.MeshStandardMaterial({ vertexColors: true, map: map || null, roughness: 0.96, metalness: 0, envMapIntensity: 0.25, polygonOffset: true, polygonOffsetFactor: f, polygonOffsetUnits: u });
   const kit = k => { const [a, b] = k === 'shop' ? shopTextures(rnd) : kitTextures(k, rnd), m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex(a), emissive: 0xffffff, emissiveMap: tex(b), emissiveIntensity: 0, roughness: 0.92, metalness: 0, envMapIntensity: 0.3 }); m.userData.kit = true; return m; };
-  const mats = { ground: flat(-1, -1, noise), park: flat(-2, -3, noise), walk: flat(-2, -4), road: flat(-3, -5), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
+  const pbr = (name, tint) => { const L = new THREE.TextureLoader(), ld = (f, srgb) => { const t = L.load('assets/roads/' + name + '_' + f + '.jpg'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }; const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: ld('color', true), normalMap: ld('normal', false), roughnessMap: ld('rough', false), roughness: 1, metalness: 0, envMapIntensity: 0.3, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -5 }); m.normalScale.set(0.8, 0.8); m.color.setScalar(tint); return m; };
+  const mats = { ground: flat(-1, -1, noise), park: flat(-2, -3, noise), walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 2.6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
   mats.setNight = on => { for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
   return mats;
 }
