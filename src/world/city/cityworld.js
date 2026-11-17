@@ -9,6 +9,7 @@ import { CityPeds } from './citypeds.js';
 import { CityTransit } from './transit.js';
 import { installCutHoles } from './cuts.js';
 import { buildSkyline } from './skyline.js';
+import { CityLandmarks } from './landmarks/index.js';
 
 /* the world config of a city: the region's palette and plants, on flat land (no hills, no sea) with the engine's own placeholder road parked far away (the engine always has one road; here it only gives the vehicle code something to ask) */
 export function cityConfig(base, seed) {
@@ -26,12 +27,13 @@ export class CityWorld {
   async init() {
     await this.pack.init(); const { landmarks } = this.pack; this.traffic = new CityTraffic(this.scene, this.origin, this.pack.G); this.peds = new CityPeds(this.scene, this.origin, this.traffic); this.traffic.peds = this.peds.list; this.transit = new CityTransit(this); await this.transit.init();     // the Delhi Metro (transit*.js, D6)
     for (const l of landmarks) if (l.footprint && l.footprint.length >= 6) { const station = (l.type || '').includes('station') || /station|terminal/.test(l.id); this.ko.add('city:lm:' + l.id, station ? 'station' : 'landmark', footprintRect(l.footprint, l.yaw || 0)); }       // landmarks and stations claim their ground
+    this.lmx = new CityLandmarks(this).init();                                                                                                   // the landmark models (landmarks/, D8): they replace the plain extruded footprints
     this.pack.nearestStreet = (x, z) => this.nearestStreet(x, z); return this;
   }
   tileKey(tx, tz) { return tx + '_' + tz; }
   /* call every frame: wanted tiles are fetched, one is built per frame, far ones are dropped */
   update(px, pz, dt = 0.016) {
-    this.traffic.update(dt, px, pz); this.transit.update(px, pz, dt); this.peds.update(dt, px, pz, this.gy); this.cuts.set(this.openCuts, this.origin, px, pz);
+    this.traffic.update(dt, px, pz); this.transit.update(px, pz, dt); this.peds.update(dt, px, pz, this.gy); this.cuts.set(this.openCuts, this.origin, px, pz); this.lmx.update(px, pz);
     const S = this.pack.size, tx0 = Math.floor((px - RADIUS) / S), tx1 = Math.floor((px + RADIUS) / S), tz0 = Math.floor((pz - RADIUS) / S), tz1 = Math.floor((pz + RADIUS) / S), want = [];
     for (let i = tx0; i <= tx1; i++) for (let j = tz0; j <= tz1; j++) { const k = this.tileKey(i, j); if (this.tiles.has(k) || this.loading.has(k) || !this.pack.hasTile(i, j)) continue; const d = Math.hypot(Math.max(i * S - px, 0, px - (i + 1) * S), Math.max(j * S - pz, 0, pz - (j + 1) * S)); if (d < RADIUS) want.push([d, i, j]); }
     want.sort((a, b) => a[0] - b[0]); for (const [, i, j] of want) { if (this.loading.size >= 3) break; this.fetchTile(i, j); }
@@ -49,7 +51,7 @@ export class CityWorld {
   }
   fetchTile(tx, tz) { const k = this.tileKey(tx, tz); this.loading.set(k, true); this.pack.tile(tx, tz).then(t => { if (t && this.loading.has(k)) this.ready.push(t); else this.loading.delete(k); }).catch(e => { this.stats.failed++; console.warn('city tile', k, e); this.loading.delete(k); }); }
   /* a tile is meshed in slices of about SLICE_MS a frame (tilemesh.js buildTileSteps), then added to the scene in one go */
-  startJob(tile) { this.job = { tile, t0: performance.now(), cpu: 0, gen: buildTileSteps(tile, { G: this.pack.G, lm: this.pack.lm, gy: this.gy, size: this.pack.size, yieldNow: () => performance.now() > this.deadline }) }; this.stepJob(); }
+  startJob(tile) { this.job = { tile, t0: performance.now(), cpu: 0, gen: buildTileSteps(tile, { G: this.pack.G, lm: this.pack.lm, gy: this.gy, size: this.pack.size, skip: this.lmx.skip, yieldNow: () => performance.now() > this.deadline }) }; this.stepJob(); }
   stepJob() {
     const j = this.job, t = performance.now(); this.deadline = t + SLICE_MS; const r = j.gen.next(); const dt = performance.now() - t; j.cpu += dt; j.slice = Math.max(j.slice || 0, dt);
     if (r.done) { this.job = null; const t1 = performance.now(); this.build(j.tile, r.value.M, r.value.out); const bt = performance.now() - t1; this.stats.ms = j.cpu + bt; this.stats.buildMs = bt; this.stats.buildMax = Math.max(this.stats.buildMax || 0, bt); this.stats.sliceMax = Math.max(this.stats.sliceMax || 0, j.slice || 0); this.stats.slices = (this.stats.slices || 0) + 1; }
@@ -84,8 +86,8 @@ export class CityWorld {
     this.traffic.removeTile(k); for (const s of t.streets) { const l = this.geomMap.get(s.id); if (l) { const n = l.filter(q => q.k !== k); if (n.length) this.geomMap.set(s.id, n); else this.geomMap.delete(s.id); } } this.tiles.delete(k); this.refreshStats();
   }
   refreshStats() { let b = 0, s = 0; for (const t of this.tiles.values()) { for (const m of t.meshes) if (m.userData.bld) b += m.geometry.index.count / 3; s += t.decks.length; } this.stats.tiles = this.tiles.size; this.stats.tris = b; this.stats.decks = s; }
-  setNight(on) { if (on !== this.night) { this.night = on; this.mats.setNight(on); } }
-  reposition() { for (const t of this.tiles.values()) t.grp.position.set(t.tx * this.pack.size - this.origin.x, 0, t.tz * this.pack.size - this.origin.z); for (const f of this.far.values()) { f.mesh.position.set(f.tx * this.pack.size - this.origin.x, 0, f.tz * this.pack.size - this.origin.z); f.mesh.updateMatrix(); } this.transit.reposition(); }
+  setNight(on) { if (on !== this.night) { this.night = on; this.mats.setNight(on); this.lmx.setNight(on); } }
+  reposition() { for (const t of this.tiles.values()) t.grp.position.set(t.tx * this.pack.size - this.origin.x, 0, t.tz * this.pack.size - this.origin.z); for (const f of this.far.values()) { f.mesh.position.set(f.tx * this.pack.size - this.origin.x, 0, f.tz * this.pack.size - this.origin.z); f.mesh.updateMatrix(); } this.transit.reposition(); this.lmx.reposition(); }
   /* the loaded geometry of street edge `id` as flat points running a -> b (pieces from several tiles are chained), or null when no tile with it is loaded: for the GPS route line and autodrive */
   edgeGeom(id) {
     const l = this.geomMap.get(id); if (!l) return null; const G = this.pack.G, A = G.a[id], ax = G.xz[A * 2], az = G.xz[A * 2 + 1]; if (l.length === 1) { const p = l[0].pts; return Math.hypot(p[0] - ax, p[1] - az) <= Math.hypot(p[p.length - 2] - ax, p[p.length - 1] - az) ? p : this.rev(p); }
@@ -98,7 +100,7 @@ export class CityWorld {
     const i0 = Math.floor((x - r) / CELL), i1 = Math.floor((x + r) / CELL), j0 = Math.floor((z - r) / CELL), j1 = Math.floor((z + r) / CELL), S = this.pack.size, out = [];
     for (let tx = Math.floor((x - r) / S); tx <= Math.floor((x + r) / S); tx++) for (let tz = Math.floor((z - r) / S); tz <= Math.floor((z + r) / S); tz++) { const t = this.tiles.get(this.tileKey(tx, tz)); if (!t) continue; const a = t.circ.arr;
       for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const l = t.circ.cells.get(this.ck(i, j)); if (l) for (const n of l) if (Math.abs(a[n] - x) < r + Math.abs(a[n + 2]) && Math.abs(a[n + 1] - z) < r + Math.abs(a[n + 2])) out.push({ x: a[n], z: a[n + 1], r: Math.abs(a[n + 2]), y: this.gy, kerb: a[n + 2] < 0 }); } }
-    const tc = this.traffic.circles(x, z, r).concat(this.peds.circles(x, z, r), this.transit.circles(x, z, r)); return out.length || tc.length ? [out.concat(tc)] : [];
+    const tc = this.traffic.circles(x, z, r).concat(this.peds.circles(x, z, r), this.transit.circles(x, z, r), this.lmx.circles(x, z, r)); return out.length || tc.length ? [out.concat(tc)] : [];
   }
   /* deck triangles of the flyovers around (cx, cz) for the physics, in world metres: { pos, idx } or null */
   deckMesh(cx, cz, half) {
@@ -124,5 +126,5 @@ export class CityWorld {
     for (const t of this.tiles.values()) for (const s of t.streets || []) { const cls = G.classes[G.cls[s.id]]; if (G.layer[s.id] !== 0 || cls === 'footway' || cls === 'cycleway') continue; const p = s.pts; for (let i = 0; i + 3 < p.length; i += 2) { const dx = p[i + 2] - p[i], dz = p[i + 3] - p[i + 1], L2 = dx * dx + dz * dz, f = L2 ? Math.max(0, Math.min(1, ((x - p[i]) * dx + (z - p[i + 1]) * dz) / L2)) : 0, qx = p[i] + dx * f, qz = p[i + 1] + dz * f, d = Math.hypot(qx - x, qz - z); if (d < bd) { bd = d; best = { x: qx, z: qz, yaw: Math.atan2(dz, dx), d, id: s.id }; } } }
     void S; return best;
   }
-  summary() { const s = this.stats; return 'city        tiles ' + s.tiles + ' loading ' + this.loading.size + ' queued ' + this.ready.length + '  buildings ' + (s.tris / 1000).toFixed(0) + 'k tris  decks ' + s.decks + '  last tile ' + s.ms.toFixed(0) + ' ms\n' + this.transit.summary(); }
+  summary() { const s = this.stats; return 'city        tiles ' + s.tiles + ' loading ' + this.loading.size + ' queued ' + this.ready.length + '  buildings ' + (s.tris / 1000).toFixed(0) + 'k tris  decks ' + s.decks + '  last tile ' + s.ms.toFixed(0) + ' ms\n' + this.lmx.summary() + '\n' + this.transit.summary(); }
 }
