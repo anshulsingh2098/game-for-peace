@@ -22,7 +22,9 @@ def wanted():
         for d, _, names in os.walk(os.path.join(ROOT, tree)):
             for n in names:
                 if os.path.splitext(n)[1].lower() in exts:
-                    out.append(os.path.relpath(os.path.join(d, n), ROOT).replace('\\', '/'))
+                    rel = os.path.relpath(os.path.join(d, n), ROOT).replace('\\', '/')
+                    if rel.startswith('assets/cities/'): continue                # city packs (77 MB, 1,900 files) are not served until the enclave loader exists (CITY_PLAN D5)
+                    out.append(rel)
     return sorted(out)
 
 def main():

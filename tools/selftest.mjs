@@ -49,6 +49,14 @@ import { OnFoot, FOOT, chooseExit, Interactions } from '../src/player/onfoot.js'
 import { validateTransit, EXPECT as TRANSIT_EXPECT } from './validate_transit.mjs';
 import { project as tProject, unproject as tUnproject, routeThrough, simplify as tSimplify, nearestOnPath } from './lib_transit.mjs';
 import { readFileSync as tReadFile } from 'node:fs';
+import { validatePack, BUDGET as CITY_BUDGET } from './validate_city.mjs';
+import { BUILDER_VERSION, PACK_FORMAT } from './build_city.mjs';
+import { enc as packEnc, dec as packDec, encodeGraph, decodeGraph } from './lib/packio.mjs';
+import { area as gArea, clipRing, splitLine, joinRings, PolyMask, selfIntersects, simplifyRing } from './lib/geom.mjs';
+import { Router } from './lib/graphroute.mjs';
+import { loadPack } from './check_city.mjs';
+import * as cityPack from '../src/world/city/pack.js';
+import { decodeTile as packDecodeTile, corridorHw, streetConflict, droppedForStreet, streetWidth, CONFLICT_CLASSES } from './lib/packio.mjs';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -984,6 +992,52 @@ test('Indian lane discipline (3-lane road, traffic keeps left): slow kinds in th
   assert.ok(cowFrames > 100 && cowLeft / cowFrames > 0.9, 'cows stay in the left lane (' + Math.round(100 * cowLeft / cowFrames) + '% of the time)'); assert.equal(overlaps, 0, 'no two vehicles overlap, also while changing lane'); assert.equal(capBreaks, 0, 'trucks and two-wheelers never exceed 80 km/h'); const avg = carSpeeds.reduce((a, b) => a + b, 0) / carSpeeds.length; assert.ok(avg > 14, 'cars are not stuck behind the cows on a three-lane road (average ' + avg.toFixed(1) + ' m/s)');
 });
 
+/* ---- the railway control office (src/world/rail_control*.js, rail_signals.js, rail_services.js; docs/RAIL_CONTROL.md) ---- */
+await atest('rail control: blocks cover every edge, single line edges get loops, multi track edges are directional, signals have four aspects', async () => {
+  const { RailNetwork } = await import('../src/world/rail.js'), { ControlGraph } = await import('../src/world/rail_control_graph.js'), { aspectFor, legTime, SIG } = await import('../src/world/rail_control_signals.js'), fs = await import('node:fs/promises');
+  const rn = new RailNetwork(JSON.parse(await fs.readFile(new URL('../assets/india/rails.json', import.meta.url)))), tracks = rn.edges.map((e, i) => 1 + (i % 4 === 0 ? 1 : 0) + (i % 20 === 0 ? 1 : 0)), g = new ControlGraph(rn, tracks); let loops = 0, auto = 0;
+  for (const e of g.edges) { let x = 0; for (const b of e.blocks) { assert.ok(Math.abs(b.a - x) < 1e-6, 'blocks are contiguous on edge ' + e.li); x = b.b; assert.ok(b.lines.length >= 1); if (b.loop) { loops++; assert.ok(b.len >= 100 && b.len <= SIG.LOOP_LEN + 1); assert.ok(b.lines.some(l => l.kind === 'loop')); } } assert.ok(Math.abs(x - e.len) < 1e-6, 'blocks end at the end of edge ' + e.li);
+    if (e.mode === 'auto') { auto++; const f = e.blocks[0].lines.filter(l => l.dir === 1).length, bk = e.blocks[0].lines.filter(l => l.dir === -1).length; assert.ok(f >= 1 && bk >= 1, 'a multi track edge has a track each way'); for (const b of e.blocks) if (!b.loop) assert.ok(b.len <= SIG.BLOCK_AUTO + 1, 'automatic block length'); } else assert.equal(e.blocks[0].lines[0].dir, 0, 'single line is worked both ways'); }
+  assert.ok(loops > 50 && auto > 20, 'loops ' + loops + ', multi track edges ' + auto);
+  assert.deepEqual(['R', 'Y', 'YY', 'G', 'G'].map((a, i) => aspectFor(i) === a), [true, true, true, true, true]); const lt = legTime(10000, 36, 0.5, 0.8); assert.ok(lt > 10000 / 36 && lt < 10000 / 36 + 120, 'running time of a leg ' + lt);
+  const st = rn.stations[0], steps = rn.route(st.id, rn.stations[5].id), r = g.segsFor(steps); assert.ok(Math.abs(r.total - steps.reduce((a, s) => a + s.edge.len, 0)) < 1e-6, 'route coordinates add up'); for (let i = 1; i < r.segs.length; i++) assert.ok(r.segs[i].a >= r.segs[i - 1].a - 1e-6, 'segments in travel order');
+  assert.ok(g.platformNo(st.id, g.platformBlock(g.edges[rn.edges.indexOf(rn.adj.get(st.id)[0])], rn.adj.get(st.id)[0].b === st.id), 0) >= 1, 'a station has numbered platforms');
+});
+
+await atest('rail control: crossing, overtaking, platforms, signals and level crossing gates on a small single line (no collision, higher class first)', async () => {
+  const { RailNetwork } = await import('../src/world/rail.js'), { ControlGraph } = await import('../src/world/rail_control_graph.js'), { RailControl } = await import('../src/world/rail_control.js'), { makeService } = await import('../src/world/rail_services.js'), { PRIORITY, SIG } = await import('../src/world/rail_control_signals.js');
+  const net = new RailNetwork({ nodes: [{ id: 0, x: 0, z: 0, city: 'a', deg: 1 }, { id: 1, x: 3000, z: 0, city: null, deg: 2 }, { id: 2, x: 6000, z: 0, city: 'c', deg: 1 }], edges: [{ id: 0, a: 0, b: 1, pts: [0, 0, 3000, 0] }, { id: 1, a: 1, b: 2, pts: [3000, 0, 6000, 0] }] });
+  const g = new ControlGraph(net, [1, 1]), mk = (id, style, prio, nodes, dep, seed) => makeService(net, g, { id, n: id, name: id, style, prio, nodes, dep, seed, cities: nodes.map(n => net.nodes[n].city) });
+  const run = (svcs, T, extra = {}) => { const c = new RailControl(g, svcs, { days: 1, day: 1e9, ...extra }), arr = new Map(), hit = c.arrive.bind(c); c.arrive = (t, tm, a) => { hit(t, tm, a); if (a && t.atStop >= 0) arr.set(t.n + ':' + t.si, tm - t.sched[t.si].arr); }; let bad = []; for (let i = 0; i < T * 2; i++) { c.step(); if (i % 4 === 0) bad = bad.concat(c.audit()); } return { c, arr, bad }; };
+  /* crossing: an express from A and a goods train from C meet on the single line */
+  let r = run([mk('X', 'express', PRIORITY.mail, [0, 2], 0, 1), mk('G', 'freight', PRIORITY.freight, [2, 0], 0, 2)], 2500); assert.equal(r.bad.length, 0, 'no collision: ' + r.bad.slice(0, 2)); assert.equal(r.c.stats.completed, 2, 'both trains complete'); assert.equal(r.c.stats.deadlockBreaks + r.c.stats.emergency, 0);
+  assert.ok(r.arr.get('X:1') < r.arr.get('G:1'), 'the express is held up less than the goods train: ' + r.arr.get('X:1') + ' / ' + r.arr.get('G:1'));
+  /* overtaking: the goods train leaves 200 s before the express over the same line: it is held in a loop and the express arrives first and on time */
+  r = run([mk('G', 'freight', PRIORITY.freight, [0, 2], 0, 2), mk('R', 'rajdhani', PRIORITY.premium, [0, 2], 200, 3)], 3000); assert.equal(r.bad.length, 0, 'no collision: ' + r.bad.slice(0, 2)); assert.equal(r.c.stats.completed, 2); assert.ok(r.c.stats.holds >= 1, 'the goods train was held in a loop: holds ' + r.c.stats.holds);
+  assert.ok(r.arr.get('R:1') < SIG.PUNCTUAL, 'the Rajdhani is on time (' + r.arr.get('R:1') + ' s late)'); assert.ok(r.arr.get('G:1') > r.arr.get('R:1'), 'the goods train gives way');
+  /* a stopping train takes a numbered platform, a train never leaves before its booked time, nothing runs past a red signal (emergency stops stay 0) */
+  const s = mk('P', 'express', PRIORITY.mail, [0, 1, 2], 100, 5); assert.ok(s.stops.length === 3, 'two stops and an origin'); r = run([s], 2500); assert.equal(r.c.stats.completed, 1); assert.equal(r.c.stats.emergency, 0);
+  const seen = []; { const c = new RailControl(g, [s], { days: 1, day: 1e9 }); let last = 0, early = false, left = 0; for (let i = 0; i < 5000; i++) { c.step(); const T = c.trains[0]; if (!T) continue; if (T.stopped && T.atStop === 1 && T.platform) seen.push(T.platform); if (T.si !== last) { if (c.t < T.sched[last].dep - 1) early = true; last = T.si; left++; } } assert.ok(seen.length && seen.every(p => p >= 1 && p <= 6), 'platform numbers ' + seen.slice(0, 3)); assert.ok(!early && left >= 2, 'the train waits for its booked departure (' + left + ' departures)'); }
+  const lines = new RailControl(g, [], {}); const blk = g.edges[0].blocks[1]; assert.equal(lines.aspectAt(blk, 1), 'G'); for (const l of blk.lines) l.occ = 99; assert.equal(lines.aspectAt(blk, 1), 'R'); for (const l of blk.lines) l.occ = -1; g.edges[0].blocks[2].lines[0].occ = 99; assert.ok(['Y', 'YY'].includes(lines.aspectAt(blk, 1)), 'yellow before an occupied block'); g.edges[0].blocks[2].lines[0].occ = -1;
+  /* level crossing: the gate is down whenever a train is over it, it opens again afterwards, and a train never reaches it with the gate up */
+  { const c = new RailControl(g, [mk('Q', 'express', PRIORITY.mail, [0, 2], 50, 6)], { days: 1, day: 1e9, crossings: [{ id: 0, li: 0, s: 1500 }] }); const lc = c.lcs[0]; let over = 0, openOver = 0, closedFar = 0, maxClosed = 0;
+    for (let i = 0; i < 4000; i++) { c.step(); const T = c.trains[0]; if (!T) continue; const x = lc.s; if (T.head > x - 5 && T.head - T.len < x + 5) { over++; if (lc.frac < 0.99) openOver++; } if (lc.frac > maxClosed) maxClosed = lc.frac; if (lc.frac > 0.5 && (T.head < x - 700 || T.head - T.len > x + 200)) closedFar++; }
+    assert.ok(over > 5 && openOver === 0, 'gate down while the train is over the crossing (' + over + ' steps, ' + openOver + ' open)'); assert.equal(c.stats.lcViolations, 0); assert.ok(maxClosed > 0.99 && closedFar === 0, 'the gate closes for the train and is open when it is far (' + closedFar + ')'); assert.ok(lc.frac < 0.01, 'the gate opens again'); }
+});
+
+await atest('rail control: the whole network for a day (every real timetable train, goods trains, locals): no collision, no train over a red signal, no deadlock, priority and punctuality', async () => {
+  const { RailNetwork } = await import('../src/world/rail.js'), { TrainBook } = await import('../src/world/rail_timetable.js'), { ControlGraph } = await import('../src/world/rail_control_graph.js'), { RailControl } = await import('../src/world/rail_control.js'), { buildServices, CLOCK_K } = await import('../src/world/rail_services.js'), fs = await import('node:fs/promises'), rd = f => fs.readFile(new URL('../assets/india/' + f, import.meta.url)).then(JSON.parse);
+  const rn = new RailNetwork(await rd('rails.json')), book = new TrainBook(await rd('trains.json'), rn), tracks = rn.edges.map(e => book.tracks(e.edgeId)), g = new ControlGraph(rn, tracks), svcs = buildServices(rn, book, g, { freight: 60, k: CLOCK_K });
+  assert.ok(svcs.filter(s => s.real).length >= 450, 'timetable trains with a route: ' + svcs.filter(s => s.real).length); assert.ok(svcs.some(s => s.style === 'freight') && svcs.some(s => s.style.startsWith('emu')), 'goods trains and locals run too');
+  const day = 1440 * CLOCK_K, lcs = []; for (let i = 0; i < g.edges.length && lcs.length < 25; i += 11) if (g.edges[i].len > 500) lcs.push({ id: lcs.length, li: i, s: g.edges[i].len / 2 });
+  const c = new RailControl(g, svcs, { days: 2, day, crossings: lcs }); const t0 = performance.now(); let bad = [], maxRun = 0, moved = 0, atRed = 0;
+  for (let i = 0; i < day * 2; i++) { c.step(); if (i % 20 === 0) { bad = bad.concat(c.audit()); } maxRun = Math.max(maxRun, c.trains.length); }
+  const ms = performance.now() - t0, st = c.stats; assert.equal(bad.length, 0, 'collisions or bodies off their blocks: ' + bad.slice(0, 3)); assert.equal(st.emergency, 0, 'no train was stopped by the Kavach emergency clamp (no signal passed at danger)'); assert.equal(st.lcViolations, 0, 'no train reached a level crossing with the gate up');
+  assert.ok(st.deadlockBreaks <= Math.max(2, 0.01 * st.spawned), 'deadlocks broken: ' + st.deadlockBreaks + ' of ' + st.spawned + ' trains'); assert.ok(st.completed >= 0.85 * st.spawned - maxRun, 'trains complete their runs: ' + st.completed + ' of ' + st.spawned); assert.ok(maxRun > 100, 'many trains at once: ' + maxRun);
+  const by = st.byClass.map(b => b.n ? b.sum / b.n : null), ok = st.byClass.map(b => b.n ? b.ok / b.n : null); assert.ok(by[0] !== null && by[4] !== null && by[0] < by[4], 'higher class trains are delayed less: mean delay by class ' + by.map(v => v === null ? '-' : Math.round(v)).join(' / ')); assert.ok(by[0] < by[1] * 1.1, 'Rajdhani class is not delayed more than mail and express');
+  assert.ok(st.holds > 20 && st.loopStops > 100 && st.platformStops > 500, 'crossings and holds happened: holds ' + st.holds + ', loop stops ' + st.loopStops); assert.ok(ms < 20000, 'two simulated days run in ' + Math.round(ms) + ' ms');
+  console.log('     network day: ' + svcs.length + ' services, up to ' + maxRun + ' trains at once, ' + st.spawned + ' started, ' + st.completed + ' completed, ' + st.cancelled + ' cancelled (' + st.deadlockBreaks + ' deadlocks broken), holds ' + st.holds + ', punctual (within ' + 90 + ' s) by class ' + ok.map(v => v === null ? '-' : Math.round(v * 100) + '%').join(' / ') + ', mean delay s ' + by.map(v => v === null ? '-' : Math.round(v)).join(' / ') + ', ' + Math.round(ms) + ' ms for two days');
+});
 
 /* ---- overpasses (interchanges): a road raised on a deck over another one; the car stays on the level it is on ---- */
 await atest('overpass: a road crossing another is raised on a deck; the car drives over it and under it without snapping layers, rails and posts of the other level do not touch it', () => {
@@ -1084,6 +1138,58 @@ test('delhi transit pack (assets/cities/delhi/transit.json): projection, track r
   assert.ok(tReadFile(new URL('../assets/cities/delhi/transit.json', import.meta.url)).length < 1.5e6, 'transit.json stays under 1.5 MB');
   // a metro station lies on its own track: Rajiv Chowk, both lines
   const rc = doc.metro.stations.find(s => s.name.en === 'Rajiv Chowk'); assert.ok(rc && rc.lines.includes('blue') && rc.lines.includes('yellow')); for (const l of ['blue', 'yellow']) assert.ok(doc.metro.lines.find(L => L.id === l).routes.some(rt => nearestOnPath(rt.path, [rc.x, rc.z]).d < 120), 'Rajiv Chowk is on the ' + l + ' line');
+});
+
+/* ---- city pipeline (CITY_PLAN Phase 1, D1 and D4): tools/build_city.mjs, tools/validate_city.mjs, the shipped Delhi pack ---- */
+test('city pipeline: coordinate encoding round-trips, polygons clip and join, a mask answers point-in-polygon, graph columns round-trip', () => {
+  const p = [10.1, -20.2, 15.5, -20.2, 15.5, -9.9, 10.1, -9.9], d = packEnc(p, 0, 0); assert.deepEqual(packDec(d, 0, 0), p, 'delta decimetres are exact at 0.1 m'); assert.deepEqual(packDec(packEnc(p, 1000, -3000), 1000, -3000).map(v => Math.round(v * 10)), p.map(v => Math.round(v * 10)), 'tile origin offsets cancel');
+  const sq = [0, 0, 10, 0, 10, 10, 0, 10]; assert.equal(gArea(sq), 100, 'ccw square has positive area'); assert.equal(Math.abs(gArea(clipRing(sq, 5, 0, 20, 20))), 50, 'clip keeps the part inside'); assert.equal(clipRing(sq, 20, 20, 30, 30).length, 0, 'clip to a far rectangle is empty');
+  const pieces = splitLine([-5, 5, 25, 5], 10); assert.deepEqual(pieces.map(x => x.tx), [-1, 0, 1, 2], 'a line is cut at tile edges'); assert.ok(pieces[0].clipB && pieces[1].clipA && !pieces[0].clipA && !pieces[3].clipB, 'clip flags mark continuation');
+  const ring = joinRings([{ pts: [0, 0, 10, 0, 10, 10], a: 'a', b: 'c' }, { pts: [10, 10, 0, 10, 0, 0], a: 'c', b: 'a' }]); assert.equal(ring.length, 1, 'two open ways make one ring'); assert.equal(Math.abs(gArea(ring[0])), 100, 'joined ring');
+  const m = new PolyMask([sq], 3); assert.ok(m.has(5, 5) && !m.has(11, 5) && !m.has(-1, -1), 'mask'); assert.ok(selfIntersects([0, 0, 10, 10, 10, 0, 0, 10]) && !selfIntersects(sq), 'bow-tie crosses, square does not'); assert.ok(simplifyRing([0, 0, 5, 0.01, 10, 0, 10, 10, 0, 10], 0.1).length === 8, 'simplify drops a collinear vertex');
+  const g = { format: 1, nodes: [[0, 0, 0, 0], [1, 10.5, -3.2, 1], [2, 20, 0, 0]], edges: [[0, 0, 1, 'primary', 2, 0, 50, 11, 0, 0, 0], [1, 1, 2, 'residential', 1, 1, 20, 12.3, 1, 8, 0]], names: [{ en: '', hi: '', ref: '' }], restrictions: [] }; assert.deepEqual(decodeGraph(encodeGraph(g)), g, 'graph columns round-trip');
+});
+test('city pack delhi: the shipped pack is current and valid (builder version, file hashes, schema, geometry, budget); tiles load into a KeepOut', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname; const r = validatePack(dir, { quick: true });
+  assert.deepEqual(r.errors, [], 'validate_city reports no error (rebuild with node tools/build_city.mjs delhi --extract data/raw/delhi/<file>.osm.pbf if the tool or the data changed)');
+  const M = r.manifest; assert.equal(M.format, PACK_FORMAT); assert.equal(M.builder.version, BUILDER_VERSION, 'the pack was built by this version of the tool'); assert.equal(M.licence, 'ODbL 1.0'); assert.ok(M.counts.gzBytes <= CITY_BUDGET.maxGzBytes, 'pack within the 20 MB gzip budget (' + (M.counts.gzBytes / 1e6).toFixed(1) + ' MB)');
+  assert.ok(M.counts.buildings > 100000 && M.counts.edges > 100000 && M.counts.landmarks >= 40, 'Delhi has its streets, buildings and landmarks'); assert.ok(M.gates.some(g => g.india === 'NH44') && M.gates.some(g => g.india === 'NH48'), 'gates for the national highways');
+  const { G, L, tile } = loadPack(dir), c = M.spawns.find(s => s.id === 'centre'), ko = new KeepOut(); let nb = 0;
+  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) { const t = tile(Math.floor(c.x / M.tileSize) + dx, Math.floor(c.z / M.tileSize) + dz); assert.ok(t, 'the tiles around Connaught Place exist'); nb += t.buildings.length; for (const s of t.streets) ko.add('s' + s.id, 'road', { t: 'line', pts: s.pts, hw: 3 }, { layer: G.edges[s.id][8] }); for (const b of t.buildings.slice(0, 200)) { assert.ok(b.ring.length >= 6 && gArea(b.ring) > 0, 'footprints are ccw rings'); } }
+  assert.ok(nb > 500 && ko.size > 500, 'the centre is dense: ' + nb + ' buildings'); assert.ok(ko.point(c.x, c.z, 15, { as: 'building' }), 'the centre spawn is on a street');
+  const ids = new Set(L.map(l => l.id)); for (const need of ['india-gate', 'red-fort', 'qutub-minar', 'humayuns-tomb', 'lotus-temple', 'jama-masjid', 'rashtrapati-bhavan', 'akshardham']) assert.ok(ids.has(need), 'landmark ' + need); assert.ok(L.every(l => l.card && l.card.text && l.name.hi && l.look), 'every landmark has a card, a Hindi name and a look note');
+});
+test('city pack delhi: the street graph routes (one-ways respected) between Connaught Place, India Gate, the Red Fort and the airport', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M, G } = loadPack(dir), R = new Router(G), at = id => M.spawns.find(s => s.id === id);
+  const leg = (a, b) => { const A = at(a), B = at(b); return R.route(R.nearest(A.x, A.z).node, R.nearest(B.x, B.z).node); };
+  const ig = leg('centre', 'indiagate'), rf = leg('centre', 'redfort'), igi = leg('centre', 'igi'); assert.ok(ig && ig.metres > 2000 && ig.metres < 6000, 'CP to India Gate by road: ' + (ig && ig.metres)); assert.ok(rf && rf.metres > 4000 && rf.metres < 10000, 'CP to the Red Fort'); assert.ok(igi && igi.metres > 14000 && igi.metres < 30000, 'CP to the airport');
+  const back = leg('indiagate', 'centre'); assert.ok(back && Math.abs(back.metres - ig.metres) / ig.metres < 0.6, 'the way back is of similar length');
+});
+
+/* ---- D5: the game's loader of the city pack (src/world/city/pack.js) agrees with the tool's, flyovers have ramps, stations stand clear of streets ---- */
+test('city loader: decode, graph columns and street widths agree with tools/lib/packio.mjs', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), rawG = JSON.parse(readFileSync(dir + 'graph.json', 'utf8')), ref = decodeGraph(rawG), G = cityPack.decodeGraphColumns(rawG);
+  assert.deepEqual(cityPack.dec([10, -5, 3, 4], 100, 200), packDec([10, -5, 3, 4], 100, 200)); assert.equal(G.n, ref.edges.length); assert.equal(G.nodes, ref.nodes.length);
+  for (const i of [0, 1, 1000, 123456, G.n - 1]) { const e = ref.edges[i]; assert.equal(G.a[i], e[1]); assert.equal(G.b[i], e[2]); assert.equal(G.classes[G.cls[i]], e[3]); assert.equal(G.lanes[i], e[4]); assert.equal(G.layer[i], e[8]); assert.ok(Math.abs(G.len[i] - e[7]) < 0.01); }
+  const t = M.tiles.find(x => x.tx === 0 && x.tz === -2), raw = JSON.parse(readFileSync(dir + 'tiles/0_-2.json', 'utf8')); assert.deepEqual(cityPack.decodeTile(raw, M.tileSize), packDecodeTile(raw, M.tileSize)); assert.ok(t);
+  const tile = cityPack.decodeTile(raw, M.tileSize); for (const s of tile.streets.slice(0, 200)) assert.equal(cityPack.pieceWidth(G, s), streetWidth(s, ref.edges[s.id]));
+  assert.ok(Math.abs(cityPack.yawFromBearing(0) - -Math.PI / 2) < 1e-9 && Math.abs(Math.cos(cityPack.yawFromBearing(Math.PI / 2)) - 1) < 1e-9, 'bearing north is -z, east is +x');
+});
+test('city loader: a flyover is on the ground at a ramp end, one level up in the middle, and a ground street is never lifted', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8'))); let n = 0, flat = 0;
+  for (let i = 0; i < G.n && n < 40; i++) if (G.layer[i] === 1 && G.len[i] > 200 && G.up[G.a[i]] < 2 && G.up[G.b[i]] < 2) {
+    const ax = G.xz[G.a[i] * 2], az = G.xz[G.a[i] * 2 + 1], bx = G.xz[G.b[i] * 2], bz = G.xz[G.b[i] * 2 + 1];
+    assert.ok(cityPack.deckHeight(G, i, ax, az) < 0.01 && cityPack.deckHeight(G, i, bx, bz) < 0.01, 'ramp ends on the ground'); assert.ok(Math.abs(cityPack.deckHeight(G, i, (ax + bx) / 2, (az + bz) / 2) - cityPack.LEVEL) < 0.01, 'one level up in the middle'); n++;
+  }
+  assert.ok(n >= 5, 'Delhi has flyovers: ' + n); for (let i = 0; i < G.n && flat < 100; i++) if (G.layer[i] === 0) { assert.equal(cityPack.deckHeight(G, i, G.xz[G.a[i] * 2], G.xz[G.a[i] * 2 + 1]), 0); flat++; }
+});
+test('city pack delhi: the five stations have footprints, stand clear of the streets of their tiles, and claim their ground in the registry', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M, G, L, tile } = loadPack(dir), stations = L.filter(l => ['old-delhi-station', 'new-delhi-station', 'nizamuddin-station', 'anand-vihar-terminal', 'sarai-rohilla-station'].includes(l.id)); assert.equal(stations.length, 5);
+  for (const l of stations) {
+    assert.ok(l.footprint && l.footprint.length >= 8, l.id + ' has a footprint'); const rect = cityPack.footprintRect(l.footprint, l.yaw || 0), ko = new KeepOut(), ko2 = new KeepOut(); ko2.add('city:lm:' + l.id, 'station', rect); assert.ok(ko2.point(rect.x, rect.z, 0, { as: 'scenery' }), 'the registry knows the station');
+    for (let i = Math.floor((rect.x - 150) / 1000); i <= Math.floor((rect.x + 150) / 1000); i++) for (let j = Math.floor((rect.z - 150) / 1000); j <= Math.floor((rect.z + 150) / 1000); j++) { const t = tile(i, j); if (!t) continue; for (const s of t.streets) { const e = G.edges[s.id]; if (e[8] !== 0 || !CONFLICT_CLASSES.has(e[3])) continue; ko.add('s', 'road', { t: 'line', pts: s.pts, hw: corridorHw(e[3], streetWidth(s, e)) }); } }
+    let cx = 0, cz = 0; for (let k = 0; k < l.footprint.length; k += 2) { cx += l.footprint[k]; cz += l.footprint[k + 1]; } const n = l.footprint.length / 2, r = streetConflict(l.footprint, [cx / n, cz / n], ko); assert.ok(!droppedForStreet(r), l.id + ' stands on a street: ' + (r.share * 100).toFixed(0) + ' % of its outline');
+  }
 });
 
 console.log(`\n${passed} checks passed`);
