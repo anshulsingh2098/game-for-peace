@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 05:00  Delhi shadow cost: buildings cast only within 200 m, scenery casts none in a city (stacked on PR 69)
+Branch: claude/delhi-shadow-cut (on claude/delhi-perf-cut)  Commit: see the PR
+What changed: `cityworld.js` (`SHADOW_D` 200 m: a tile's buildings cast a shadow only when the tile is within 200 m of you; before 450 m, and the sun's shadow box is 140 m wide; scatter config `shadows: false` in `cityConfig`), `src/world/scatter.js` (one line: `castShadow = c.shadows !== false`; the default is unchanged, so the India world still has tree shadows). The shadow pass was 51 calls and 50k triangles of a 337 / 250k frame (measured by switching the shadow map off); now the frame is 328 calls / 241k triangles at `?play&q=med`, Connaught Place. Not seen: a building shadow at dusk (the browser pane did not redraw after a time change); tree and tuft shadows are gone in Delhi.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-18 04:00  Delhi frame cost: 610k to 250k triangles, 408 to 337 draw calls at the default start (q=med)
 Branch: claude/delhi-perf-cut  Commit: see the PR
 What changed: (1) `tilemesh.js` `Mesher.cells(size)` and `cityworld.js` (`CELLED`, `LOD_OF`, `flagMesh`): the near-detail meshes (pavements and kerbs, street furniture, markings, signs, banners, ads) are cut into 250 or 500 m cells, so the near-detail distance and the view culling work per cell and not per 1000 m tile (before, standing in a tile drew all its pavements and furniture, 280k triangles); per-kind distances (signs and banners 280 m, furniture 350 m, markings 400 m, pavements 450 m). (2) `src/main.js` (shared file, one line after `config.view = ...`): in a city the engine's own terrain, which lies flat under the city ground, uses 8, 4 and 4 cells per tile out to 4 tiles and a far ring out to 6 (it was 64, 32, 16, 8 cells out to 8 tiles and 9 far: 284k + 90k triangles of ground nobody could see). Measured in the browser at `?play&q=med` (Connaught Place), same camera: 408 calls and 610k triangles before, 337 and 250k after; the picture is the same by eye; at the Ghazipur gate 311 calls, 143k triangles, no gap at the edge. Not measured: a real frame rate or a phone; the shadow pass is still drawing every building of the nearest tiles (buildings are not cut into cells: it added more calls than it saved). Seen, not fixed: at the gate `nationalhighway24bypassflyover-east-1` a flyover pier stands directly in front of the start.
