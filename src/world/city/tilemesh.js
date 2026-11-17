@@ -3,7 +3,7 @@
    and z and absolute in y; the flat layers lie exactly in the ground plane and are ordered by polygon offset (the terrain here is flat), so a car's wheels sit on the paint. 97 % of the building heights in
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
-import { deckHeight, pieceWidth, pieceSidewalk } from './pack.js';
+import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 
 class Mesher {
   constructor() { this.p = []; this.n = []; this.c = []; this.u = []; this.i = []; }
@@ -49,7 +49,7 @@ function frames(pts) {
 
 export function buildTile(tile, ctx) {
   const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher() };
-  const out = { circles: [], decks: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
+  const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y) => {                                           // a polygon (ring and holes in metres) lying at height y
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
     const R = clean(ring), contour = []; for (let i = 0; i < R.length; i += 2) contour.push(new THREE.Vector2(R[i], R[i + 1])); const H = (holes || []).map(h => { const c2 = clean(h), a = []; for (let i = 0; i < c2.length; i += 2) a.push(new THREE.Vector2(c2[i], c2[i + 1])); return a; });
@@ -67,11 +67,26 @@ export function buildTile(tile, ctx) {
   const hashSeg = (x0, z0, x1, z1, hw) => { const a = Math.floor(Math.min(x0, x1) / CELLQ), b = Math.floor(Math.max(x0, x1) / CELLQ), c = Math.floor(Math.min(z0, z1) / CELLQ), d = Math.floor(Math.max(z0, z1) / CELLQ); for (let i = a; i <= b; i++) for (let j = c; j <= d; j++) { const k = i + ',' + j; let l = groundSeg.get(k); if (!l) groundSeg.set(k, l = []); l.push([x0, z0, x1, z1, hw]); } };
   const pierFree = (x, z, r) => { const l = groundSeg.get(Math.floor(x / CELLQ) + ',' + Math.floor(z / CELLQ)); if (!l) return true; for (const [x0, z0, x1, z1, hw] of l) { const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)) : 0; if (Math.hypot(x - (x0 + dx * t), z - (z0 + dz * t)) < hw + r) return false; } return true; };
   for (const s of tile.streets) { const lay = G.layer[s.id]; if (lay === 0) { const w = pieceWidth(G, s) / 2 + 1; for (let i = 0; i + 3 < s.pts.length; i += 2) hashSeg(s.pts[i], s.pts[i + 1], s.pts[i + 2], s.pts[i + 3], w); } }
+  /* an underpass: the trench around the sunken carriageway (walls to the ground, a roof where the cut is deeper than OPEN_CUT), the strips the ground is lowered along for the physics, and the roof as a deck for cars crossing above */
+  const underpass = (pts, F, H, hw, id, lay) => {
+    const WALLC = shade(0x8c8a84, 0.8), ROOFC = shade(0x6e6c68, 0.9), e = 0.25, rd = out.decks.length; const roofPos = [], roofIdx = []; let inRun = false;
+    for (let i = 0; i + 1 < F.n; i++) {
+      const d0 = -H[i], d1 = -H[i + 1], covered = d0 >= OPEN_CUT && d1 >= OPEN_CUT;
+      for (const side of [1, -1]) { const off = side * (hw + e), x0 = pts[i * 2] + F.nx[i] * off * F.sc[i], z0 = pts[i * 2 + 1] + F.nz[i] * off * F.sc[i], x1 = pts[i * 2 + 2] + F.nx[i + 1] * off * F.sc[i + 1], z1 = pts[i * 2 + 3] + F.nz[i + 1] * off * F.sc[i + 1], nxv = -F.nx[i] * side, nzv = -F.nz[i] * side;       // the wall faces the road
+        const a = M.road.v(X(x0), gy + H[i], Z(z0), nxv, 0, nzv, WALLC), b = M.road.v(X(x1), gy + H[i + 1], Z(z1), nxv, 0, nzv, WALLC), c2 = M.road.v(X(x1), gy + 0.05, Z(z1), nxv, 0, nzv, WALLC), d = M.road.v(X(x0), gy + 0.05, Z(z0), nxv, 0, nzv, WALLC); M.road.tri(a, b, c2, nxv, 0, nzv); M.road.tri(a, c2, d, nxv, 0, nzv); }
+      if (d0 > 0.05 || d1 > 0.05) out.cuts.push({ x0: pts[i * 2], z0: pts[i * 2 + 1], x1: pts[i * 2 + 2], z1: pts[i * 2 + 3], d0, d1, hw: hw + 0.5, phw: hw + 2.4, open: !covered });       // hw: the strip the ground is not drawn in; phw: the strip it is lowered in for the wheels (a car keeps to the left lane, and the heightfield's walls take a 1.5 m cell to rise)
+      if (covered) { const ka = F.sc[i], kb = F.sc[i + 1], y = gy - 0.12, v = (px, pz, nx2, nz2, k, off) => M.road.v(X(px + nx2 * off * k), y, Z(pz + nz2 * off * k), 0, -1, 0, ROOFC);
+        const a = v(pts[i * 2], pts[i * 2 + 1], F.nx[i], F.nz[i], ka, -(hw + e)), b = v(pts[i * 2], pts[i * 2 + 1], F.nx[i], F.nz[i], ka, hw + e), c2 = v(pts[i * 2 + 2], pts[i * 2 + 3], F.nx[i + 1], F.nz[i + 1], kb, hw + e), d = v(pts[i * 2 + 2], pts[i * 2 + 3], F.nx[i + 1], F.nz[i + 1], kb, -(hw + e)); M.road.tri(a, b, c2, 0, -1, 0); M.road.tri(a, c2, d, 0, -1, 0);
+        const rw = hw + 1.2; if (!inRun) { roofPos.push(pts[i * 2] + F.nx[i] * rw, gy, pts[i * 2 + 1] + F.nz[i] * rw, pts[i * 2] - F.nx[i] * rw, gy, pts[i * 2 + 1] - F.nz[i] * rw); inRun = true; }
+        const v0 = roofPos.length / 3; roofPos.push(pts[i * 2 + 2] + F.nx[i + 1] * rw, gy, pts[i * 2 + 3] + F.nz[i + 1] * rw, pts[i * 2 + 2] - F.nx[i + 1] * rw, gy, pts[i * 2 + 3] - F.nz[i + 1] * rw); roofIdx.push(v0 - 2, v0 - 1, v0, v0 - 1, v0 + 1, v0); } else inRun = false;
+    }
+    if (roofIdx.length) out.decks.push({ pos: roofPos, idx: roofIdx, hw: hw + 1.2, id, lay, roof: true }); void rd;
+  };
   /* the list of streets sorted so that small roads are drawn first (their order only matters for z fighting at junctions, which the offsets below settle) */
   for (const s of tile.streets) {
-    const id = s.id, cls = G.classes[G.cls[id]], lay = G.layer[id]; if (lay < 0 || s.pts.length < 4) continue;                 // underpasses and tunnels are not drawn yet
+    const id = s.id, cls = G.classes[G.cls[id]], lay = G.layer[id]; if (s.pts.length < 4 || (lay < 0 && !['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential'].includes(cls))) continue;                 // sunken footways and service lanes are not drawn
     const w = pieceWidth(G, s), walk = pieceSidewalk(G, s), clip = s.clip || 0, deck = lay > 0, rank = RANKOF[cls] || 0, rc = ROAD[cls] || ROAD.residential, two = G.oneway[id] === 0, lanes = G.lanes[id];
-    let pts = s.pts; if (deck) pts = densify(pts, 5); const F = frames(pts), hAt = (x, z) => (deck ? deckHeight(G, id, x, z) : 0), H = new Float32Array(F.n);
+    const sunk = lay < 0; let pts = s.pts; if (deck) pts = densify(pts, 5); else if (sunk) pts = densify(pts, 4); const F = frames(pts), hAt = (x, z) => (deck ? deckHeight(G, id, x, z) : sunk ? -underDepth(G, id, x, z) : 0), H = new Float32Array(F.n);
     for (let i = 0; i < F.n; i++) H[i] = hAt(pts[i * 2], pts[i * 2 + 1]);
     const strip = (m, a, b, c, dy, hExtra = 0) => {                                                 // a strip between lateral offsets a and b along the whole piece
       let prev = -1; for (let i = 0; i < F.n; i++) {
@@ -82,6 +97,7 @@ export function buildTile(tile, ctx) {
     const hw = w / 2;
     if (cls === 'footway' || cls === 'cycleway') { strip(M.walk, -hw, hw, rc, 0); out.nStreets++; continue; }
     strip(M.road, -hw, hw, rc, 0);
+    if (sunk) { underpass(pts, F, H, hw, id, lay); if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) { /* lane marks below */ } } else
     if (walk > 0) { const wl = 1.8; strip(M.walk, hw, hw + wl, WALK, 0); if (walk > 1 || two) strip(M.walk, -hw - wl, -hw, WALK, 0); }
     /* sidewalks are painted flat (the car physics has no kerb yet); a flyover gets edges, an underside and piers */
     if (deck) {
@@ -107,7 +123,7 @@ export function buildTile(tile, ctx) {
           const va = m.v(X(q.x + q.nx * (off - e)), y, Z(q.z + q.nz * (off - e)), 0, 1, 0, MARK), vb = m.v(X(q.x + q.nx * (off + e)), y, Z(q.z + q.nz * (off + e)), 0, 1, 0, MARK); if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va; }
       }
     }
-    out.claims.push({ shape: { t: 'line', pts: s.pts, hw: hw + (walk ? 1.8 : 0) }, layer: Math.max(0, lay), owner: 'street' }); out.nStreets++;
+    out.claims.push({ shape: { t: 'line', pts: s.pts, hw: hw + (walk ? 1.8 : 0) }, layer: lay, owner: 'street' }); out.nStreets++;
   }
   /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */
   const B = M.bldg;

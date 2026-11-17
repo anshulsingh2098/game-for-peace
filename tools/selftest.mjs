@@ -1213,4 +1213,10 @@ test('city gates: each pack gate maps to the India road arm that leaves Delhi th
   const { sanitiseSaved } = await import('../src/core/saved.js'); assert.equal(sanitiseSaved({ enclave: 'delhi' }).enclave, 'delhi', 'the save keeps the city you were in'); assert.equal(sanitiseSaved({ enclave: '../x' }).enclave, undefined, 'a bad enclave is dropped');
 });
 
+test('city underpasses: a street on layer -1 is on the ground at a portal and one level (5.6 m) down in the middle, a ground street is never sunk', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8'))); let n = 0, flat = 0;
+  for (let i = 0; i < G.n; i++) if (G.layer[i] === -1 && G.len[i] > 200 && G.dn[G.a[i]] === 1 && G.dn[G.b[i]] >= 2) { const ax = G.xz[G.a[i] * 2], az = G.xz[G.a[i] * 2 + 1], bx = G.xz[G.b[i] * 2], bz = G.xz[G.b[i] * 2 + 1]; assert.equal(cityPack.underDepth(G, i, ax, az), 0, 'on the ground at the portal'); assert.ok(Math.abs(cityPack.underDepth(G, i, bx, bz) - cityPack.LEVEL) < 1e-6, 'a level down where the street continues underground'); assert.ok(cityPack.underDepth(G, i, (ax + bx) / 2, (az + bz) / 2) <= cityPack.LEVEL + 1e-9); n++; }
+  assert.ok(n >= 3, 'Delhi has underpasses: ' + n); for (let i = 0; i < G.n && flat < 100; i++) if (G.layer[i] >= 0) { assert.equal(cityPack.underDepth(G, i, G.xz[G.a[i] * 2], G.xz[G.a[i] * 2 + 1]), 0); flat++; }
+});
+
 console.log(`\n${passed} checks passed`);

@@ -62,5 +62,5 @@ export class CityTraffic {
   /* the nearest car in front of `ph` ({ x, z, yaw }) within `range` m and 2.3 m either side of its heading: { gap, speed } or null (autodrive's leader) */
   leaderAhead(ph, range) { const fx = Math.cos(ph.yaw), fz = Math.sin(ph.yaw); let best = null; for (const c of this.cars) { const dx = c.x - ph.x, dz = c.z - ph.z, ahead = dx * fx + dz * fz, side = Math.abs(-dx * fz + dz * fx); if (ahead > 0 && ahead < range && side < 2.3 && (!best || ahead < best.gap)) best = { gap: ahead - 2.1, speed: c.v }; } return best; }
   /* obstacle circles near (x, z) for the vehicle physics (front and rear of each car) */
-  circles(x, z, r) { const out = []; for (const c of this.cars) { if (Math.abs(c.x - x) > r + 4 || Math.abs(c.z - z) > r + 4) continue; const cx = Math.cos(c.yaw), sz = Math.sin(c.yaw); out.push({ x: c.x + cx * 1.2, z: c.z + sz * 1.2, r: 1.2, traffic: true }, { x: c.x - cx * 1.2, z: c.z - sz * 1.2, r: 1.2, traffic: true }); } return out; }
+  circles(x, z, r) { const out = []; for (const c of this.cars) { if (Math.abs(c.x - x) > r + 4 || Math.abs(c.z - z) > r + 4) continue; const cx = Math.cos(c.yaw), sz = Math.sin(c.yaw); out.push({ x: c.x + cx * 1.2, z: c.z + sz * 1.2, r: 1.2, y: this.gy, traffic: true }, { x: c.x - cx * 1.2, z: c.z - sz * 1.2, r: 1.2, y: this.gy, traffic: true }); } return out; }
 }

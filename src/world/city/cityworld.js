@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { CityPack, footprintRect } from './pack.js';
 import { buildTile, makeMaterials } from './tilemesh.js';
 import { CityTraffic } from './citytraffic.js';
+import { installCutHoles } from './cuts.js';
 
 /* the world config of a city: the region's palette and plants, on flat land (no hills, no sea) with the engine's own placeholder road parked far away (the engine always has one road; here it only gives the vehicle code something to ask) */
 export function cityConfig(base, seed) {
@@ -17,7 +18,7 @@ const RADIUS = 1300, KEEP = 1900, CELL = 16;
 export class CityWorld {
   constructor(scene, origin, terrain, { base = 'assets/cities/delhi' } = {}) {
     this.scene = scene; this.origin = origin; this.terrain = terrain; this.ko = terrain.keepout; this.gy = terrain.base(0, 0); this.pack = new CityPack(base); this.group = new THREE.Group(); scene.add(this.group);
-    this.mats = makeMaterials(); this.tiles = new Map(); this.loading = new Map(); this.ready = []; this.circ = new Map(); this.geomMap = new Map(); this.onStreets = null; this.deckCells = new Map(); this.stats = { tiles: 0, buildings: 0, streets: 0, ms: 0, loaded: 0, failed: 0 }; this.labels = new Map();
+    this.mats = makeMaterials(); this.cutCells = new Map(); this.openCuts = []; this.cuts = installCutHoles([this.mats.ground, this.mats.park, this.mats.walk]); this.tiles = new Map(); this.loading = new Map(); this.ready = []; this.circ = new Map(); this.geomMap = new Map(); this.onStreets = null; this.deckCells = new Map(); this.stats = { tiles: 0, buildings: 0, streets: 0, ms: 0, loaded: 0, failed: 0 }; this.labels = new Map();
   }
   async init() {
     await this.pack.init(); const { landmarks } = this.pack; this.traffic = new CityTraffic(this.scene, this.origin, this.pack.G);
@@ -27,7 +28,7 @@ export class CityWorld {
   tileKey(tx, tz) { return tx + '_' + tz; }
   /* call every frame: wanted tiles are fetched, one is built per frame, far ones are dropped */
   update(px, pz, dt = 0.016) {
-    this.traffic.update(dt, px, pz);
+    this.traffic.update(dt, px, pz); this.cuts.set(this.openCuts, this.origin, px, pz);
     const S = this.pack.size, tx0 = Math.floor((px - RADIUS) / S), tx1 = Math.floor((px + RADIUS) / S), tz0 = Math.floor((pz - RADIUS) / S), tz1 = Math.floor((pz + RADIUS) / S), want = [];
     for (let i = tx0; i <= tx1; i++) for (let j = tz0; j <= tz1; j++) { const k = this.tileKey(i, j); if (this.tiles.has(k) || this.loading.has(k) || !this.pack.hasTile(i, j)) continue; const d = Math.hypot(Math.max(i * S - px, 0, px - (i + 1) * S), Math.max(j * S - pz, 0, pz - (j + 1) * S)); if (d < RADIUS) want.push([d, i, j]); }
     want.sort((a, b) => a[0] - b[0]); for (const [, i, j] of want) { if (this.loading.size >= 3) break; this.fetchTile(i, j); }
@@ -48,6 +49,8 @@ export class CityWorld {
     const dk = []; for (const d of out.decks) for (let i = 0; i < d.pos.length; i += 6) dk.push({ x: (d.pos[i] + d.pos[i + 3]) / 2, z: (d.pos[i + 2] + d.pos[i + 5]) / 2, y: d.pos[i + 1], hw: d.hw });
     const deckCells = new Map(); for (const q of dk) { const key = this.ck(Math.floor(q.x / 6), Math.floor(q.z / 6)); let l = deckCells.get(key); if (!l) deckCells.set(key, l = []); l.push(q); }
     const labels = out.labels.map(l => this.label(grp, l, tile)); this.tiles.set(k, { tx: tile.tx, tz: tile.tz, streets: tile.streets, grp, meshes, owner, circ: { arr: c, cells }, decks: out.decks, deckCells, labels });
+    const ckeys = []; for (const c of out.cuts) { c.id = k; const n = Math.max(1, Math.ceil(Math.hypot(c.x1 - c.x0, c.z1 - c.z0) / 3)); for (let q = 0; q <= n; q++) { const key = this.ck(Math.floor((c.x0 + (c.x1 - c.x0) * q / n) / 6), Math.floor((c.z0 + (c.z1 - c.z0) * q / n) / 6)); let l = this.cutCells.get(key); if (!l) this.cutCells.set(key, l = []); if (l[l.length - 1] !== c) { l.push(c); ckeys.push(key); } } if (c.open) this.openCuts.push(c); }
+    this.tiles.get(k).cuts = out.cuts; this.tiles.get(k).ckeys = ckeys;
     for (const s of tile.streets) { if (s.pts.length < 4) continue; let l = this.geomMap.get(s.id); if (!l) this.geomMap.set(s.id, l = []); l.push({ k, pts: s.pts }); } if (this.onStreets) this.onStreets();
     this.traffic.addTile(k, tile.streets, this.gy); this.stats.loaded++; this.stats.ms = performance.now() - t0; this.refreshStats();
   }
@@ -59,7 +62,8 @@ export class CityWorld {
   }
   drop(k) {
     const t = this.tiles.get(k); if (!t) return; this.group.remove(t.grp); for (const m of t.meshes) m.geometry.dispose(); for (const l of t.labels) if (l) { this.labels.delete([...this.labels].find(([, v]) => v === l)?.[0]); l.material.map.dispose(); l.material.dispose(); }
-    const L = this.ko.listeners.slice(); this.ko.listeners.length = 0; this.ko.removeOwner(t.owner); for (const f of L) this.ko.listeners.push(f); this.traffic.removeTile(k); for (const s of t.streets) { const l = this.geomMap.get(s.id); if (l) { const n = l.filter(q => q.k !== k); if (n.length) this.geomMap.set(s.id, n); else this.geomMap.delete(s.id); } } this.tiles.delete(k); this.refreshStats();
+    const L = this.ko.listeners.slice(); this.ko.listeners.length = 0; this.ko.removeOwner(t.owner); for (const f of L) this.ko.listeners.push(f); if (t.cuts && t.cuts.length) { const dead = new Set(t.cuts); for (const key of new Set(t.ckeys)) { const l = this.cutCells.get(key); if (l) { const n = l.filter(c => !dead.has(c)); if (n.length) this.cutCells.set(key, n); else this.cutCells.delete(key); } } this.openCuts = this.openCuts.filter(c => !dead.has(c)); }
+    this.traffic.removeTile(k); for (const s of t.streets) { const l = this.geomMap.get(s.id); if (l) { const n = l.filter(q => q.k !== k); if (n.length) this.geomMap.set(s.id, n); else this.geomMap.delete(s.id); } } this.tiles.delete(k); this.refreshStats();
   }
   refreshStats() { let b = 0, s = 0; for (const t of this.tiles.values()) { for (const m of t.meshes) if (m.material === this.mats.bldg) b += m.geometry.index.count / 3; s += t.decks.length; } this.stats.tiles = this.tiles.size; this.stats.tris = b; this.stats.decks = s; }
   reposition() { for (const t of this.tiles.values()) t.grp.position.set(t.tx * this.pack.size - this.origin.x, 0, t.tz * this.pack.size - this.origin.z); }
@@ -74,7 +78,7 @@ export class CityWorld {
   near(x, z, r) {
     const i0 = Math.floor((x - r) / CELL), i1 = Math.floor((x + r) / CELL), j0 = Math.floor((z - r) / CELL), j1 = Math.floor((z + r) / CELL), S = this.pack.size, out = [];
     for (let tx = Math.floor((x - r) / S); tx <= Math.floor((x + r) / S); tx++) for (let tz = Math.floor((z - r) / S); tz <= Math.floor((z + r) / S); tz++) { const t = this.tiles.get(this.tileKey(tx, tz)); if (!t) continue; const a = t.circ.arr;
-      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const l = t.circ.cells.get(this.ck(i, j)); if (l) for (const n of l) if (Math.abs(a[n] - x) < r + a[n + 2] && Math.abs(a[n + 1] - z) < r + a[n + 2]) out.push({ x: a[n], z: a[n + 1], r: a[n + 2] }); } }
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const l = t.circ.cells.get(this.ck(i, j)); if (l) for (const n of l) if (Math.abs(a[n] - x) < r + a[n + 2] && Math.abs(a[n + 1] - z) < r + a[n + 2]) out.push({ x: a[n], z: a[n + 1], r: a[n + 2], y: this.gy }); } }
     const tc = this.traffic.circles(x, z, r); return out.length || tc.length ? [out.concat(tc)] : [];
   }
   /* deck triangles of the flyovers around (cx, cz) for the physics, in world metres: { pos, idx } or null */
@@ -88,6 +92,12 @@ export class CityWorld {
     const i = Math.floor(x / 6), j = Math.floor(z / 6); let best = NaN, bd = Infinity;
     for (const t of this.tiles.values()) { if (!t.decks.length) continue; for (let a = i - 1; a <= i + 1; a++) for (let b = j - 1; b <= j + 1; b++) { const l = t.deckCells.get(this.ck(a, b)); if (l) for (const q of l) { const d = Math.hypot(q.x - x, q.z - z); if (d < q.hw + 1.5 && d < bd) { bd = d; best = q.y; } } } }
     return best;
+  }
+  /* the ground height at (x, z): the flat ground, lowered inside an underpass strip (the cut and the covered trench; a roof deck above the covered part carries the cars crossing over) */
+  groundAt(x, z) {
+    if (!this.cutCells.size) return this.gy; const i = Math.floor(x / 6), j = Math.floor(z / 6); let best = 0, bd = Infinity;
+    for (let a = i - 2; a <= i + 2; a++) for (let b = j - 2; b <= j + 2; b++) { const l = this.cutCells.get(this.ck(a, b)); if (l) for (const c of l) { const dx = c.x1 - c.x0, dz = c.z1 - c.z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - c.x0) * dx + (z - c.z0) * dz) / L2)) : 0, d = Math.hypot(c.x0 + dx * t - x, c.z0 + dz * t - z); if (d < c.phw && d < bd) { bd = d; best = c.d0 + (c.d1 - c.d0) * t; } } }
+    return this.gy - best;
   }
   /* the nearest street point to (x, z) among the loaded tiles, and its heading: for "back to the road" */
   nearestStreet(x, z) {

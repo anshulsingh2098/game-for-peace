@@ -61,6 +61,7 @@ import { Menu } from './ui/menu.js';
 import { Gps } from './ui/gps.js';
 import { CityNav, CityMap } from './ui/citymap.js';
 import { mapGates, pickGate } from './world/city/gates.js';
+import { installCutHoles } from './world/city/cuts.js';
 import { RailLine, RailNetwork, classifyCrossings } from './world/rail.js';
 import { RailGrade } from './world/rail_grade.js';
 import { TrainBook, clockMinutes, fmtTime, announcement } from './world/rail_timetable.js';
@@ -208,7 +209,7 @@ function makeScenery() {
   if (peds) { peds.dispose(); peds = null; }
   if (traffic) traffic.dispose(); traffic = new Traffic(scene, road, config.seed, grid.origin, { mode: cityMode ? 'off' : S.traffic, drive: locationById(config.location).drive || 'right', scale: (locationById(config.location).region || { traffic: { scale: 1 } }).traffic.scale, mix: (locationById(config.location).region || { traffic: {} }).traffic.mix || null, pack: trafficPack });          // cars on the road (src/traffic), on the right or the left as the place drives
   { const reg = locationById(config.location).region; if (reg && reg.district && reg.population && reg.population.density > 0) peds = new Pedestrians(scene, nav, config.seed + ':' + config.location, grid.origin, { density: reg.population.density, archetypes: reg.population.archetypes, level: S.traffic, traffic: traffic.sim }); }          // people on the sidewalks of a built-up region (src/pedestrians); their number follows the traffic setting
-  env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); groundMat.uniforms.uArid.value = (config.palette && config.palette.arid) || 0; } if (!holes) holes = installTunnelHoles(ground, WALL, ARCH); waterMat.color.set(config.water.color);
+  env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); groundMat.uniforms.uArid.value = (config.palette && config.palette.arid) || 0; } if (!holes) holes = installTunnelHoles(ground, WALL, ARCH); if (city && !ground.userData.cutHoles) { ground.userData.cutHoles = true; installCutHoles([ground], city.cuts); } waterMat.color.set(config.water.color);
 }
 makeScenery();
 function applyView() {
@@ -218,7 +219,7 @@ function applyView() {
 
 /* ---------- the vehicle ---------- */
 const cam = new FlyCam(canvas), controls = new Controls(), autodrive = new Autodrive(), view = new VehicleView(scene);
-const world = { height: (x, z, y) => { if (city && y !== -Infinity) { const dk = city.deck(x, z); if (dk === dk && (y === undefined || Math.abs(dk - y) <= Math.abs(city.gy - y))) return dk; return city.gy; } return terrain.drive(x, z, y); }, ground: (x, z) => terrain.drive(x, z, -Infinity), deck: (x, z) => city ? city.deck(x, z) : terrain.deck(x, z), deckMesh: (x, z, h) => city ? city.deckMesh(x, z, h) : roadSet ? roadSet.deckMesh(x, z, h) : null, surface: (x, z) => city ? 'asphalt' : terrain.surface(x, z), near: (x, z, r) => { if (city) return city.near(x, z, r); const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), ...branches.map(b => b.mesh.bridges.near(x, z, r)).flat(), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : [], rail ? rail.near(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
+const world = { height: (x, z, y) => { if (city && y !== -Infinity) { const dk = city.deck(x, z), g = city.groundAt(x, z); if (dk === dk && (y === undefined ? dk > city.gy : Math.abs(dk - y) <= Math.abs(g - y))) return dk; return g; } return terrain.drive(x, z, y); }, ground: (x, z) => city ? city.groundAt(x, z) : terrain.drive(x, z, -Infinity), deck: (x, z) => city ? city.deck(x, z) : terrain.deck(x, z), deckMesh: (x, z, h) => city ? city.deckMesh(x, z, h) : roadSet ? roadSet.deckMesh(x, z, h) : null, surface: (x, z) => city ? 'asphalt' : terrain.surface(x, z), near: (x, z, r) => { if (city) return city.near(x, z, r); const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), ...branches.map(b => b.mesh.bridges.near(x, z, r)).flat(), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : [], rail ? rail.near(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
 const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
@@ -656,7 +657,7 @@ function update(dt, now) {
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
   if (mode === 'drive' && phys && orbiting()) orbitCam(dt);
-  else if (mode === 'drive' && phys) { if (offset) { camera.clearViewOffset(); offset = 0; } view.aim(camera, phys, grid.origin, dt, (x, z) => Math.max(terrain.seaLevel, terrain.drive(x, z)), boostEase); }
+  else if (mode === 'drive' && phys) { if (offset) { camera.clearViewOffset(); offset = 0; } view.aim(camera, phys, grid.origin, dt, (x, z) => city ? city.groundAt(x, z) : Math.max(terrain.seaLevel, terrain.drive(x, z)), boostEase); }
   else { cam.apply(camera, grid.origin); camera.fov = 58; camera.updateProjectionMatrix(); }
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   waterT.value = now / 1000; if (groundMat) groundMat.uniforms.uTime.value = now / 1000; ripples.offset.set(((camera.position.x + grid.origin.x) * RIP) % 1, (-(camera.position.z + grid.origin.z) * RIP) % 1);     // ripples stay fixed to the world while the sheet follows the camera

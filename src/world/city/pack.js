@@ -20,8 +20,8 @@ export function decodeGraphColumns(j) {
   if (j.enc !== 1) throw new Error('graph: unknown encoding ' + j.enc);
   const xz = dec(j.nodes.xz), c = j.edges, n = c.a.length, a = new Int32Array(n), b = new Int32Array(n), len = new Float32Array(n), nn = j.nodes.flags.length;
   let pa = 0; for (let i = 0; i < n; i++) { pa += c.a[i]; a[i] = pa; b[i] = pa + c.d[i]; len[i] = c.len[i] / 10; }
-  const layer = Int8Array.from(c.layer), up = new Uint8Array(nn); for (let i = 0; i < n; i++) if (layer[i] > 0) { if (up[a[i]] < 255) up[a[i]]++; if (up[b[i]] < 255) up[b[i]]++; }
-  return { n, nodes: nn, classes: j.classes, cls: Uint8Array.from(c.cls), lanes: Uint8Array.from(c.lanes), oneway: Int8Array.from(c.oneway), speed: Uint16Array.from(c.speed), layer, flags: Uint8Array.from(c.flags), name: Uint32Array.from(c.name || new Array(n).fill(0)), a, b, len, xz: Float32Array.from(xz), nodeFlags: Uint8Array.from(j.nodes.flags), up, names: j.names };
+  const layer = Int8Array.from(c.layer), up = new Uint8Array(nn), dn = new Uint8Array(nn); for (let i = 0; i < n; i++) { if (layer[i] > 0) { if (up[a[i]] < 255) up[a[i]]++; if (up[b[i]] < 255) up[b[i]]++; } else if (layer[i] < 0) { if (dn[a[i]] < 255) dn[a[i]]++; if (dn[b[i]] < 255) dn[b[i]]++; } }
+  return { n, nodes: nn, classes: j.classes, cls: Uint8Array.from(c.cls), lanes: Uint8Array.from(c.lanes), oneway: Int8Array.from(c.oneway), speed: Uint16Array.from(c.speed), layer, flags: Uint8Array.from(c.flags), name: Uint32Array.from(c.name || new Array(n).fill(0)), a, b, len, xz: Float32Array.from(xz), nodeFlags: Uint8Array.from(j.nodes.flags), up, dn, names: j.names };
 }
 
 export const LEVEL = 5.6, RAMP = 70;                                       // a flyover deck is 5.6 m per layer above the ground; ramps are up to 70 m long (a grade of 8 %)
@@ -33,6 +33,13 @@ export function deckHeight(G, id, x, z) {
   const fa = G.up[A] >= 2 ? 1 : sstep(Math.hypot(x - G.xz[A * 2], z - G.xz[A * 2 + 1]) / ramp), fb = G.up[B] >= 2 ? 1 : sstep(Math.hypot(x - G.xz[B * 2], z - G.xz[B * 2 + 1]) / ramp);
   return H * Math.min(fa, fb);
 }
+/* how far below the ground an underpass street (layer below 0) is at (x, z), as a positive depth: layer x LEVEL, with a ramp at each end that does not continue as another sunken edge (`dn` counts them at a node) */
+export function underDepth(G, id, x, z) {
+  const lay = G.layer[id]; if (lay >= 0) return 0; const m = Math.min(-lay, 2), A = G.a[id], B = G.b[id], H = m * LEVEL, ramp = Math.max(8, Math.min(G.len[id] / 2, RAMP * m));
+  const fa = G.dn[A] >= 2 ? 1 : sstep(Math.hypot(x - G.xz[A * 2], z - G.xz[A * 2 + 1]) / ramp), fb = G.dn[B] >= 2 ? 1 : sstep(Math.hypot(x - G.xz[B * 2], z - G.xz[B * 2 + 1]) / ramp);
+  return H * Math.min(fa, fb);
+}
+export const OPEN_CUT = 3.4;                                                  // a sunken street is open to the sky while shallower than this (m), and roofed (the ground is its ceiling) below it: a car is 1.5 m high
 /* width (carriageway, m) and sidewalk (0, 1 or 2 sides) of a street piece of a tile on edge `id` */
 export const pieceWidth = (G, s) => (s.width !== undefined ? s.width : defaultWidth(G.classes[G.cls[s.id]], G.lanes[s.id]));
 export const pieceSidewalk = (G, s) => (s.sidewalk !== undefined ? s.sidewalk : DEFAULT_SIDEWALK[G.classes[G.cls[s.id]]]);
