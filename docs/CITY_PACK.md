@@ -84,6 +84,8 @@ Basis: `PERFORMANCE.md` (medium tier today: 520 draw calls, 428k triangles, 5.6 
 | Pack size on disk (gzip) | at most 30 MB per city pack, 20 MB each for Delhi NCR's three | same pack, streamed: at most 4 MB resident |
 | Time from the gate to driving | under 4 s on a 20 Mbit line (manifest, identity, first 9 tiles prefetched) | under 8 s on 10 Mbit |
 
+**Measured 17 Nov 2026 (Delhi, desktop, medium; the browser pane was hidden, so CPU only, no GPU or frame rate):** 299 draw calls and 285k triangles in the city view (14 near tiles and 35 skyline tiles), 171 MB JS heap; CPU of one frame (update plus draw submit) median 0.9 ms, 95 % under 2.4 ms, 99 % under 6.8 ms; a tile is meshed in slices of 3 ms (worst slice 5 ms) and then added to the scene in 5 to 6 ms (before: 3 to 41 ms in one frame). Detailed ring 1.3 km (the table's 600 m is not met: buildings are plain extrusions, cheap), lane marks and kerbs within 450 m, skyline to 3.8 km. No phone measured.
+
 How: geometry merged per 128 m cell (one draw call per material per cell, as `district.js` does per 200 m piece), instancing for repeated furniture, facade textures from a small atlas by building use, tiles of 1 km streamed by the existing sector scheme (hysteresis, abort, pins, LRU), far cells baked at pack build time. Measure with `?bench=30` on a desktop and on a phone before Phase 2 is called done; update these numbers from the measurement, not the other way round.
 
 ## 5. The versioned city pack format

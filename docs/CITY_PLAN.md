@@ -74,6 +74,8 @@ A real-circuit race at the Buddh International Circuit (F1-style cars, laps, tim
 ### Phase 7: repeat for the next cities
 Order: Delhi NCR, Mumbai, Kolkata, Chennai, Bengaluru, Hyderabad, then Ahmedabad, Pune, Jaipur, Lucknow, Varanasi, Agra (Taj Mahal city), Amritsar, Kochi and the rest of the 86 stations in `rails.json`. Each city follows the same card below and does not start until the previous city passes it.
 
+**Status (17 Nov 2026, session "Delhi renderer fixes", branch `claude/delhi-d5b-fixes-fa289f`): the D5 leftovers 12.2 to 12.8 are worked down** (city map and GPS with autodrive on the pack graph, gate fade with speed carried and gates mapped to India roads, underpasses, kerbs, sliced meshing and a far skyline, pedestrians and signals, facade kits). What is left is in `docs/WORK_REMAINING.md` section 12. Item 5 of the phases (identity, Travel and the city card) is unchanged.
+
 ## The city card (done checklist for one city)
 - [ ] Data: pack built from a stated extract; attribution in the credits; owner approved downloads.
 - [ ] Streets, blocks and buildings from data; no object on a road, rail or station.
