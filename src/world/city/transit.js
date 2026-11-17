@@ -20,7 +20,13 @@ export class CityTransit {
     this.chunks = new Map(); this.runs = new Map(); this.stations = new Map(); this.circ = new Map(); this.onTeleport = null;
     this.stats = { chunks: 0, stations: 0, tris: 0, calls: 0, piers: 0, pierMoved: 0, pierBlocked: 0, trains: 0, ms: 0 };
     this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.05, side: THREE.DoubleSide, envMapIntensity: 0.3, emissive: 0x24262a });
-    this.litMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide, emissive: 0x606060 });       // below ground: lit from itself
+    this.litMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, color: 0xe8e8e8 });       // below ground: lit from itself
+    /* tiles without textures: a 0.6 m grid of darker joints from the world position and the face direction (walls, floors and platforms of the underground stations) */
+    this.litMat.onBeforeCompile = sh => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWP = (modelMatrix * vec4(position, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;').replace('#include <color_fragment>', `#include <color_fragment>
+        { vec3 an = abs(normalize(cross(dFdx(vWP), dFdy(vWP)))); vec2 uv = an.y > 0.7 ? vWP.xz : (an.x > an.z ? vWP.zy : vWP.xy); vec2 q = uv / 0.6; vec2 g = abs(fract(q - 0.5) - 0.5) / max(fwidth(q), vec2(1e-4)); float joint = 1.0 - min(min(g.x, g.y), 1.0); diffuseColor.rgb *= (1.0 - 0.22 * joint) * (0.66 + 0.34 * an.y + 0.1 * an.x); }`);
+    };
     this.glassMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 0.6 });
   }
   async init(url = 'assets/cities/delhi/transit.json') {
