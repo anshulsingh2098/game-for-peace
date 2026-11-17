@@ -64,9 +64,23 @@ export function buildTile(tile, ctx) {
   for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, 0);
   /* ---- streets ---- */
   const groundSeg = new Map(), CELLQ = 24;                                           // ground carriageways of this tile, to keep flyover piers out of them
-  const hashSeg = (x0, z0, x1, z1, hw) => { const a = Math.floor(Math.min(x0, x1) / CELLQ), b = Math.floor(Math.max(x0, x1) / CELLQ), c = Math.floor(Math.min(z0, z1) / CELLQ), d = Math.floor(Math.max(z0, z1) / CELLQ); for (let i = a; i <= b; i++) for (let j = c; j <= d; j++) { const k = i + ',' + j; let l = groundSeg.get(k); if (!l) groundSeg.set(k, l = []); l.push([x0, z0, x1, z1, hw]); } };
+  const hashSeg = (x0, z0, x1, z1, hw, id) => { const a = Math.floor(Math.min(x0, x1) / CELLQ), b = Math.floor(Math.max(x0, x1) / CELLQ), c = Math.floor(Math.min(z0, z1) / CELLQ), d = Math.floor(Math.max(z0, z1) / CELLQ); for (let i = a; i <= b; i++) for (let j = c; j <= d; j++) { const k = i + ',' + j; let l = groundSeg.get(k); if (!l) groundSeg.set(k, l = []); l.push([x0, z0, x1, z1, hw, id]); } };
   const pierFree = (x, z, r) => { const l = groundSeg.get(Math.floor(x / CELLQ) + ',' + Math.floor(z / CELLQ)); if (!l) return true; for (const [x0, z0, x1, z1, hw] of l) { const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)) : 0; if (Math.hypot(x - (x0 + dx * t), z - (z0 + dz * t)) < hw + r) return false; } return true; };
-  for (const s of tile.streets) { const lay = G.layer[s.id]; if (lay === 0) { const w = pieceWidth(G, s) / 2 + 1; for (let i = 0; i + 3 < s.pts.length; i += 2) hashSeg(s.pts[i], s.pts[i + 1], s.pts[i + 2], s.pts[i + 3], w); } }
+  for (const s of tile.streets) { const lay = G.layer[s.id]; if (lay === 0) { const w = pieceWidth(G, s) / 2 + 1; for (let i = 0; i + 3 < s.pts.length; i += 2) hashSeg(s.pts[i], s.pts[i + 1], s.pts[i + 2], s.pts[i + 3], w, s.id); } }
+  /* is (x, z) clear of every ground carriageway of the tile except street `id`'s own (a kerb stops at a side street's mouth) */
+  const mouthFree = (x, z, id) => { const l = groundSeg.get(Math.floor(x / CELLQ) + ',' + Math.floor(z / CELLQ)); if (!l) return true; for (const [x0, z0, x1, z1, hw, sid] of l) { if (sid === id) continue; const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)) : 0; if (Math.hypot(x - (x0 + dx * t), z - (z0 + dz * t)) < hw - 0.3) return false; } return true; };
+  const KERB_H = 0.12, KERB_W = 0.3, KERBC = col(0xb4b0a6);
+  /* a kerb along one side of a street: a raised stone (0.12 m, the car physics gets wall circles of negative radius = mountable at walking pace) in 3 m pieces, none where a side street joins */
+  const kerb = (pts, F, hw, side, id) => {
+    const at = (i, f, off) => { const x = pts[i * 2] + (pts[i * 2 + 2] - pts[i * 2]) * f, z = pts[i * 2 + 1] + (pts[i * 2 + 3] - pts[i * 2 + 1]) * f, nx = F.nx[i] + (F.nx[i + 1] - F.nx[i]) * f, nz = F.nz[i] + (F.nz[i + 1] - F.nz[i]) * f, k = F.sc[i] + (F.sc[i + 1] - F.sc[i]) * f; return [x + nx * off * k * side, z + nz * off * k * side, nx * side, nz * side]; };
+    const m = M.walk, y1 = gy + KERB_H;
+    for (let i = 0; i + 1 < F.n; i++) { const L = Math.hypot(pts[i * 2 + 2] - pts[i * 2], pts[i * 2 + 3] - pts[i * 2 + 1]), n = Math.max(1, Math.round(L / 3));
+      for (let q = 0; q < n; q++) { const f0 = q / n, f1 = (q + 1) / n, mid = at(i, (f0 + f1) / 2, hw + KERB_W / 2); if (!mouthFree(mid[0], mid[1], id)) continue;
+        const a0 = at(i, f0, hw), a1 = at(i, f1, hw), b0 = at(i, f0, hw + KERB_W), b1 = at(i, f1, hw + KERB_W), nxv = -a0[2], nzv = -a0[3];       // the inner face looks at the road
+        const va = m.v(X(a0[0]), gy, Z(a0[1]), nxv, 0, nzv, KERBC), vb = m.v(X(a1[0]), gy, Z(a1[1]), nxv, 0, nzv, KERBC), vc = m.v(X(a1[0]), y1, Z(a1[1]), nxv, 0, nzv, KERBC), vd = m.v(X(a0[0]), y1, Z(a0[1]), nxv, 0, nzv, KERBC); m.tri(va, vb, vc, nxv, 0, nzv); m.tri(va, vc, vd, nxv, 0, nzv);
+        const ta = m.v(X(a0[0]), y1, Z(a0[1]), 0, 1, 0, KERBC), tb = m.v(X(a1[0]), y1, Z(a1[1]), 0, 1, 0, KERBC), tc = m.v(X(b1[0]), y1, Z(b1[1]), 0, 1, 0, KERBC), td = m.v(X(b0[0]), y1, Z(b0[1]), 0, 1, 0, KERBC); m.tri(ta, tb, tc, 0, 1, 0); m.tri(ta, tc, td, 0, 1, 0);
+        const c = at(i, (f0 + f1) / 2, hw + 1.6); out.circles.push(c[0], c[1], -1.6); } }
+  };
   /* an underpass: the trench around the sunken carriageway (walls to the ground, a roof where the cut is deeper than OPEN_CUT), the strips the ground is lowered along for the physics, and the roof as a deck for cars crossing above */
   const underpass = (pts, F, H, hw, id, lay) => {
     const WALLC = shade(0x8c8a84, 0.8), ROOFC = shade(0x6e6c68, 0.9), e = 0.25, rd = out.decks.length; const roofPos = [], roofIdx = []; let inRun = false;
@@ -98,7 +112,7 @@ export function buildTile(tile, ctx) {
     if (cls === 'footway' || cls === 'cycleway') { strip(M.walk, -hw, hw, rc, 0); out.nStreets++; continue; }
     strip(M.road, -hw, hw, rc, 0);
     if (sunk) { underpass(pts, F, H, hw, id, lay); if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) { /* lane marks below */ } } else
-    if (walk > 0) { const wl = 1.8; strip(M.walk, hw, hw + wl, WALK, 0); if (walk > 1 || two) strip(M.walk, -hw - wl, -hw, WALK, 0); }
+    if (walk > 0) { const wl = 1.8; strip(M.walk, hw, hw + wl, WALK, 0); if (walk > 1 || two) strip(M.walk, -hw - wl, -hw, WALK, 0); if (!deck) { kerb(pts, F, hw, 1, id); if (walk > 1 || two) kerb(pts, F, hw, -1, id); } }
     /* sidewalks are painted flat (the car physics has no kerb yet); a flyover gets edges, an underside and piers */
     if (deck) {
       const wall = (off, side) => { for (let i = 0; i + 1 < F.n; i++) {
