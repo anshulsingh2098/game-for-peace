@@ -216,3 +216,13 @@ Still open (what is left of 12):
 | D6.4 | Look check done for Blue Line and Laxmi Nagar only (DELHI_TRANSIT 10.1); still to check: other lines' liveries, cars per train, speeds, PSD, railway stations (round signs done) |
 | D6.5 | Ride animation instead of a fade; no sound |
 | D6.6 | Buildings under viaducts (needs the tile renderer to take Metro claims) |
+
+## 13. Delhi street life and identity (D7, 17 Nov 2026, branch `claude/delhi-d7-streetlife-29f2c5`)
+Built: see `docs/DELHI_LOOK.md` sections 9 and 10 (identity.json, shop boards, ads, poles and wires, stalls, trees, vehicle kinds, buses on routes, people, month haze). Open:
+| # | What |
+|---|---|
+| 13.1 | Phone: measure and add a low level (fewer trees and poles, no `prop` mesh, fewer vehicle kinds). The desktop numbers are in DELHI_LOOK section 9. |
+| 13.2 | The lit look: in the browser pane the game rendered black before and after D7 (even with an added ambient light); check on a real GPU that the boards, trees and buses look right under the game's lights and at night (only boards glow at night). |
+| 13.3 | Read the hour tables (`people.byHour`, `traffic.byHourFactor`) in traffic and crowds; stray cows and dogs; string lights; passengers boarding; buses giving way at junctions. |
+| 13.4 | Verify with photographs (owner's call): the Karol Bagh, Lajpat Nagar, Sarojini Nagar, Sadar Bazaar and urban-village descriptions, DTC AC livery, taxi colour, the Lutyens zone circle. |
+| 13.5 | Hindi text in the canvases needs a Devanagari font on the device (a system font stack is used: Noto Sans Devanagari, Kohinoor, Devanagari Sangam MN, Nirmala UI); check on Android and Windows. |

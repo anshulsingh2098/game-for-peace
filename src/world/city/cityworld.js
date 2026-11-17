@@ -36,6 +36,7 @@ export class CityWorld {
   /* D7: the identity of the city (identity.json), the canvas art and the bus stops by tile; without them the city is drawn plain */
   async initLife() {
     this.stops = new Map(); this.life = false; this.month = (() => { const m = /[?&]month=(\d+)/.exec(location.search); return m ? Math.max(1, Math.min(12, +m[1])) : new Date().getMonth() + 1; })();
+    if (/[?&]life=off/.test(location.search)) return;                                   // ?life=off: the plain city (the street life costs draw calls and triangles; docs/DELHI_LOOK.md section 9)
     try { this.identity = await loadIdentity(this.base, this.pack.M.origin); this.art = new StreetArt(this.identity); this.mats.sign = this.art.mats.sign; this.mats.ad = this.art.mats.ad; this.mats.ban = this.art.mats.ban; this.mats.prop = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.25 }); this.life = true; const mo = this.identity.month(this.month), haze = Math.max(mo.smog || 0, mo.fog || 0, (mo.dust || 0) * 0.8); WX.clear.fogMul = 1 - 0.45 * haze; WX.overcast.fogMul = Math.min(WX.overcast.fogMul, 0.75 - 0.2 * haze); }       // the month's haze (identity.json sky): a clear day in November smog sees less far than one in August
     catch (e) { console.warn('identity.json not loaded, plain city:', e); }
   }

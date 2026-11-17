@@ -18,7 +18,7 @@ export class CityTraffic {
   }
   /* a vehicle kind for the area at (x, z) from identity.json (buses are CityBuses'; a parked vehicle is never a cycle rickshaw, a truck or an auto stand-in) */
   pickKind(x, z, r, parked = false) { const ID = this.identity; if (!ID) return 'hatch'; let k = ID.vehicleKind(ID.areaNameAt(x, z), r); if (k === 'bus') k = 'hatch'; if (parked && (k === 'cyclerick' || k === 'truck')) k = 'two'; return k; }
-  paintOf(kind) { const ID = this.identity, l = ID && ID.j.vehicles.paints[kind]; if (!l) return 0xffffff; return parseInt(l[Math.floor(rnd() * l.length)].slice(1), 16); }
+  paintOf(kind) { const ID = this.identity, l = ID && ID.j.vehicles.paints[kind]; if (!l) return PAINT[Math.floor(rnd() * PAINT.length)]; return parseInt(l[Math.floor(rnd() * l.length)].slice(1), 16); }
   setMode(m) { this.want = MODES[m] === undefined ? 10 : MODES[m]; if (this.onMode) this.onMode(m); }
   key(x, z) { return Math.floor(x / CELL) + ',' + Math.floor(z / CELL); }
   addTile(k, streets, gy) {
