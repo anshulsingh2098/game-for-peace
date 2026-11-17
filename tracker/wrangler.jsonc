@@ -1,0 +1,8 @@
+{
+  // A Worker of its own (not the game's): the page in ./public, the state in KV. See README.md for the three setup commands.
+  "name": "game-for-peace-tracker",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "kv_namespaces": [{ "binding": "TRACKER", "id": "REPLACE_WITH_THE_ID_FROM_wrangler_kv_namespace_create" }]
+}
