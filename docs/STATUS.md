@@ -49,3 +49,6 @@ For a build to be called accepted, a person records: the commit hash, the device
 
 ## Phone, sound, app, tuner (17 Nov 2026)
 Built and seen in an emulated 740 x 340 phone: compact title menu, small station board, map under the speed readout, Horn button, Add to Home Screen button. Built, not heard or tried on a real phone: sound unlock on iPhone, the horn, the Delhi street bed, the home-screen icon opening full screen. Tuner storage and password: set on the owner's account (live API answers 200 and rejects a wrong password with 401). Mumbai at the low tier: about 800 to 1000 draw calls (the California baseline in `PERFORMANCE.md` is 183): the next cost cut is merging or culling landmarks and rails.
+
+## 17 Nov 2026, end of session
+PRs 83 (audit fixes, phone, sound, app icon, tuner, bundle, prefetch, NPCs) and 85 (roads out of Delhi) are merged into `main`; self-test 112. `vehicle/cars-and-gears` (Anshul) is not merged: 14 files and 42 hunks conflict and the two sides carry different driving models; the steps are in `docs/NEXT_PHASES.md`. The owner's session limit ended here; the next session starts from `docs/NEXT_PHASES.md`.
