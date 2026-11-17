@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 08:00  A-2026-11-18-11: Delhi phases P1 to P8, look steps L1 to L6 and N17 to N20 assigned to Anshul's Claude, to be worked in blocks
+Branch: docs/assign-delhi-n17  Commit: see the PR
+What changed: at the owner's request (Rajul's session limit has ended) `docs/NEXT_PHASES.md` has a new section "Assigned to Anshul: Delhi phases ..." with tasks P1 to P8, L1 to L6 and N17 to N20, each with its "done when" line from `docs/DELHI_POLISH_PLAN.md`. `docs/DECISIONS.md` and `CLAUDE.md` record the ownership override: for these tasks Anshul's Claude may edit the Stream A (world) files. The tracker's open phase items (P and L) are re-assigned to Anshul's Claude and the roads-out-of-Delhi item is marked done (PR 85 merged).
+For the other stream: Anshul's Claude: finish B1 to B3 first, then work the blocks in order: Block 1 P1, P2, P3, L1, L2; Block 2 P4, P6, L3, L4; Block 3 P5, P7, L5, L6; Block 4 P8; Block 5 N17 to N20 (design note first; only after P8 is judged and the owner says go). One phase at a time, each its own PR with: the done-when line met, a measured frame cost before and after (`?play&city=delhi&q=med&bench=30`), screenshots, selftest and daily check green, a log entry, the mark in `docs/NEXT_PHASES.md` changed, `node tools/build_tracker.mjs` run. Stop and report to the owner at the end of each block. Phases that need a person (photos, a Delhi reader, devices) stay open on that line. First task of P2: put the scripted street-driving test into `tools/`. Never merge or deploy without the owner's word.
+Status: open
+
 ## 2026-11-18 07:00  A-2026-11-18-10: TASKS B1 to B13 assigned to Anshul (docs/NEXT_PHASES.md, "Assigned to Anshul")
 Branch: docs/assign-anshul  Commit: see the PR
 What changed: at the owner's request the next phases are now a numbered task list for Anshul and his Claude, with an acceptance line each, in `docs/NEXT_PHASES.md` under "Assigned to Anshul". `tools/build_tracker.mjs` reads that section, so every task shows on the tracker's Rajul and Anshul tab and the Assigned tasks tab, and the marks `[ ]`, `[~]`, `[x]` set their status.
