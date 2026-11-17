@@ -29,12 +29,12 @@ function box(m, cx, y0, cz, sx, sy, sz, ux, uz, c, cTop) {
 }
 /* a tree: a trunk box and a lathed crown from a profile (sides of 6) */
 function tree(m, x, y0, z, sp, k, bloom) {
-  const h = sp.h * (0.8 + 0.4 * k), r = sp.r * (0.8 + 0.4 * ((k * 7) % 1)), th = h * 0.42, prof = PROFILE[sp.shape] || PROFILE.round, base = C(bloom && sp.bloom ? sp.bloom : sp.canopy), N = 6;
+  const h = sp.h * (0.8 + 0.4 * k), r = sp.r * (0.8 + 0.4 * ((k * 7) % 1)), th = h * 0.42, prof = PROFILE[sp.shape] || PROFILE.round, base = C(bloom && sp.bloom ? sp.bloom : sp.canopy), N = 8, ra = i => 0.84 + 0.32 * ((k * 13 + (i % N) * 0.618) % 1);          // 8 sides and an uneven outline: a crown, not a lollipop
   if (sp.id !== 'bougainvillea') box(m, x, y0, z, 0.3, th + 0.6, 0.3, 1, 0, C(PALE.wood));
   const y1 = y0 + th * (sp.id === 'bougainvillea' ? 0 : 1), ch = h - th * (sp.id === 'bougainvillea' ? 0 : 1);
   for (let i = 0; i + 1 < prof.length; i++) { const [h0, r0] = prof[i], [h1, r1] = prof[i + 1]; if (r0 === 0 && r1 === 0) continue; const dy = (h1 - h0) * ch, dr = (r1 - r0) * r, ln = Math.hypot(dy, dr) || 1, f0 = 0.72 + 0.28 * h0, f1 = 0.72 + 0.28 * h1;
-    for (let a = 0; a < N; a++) { const a0 = a / N * 6.2832, a1 = (a + 1) / N * 6.2832, am = (a0 + a1) / 2, nx = Math.cos(am) * dy / ln, nz = Math.sin(am) * dy / ln, ny = -dr / ln, c0 = base.clone().multiplyScalar(f0 * (0.9 + 0.2 * ((k * 13 + a) % 1))), c1 = base.clone().multiplyScalar(f1 * (0.9 + 0.2 * ((k * 13 + a) % 1)));
-      const v0 = m.v(x + Math.cos(a0) * r0 * r, y1 + h0 * ch, z + Math.sin(a0) * r0 * r, nx, ny, nz, c0), v1 = m.v(x + Math.cos(a1) * r0 * r, y1 + h0 * ch, z + Math.sin(a1) * r0 * r, nx, ny, nz, c0), v2 = m.v(x + Math.cos(a1) * r1 * r, y1 + h1 * ch, z + Math.sin(a1) * r1 * r, nx, ny, nz, c1), v3 = m.v(x + Math.cos(a0) * r1 * r, y1 + h1 * ch, z + Math.sin(a0) * r1 * r, nx, ny, nz, c1);
+    for (let a = 0; a < N; a++) { const ra0 = ra(a), ra1 = ra(a + 1), a0 = a / N * 6.2832, a1 = (a + 1) / N * 6.2832, am = (a0 + a1) / 2, nx = Math.cos(am) * dy / ln, nz = Math.sin(am) * dy / ln, ny = -dr / ln, c0 = base.clone().multiplyScalar(f0 * (0.9 + 0.2 * ((k * 13 + a) % 1))), c1 = base.clone().multiplyScalar(f1 * (0.9 + 0.2 * ((k * 13 + a) % 1)));
+      const v0 = m.v(x + Math.cos(a0) * r0 * r * ra0, y1 + h0 * ch, z + Math.sin(a0) * r0 * r * ra0, Math.cos(a0) * dy / ln, ny, Math.sin(a0) * dy / ln, c0), v1 = m.v(x + Math.cos(a1) * r0 * r * ra1, y1 + h0 * ch, z + Math.sin(a1) * r0 * r * ra1, Math.cos(a1) * dy / ln, ny, Math.sin(a1) * dy / ln, c0), v2 = m.v(x + Math.cos(a1) * r1 * r * ra1, y1 + h1 * ch, z + Math.sin(a1) * r1 * r * ra1, Math.cos(a1) * dy / ln, ny, Math.sin(a1) * dy / ln, c1), v3 = m.v(x + Math.cos(a0) * r1 * r * ra0, y1 + h1 * ch, z + Math.sin(a0) * r1 * r * ra0, Math.cos(a0) * dy / ln, ny, Math.sin(a0) * dy / ln, c1);
       if (r0 > 0) m.tri(v0, v1, v2, nx, ny, nz); if (r1 > 0) m.tri(v0, v2, v3, nx, ny, nz); } }
 }
 /* a wire from (x0, y0, z0) to (x1, y1, z1) sagging by `sag`, as a vertical and a flat ribbon of 4 pieces */
@@ -139,5 +139,13 @@ export function* buildStreetLife(tile, ctx, out) {
     box(M.prop, lx + nxo * 0.55, gy + 0.45, lz + nzo * 0.55, 2.2, 0.08, 0.4, ns.tx, ns.tz, C(PALE.steel), C(PALE.steel)); const c = art.bannerFor(rnd(Math.floor(sp[0]), Math.floor(sp[1])));
     board(M.ban, lx + nxo * 0.7, gy + 1.5, lz + nzo * 0.7, -nxo, -nzo, 1.2, 1.9, WHITE, [c.u0, c.v0, c.u1, c.v1]); box(M.prop, lx - ns.tx * 2.0 - nxo * 0.2, gy, lz - ns.tz * 2.0 - nzo * 0.2, 0.08, 3.2, 0.08, 1, 0, C(PALE.steel)); box(M.prop, lx - ns.tx * 2.0 - nxo * 0.2, gy + 2.7, lz - ns.tz * 2.0 - nzo * 0.2, 0.5, 0.4, 0.05, ns.tx, ns.tz, C(PALE.green));
     st.shelters++; circle(px + ns.tx * 0.9, pz + ns.tz * 0.9, 0.7); circle(px - ns.tx * 0.9, pz - ns.tz * 0.9, 0.7); }
+  /* ---- park trees: lawns and gardens get trees spaced by the area profile (they were bare grass), on a jittered grid, never in a building or a road ---- */
+  { let np = 0; const CAP_PARK = 600, STEP = 10, bloomOnP = sp0 => sp0.bloomMonths && sp0.bloomMonths.includes(ctx.month);
+    for (const p of tile.parks || []) { const R = p.ring; if (!R || R.length < 8) continue; if (ctx.yieldNow && ctx.yieldNow()) yield; let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (let i = 0; i < R.length; i += 2) { x0 = Math.min(x0, R[i]); x1 = Math.max(x1, R[i]); z0 = Math.min(z0, R[i + 1]); z1 = Math.max(z1, R[i + 1]); }
+      for (let gx = x0 + STEP / 2; gx < x1 && np < CAP_PARK; gx += STEP) for (let gz = z0 + STEP / 2; gz < z1 && np < CAP_PARK; gz += STEP) {
+        const key = Math.floor(gx * 3) * 7919 + Math.floor(gz * 5); const px = gx + (rnd(901, key) - 0.5) * STEP * 0.8, pz = gz + (rnd(902, key) - 0.5) * STEP * 0.8; if (!inPoly(R, px, pz)) continue; let hole = false; for (const h of p.holes || []) if (inPoly(h, px, pz)) { hole = true; break; } if (hole) continue;
+        const an = ID.areaNameAt(px, pz), A = ID.area(an), dens = Math.min(0.9, 0.25 + 0.5 * A.trees.density); if (rnd(903, key) > dens) continue; if (insideBuilding(px, pz, 2.0) || inRoad(px, pz, 1.0)) continue;
+        const id = A.trees.species[Math.floor(rnd(904, key) * A.trees.species.length)], spc = ID.species.get(id); if (!spc || spc.id === 'bougainvillea') continue; const [lx, lz] = L(px, pz); tree(M.prop, lx, gy, lz, spc, rnd(905, key), bloomOnP(spc)); np++; st.trees++; circle(px, pz, 0.4); } }
+  }
   return { M, stats: st };
 }

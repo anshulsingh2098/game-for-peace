@@ -43,7 +43,7 @@ export class Mesher {
 const col = hex => new THREE.Color(hex);
 const ROAD = { motorway: col(0x333436), trunk: col(0x333436), primary: col(0x353638), secondary: col(0x383a3b), tertiary: col(0x3b3c3d), residential: col(0x44413e), service: col(0x4a4642), busway: col(0x3a3a3c), footway: col(0x9a9284), cycleway: col(0x6a7a68) };
 const WALK = col(0x77736a), MARK = col(0xe9e6da), CONCRETE = col(0x8c8a84), BLOCK = { urban: col(0x6f695c), residential: col(0x716a5c), commercial: col(0x6c6a64), retail: col(0x6c6a64), industrial: col(0x64625d), park: col(0x5a7a3a), garden: col(0x5a7a3a), forest: col(0x44663a), farmland: col(0x8f9a55), grass: col(0x66843f), meadow: col(0x7a8a45), water: col(0x2e5f73), river: col(0x2e5f73), cemetery: col(0x6f7f50), military: col(0x7b7f66), religious: col(0x9a8f78) };
-const PARK = col(0x5f8a3c), WATER = col(0x2f6477);
+const PARK = col(0xcfe69a), WATER = col(0x2f6477);
 /* walls by use (sRGB hex), a little different for every building */
 const WALLS = { residential: [0xcdbd9c, 0xd7c6a6, 0xb9a384, 0xe0d3b8, 0xc4a98a, 0xa89580], commercial: [0xc9c1ae, 0xb6b0a2, 0xd3c6a8, 0xa9a59a], office: [0x9fb3c2, 0xb4c2cc, 0x8aa0b2, 0xc3ccd2], retail: [0xd6c2a0, 0xc7b79a], civic: [0xd9c79a, 0xe6d6ac, 0xc9b88c], religious: [0xece3cc, 0xdcc9a0], industrial: [0x9d9a92, 0xafa99c], hotel: [0xd8cdb4, 0xc8bda5], transit: [0xb7a58a, 0xc4b394], other: [0xbfb5a0, 0xcbc2ad] };
 const ROOF = col(0x77726a), SAND = col(0xb0553a);
@@ -112,7 +112,7 @@ function junctionShapes(J, M, X, Z, gy, out) {
   out.nFillets = nf; out.nNotches = nn;
 }
 export function* buildTileSteps(tile, ctx) {
-  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y) => {                                           // a polygon (ring and holes in metres) lying at height y
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
@@ -123,8 +123,13 @@ export function* buildTileSteps(tile, ctx) {
   };
   /* ---- ground: land use first, then blocks, parks and water ---- */
   for (const l of tile.landuse) { const c = BLOCK[l.class]; if (c && !['residential', 'commercial', 'retail', 'industrial'].includes(l.class)) flat(M.ground, l.ring, l.holes, c, 0); }
-  for (const b of tile.blocks) flat(M.ground, b.ring, b.holes, BLOCK[b.landuse] || BLOCK.urban, 0);
-  for (const p of tile.parks) flat(M.park, p.ring, p.holes, PARK, LIFT.park);
+  /* the land between the streets: lawns (green, the real grass texture) where the area is green (Lutyens' Delhi, DDA colonies, business parks) or the block is mapped as grass or a garden, dusty earth elsewhere (the sand texture, warm, not a grey blotch) */
+  const IDN = ctx.life && ctx.life.identity, GREEN_AREAS = new Set(['lutyens', 'dda', 'business']), GREEN_USE = new Set(['grass', 'meadow', 'recreation_ground', 'village_green', 'park', 'garden', 'forest', 'flowerbed']);
+  for (const b of tile.blocks) { let cx = 0, cz = 0; const n = b.ring.length / 2; for (let i = 0; i < n; i++) { cx += b.ring[i * 2]; cz += b.ring[i * 2 + 1]; } cx /= n || 1; cz /= n || 1;
+    const an = IDN && IDN.areaNameAt ? IDN.areaNameAt(cx, cz) : '', h = ((Math.floor(cx * 0.37) * 73856093) ^ (Math.floor(cz * 0.37) * 19349663)) >>> 0, v = (h % 1000) / 1000;
+    if (GREEN_USE.has(b.landuse) || (GREEN_AREAS.has(an) && v < 0.8)) flat(M.lawn, b.ring, b.holes, shade(0xcfe69a, 0.82 + 0.3 * v), LIFT.park * 0.5);
+    else flat(M.ground, b.ring, b.holes, shade(0xb9a888, 0.85 + 0.25 * v), 0); }
+  for (const p of tile.parks) flat(M.lawn, p.ring, p.holes, PARK, LIFT.park);          // lawns and gardens: the real grass texture (mats.lawn), the water stays plain
   for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, LIFT.park);
   /* ---- streets ---- */
   const groundSeg = new Map(), CELLQ = 24;                                           // ground carriageways of this tile, to keep flyover piers out of them
@@ -300,8 +305,10 @@ export function makeMaterials() {
   const noise = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#d8d8d8'; g.fillRect(0, 0, 128, 128); for (let i = 0; i < 700; i++) { const v = 170 + Math.floor(rnd() * 80), r = 2 + rnd() * 9; g.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',0.35)'; g.beginPath(); g.arc(rnd() * 128, rnd() * 128, r, 0, 7); g.fill(); } const t = tex(c); t.anisotropy = 2; return t; })();
   const flat = (f, u, map) => new THREE.MeshStandardMaterial({ vertexColors: true, map: map || null, roughness: 0.96, metalness: 0, envMapIntensity: 0.25, polygonOffset: true, polygonOffsetFactor: f, polygonOffsetUnits: u });
   const kit = k => { const [a, b] = k === 'shop' ? shopTextures(rnd) : kitTextures(k, rnd), m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex(a), emissive: 0xffffff, emissiveMap: tex(b), emissiveIntensity: 0, roughness: 0.92, metalness: 0, envMapIntensity: 0.3 }); m.userData.kit = true; return m; };
-  const pbr = (name, tint) => { const L = new THREE.TextureLoader(), ld = (f, srgb) => { const t = L.load('assets/roads/' + name + '_' + f + '.jpg'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }; const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: ld('color', true), normalMap: ld('normal', false), roughnessMap: ld('rough', false), roughness: 1, metalness: 0, envMapIntensity: 0.3, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -5 }); m.normalScale.set(0.8, 0.8); m.color.setScalar(tint); return m; };
-  const mats = { ground: flat(-1, -1, noise), park: flat(-2, -3, noise), walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 2.6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
+  const pbr = (name, tint, dir = 'roads') => { const L = new THREE.TextureLoader(), ld = (f, srgb) => { const t = L.load('assets/' + dir + '/' + name + '_' + f + '.jpg'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }; const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: ld('color', true), normalMap: ld('normal', false), roughnessMap: ld('rough', false), roughness: 1, metalness: 0, envMapIntensity: 0.3, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -5 }); m.normalScale.set(0.8, 0.8); m.color.setScalar(tint); return m; };
+  const lawn = (() => { const m = pbr('grass', 1.85, 'ground'); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -3; return m; })();
+  const dirt = (() => { const m = pbr('sand', 1.7, 'ground'); m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; return m; })();
+  const mats = { ground: dirt, park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 2.6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
   mats.setNight = on => { for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
   return mats;
 }
