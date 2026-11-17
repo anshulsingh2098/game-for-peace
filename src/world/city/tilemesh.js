@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { buildStreetLife } from './streetlife.js';
 
+const WALL_R = 1.1;                   // a wall circle's radius, and how far its centre sits inside the footprint edge: the circle ends exactly at the drawn wall (it was 1.25 m wide, 0.7 m inside: an invisible 0.55 m of wall in the street)
 export class Mesher {
   constructor() { this.p = []; this.n = []; this.c = []; this.u = []; this.i = []; }
   v(x, y, z, nx, ny, nz, col, u = 0, v = 0) { this.p.push(x, y, z); this.n.push(nx, ny, nz); this.c.push(col.r, col.g, col.b); this.u.push(u, v); return this.p.length / 3 - 1; }
@@ -145,7 +146,7 @@ export function* buildTileSteps(tile, ctx) {
         M.road.tri(a, b, c2, nxv, 0, nzv); M.road.tri(a, c2, d, nxv, 0, nzv); } };
       wall(hw + 0.2, 1); wall(-hw - 0.2, -1);
       for (let i = 0; i + 1 < F.n; i++) { const a = M.road.v(X(pts[i * 2] + F.nx[i] * (-hw - 0.2)), gy + H[i] - 1.0, Z(pts[i * 2 + 1] + F.nz[i] * (-hw - 0.2)), 0, -1, 0, CONCRETE), b = M.road.v(X(pts[i * 2] + F.nx[i] * (hw + 0.2)), gy + H[i] - 1.0, Z(pts[i * 2 + 1] + F.nz[i] * (hw + 0.2)), 0, -1, 0, CONCRETE), c2 = M.road.v(X(pts[i * 2 + 2] + F.nx[i + 1] * (hw + 0.2)), gy + H[i + 1] - 1.0, Z(pts[i * 2 + 3] + F.nz[i + 1] * (hw + 0.2)), 0, -1, 0, CONCRETE), d = M.road.v(X(pts[i * 2 + 2] + F.nx[i + 1] * (-hw - 0.2)), gy + H[i + 1] - 1.0, Z(pts[i * 2 + 3] + F.nz[i + 1] * (-hw - 0.2)), 0, -1, 0, CONCRETE); M.road.tri(a, b, c2, 0, -1, 0); M.road.tri(a, c2, d, 0, -1, 0); }
-      let nextPier = 8; for (let i = 0; i < F.n; i++) if (F.arc[i] >= nextPier) { nextPier += 28; if (H[i] < 2.5) continue; const x = pts[i * 2], z = pts[i * 2 + 1]; if (!pierFree(x, z, 1.2)) continue; const px = X(x), pz = Z(z), r = 0.9, y0 = gy, y1 = gy + H[i] - 1.0; const cs = [[-r, -r], [r, -r], [r, r], [-r, r]];
+      let nextPier = 8; for (let i = 0; i < F.n; i++) if (F.arc[i] >= nextPier) { nextPier += 28; if (H[i] < 2.5) continue; const x = pts[i * 2], z = pts[i * 2 + 1]; if (!pierFree(x, z, 1.2)) continue; out.circles.push(x, z, 1.15); const px = X(x), pz = Z(z), r = 0.9, y0 = gy, y1 = gy + H[i] - 1.0; const cs = [[-r, -r], [r, -r], [r, r], [-r, r]];
         for (let k = 0; k < 4; k++) { const [x0, z0] = cs[k], [x1, z1] = cs[(k + 1) % 4], nxv = (x0 + x1) / 2 > 0 ? 1 : (x0 + x1) / 2 < 0 ? -1 : 0, nzv = (z0 + z1) / 2 > 0 ? 1 : (z0 + z1) / 2 < 0 ? -1 : 0, a = M.road.v(px + x0, y0, pz + z0, nxv, 0, nzv, CONCRETE), b = M.road.v(px + x1, y0, pz + z1, nxv, 0, nzv, CONCRETE), c2 = M.road.v(px + x1, y1, pz + z1, nxv, 0, nzv, CONCRETE), d = M.road.v(px + x0, y1, pz + z0, nxv, 0, nzv, CONCRETE); M.road.tri(a, b, c2, nxv, 0, nzv); M.road.tri(a, c2, d, nxv, 0, nzv); } }
       /* the same surface for the physics: a ribbon of triangles over the carriageway where the deck is above the ground */
       const pos = [], idx = []; let prev = -1; for (let i = 0; i < F.n; i++) { if (H[i] < 0.05 && (i + 1 >= F.n || H[i + 1] < 0.05) && (i === 0 || H[i - 1] < 0.05)) { prev = -1; continue; } const v = pos.length / 3, k = F.sc[i]; pos.push(pts[i * 2] + F.nx[i] * hw * k, gy + H[i], pts[i * 2 + 1] + F.nz[i] * hw * k, pts[i * 2] - F.nx[i] * hw * k, gy + H[i], pts[i * 2 + 1] - F.nz[i] * hw * k); if (prev >= 0) idx.push(prev, prev + 1, v, prev + 1, v + 1, v); prev = v; }
@@ -188,7 +189,7 @@ export function* buildTileSteps(tile, ctx) {
       const dark = c0 => c0.clone().multiplyScalar(AO);
       if (shopB && y1 - y0 > 4) { const ys = y0 + 3.2, sc = shade(0xffffff, 0.7 + 0.3 * hash(b.id * 11 + i)); quad(M.shop, y0, ys, dark(sc), sc, 0, 1); quad(B, ys, y1, wc, wc, (ys - gy) / 12.8, v1); }
       else { quad(B, y0, y2, dark(wc), wc, v0, v0 + (y2 - y0) / 12.8); if (y1 > y2) quad(B, y2, y1, wc, wc, v0 + (y2 - y0) / 12.8, v1); }
-      if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * 0.7, az + dz * t - nz * 0.7, 1.25); } void mx; void mz; }
+      if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
     }
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
     let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }

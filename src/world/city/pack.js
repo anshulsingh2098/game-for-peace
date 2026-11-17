@@ -64,15 +64,17 @@ export class CityPack {
     if (M.format > 1) throw new Error('city pack format ' + M.format + ' is newer than this game reads'); this.M = M; this.size = M.tileSize; this.G = decodeGraphColumns(g); this.landmarks = L.landmarks; this.lm = new Map(L.landmarks.map(l => [l.id, l]));
     this.have = new Set(M.tiles.map(t => t.tx + '_' + t.tz)); return this;
   }
+  /* how many streets meet at each node (a node whose streets are all raised, deg <= up, is on a flyover) */
+  degrees() { if (this.deg) return this.deg; const G = this.G, d = new Uint16Array(G.nodes); for (let i = 0; i < G.n; i++) { d[G.a[i]]++; d[G.b[i]]++; } return (this.deg = d); }
   hasTile(tx, tz) { return this.have.has(tx + '_' + tz); }
   async tile(tx, tz) { if (!this.hasTile(tx, tz)) return null; const u = this.base + '/tiles/' + tx + '_' + tz + '.json', c = this.raw || (this.raw = new Map()); let p = c.get(u); if (p) { c.delete(u); } else { p = this.get(u); p.catch(() => c.delete(u)); } c.set(u, p); if (c.size > 64) c.delete(c.keys().next().value); return decodeTile(await p, this.size); }       /* the near city and the far skyline both ask for a tile: the raw JSON is fetched and parsed once (decodeTile copies, it never changes it), the last 64 are kept */
   /* where to start: ?at=<spawn, landmark or gate id>, default the centre spawn. Returns { x, z, yaw (game), name } */
   start(id) {
     const M = this.M, sp = M.spawns.find(s => s.id === id) || M.spawns.find(s => s.id === 'centre') || M.spawns[0];
-    if (id) { const g = M.gates.find(x => x.id === id); if (g) return { x: g.x, z: g.z, yaw: yawFromBearing(g.bearing), name: g.name || g.id };
+    if (id) { const g = M.gates.find(x => x.id === id); if (g) { const n = this.nearestNode(g.x, g.z, null, true); return n.d < 120 ? { x: n.x, z: n.z, yaw: yawFromBearing(g.bearing), name: g.name || g.id } : { x: g.x, z: g.z, yaw: yawFromBearing(g.bearing), name: g.name || g.id }; }       /* a gate on a flyover starts the car on the ground under it, inside the piers: use the nearest node that has a ground-level street */
       const l = this.lm.get(id); if (l && !M.spawns.find(s => s.id === id)) { const n = this.nearestNode(l.x, l.z, l.footprint); return { x: n.x, z: n.z, yaw: Math.atan2(l.z - n.z, l.x - n.x), name: l.name.en }; } }
     return { x: sp.x, z: sp.z, yaw: yawFromBearing(sp.yaw), name: sp.name };
   }
   /* the graph node nearest to (x, z) (a plain scan: used once at the start) */
-  nearestNode(x, z, avoid) { const xz = this.G.xz; let best = 0, bd = Infinity; for (let i = 0; i < this.G.nodes; i++) { const d = (xz[i * 2] - x) ** 2 + (xz[i * 2 + 1] - z) ** 2; if (d < bd && !(avoid && avoid.length >= 6 && insidePoly(avoid, xz[i * 2], xz[i * 2 + 1]))) { bd = d; best = i; } } return { x: xz[best * 2], z: xz[best * 2 + 1], d: Math.sqrt(bd) }; }
+  nearestNode(x, z, avoid, ground) { const xz = this.G.xz, deg = ground ? this.degrees() : null; let best = 0, bd = Infinity; for (let i = 0; i < this.G.nodes; i++) { const d = (xz[i * 2] - x) ** 2 + (xz[i * 2 + 1] - z) ** 2; if (d < bd && !(deg && deg[i] <= this.G.up[i]) && !(avoid && avoid.length >= 6 && insidePoly(avoid, xz[i * 2], xz[i * 2 + 1]))) { bd = d; best = i; } } return { x: xz[best * 2], z: xz[best * 2 + 1], d: Math.sqrt(bd) }; }
 }
