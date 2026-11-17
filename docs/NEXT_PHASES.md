@@ -70,6 +70,13 @@ Block 1 (decides how the city feels): P1, P2, P3, L1, L2. Block 2: P4, P6, L3, L
 - [ ] L4: Street props — Lamp posts, signal heads, bins, bus shelters, wires and hoardings with proper geometry and a shared-material budget (pairs with P2 and P4).
 - [ ] L5: Cars and traffic models — Move the city traffic from boxes to the traffic-pack models and your rebuilt cars, with the Indian mix from P7 (needs B1 merged).
 - [ ] L6: Lighting and colour grade — Dusk, night and monsoon look, and a cheaper version of the ambient-shadow filter so phones can keep it.
+- [ ] C0: City conflicts, measure first — `docs/CITY_CONFLICTS_PLAN.md`: write `tools/audit_city.mjs` (street crossings, buildings on roads, height jumps and missing ramps, sunken streets without floors, unflagged road and rail crossings) with the worst 50 spots as links. Accepted when the owner's defects appear in the report. Needs from the owner: coordinates (menu line, Copy) and the build address for each defect.
+- [ ] C1: Heights and falls — one `surfaceAt`, ramp fixes, automatic return to the road when the car is under the surface with no tunnel there; accepted by the scripted 150-street drive with no sink and no fall.
+- [ ] C2: Buildings against roads — roads win; accepted when the audit shows under 1 percent of today's overlaps and 8 screenshots are clean.
+- [ ] C3: One rail model — one source of truth for tracks; remove duplicates and yard strips drawn as roads; accepted when no two tracks are within 1 m and every track belongs to a line or yard.
+- [ ] C4: Road and rail crossings — level crossings or bridges everywhere; accepted when the audit finds none unflagged.
+- [ ] C5: Pack data fixes in the builder — needs the 225 MB OSM extract (owner's yes); accepted when the pack's conflict counts fall.
+- [ ] C6: Regression — the audit in the daily check and the street-driving test in the self-test.
 - [ ] N17: Services and events — Design note first (`docs/SERVICES.md`): fire, ambulance and (only if the owner confirms) police, as institutions with dispatch, response AI and consequences, on the existing traffic and navigation. Build one small slice. Starts only after P8 and the owner's go-ahead.
 - [ ] N18: Interiors and commerce — Design note first, then one streamed interior (a shop you can enter) with buying, with the save boundaries decided in advance. Starts after N17's design note is accepted.
 - [ ] N19: Vehicle depth — Damage and repair, ownership and garage, customisation beyond paint, Indian vehicle types, on top of B1 and B2.

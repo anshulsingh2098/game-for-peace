@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 20:00  A-2026-11-18-23: owner reports rail, road, building and height conflicts; plan C0 to C6 (docs/CITY_CONFLICTS_PLAN.md)
+Branch: docs/city-conflicts  Commit: see the PR
+What changed: the owner sent a screenshot of a city covered in parallel strips with trains on them and old low-poly trees, and reported rail and road overlaps, buildings on roads, a car that sinks and a car that falls into a tunnel. Not reproduced in the live game (`c085cc44`) at Connaught Place, New Delhi station or the India-map start. New `docs/CITY_CONFLICTS_PLAN.md` (what was checked, likely causes, phases C0 to C6) and tasks C0 to C6 in `docs/NEXT_PHASES.md`. Three rail systems exist that do not share data (the India-map network, the Delhi station kits, the Metro in `transit.json`), and the city pack has no rail class; the pack's own conflict counts are in the plan.
+For the other stream: Anshul's Claude: start with C0 (`tools/audit_city.mjs`), then C1; ask the owner for coordinates (menu Copy line) of each defect and the build address of the screenshot.
+Status: open
+
 ## 2026-11-18 11:00  A-2026-11-18-14: loading stuck on "Starting the physics": engine starts first, never waited for forever, stuck screen has a way out (live c2237bce)
 Branch: perf/start-order (PR)  Commit: see the PR (deployed)
 What changed: the owner reported the loading bar not moving past "Starting the physics". That label shows until the physics engine (Rapier, a 2 MB wasm module) is ready, and `src/main.js` only started it after all the map and world building, and `setVehicle` waited on it with no limit. Now: (1) `rapierStart = initRapier()` runs at the top of `main.js`, so it loads and compiles while the map and world are built; (2) the wait has a 25 s limit and an error path that sets the flag too: after that the simple physics (`?phys=old`) is used and the bar moves on; (3) `index.html` watchdog: after 25 s on any stage it says which stage, the last console warning or error text, and offers Reload and "Try simple physics". Measured here (fast machine, new bundle cold): ready in 6.3 s, the "Starting the physics" stage no longer appears; `?phys=old` ready in 2.4 s. Not verified: the owner's device (cause unknown: slow wasm compile, memory, or a network stall); a real phone.
