@@ -1,0 +1,1388 @@
+{
+ "city": "delhi",
+ "note": "Curated landmark list for Delhi (package D4). Names, Hindi names, cards and look notes are written for this game from public encyclopaedic facts; positions, footprints, heights, wikidata ids and opening hours are filled in from OpenStreetMap by tools/lib/landmarks_resolve.mjs. lat/lon here are only a search centre (a few hundred metres off is fine). Branded hotels, malls and shops are left out on purpose (owner rule: invented look-alike brands).",
+ "landmarks": [
+  {
+   "id": "india-gate",
+   "name": {
+    "en": "India Gate",
+    "hi": "इंडिया गेट"
+   },
+   "lat": 28.6129,
+   "lon": 77.2295,
+   "match": [
+    "india gate"
+   ],
+   "type": "memorial",
+   "importance": 5,
+   "height": 42,
+   "model": "procedural:india-gate",
+   "look": "tall arch of red and buff sandstone on a low stepped base, plain, with a shallow canopy to its east; lawns and tree-lined avenues around it",
+   "card": {
+    "text": "A 42 m war memorial arch designed by Edwin Lutyens. The foundation stone was laid in 1921 and it was dedicated in 1931. It carries the names of more than 13,000 soldiers of the British Indian Army who died in the First World War and the Third Anglo-Afghan War. The eternal flame that stood beneath it was merged into the nearby National War Memorial in January 2022.",
+    "built": 1931,
+    "source": "public encyclopaedic facts (Wikipedia, Wikidata), written for this game"
+   }
+  },
+  {
+   "id": "kartavya-path",
+   "name": {
+    "en": "Kartavya Path (Rajpath)",
+    "hi": "कर्तव्य पथ"
+   },
+   "kind": "street",
+   "street": "kartavya|rajpath|कर्तव्य",
+   "lat": 28.6128,
+   "lon": 77.215,
+   "radius": 1800,
+   "type": "avenue",
+   "importance": 5,
+   "look": "two long canals with lawns and rows of trees on both sides, wide sandstone-red paths, Rashtrapati Bhavan at the west end and India Gate at the east end",
+   "card": {
+    "text": "The ceremonial avenue of about 3 km that runs from Rashtrapati Bhavan through Vijay Chowk to India Gate. Called Kingsway and then Rajpath, it was renamed Kartavya Path in September 2022 after a redevelopment under the Central Vista project. The Republic Day parade is held here every 26 January.",
+    "built": 1931,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "rashtrapati-bhavan",
+   "name": {
+    "en": "Rashtrapati Bhavan",
+    "hi": "राष्ट्रपति भवन"
+   },
+   "lat": 28.6144,
+   "lon": 77.1996,
+   "match": [
+    "rashtrapati bhavan"
+   ],
+   "type": "government",
+   "importance": 5,
+   "model": "procedural:rashtrapati-bhavan",
+   "look": "very long cream and red sandstone building on a raised plinth, a central copper-green dome, rows of columns with chhajjas, the Jaipur Column in front, formal gardens behind",
+   "card": {
+    "text": "The official residence of the President of India, designed by Edwin Lutyens and completed in 1929 as the Viceroy's House. It has 340 rooms and a central dome that rises over a long red and cream sandstone front. The Jaipur Column stands in the forecourt, and the formal gardens behind (Amrit Udyan since 2023) open to visitors in season.",
+    "built": 1929,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "osm": "r5354966",
+   "wikidata": "Q677555"
+  },
+  {
+   "id": "sansad-bhavan-new",
+   "name": {
+    "en": "Sansad Bhavan (new Parliament House)",
+    "hi": "नया संसद भवन"
+   },
+   "lat": 28.6174,
+   "lon": 77.2083,
+   "match": [
+    "new parliament",
+    "sansad bhavan"
+   ],
+   "wikidata": "Q106103956",
+   "type": "government",
+   "importance": 5,
+   "look": "triangular building of cream and red sandstone with carved jaali screens, a national emblem on the roof, open courtyards inside",
+   "card": {
+    "text": "The new Parliament building, triangular in plan, was inaugurated on 28 May 2023 beside the old one. The Lok Sabha chamber seats 888 members and the Rajya Sabha chamber 384. It is part of the Central Vista redevelopment; construction began in December 2020.",
+    "built": 2023,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "samvidhan-sadan",
+   "name": {
+    "en": "Samvidhan Sadan (old Parliament House)",
+    "hi": "संविधान सदन (पुराना संसद भवन)"
+   },
+   "lat": 28.617,
+   "lon": 77.209,
+   "match": [
+    "old parliament",
+    "parliament house"
+   ],
+   "wikidata": "Q15275136",
+   "type": "government",
+   "importance": 5,
+   "look": "a circular colonnaded building of buff sandstone with a ring of tall columns and a low central dome, set in lawns inside a wall",
+   "card": {
+    "text": "The circular colonnaded building designed by Herbert Baker and Edwin Lutyens, built between 1921 and 1927 and in use as Parliament until 2023. It is about 170 m across and ringed by 144 columns. It was renamed Samvidhan Sadan (House of the Constitution) when the new building opened.",
+    "built": 1927,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "north-block",
+   "name": {
+    "en": "North Block",
+    "hi": "नॉर्थ ब्लॉक"
+   },
+   "lat": 28.6153,
+   "lon": 77.2092,
+   "match": [
+    "north block"
+   ],
+   "type": "government",
+   "importance": 4,
+   "look": "long red and cream sandstone secretariat building with domed pavilions, chhatris and deep arcades facing Raisina Hill",
+   "card": {
+    "text": "One of the two Secretariat buildings flanking Raisina Hill, designed by Herbert Baker and built in the 1920s, finished by about 1930. It has long housed the Ministries of Finance and Home Affairs. Its twin, South Block, stands opposite across the road.",
+    "built": 1927,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "south-block",
+   "name": {
+    "en": "South Block",
+    "hi": "साउथ ब्लॉक"
+   },
+   "lat": 28.6118,
+   "lon": 77.2092,
+   "match": [
+    "south block"
+   ],
+   "type": "government",
+   "importance": 4,
+   "look": "red and cream sandstone mirror image of North Block with domed pavilions and arcades",
+   "card": {
+    "text": "The southern Secretariat building on Raisina Hill, the twin of North Block and also designed by Herbert Baker, built in the 1920s and finished by about 1930. It has long housed the Ministries of Defence and External Affairs.",
+    "built": 1927,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "national-war-memorial",
+   "name": {
+    "en": "National War Memorial",
+    "hi": "राष्ट्रीय समर स्मारक"
+   },
+   "lat": 28.6126,
+   "lon": 77.2326,
+   "match": [
+    "national war memorial"
+   ],
+   "wikidata": "Q17747063",
+   "type": "memorial",
+   "importance": 4,
+   "look": "four concentric circles of dark granite walls and an obelisk, set in lawns behind India Gate",
+   "card": {
+    "text": "Inaugurated on 25 February 2019 behind India Gate, it honours the soldiers of independent India who died in war and operations. The names of 25,942 soldiers are inscribed on granite walls arranged in four concentric circles called Amar Chakra, Veerta Chakra, Tyag Chakra and Rakshak Chakra.",
+    "built": 2019,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "national-museum",
+   "name": {
+    "en": "National Museum",
+    "hi": "राष्ट्रीय संग्रहालय"
+   },
+   "lat": 28.6118,
+   "lon": 77.2195,
+   "match": [
+    "national museum"
+   ],
+   "wikidata": "Q1356138",
+   "type": "museum",
+   "importance": 4,
+   "look": "large circular-court building in pale stone with a central dome, on the corner of Janpath and Maulana Azad Road",
+   "card": {
+    "text": "India's largest museum, on Janpath, with more than 200,000 works spanning some 5,000 years, including Harappan objects, miniature paintings and textiles. The museum opened in 1949 in Rashtrapati Bhavan and moved to its own building in 1960.",
+    "built": 1960,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "teen-murti-bhavan",
+   "name": {
+    "en": "Teen Murti Bhavan",
+    "hi": "तीन मूर्ति भवन"
+   },
+   "lat": 28.6,
+   "lon": 77.199,
+   "match": [
+    "teen murti bhavan",
+    "teen murti"
+   ],
+   "wikidata": "Q3595320",
+   "type": "museum",
+   "importance": 3,
+   "look": "large cream-coloured colonial residence with a columned portico and wide lawns, a monument of three soldier statues at the gate",
+   "card": {
+    "text": "Built around 1930 as the residence of the British Commander-in-Chief, it became the home of Jawaharlal Nehru until 1964 and is now the Prime Ministers' Museum. It takes its name from the Teen Murti (three soldiers) memorial at the gate.",
+    "built": 1930,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "supreme-court",
+   "name": {
+    "en": "Supreme Court of India",
+    "hi": "भारत का उच्चतम न्यायालय"
+   },
+   "lat": 28.6224,
+   "lon": 77.24,
+   "match": [
+    "supreme court"
+   ],
+   "type": "government",
+   "importance": 4,
+   "look": "wide pale building with two long wings, a central pillared block and a dome, set in lawns near Pragati Maidan",
+   "card": {
+    "text": "The apex court of India, in a building inaugurated in 1958 on Tilak Marg. Its plan is said to resemble the scales of justice, with a central block under a dome and two wings.",
+    "built": 1958,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "connaught-place",
+   "name": {
+    "en": "Connaught Place (Rajiv Chowk)",
+    "hi": "कनॉट प्लेस"
+   },
+   "lat": 28.6315,
+   "lon": 77.2167,
+   "match": [
+    "connaught place",
+    "rajiv chowk"
+   ],
+   "type": "district",
+   "importance": 5,
+   "radius": 600,
+   "look": "two concentric rings of white stucco colonnaded buildings in a Georgian style, three storeys with arcades, a central park above the underground Palika Bazaar, bright shop hoardings above the arcades",
+   "card": {
+    "text": "Delhi's central business and shopping district, laid out by Robert Tor Russell and built between 1929 and 1933, named after the Duke of Connaught. Two concentric circles of colonnaded white buildings are joined by radial roads, and the central park sits over the underground Palika Bazaar. Officially renamed Rajiv Chowk, it is still called Connaught Place by almost everyone.",
+    "built": 1933,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "jantar-mantar",
+   "name": {
+    "en": "Jantar Mantar",
+    "hi": "जंतर मंतर"
+   },
+   "lat": 28.627,
+   "lon": 77.2166,
+   "match": [
+    "jantar mantar"
+   ],
+   "wikidata": "Q2045115",
+   "type": "observatory",
+   "importance": 4,
+   "height": 21,
+   "look": "large geometric masonry instruments painted red-ochre and white: a huge triangular stair-gnomon, two bowl-shaped structures, circular walls with slits",
+   "card": {
+    "text": "An astronomical observatory built in 1724 by Maharaja Jai Singh II of Jaipur. Its giant masonry instruments measure time and the positions of the sun, moon and stars; the Samrat Yantra, a triangular sundial, is about 21 m high.",
+    "built": 1724,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "agrasen-ki-baoli",
+   "name": {
+    "en": "Agrasen ki Baoli",
+    "hi": "अग्रसेन की बावली"
+   },
+   "lat": 28.6251,
+   "lon": 77.2251,
+   "match": [
+    "agrasen"
+   ],
+   "wikidata": "Q4693773",
+   "type": "stepwell",
+   "importance": 3,
+   "look": "a long narrow stepwell of grey and buff stone with arched niches on three levels, steep stairs descending to a dry well, hidden between modern office blocks",
+   "card": {
+    "text": "A protected stepwell near Connaught Place, about 60 m long and 15 m wide, with 103 steps down to the water level. Tradition says it was first built by the legendary king Agrasen; the present structure dates to about the 14th century.",
+    "built": 1400,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "bangla-sahib",
+   "name": {
+    "en": "Gurudwara Bangla Sahib",
+    "hi": "गुरुद्वारा बंगला साहिब"
+   },
+   "lat": 28.6264,
+   "lon": 77.2092,
+   "match": [
+    "bangla sahib"
+   ],
+   "type": "gurdwara",
+   "importance": 4,
+   "look": "white marble building with a shining gold onion dome and smaller gold chhatris, a flagpole (Nishan Sahib), a large square sarovar (tank) beside it",
+   "card": {
+    "text": "The Sikh house of worship associated with the eighth Guru, Har Krishan, who stayed here in 1664. The present building was raised in 1783. It has a gold dome, a sacred pool (sarovar) and a free community kitchen (langar) that serves thousands every day.",
+    "built": 1783,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "birla-mandir",
+   "name": {
+    "en": "Laxminarayan (Birla) Mandir",
+    "hi": "लक्ष्मीनारायण मंदिर (बिड़ला मंदिर)"
+   },
+   "lat": 28.6325,
+   "lon": 77.1998,
+   "match": [
+    "laxminarayan",
+    "lakshmi narayan",
+    "birla mandir"
+   ],
+   "type": "temple",
+   "importance": 3,
+   "look": "multi-tiered temple of red sandstone and cream marble with tall curved shikhara spires and carved panels, gardens around it",
+   "card": {
+    "text": "A Hindu temple dedicated to Lakshmi and Narayan on Mandir Marg, built by the industrialist B. D. Birla and opened by Mahatma Gandhi in 1939. It is built in the northern Nagara style with several shikhara spires.",
+    "built": 1939,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "safdarjung-tomb",
+   "name": {
+    "en": "Safdarjung's Tomb",
+    "hi": "सफ़दरजंग का मक़बरा"
+   },
+   "lat": 28.5894,
+   "lon": 77.2098,
+   "match": [
+    "safdarjung"
+   ],
+   "wikidata": "Q391381",
+   "type": "tomb",
+   "importance": 4,
+   "look": "red and buff sandstone mausoleum with a white marble dome on a high platform at the centre of a walled char-bagh garden, canals and fountains",
+   "card": {
+    "text": "A garden tomb of sandstone and marble built in 1754 for Safdarjung, the Nawab of Awadh. It is among the last great garden tombs of the Mughal tradition, set at the centre of a walled four-part garden.",
+    "built": 1754,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "lodhi-garden",
+   "name": {
+    "en": "Lodhi Garden",
+    "hi": "लोधी उद्यान"
+   },
+   "lat": 28.5931,
+   "lon": 77.2197,
+   "match": [
+    "lodhi garden",
+    "lodhi gardens",
+    "lodi garden"
+   ],
+   "wikidata": "Q2985076",
+   "type": "garden",
+   "importance": 4,
+   "radius": 900,
+   "look": "large park with old grey-stone domed tombs among lawns, big shade trees, a bridge over a pond, joggers' paths",
+   "card": {
+    "text": "A park of about 90 acres holding 15th and 16th century tombs of the Sayyid and Lodi dynasties, including the Bara Gumbad, the Shish Gumbad and the tombs of Muhammad Shah and Sikandar Lodi. It was landscaped in 1936 as Lady Willingdon Park and is now Delhi's favourite place for a morning walk.",
+    "built": 1936,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "hauz-khas",
+   "name": {
+    "en": "Hauz Khas Fort and Village",
+    "hi": "हौज़ खास"
+   },
+   "lat": 28.5494,
+   "lon": 77.1943,
+   "match": [
+    "hauz khas complex",
+    "hauz khas fort",
+    "hauz khas"
+   ],
+   "wikidata": "Q4496635",
+   "type": "ruins",
+   "importance": 4,
+   "radius": 900,
+   "look": "grey stone ruins of a madrasa and domed tomb above a large lake, with trees, and a lane of boutique cafes in the village",
+   "card": {
+    "text": "A medieval complex around a large reservoir first dug by Alauddin Khalji in the early 14th century. Firoz Shah Tughlaq built a madrasa and later his own tomb on its bank (he died in 1388). The village beside it is now a lane of galleries, boutiques and cafes.",
+    "built": 1352,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "purana-qila",
+   "name": {
+    "en": "Purana Qila",
+    "hi": "पुराना क़िला"
+   },
+   "lat": 28.6096,
+   "lon": 77.2434,
+   "match": [
+    "purana qila",
+    "old fort"
+   ],
+   "wikidata": "Q1151529",
+   "type": "fort",
+   "importance": 4,
+   "look": "tall rough red and grey sandstone walls with three big gates and bastions, a mosque (Qila-i-Kuhna) and an octagonal tower (Sher Mandal) inside lawns",
+   "card": {
+    "text": "The Old Fort, begun by the Mughal emperor Humayun around 1533 and finished under his rival Sher Shah Suri. Its walls run about 1.5 km and are around 18 m high with three gates. Inside are the Qila-i-Kuhna mosque (1541) and the Sher Mandal tower.",
+    "built": 1540,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "delhi-zoo",
+   "name": {
+    "en": "National Zoological Park",
+    "hi": "राष्ट्रीय प्राणी उद्यान"
+   },
+   "lat": 28.6015,
+   "lon": 77.2467,
+   "match": [
+    "zoological park",
+    "delhi zoo"
+   ],
+   "type": "zoo",
+   "importance": 3,
+   "radius": 900,
+   "look": "wooded grounds with ponds and open enclosures, the walls of Purana Qila on its north side",
+   "card": {
+    "text": "Delhi's zoo, opened in 1959 on about 176 acres beside Purana Qila. It is known for its tigers, rhinoceroses and a large collection of birds in wooded grounds.",
+    "built": 1959,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "humayuns-tomb",
+   "name": {
+    "en": "Humayun's Tomb",
+    "hi": "हुमायूँ का मक़बरा"
+   },
+   "lat": 28.5933,
+   "lon": 77.2507,
+   "match": [
+    "humayun's tomb",
+    "humayun tomb"
+   ],
+   "wikidata": "Q486188",
+   "type": "tomb",
+   "importance": 5,
+   "height": 47,
+   "model": "procedural:humayuns-tomb",
+   "look": "a huge red sandstone mausoleum with white marble borders and a double white-marble dome, on a raised stone platform in a square char-bagh garden with water channels",
+   "card": {
+    "text": "The tomb of the second Mughal emperor Humayun, built between about 1565 and 1572 and designed by the Persian architect Mirak Mirza Ghiyas. It is the first great garden tomb of the subcontinent and a model for the Taj Mahal. Red sandstone is inlaid with white marble under a double dome about 47 m high. It is a UNESCO World Heritage Site (1993).",
+    "built": 1572,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "nizamuddin-dargah",
+   "name": {
+    "en": "Hazrat Nizamuddin Dargah",
+    "hi": "हज़रत निज़ामुद्दीन दरगाह"
+   },
+   "lat": 28.5914,
+   "lon": 77.2425,
+   "match": [
+    "nizamuddin dargah"
+   ],
+   "wikidata": "Q2983384",
+   "type": "shrine",
+   "importance": 4,
+   "look": "small white marble shrine with a dome and screens in a crowded lane of flower and chadar sellers",
+   "card": {
+    "text": "The shrine of the Sufi saint Nizamuddin Auliya (died 1325), reached through narrow lanes of flower and food sellers. The poet Amir Khusro is buried nearby. Qawwali is sung here on Thursday evenings.",
+    "built": 1325,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "sunder-nursery",
+   "name": {
+    "en": "Sunder Nursery",
+    "hi": "सुंदर नर्सरी"
+   },
+   "lat": 28.5937,
+   "lon": 77.243,
+   "match": [
+    "sunder nursery"
+   ],
+   "wikidata": "Q15628824",
+   "type": "garden",
+   "importance": 3,
+   "look": "landscaped park of lawns, lakes and old trees with several 16th century domed tombs in pale stone",
+   "card": {
+    "text": "A restored 90-acre heritage park next to Humayun's Tomb, reopened in 2018 after a project by the Aga Khan Trust for Culture. It holds 16th century monuments such as Sunder Burj and the tomb of Mirza Muzaffar Hussain among lawns and groves.",
+    "built": 1930,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "khan-market",
+   "name": {
+    "en": "Khan Market",
+    "hi": "ख़ान मार्केट"
+   },
+   "lat": 28.6003,
+   "lon": 77.2271,
+   "match": [
+    "khan market"
+   ],
+   "type": "market",
+   "importance": 3,
+   "radius": 500,
+   "look": "two-storey arcaded blocks painted cream and white with colourful shop signs, narrow lanes, crowded parking",
+   "card": {
+    "text": "A compact arcaded market built in the early 1950s to resettle refugees from the north-west and named after the leader Khan Abdul Jabbar Khan. Today it is known for bookshops, cafes and boutiques.",
+    "built": 1951,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "dilli-haat-ina",
+   "name": {
+    "en": "Dilli Haat, INA",
+    "hi": "दिल्ली हाट, आई.एन.ए."
+   },
+   "lat": 28.5744,
+   "lon": 77.2085,
+   "match": [
+    "dilli haat"
+   ],
+   "wikidata": "Q3595641",
+   "radius": 500,
+   "type": "market",
+   "importance": 4,
+   "look": "open-air bazaar of brick-red walkways with small thatched-roof or tiled stalls and a food court, carved wooden doors and hanging textiles",
+   "card": {
+    "text": "An open-air craft and food bazaar opened in 1994 by Delhi Tourism. Craftspeople from across India rent stalls on a rotating basis, and the food court serves dishes from many states.",
+    "built": 1994,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "bharat-mandapam",
+   "name": {
+    "en": "Bharat Mandapam (Pragati Maidan)",
+    "hi": "भारत मंडपम"
+   },
+   "lat": 28.6176,
+   "lon": 77.2437,
+   "match": [
+    "bharat mandapam",
+    "pragati maidan",
+    "exhibition"
+   ],
+   "type": "convention",
+   "importance": 4,
+   "radius": 1000,
+   "look": "very large modern convention complex with a faceted copper-gold and cream facade, wide plazas, pale stone paving",
+   "card": {
+    "text": "The International Exhibition-Convention Centre built on the Pragati Maidan fairground and inaugurated on 26 July 2023. It hosted the G20 Leaders' Summit in September 2023. The Pragati Maidan grounds have held the annual India International Trade Fair since 1980.",
+    "built": 2023,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "major-dhyan-chand-stadium",
+   "name": {
+    "en": "Major Dhyan Chand National Stadium",
+    "hi": "मेजर ध्यानचंद राष्ट्रीय स्टेडियम"
+   },
+   "lat": 28.6115,
+   "lon": 77.238,
+   "match": [
+    "dhyan chand"
+   ],
+   "type": "stadium",
+   "importance": 3,
+   "look": "oval grey stadium with a covered stand and floodlight masts, behind the Princes' Park area near India Gate",
+   "card": {
+    "text": "A hockey stadium near India Gate, opened in 1933 as the Irwin Amphitheatre and renamed in 2002 after the hockey great Major Dhyan Chand. It was the main stadium of the first Asian Games in 1951.",
+    "built": 1933,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "jln-stadium",
+   "name": {
+    "en": "Jawaharlal Nehru Stadium",
+    "hi": "जवाहरलाल नेहरू स्टेडियम"
+   },
+   "lat": 28.5828,
+   "lon": 77.2338,
+   "match": [
+    "jawaharlal nehru stadium"
+   ],
+   "wikidata": "Q864849",
+   "type": "stadium",
+   "importance": 4,
+   "look": "huge oval concrete bowl with a white angular roof structure of steel masts, wide forecourt",
+   "card": {
+    "text": "A multi-purpose stadium of about 60,000 seats built for the 1982 Asian Games and rebuilt for the 2010 Commonwealth Games, whose opening and closing ceremonies it hosted. It stages athletics, football and large concerts.",
+    "built": 1982,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "arun-jaitley-stadium",
+   "name": {
+    "en": "Arun Jaitley Stadium (Feroz Shah Kotla)",
+    "hi": "अरुण जेटली स्टेडियम (फ़िरोज़ शाह कोटला)"
+   },
+   "lat": 28.6379,
+   "lon": 77.2432,
+   "match": [
+    "arun jaitley",
+    "ferozeshah kotla stadium"
+   ],
+   "type": "stadium",
+   "importance": 3,
+   "look": "cricket ground with tiered stands in blue and grey, floodlight towers, beside the old Kotla fort walls",
+   "card": {
+    "text": "One of India's oldest international cricket grounds, in use since 1883 and a Test venue since 1948. It was renamed in 2019 after the former finance minister Arun Jaitley and is home ground of Delhi's cricket teams.",
+    "built": 1883,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "radius": 500
+  },
+  {
+   "id": "firoz-shah-kotla",
+   "name": {
+    "en": "Feroz Shah Kotla",
+    "hi": "फ़िरोज़ शाह कोटला"
+   },
+   "lat": 28.635,
+   "lon": 77.2425,
+   "match": [
+    "kotla firoz shah",
+    "feroz shah kotla",
+    "firoz shah kotla"
+   ],
+   "type": "fort",
+   "importance": 3,
+   "look": "ruined rubble-stone walls and a pyramid-like tiered pavilion topped by an ancient sandstone pillar",
+   "card": {
+    "text": "The ruined citadel of Firozabad, built by Sultan Firoz Shah Tughlaq in 1354. On top of a stepped pavilion stands a polished sandstone pillar of the emperor Ashoka (3rd century BCE), which Firoz Shah had brought from Haryana in 1356.",
+    "built": 1354,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "red-fort",
+   "name": {
+    "en": "Red Fort (Lal Qila)",
+    "hi": "लाल क़िला"
+   },
+   "lat": 28.6562,
+   "lon": 77.241,
+   "match": [
+    "red fort",
+    "lal qila"
+   ],
+   "wikidata": "Q45957",
+   "type": "fort",
+   "importance": 5,
+   "model": "procedural:red-fort",
+   "look": "massive red sandstone walls with crenellations and domed octagonal towers, the arched Lahori Gate with white marble pavilions above, marble palaces and lawns inside",
+   "card": {
+    "text": "The fort-palace of the Mughal emperor Shah Jahan, built between 1638 and 1648 when he founded Shahjahanabad. Red sandstone walls about 2.4 km long rise from 18 m on the river side to 33 m at the city side. The prime minister raises the flag from its ramparts each 15 August. It is a UNESCO World Heritage Site (2007).",
+    "built": 1648,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "jama-masjid",
+   "name": {
+    "en": "Jama Masjid",
+    "hi": "जामा मस्जिद"
+   },
+   "lat": 28.6507,
+   "lon": 77.2334,
+   "match": [
+    "jama masjid"
+   ],
+   "wikidata": "Q233678",
+   "type": "mosque",
+   "importance": 5,
+   "height": 41,
+   "model": "procedural:jama-masjid",
+   "look": "red sandstone mosque striped with white marble, three white-and-black-striped onion domes, two tall minarets, a vast courtyard reached by wide stairways",
+   "card": {
+    "text": "One of India's largest mosques, built under Shah Jahan between 1644 and 1656. The courtyard holds about 25,000 people. Three domes of white marble striped with black rise above the prayer hall and two minarets stand about 41 m high. It sits on a small hill opposite the Red Fort and is entered by three gateways.",
+    "built": 1656,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "chandni-chowk",
+   "name": {
+    "en": "Chandni Chowk",
+    "hi": "चाँदनी चौक"
+   },
+   "kind": "street",
+   "street": "chandni chowk|चांदनी चौक|चाँदनी चौक",
+   "lat": 28.6506,
+   "lon": 77.2303,
+   "radius": 900,
+   "type": "market",
+   "importance": 5,
+   "look": "a dense bazaar street under a mesh of electric wires, cloth and sweet shops in old arcaded havelis, rickshaws and handcarts, signs in Hindi and Urdu",
+   "card": {
+    "text": "The main bazaar of Old Delhi, laid out in the 1650s by Shah Jahan's daughter Jahanara Begum, running west from the Red Fort's Lahori Gate to the Fatehpuri Masjid. Side lanes specialise in silver, wedding cloth, spices, books and sweets; the street is shared by pedestrians, cycle rickshaws and handcarts.",
+    "built": 1650,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "sis-ganj-sahib",
+   "name": {
+    "en": "Gurdwara Sis Ganj Sahib",
+    "hi": "गुरुद्वारा सीस गंज साहिब"
+   },
+   "lat": 28.6559,
+   "lon": 77.2321,
+   "match": [
+    "sis ganj",
+    "sisganj"
+   ],
+   "type": "gurdwara",
+   "importance": 3,
+   "look": "white marble gurdwara with gilded domes and a flagpole on Chandni Chowk",
+   "card": {
+    "text": "A gurdwara on Chandni Chowk that marks the place where the ninth Sikh Guru, Tegh Bahadur, was executed in 1675. The present building dates from 1783.",
+    "built": 1783,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "fatehpuri-masjid",
+   "name": {
+    "en": "Fatehpuri Masjid",
+    "hi": "फतेहपुरी मस्जिद"
+   },
+   "lat": 28.6563,
+   "lon": 77.2229,
+   "match": [
+    "fatehpuri"
+   ],
+   "type": "mosque",
+   "importance": 3,
+   "look": "red sandstone mosque with one large flattened dome and a tall gateway at the western end of Chandni Chowk",
+   "card": {
+    "text": "A mosque at the western end of Chandni Chowk, built in 1650 by Fatehpuri Begum, one of Shah Jahan's wives. Its single large dome and long prayer hall face a courtyard with a tank, and shops line the old market around it.",
+    "built": 1650,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "khari-baoli",
+   "name": {
+    "en": "Khari Baoli (spice market)",
+    "hi": "खारी बावली"
+   },
+   "lat": 28.656,
+   "lon": 77.2197,
+   "match": [
+    "khari baoli"
+   ],
+   "type": "market",
+   "importance": 3,
+   "radius": 500,
+   "look": "narrow street lined with sacks of chillies, turmeric and dried fruit under old balconies, porters carrying loads",
+   "card": {
+    "text": "A wholesale market of dried fruit, nuts, herbs and spices on the road behind Fatehpuri Masjid, dating to the 17th century and often called Asia's largest wholesale spice market. The air is thick with chilli and cardamom and goods move by porters and handcarts.",
+    "built": 1650,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "raj-ghat",
+   "name": {
+    "en": "Raj Ghat",
+    "hi": "राज घाट"
+   },
+   "lat": 28.641,
+   "lon": 77.2495,
+   "match": [
+    "raj ghat",
+    "rajghat"
+   ],
+   "type": "memorial",
+   "importance": 4,
+   "radius": 900,
+   "look": "a plain square platform of black marble in the middle of wide green lawns with an eternal flame at one end, trees and walkways",
+   "card": {
+    "text": "The memorial to Mahatma Gandhi on the bank of the Yamuna, where he was cremated on 31 January 1948. A simple black marble platform stands in open lawns, visited barefoot. Memorials to other leaders, including Shanti Van and Shakti Sthal, lie close by.",
+    "built": 1948,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "old-delhi-station",
+   "name": {
+    "en": "Old Delhi Railway Station",
+    "hi": "पुरानी दिल्ली रेलवे स्टेशन"
+   },
+   "lat": 28.6612,
+   "lon": 77.2278,
+   "match": [
+    "old delhi",
+    "delhi junction",
+    "delhi railway station"
+   ],
+   "type": "station",
+   "importance": 4,
+   "look": "a long red sandstone Victorian-style station front with towers and arched windows, crowded forecourt",
+   "card": {
+    "text": "Delhi Junction, the oldest of Delhi's main railway stations, opened in 1864 when the line from Howrah reached the city. Its red sandstone building stands close to the Red Fort and Chandni Chowk.",
+    "built": 1864,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "new-delhi-station",
+   "name": {
+    "en": "New Delhi Railway Station",
+    "hi": "नई दिल्ली रेलवे स्टेशन"
+   },
+   "lat": 28.643,
+   "lon": 77.2197,
+   "match": [
+    "new delhi railway",
+    "new delhi"
+   ],
+   "type": "station",
+   "importance": 5,
+   "look": "red brick and sandstone station block with a tall clock tower on the Paharganj side and a modern glass facade on the Ajmeri Gate side",
+   "card": {
+    "text": "The main railway station of the capital, opened in 1926 between Paharganj and Ajmeri Gate and now with 16 platforms. It is the origin or stop of the Rajdhani and Shatabdi express trains.",
+    "built": 1926,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "kashmere-gate-isbt",
+   "name": {
+    "en": "Maharana Pratap ISBT, Kashmere Gate",
+    "hi": "महाराणा प्रताप अंतर्राज्यीय बस अड्डा, कश्मीरी गेट"
+   },
+   "lat": 28.6672,
+   "lon": 77.229,
+   "match": [
+    "maharana pratap",
+    "kashmere gate",
+    "kashmiri gate"
+   ],
+   "type": "bus",
+   "importance": 4,
+   "radius": 900,
+   "look": "large concrete bus terminal with long bays under a roof, red and green buses and rows of auto-rickshaws outside",
+   "card": {
+    "text": "The main inter-state bus terminal of Delhi, opened in 1976 beside the Kashmere Gate Metro interchange, with buses to Punjab, Haryana, Himachal Pradesh, Uttarakhand and Jammu and Kashmir.",
+    "built": 1976,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "anand-vihar-isbt",
+   "name": {
+    "en": "Anand Vihar ISBT",
+    "hi": "आनंद विहार अंतर्राज्यीय बस अड्डा"
+   },
+   "lat": 28.6503,
+   "lon": 77.3162,
+   "match": [
+    "anand vihar isbt",
+    "anand vihar inter",
+    "anand vihar bus"
+   ],
+   "type": "bus",
+   "importance": 4,
+   "radius": 900,
+   "look": "wide bus terminal with big bays on the eastern border near the Anand Vihar railway terminal and metro",
+   "card": {
+    "text": "Delhi's inter-state bus terminal on the Uttar Pradesh border, serving Uttar Pradesh and Uttarakhand, next to Anand Vihar Railway Terminal and the Metro station.",
+    "built": null,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "sarai-kale-khan-isbt",
+   "name": {
+    "en": "Sarai Kale Khan ISBT",
+    "hi": "सराय काले खां अंतर्राज्यीय बस अड्डा"
+   },
+   "lat": 28.589,
+   "lon": 77.257,
+   "match": [
+    "sarai kale khan"
+   ],
+   "type": "bus",
+   "importance": 4,
+   "radius": 900,
+   "look": "bus terminal beside the Ring Road and the Nizamuddin railway station, rows of buses to Rajasthan, Haryana and Uttar Pradesh",
+   "card": {
+    "text": "A major inter-state bus terminal near Hazrat Nizamuddin Railway Station and the Ring Road, with buses to Haryana, Rajasthan and western Uttar Pradesh.",
+    "built": null,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "nizamuddin-station",
+   "name": {
+    "en": "Hazrat Nizamuddin Railway Station",
+    "hi": "हज़रत निज़ामुद्दीन रेलवे स्टेशन"
+   },
+   "lat": 28.588,
+   "lon": 77.253,
+   "match": [
+    "hazrat nizamuddin railway",
+    "nizamuddin railway"
+   ],
+   "type": "station",
+   "importance": 4,
+   "radius": 900,
+   "look": "long platforms under wide canopies, a plain station building in beige and maroon, near the Nizamuddin dargah",
+   "card": {
+    "text": "One of Delhi's four main railway stations, named after the nearby Sufi shrine, with many trains to Mumbai, Goa, Kerala and the south.",
+    "built": null,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "anand-vihar-terminal",
+   "name": {
+    "en": "Anand Vihar Railway Terminal",
+    "hi": "आनंद विहार टर्मिनल"
+   },
+   "lat": 28.6469,
+   "lon": 77.3153,
+   "match": [
+    "anand vihar terminal",
+    "anand vihar railway"
+   ],
+   "type": "station",
+   "importance": 3,
+   "radius": 900,
+   "look": "modern station with long platforms and a glass-fronted concourse beside the bus terminal",
+   "card": {
+    "text": "A railway terminal on the eastern edge of Delhi opened in 2009 to ease crowding at the older stations; it connects to the Anand Vihar ISBT and the Metro.",
+    "built": 2009,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "sarai-rohilla-station",
+   "name": {
+    "en": "Delhi Sarai Rohilla Railway Station",
+    "hi": "दिल्ली सराय रोहिल्ला रेलवे स्टेशन"
+   },
+   "lat": 28.6668,
+   "lon": 77.185,
+   "match": [
+    "sarai rohilla"
+   ],
+   "type": "station",
+   "importance": 3,
+   "radius": 900,
+   "look": "mid-sized station with platforms and canopies north-west of Old Delhi",
+   "card": {
+    "text": "A main railway station in north-west Delhi, opened in 1873, serving trains towards Rajasthan, Punjab and Gujarat.",
+    "built": 1873,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "wikidata": "Q3635051"
+  },
+  {
+   "id": "qutub-minar",
+   "name": {
+    "en": "Qutub Minar",
+    "hi": "क़ुतुब मीनार"
+   },
+   "lat": 28.5245,
+   "lon": 77.1855,
+   "match": [
+    "qutb minar",
+    "qutub minar"
+   ],
+   "wikidata": "Q187635",
+   "type": "monument",
+   "importance": 5,
+   "height": 72.5,
+   "model": "procedural:qutub-minar",
+   "look": "a tall fluted tower of red sandstone and cream marble in five tapering storeys, balconies with carved brackets, bands of Arabic calligraphy",
+   "card": {
+    "text": "A 72.5 m victory tower of five tapering storeys, begun in 1193 by Qutb ud-Din Aibak and completed by his successors; the top storeys were rebuilt in 1368 by Firoz Shah Tughlaq. Fluted red sandstone and marble are inscribed with verses from the Quran. The tower rises over the Mehrauli complex that also holds the 7 m Iron Pillar of the 5th century. UNESCO World Heritage Site (1993).",
+    "built": 1220,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "mehrauli-park",
+   "name": {
+    "en": "Mehrauli Archaeological Park",
+    "hi": "महरौली पुरातत्व उद्यान"
+   },
+   "lat": 28.52,
+   "lon": 77.185,
+   "match": [
+    "mehrauli archaeological"
+   ],
+   "wikidata": "Q6809814",
+   "type": "archaeological",
+   "importance": 4,
+   "radius": 1200,
+   "look": "overgrown grey-stone tombs, mosques and stepwells among rocky scrub and big trees, narrow paths",
+   "card": {
+    "text": "An archaeological park of about 200 ha with more than 400 monuments spanning roughly a thousand years, from the Qila Rai Pithora (the first city of Delhi) to Mughal and British period buildings. It includes the Jamali Kamali mosque and tomb, Balban's tomb and Adham Khan's tomb.",
+    "built": 1200,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "tughlaqabad-fort",
+   "name": {
+    "en": "Tughlaqabad Fort",
+    "hi": "तुगलकाबाद क़िला"
+   },
+   "lat": 28.5118,
+   "lon": 77.2606,
+   "match": [
+    "tughlaqabad"
+   ],
+   "type": "fort",
+   "importance": 3,
+   "radius": 1500,
+   "look": "massive sloping walls of rough grey rubble stone, bastions, ruined palaces on rocky ground, a causeway to the tomb of Ghiyath al-Din",
+   "card": {
+    "text": "A ruined fortress city built from 1321 to 1325 by Ghiyath al-Din Tughluq, with great sloping stone walls. A causeway once crossed a lake to his tomb, which stands just outside.",
+    "built": 1325,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "lotus-temple",
+   "name": {
+    "en": "Lotus Temple",
+    "hi": "लोटस टेंपल"
+   },
+   "lat": 28.5535,
+   "lon": 77.2588,
+   "match": [
+    "lotus temple"
+   ],
+   "wikidata": "Q940843",
+   "type": "temple",
+   "importance": 5,
+   "height": 34,
+   "model": "procedural:lotus-temple",
+   "look": "a huge white marble lotus of 27 petals in three rings rising from nine blue-green pools, surrounded by green lawns and paths",
+   "card": {
+    "text": "The Bahai House of Worship, completed in 1986 to a design by the Iranian-Canadian architect Fariborz Sahba. Twenty-seven free-standing marble-clad petals form a lotus about 34 m high, with nine entrances opening to a central hall. It is open to people of all faiths and visitors keep silence inside.",
+    "built": 1986,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "iskcon-delhi",
+   "name": {
+    "en": "ISKCON Temple, East of Kailash",
+    "hi": "इस्कॉन मंदिर"
+   },
+   "lat": 28.5565,
+   "lon": 77.2536,
+   "match": [
+    "iskcon"
+   ],
+   "type": "temple",
+   "importance": 3,
+   "look": "large cream and rose-pink temple with stylised spires on a hill, gardens and marble steps",
+   "card": {
+    "text": "The Sri Sri Radha Parthasarathi Mandir at Hare Krishna Hill in East of Kailash, opened in 1998 by the Hare Krishna movement. Evening aarti and a museum of Vedic culture draw large crowds.",
+    "built": 1998,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "akshardham",
+   "name": {
+    "en": "Swaminarayan Akshardham",
+    "hi": "स्वामीनारायण अक्षरधाम"
+   },
+   "lat": 28.6127,
+   "lon": 77.2773,
+   "match": [
+    "akshardham"
+   ],
+   "wikidata": "Q1849858",
+   "type": "temple",
+   "importance": 5,
+   "height": 43,
+   "model": "procedural:akshardham",
+   "look": "an enormous pink sandstone and white marble temple covered with carved figures and pillars, a central dome and spires, a wall of stone elephants, wide fountains and lawns",
+   "card": {
+    "text": "A Hindu temple complex opened in November 2005 on the bank of the Yamuna. The central monument is about 43 m tall and built of pink sandstone and white marble, carved with thousands of figures and a plinth of 148 stone elephants. Phones and cameras are not allowed inside.",
+    "built": 2005,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "garden-of-five-senses",
+   "name": {
+    "en": "Garden of Five Senses",
+    "hi": "पंच इंद्रिय उद्यान"
+   },
+   "lat": 28.5116,
+   "lon": 77.1994,
+   "match": [
+    "five senses"
+   ],
+   "type": "garden",
+   "importance": 2,
+   "radius": 800,
+   "look": "landscaped garden of lawns, rocky outcrops, water channels and sculptures with an amphitheatre and flower festival lawns",
+   "card": {
+    "text": "A 20-acre park at Said-ul-Ajaib in Mehrauli opened in 2003, built around a rocky site with themed gardens, sculptures and an annual spring flower festival.",
+    "built": 2003,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "national-rail-museum",
+   "name": {
+    "en": "National Rail Museum",
+    "hi": "राष्ट्रीय रेल संग्रहालय"
+   },
+   "lat": 28.5836,
+   "lon": 77.1818,
+   "match": [
+    "national rail museum",
+    "rail museum"
+   ],
+   "type": "museum",
+   "importance": 3,
+   "radius": 800,
+   "look": "an open-air yard of old steam locomotives and carriages on narrow-gauge track, with a toy train and a museum hall",
+   "card": {
+    "text": "A railway museum in Chanakyapuri opened in 1977, with historic locomotives and coaches in an open-air yard, including the Fairy Queen steam engine of 1855 and royal saloons, plus a toy train ride.",
+    "built": 1977,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "igi-t3",
+   "name": {
+    "en": "Indira Gandhi International Airport, Terminal 3",
+    "hi": "इंदिरा गांधी अंतर्राष्ट्रीय हवाई अड्डा, टर्मिनल 3"
+   },
+   "lat": 28.5562,
+   "lon": 77.1,
+   "match": [
+    "terminal 3",
+    "terminal-3",
+    "indira gandhi international"
+   ],
+   "type": "airport",
+   "importance": 5,
+   "radius": 2500,
+   "look": "very large glass and steel terminal with a long curved roof, a giant hand-gesture (mudra) sculpture wall in the arrivals hall, elevated approach roads",
+   "card": {
+    "text": "Delhi's international terminal, opened in July 2010 before the Commonwealth Games, and one of the largest airport terminals in Asia when it opened. Its hall has a row of giant hand gestures (mudras) as sculptures, and the Airport Express metro serves it.",
+    "built": 2010,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  },
+  {
+   "id": "yashobhoomi",
+   "name": {
+    "en": "Yashobhoomi (India International Convention and Expo Centre)",
+    "hi": "यशोभूमि"
+   },
+   "lat": 28.551,
+   "lon": 77.045,
+   "match": [
+    "yashobhoomi",
+    "iicc"
+   ],
+   "type": "convention",
+   "importance": 3,
+   "radius": 2000,
+   "look": "very large convention complex with a glass facade and a gold-patterned roof, wide plazas, in Dwarka next to a metro station",
+   "card": {
+    "text": "A convention and expo centre in Dwarka Sector 25 inaugurated in September 2023, linked to the airport by the Airport Express line. It is among the largest such venues in India.",
+    "built": 2023,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "nomatch": true,
+   "size": 400
+  },
+  {
+   "id": "sarojini-nagar-market",
+   "name": {
+    "en": "Sarojini Nagar Market",
+    "hi": "सरोजिनी नगर मार्केट"
+   },
+   "lat": 28.575,
+   "lon": 77.1985,
+   "match": [
+    "sarojini nagar market",
+    "sarojini nagar"
+   ],
+   "type": "market",
+   "importance": 3,
+   "radius": 500,
+   "look": "a crowded open-air street market of tarpaulin-covered stalls piled with clothes, bright price boards, narrow aisles",
+   "card": {
+    "text": "A huge open-air clothing market named after the poet Sarojini Naidu, known for cheap fashion, export surplus and tight bargaining. It is packed at weekends.",
+    "built": null,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "nomatch": true,
+   "size": 200
+  },
+  {
+   "id": "lajpat-nagar-market",
+   "name": {
+    "en": "Lajpat Nagar Central Market",
+    "hi": "लाजपत नगर सेंट्रल मार्केट"
+   },
+   "lat": 28.569,
+   "lon": 77.2408,
+   "match": [
+    "lajpat nagar"
+   ],
+   "type": "market",
+   "importance": 3,
+   "radius": 600,
+   "look": "multi-storey shop fronts with big hoardings over narrow lanes, fabric and jewellery shops, street food stalls",
+   "card": {
+    "text": "A busy market named after the nationalist Lala Lajpat Rai, in a neighbourhood built in the 1950s for refugees. It is known for salwar suits, wedding shopping and chaat.",
+    "built": null,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "nomatch": true,
+   "size": 130
+  },
+  {
+   "id": "karol-bagh-market",
+   "name": {
+    "en": "Karol Bagh (Ajmal Khan Road)",
+    "hi": "करोल बाग"
+   },
+   "lat": 28.646,
+   "lon": 77.19,
+   "match": [
+    "ajmal khan",
+    "karol bagh"
+   ],
+   "type": "market",
+   "importance": 3,
+   "radius": 700,
+   "look": "dense strip of multi-storey shop fronts with big hoardings above a metro viaduct, jewellery and clothing shops",
+   "card": {
+    "text": "One of Delhi's largest shopping districts, along Ajmal Khan Road and Gaffar Market, known for jewellery, clothing, and electronics. The Karol Bagh Hanuman statue, 108 ft tall, stands at a nearby junction.",
+    "built": null,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "nomatch": true,
+   "size": 260
+  },
+  {
+   "id": "palika-bazaar",
+   "name": {
+    "en": "Palika Bazaar",
+    "hi": "पालिका बाज़ार"
+   },
+   "lat": 28.6308,
+   "lon": 77.2189,
+   "match": [
+    "palika bazaar"
+   ],
+   "type": "market",
+   "importance": 2,
+   "radius": 400,
+   "look": "a low-ceilinged underground market with rows of small shops and bright signs below the Connaught Place central park",
+   "card": {
+    "text": "An underground, air-conditioned market under the central park of Connaught Place, known for electronics, cheap clothing and bargaining.",
+    "built": null,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "nomatch": true,
+   "size": 90
+  },
+  {
+   "id": "janpath-market",
+   "name": {
+    "en": "Janpath Market",
+    "hi": "जनपथ मार्केट"
+   },
+   "lat": 28.625,
+   "lon": 77.219,
+   "match": [
+    "janpath"
+   ],
+   "type": "market",
+   "importance": 3,
+   "radius": 400,
+   "look": "rows of street stalls and shops in front of cream colonial buildings, textiles, jewellery and handicrafts, Tibetan market lane",
+   "card": {
+    "text": "A shopping street south of Connaught Place with handicraft stalls, silver jewellery and textiles. A lane of Tibetan market stalls runs alongside.",
+    "built": null,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "nomatch": true,
+   "size": 150
+  },
+  {
+   "id": "majnu-ka-tilla",
+   "name": {
+    "en": "Majnu ka Tilla (Tibetan Colony)",
+    "hi": "मजनू का टीला"
+   },
+   "lat": 28.6987,
+   "lon": 77.226,
+   "match": [
+    "majnu ka tilla",
+    "majnu-ka-tilla",
+    "tibetan"
+   ],
+   "type": "market",
+   "importance": 2,
+   "radius": 600,
+   "look": "narrow lanes with prayer flags and signs in English and Tibetan, small cafes, a gold-roofed Buddhist temple, near the Yamuna",
+   "card": {
+    "text": "A Tibetan refugee colony on the Yamuna bank, set up in 1960, known for momos, thukpa, Tibetan handicrafts, prayer flags and a Buddhist temple.",
+    "built": 1960,
+    "source": "public encyclopaedic facts, written for this game"
+   },
+   "nomatch": true,
+   "size": 250
+  },
+  {
+   "id": "nehru-place",
+   "name": {
+    "en": "Nehru Place",
+    "hi": "नेहरू प्लेस"
+   },
+   "lat": 28.5491,
+   "lon": 77.2518,
+   "match": [
+    "nehru place"
+   ],
+   "type": "market",
+   "importance": 3,
+   "radius": 600,
+   "look": "a grey tower-and-plaza business district of mid-rise office blocks with computer and phone shops, hoardings, crowded steps",
+   "card": {
+    "text": "A commercial district planned in the 1960s, now the city's electronics and IT hardware market, with many shops of laptops, phones and printers and their repair stalls.",
+    "built": 1965,
+    "source": "public encyclopaedic facts, written for this game"
+   }
+  }
+ ]
+}

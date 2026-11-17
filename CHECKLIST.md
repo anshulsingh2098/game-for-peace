@@ -104,3 +104,15 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - With the 10 audio.com clips in assets/audio/trains/: station ambience at a station, a pass-by sound as a train passes close, squeal as one brakes nearby (these files are not in git: copy them by hand to test)
 - Look at a train standing at a station: yellow boards with its real name, number and Hindi route, barred sleeper windows, S/B coach plates, a loco with its number; goods trains with wagons and a brake van; busy lines with several tracks and wire over each
 - [ ] Railway control (`?play&india=world`, stand beside a line for a few minutes): trains stop at red signals and wait at stations, a slow train waits in a loop for an express, barriers are down when a train is at a crossing, the station board time matches the clock, nothing overlaps or floats. (Needs a person; the script checks collisions only.)
+
+## 9. City packs (Delhi, from the D1 session)
+- [ ] `node tools/validate_city.mjs` prints "pack is valid" and `node tools/check_city.mjs` prints "check passed" (the self-test does both in short form).
+- [ ] Plot a piece of the pack (`python tools/plot_city.py -1500 -6000 5000 1800 4 delhi_centre.png`, needs Pillow) and look at it and compare with a map you know: Connaught Place rings, the avenue from Rashtrapati Bhavan to India Gate, the Yamuna, the Red Fort, the Ring Road. Say what is missing: Old Delhi houses, a colony, a flyover that has no tag.
+- [ ] Read three landmark cards and look notes (`docs/DELHI_LANDMARKS.md`): is any fact or colour wrong? Fix them in `tools/city_data/delhi_landmarks_src.json` and rebuild.
+- [ ] After any rebuild: the pack stays under 20 MB gzip (the validator says so) and only one commit holds the tile files.
+
+## 10. The city enclave (Delhi, D5): `?play&city=delhi`
+- [ ] Open `http://localhost:8765/?play&city=delhi`: you are in Connaught Place; the circle and its radial streets match a map. Try `&at=ndls`, `&at=indiagate`, `&at=redfort`.
+- [ ] Drive the Outer and Inner Circle, Kartavya Path and a flyover (for example the ones near India Gate or Ring Road): no building in the road, no station on a road, the car stays on the deck and drops off at the ramp end.
+- [ ] Look from the air (F, fly): streets, blocks, parks and the Yamuna where you expect them; note anything that looks wrong (heights are guesses; kerbs, underpasses, traffic and people are not built yet).
+- [ ] `?bench=30&city=delhi` on a desktop and on a phone: the plan's budget is 900 draw calls and 1.5 M triangles on a desktop, 300 and 350 k on a phone (measured by script at 326 to 370 and 206 to 270 k at medium, in a hidden pane at 2 fps, so the numbers are counts, not frame times).

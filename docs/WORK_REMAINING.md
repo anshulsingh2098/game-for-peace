@@ -159,3 +159,14 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.4 | The station platforms, canopies and the roof slabs are still plain boxes at fixed size; a station only skips its building when it would stand on a road. Replace with modelled stations in Phase 5. | P3 [build] |
 | 10.5 | The provider claim (roads) is answered by point samples for a rectangle (nine points), so a thin road across the middle of a small plot can be missed; plots are at least 8 m wide and roads are at least 7 m, so a 4 m gap is the worst case. | P3 |
 | 10.6 | Stations and rail bridges still lift the railway over the road in `rail_view.js` (`BRIDGE_H`); the road should go over the rail (PR 49 note). Not touched here. | P2 [build] |
+
+## 11. City pipeline and the Delhi pack, leftovers (D1 and D4)
+| # | Limit | Tag |
+|---|---|---|
+| 11.1 | 97 % of Delhi's 244k footprints have a guessed height (OSM has `height` on 1,068, `building:levels` on 7,342). Real heights need another source (Overture, Open Buildings: licences and sizes unverified, nothing downloaded) or a height model; Old Delhi and many colonies have few mapped buildings. | P2 [decide] |
+| 11.2 | Only the NCT of Delhi is built. Gurgaon and Noida-Greater Noida are the same tool with a second entry in `CITIES` (`tools/build_city.mjs`) and their own boundary relation; Faridabad and Ghaziabad were not planned. Budget: 20 MB gzip each. | P2 [build] |
+| 11.3 | The Delhi pack is 19.8 of 20 MB gzip. Anything added (rails, metro, identity, more landmarks, building parts) must cut something or move to a second tile level; `docs/CITY_PACK.md` section 5a says what is already cut. A brotli build would be about 15 % smaller. | P2 [decide] |
+| 11.4 | Landmark `look` notes and cards are first drafts: the looks were not compared with photographs (no image was looked at), the cards were cross-checked only against Wikidata dates and heights. A person should read them. Three entries are placed at the listed position (not found in OSM): `arun-jaitley-stadium`; the markets (`nomatch`) have a square footprint, not a real outline. | P1 [person] |
+| 11.5 | 5,135 footprints that lie mostly on a street and 311 duplicates are dropped; the street widths that decide this are guessed from lanes. Look at a few dense lanes (Old Delhi, urban villages) in D5 for missing houses. | P2 [person] |
+| 11.6 | Gates: 25 gates, ids like `nh44-north-14`; merged by ref and 250 m; some are minor (SH18, NH344P). The mapping of each gate to the India world's highway (`india`) and the 1:100 world's gate positions belongs to the enclave work (Phase 2). `rail_gates` is empty. | P2 [build] |
+| 11.7 | Blocks are plain faces of the street graph (no street width taken off); the renderer must inset them. Landuse polygons are clipped at tile edges with Sutherland-Hodgman (concave shapes may show an edge along the tile border). | P3 [build] |

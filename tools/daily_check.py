@@ -56,8 +56,8 @@ else: note('FAIL', 'stage_cloudflare.py dry run', out[-120:])
 # 5. size budget
 def size(d):
     return sum(os.path.getsize(os.path.join(a, f)) for a, _, fs in os.walk(os.path.join(ROOT, d)) for f in fs) / 1e6 if os.path.isdir(os.path.join(ROOT, d)) else 0
-assets, vendor = size('assets'), size('vendor')
-note('PASS' if assets < 30 else 'WARN', 'assets folder under 30 MB (phones download this)', f'{assets:.1f} MB')
+assets, vendor = size('assets') - size('assets/cities'), size('vendor')                         # city packs stream per 1 km tile, never downloaded whole (docs/CITY_PACK.md section 4)
+note('PASS' if assets < 30 else 'WARN', 'assets folder under 30 MB (phones download this; city packs excluded)', f'{assets:.1f} MB')
 note('PASS' if vendor < 15 else 'WARN', 'vendor folder under 15 MB', f'{vendor:.1f} MB')
 
 # 6. every asset folder is credited in assets/ASSETS.md

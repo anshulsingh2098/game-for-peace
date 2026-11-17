@@ -1,0 +1,145 @@
+/* One 1 km tile of the city pack as three.js geometry (docs/CITY_PACK.md): ground fills (blocks, land use), parks and water, street carriageways with lane marks and painted sidewalks, flyover decks with
+   edges and piers, and extruded building footprints. Everything of a kind is merged into one mesh per tile, so a tile costs five draw calls. Vertices are relative to the tile's corner (tx * 1000, tz * 1000) in x
+   and z and absolute in y; the flat layers lie exactly in the ground plane and are ordered by polygon offset (the terrain here is flat), so a car's wheels sit on the paint. 97 % of the building heights in
+   the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
+import * as THREE from 'three';
+import { deckHeight, pieceWidth, pieceSidewalk } from './pack.js';
+
+class Mesher {
+  constructor() { this.p = []; this.n = []; this.c = []; this.u = []; this.i = []; }
+  v(x, y, z, nx, ny, nz, col, u = 0, v = 0) { this.p.push(x, y, z); this.n.push(nx, ny, nz); this.c.push(col.r, col.g, col.b); this.u.push(u, v); return this.p.length / 3 - 1; }
+  /* a triangle that faces the way `n` says whatever order its corners come in */
+  tri(a, b, c, nx, ny, nz) {
+    const P = this.p, ux = P[b * 3] - P[a * 3], uy = P[b * 3 + 1] - P[a * 3 + 1], uz = P[b * 3 + 2] - P[a * 3 + 2], vx = P[c * 3] - P[a * 3], vy = P[c * 3 + 1] - P[a * 3 + 1], vz = P[c * 3 + 2] - P[a * 3 + 2];
+    if ((uy * vz - uz * vy) * nx + (uz * vx - ux * vz) * ny + (ux * vy - uy * vx) * nz >= 0) this.i.push(a, b, c); else this.i.push(a, c, b);
+  }
+  get empty() { return !this.i.length; }
+  geometry() {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(this.u, 2));
+    g.setIndex(this.i.length > 65535 ? new THREE.Uint32BufferAttribute(this.i, 1) : new THREE.Uint16BufferAttribute(this.i, 1)); g.computeBoundingSphere(); return g;
+  }
+}
+
+const col = hex => new THREE.Color(hex);
+const ROAD = { motorway: col(0x333436), trunk: col(0x333436), primary: col(0x353638), secondary: col(0x383a3b), tertiary: col(0x3b3c3d), residential: col(0x44413e), service: col(0x4a4642), busway: col(0x3a3a3c), footway: col(0x9a9284), cycleway: col(0x6a7a68) };
+const WALK = col(0x77736a), MARK = col(0xe9e6da), CONCRETE = col(0x8c8a84), BLOCK = { urban: col(0x6f695c), residential: col(0x716a5c), commercial: col(0x6c6a64), retail: col(0x6c6a64), industrial: col(0x64625d), park: col(0x5a7a3a), garden: col(0x5a7a3a), forest: col(0x44663a), farmland: col(0x8f9a55), grass: col(0x66843f), meadow: col(0x7a8a45), water: col(0x2e5f73), river: col(0x2e5f73), cemetery: col(0x6f7f50), military: col(0x7b7f66), religious: col(0x9a8f78) };
+const PARK = col(0x5f8a3c), WATER = col(0x2f6477);
+/* walls by use (sRGB hex), a little different for every building */
+const WALLS = { residential: [0xcdbd9c, 0xd7c6a6, 0xb9a384, 0xe0d3b8, 0xc4a98a, 0xa89580], commercial: [0xc9c1ae, 0xb6b0a2, 0xd3c6a8, 0xa9a59a], office: [0x9fb3c2, 0xb4c2cc, 0x8aa0b2, 0xc3ccd2], retail: [0xd6c2a0, 0xc7b79a], civic: [0xd9c79a, 0xe6d6ac, 0xc9b88c], religious: [0xece3cc, 0xdcc9a0], industrial: [0x9d9a92, 0xafa99c], hotel: [0xd8cdb4, 0xc8bda5], transit: [0xb7a58a, 0xc4b394], other: [0xbfb5a0, 0xcbc2ad] };
+const ROOF = col(0x77726a), SAND = col(0xb0553a);
+const LM_WALL = { station: 0xa04a34, memorial: 0xc9936a, monument: 0xc9936a, fort: 0xb05a3c, tomb: 0xd6c19a, temple: 0xeadfc6, mosque: 0xe7dcc2, church: 0xe2d8c0, gurdwara: 0xf0ead8, museum: 0xd5c3a0, government: 0xd9c498 };
+const tmp = new THREE.Color(), hash = n => { let h = (n | 0) * 374761393 + 668265263; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const shade = (hex, k) => { tmp.setHex(hex); tmp.multiplyScalar(k); return tmp.clone(); };
+const RANKOF = { motorway: 6, trunk: 5, primary: 4, secondary: 3, tertiary: 2, residential: 1, service: 0, busway: 3, footway: 0, cycleway: 0 };
+
+/* a polyline cut into pieces no longer than `step` (decks need points where the height changes) */
+function densify(pts, step) { const o = [pts[0], pts[1]]; for (let i = 2; i < pts.length; i += 2) { const x0 = pts[i - 2], z0 = pts[i - 1], x1 = pts[i], z1 = pts[i + 1], n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / step)); for (let k = 1; k <= n; k++) o.push(x0 + (x1 - x0) * k / n, z0 + (z1 - z0) * k / n); } return o; }
+/* the left and right offset curves of a polyline at lateral offsets a..b (right of travel positive: z points south, so right of east is south), with mitred corners */
+function frames(pts) {
+  const n = pts.length / 2, nx = new Float32Array(n), nz = new Float32Array(n), sc = new Float32Array(n), arc = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let tx = 0, tz = 0, ax = 0, az = 0, cnt = 0;
+    if (i > 0) { const dx = pts[i * 2] - pts[i * 2 - 2], dz = pts[i * 2 + 1] - pts[i * 2 - 1], l = Math.hypot(dx, dz) || 1; ax = dx / l; az = dz / l; tx += ax; tz += az; cnt++; arc[i] = arc[i - 1] + l; }
+    let bx = 0, bz = 0; if (i < n - 1) { const dx = pts[i * 2 + 2] - pts[i * 2], dz = pts[i * 2 + 3] - pts[i * 2 + 1], l = Math.hypot(dx, dz) || 1; bx = dx / l; bz = dz / l; tx += bx; tz += bz; cnt++; }
+    const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l; nx[i] = -tz; nz[i] = tx;
+    const sx = i < n - 1 ? bx : ax, sz = i < n - 1 ? bz : az; sc[i] = 1 / Math.max(0.55, tx * sx + tz * sz);          // stretch so the strip keeps its width round a bend
+  }
+  return { n, nx, nz, sc, arc };
+}
+
+export function buildTile(tile, ctx) {
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher() };
+  const out = { circles: [], decks: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
+  const flat = (m, ring, holes, c, y) => {                                           // a polygon (ring and holes in metres) lying at height y
+    const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
+    const R = clean(ring), contour = []; for (let i = 0; i < R.length; i += 2) contour.push(new THREE.Vector2(R[i], R[i + 1])); const H = (holes || []).map(h => { const c2 = clean(h), a = []; for (let i = 0; i < c2.length; i += 2) a.push(new THREE.Vector2(c2[i], c2[i + 1])); return a; });
+    if (contour.length < 3) return; let tris; try { tris = THREE.ShapeUtils.triangulateShape(contour, H); } catch (e) { return; }
+    const all = contour.concat(...H), base = m.p.length / 3; for (const q of all) m.v(X(q.x), gy + y, Z(q.y), 0, 1, 0, c);
+    for (const t of tris) m.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0);
+  };
+  /* ---- ground: land use first, then blocks, parks and water ---- */
+  for (const l of tile.landuse) { const c = BLOCK[l.class]; if (c && !['residential', 'commercial', 'retail', 'industrial'].includes(l.class)) flat(M.ground, l.ring, l.holes, c, 0); }
+  for (const b of tile.blocks) flat(M.ground, b.ring, b.holes, BLOCK[b.landuse] || BLOCK.urban, 0);
+  for (const p of tile.parks) flat(M.park, p.ring, p.holes, PARK, 0);
+  for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, 0);
+  /* ---- streets ---- */
+  const groundSeg = new Map(), CELLQ = 24;                                           // ground carriageways of this tile, to keep flyover piers out of them
+  const hashSeg = (x0, z0, x1, z1, hw) => { const a = Math.floor(Math.min(x0, x1) / CELLQ), b = Math.floor(Math.max(x0, x1) / CELLQ), c = Math.floor(Math.min(z0, z1) / CELLQ), d = Math.floor(Math.max(z0, z1) / CELLQ); for (let i = a; i <= b; i++) for (let j = c; j <= d; j++) { const k = i + ',' + j; let l = groundSeg.get(k); if (!l) groundSeg.set(k, l = []); l.push([x0, z0, x1, z1, hw]); } };
+  const pierFree = (x, z, r) => { const l = groundSeg.get(Math.floor(x / CELLQ) + ',' + Math.floor(z / CELLQ)); if (!l) return true; for (const [x0, z0, x1, z1, hw] of l) { const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)) : 0; if (Math.hypot(x - (x0 + dx * t), z - (z0 + dz * t)) < hw + r) return false; } return true; };
+  for (const s of tile.streets) { const lay = G.layer[s.id]; if (lay === 0) { const w = pieceWidth(G, s) / 2 + 1; for (let i = 0; i + 3 < s.pts.length; i += 2) hashSeg(s.pts[i], s.pts[i + 1], s.pts[i + 2], s.pts[i + 3], w); } }
+  /* the list of streets sorted so that small roads are drawn first (their order only matters for z fighting at junctions, which the offsets below settle) */
+  for (const s of tile.streets) {
+    const id = s.id, cls = G.classes[G.cls[id]], lay = G.layer[id]; if (lay < 0 || s.pts.length < 4) continue;                 // underpasses and tunnels are not drawn yet
+    const w = pieceWidth(G, s), walk = pieceSidewalk(G, s), clip = s.clip || 0, deck = lay > 0, rank = RANKOF[cls] || 0, rc = ROAD[cls] || ROAD.residential, two = G.oneway[id] === 0, lanes = G.lanes[id];
+    let pts = s.pts; if (deck) pts = densify(pts, 5); const F = frames(pts), hAt = (x, z) => (deck ? deckHeight(G, id, x, z) : 0), H = new Float32Array(F.n);
+    for (let i = 0; i < F.n; i++) H[i] = hAt(pts[i * 2], pts[i * 2 + 1]);
+    const strip = (m, a, b, c, dy, hExtra = 0) => {                                                 // a strip between lateral offsets a and b along the whole piece
+      let prev = -1; for (let i = 0; i < F.n; i++) {
+        const x = pts[i * 2], z = pts[i * 2 + 1], y = gy + H[i] + dy + hExtra, k = F.sc[i]; const va = m.v(X(x + F.nx[i] * a * k), y, Z(z + F.nz[i] * a * k), 0, 1, 0, c), vb = m.v(X(x + F.nx[i] * b * k), y, Z(z + F.nz[i] * b * k), 0, 1, 0, c);
+        if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va;
+      }
+    };
+    const hw = w / 2;
+    if (cls === 'footway' || cls === 'cycleway') { strip(M.walk, -hw, hw, rc, 0); out.nStreets++; continue; }
+    strip(M.road, -hw, hw, rc, 0);
+    if (walk > 0) { const wl = 1.8; strip(M.walk, hw, hw + wl, WALK, 0); if (walk > 1 || two) strip(M.walk, -hw - wl, -hw, WALK, 0); }
+    /* sidewalks are painted flat (the car physics has no kerb yet); a flyover gets edges, an underside and piers */
+    if (deck) {
+      const wall = (off, side) => { for (let i = 0; i + 1 < F.n; i++) {
+        const x0 = pts[i * 2] + F.nx[i] * off * F.sc[i], z0 = pts[i * 2 + 1] + F.nz[i] * off * F.sc[i], x1 = pts[i * 2 + 2] + F.nx[i + 1] * off * F.sc[i + 1], z1 = pts[i * 2 + 3] + F.nz[i + 1] * off * F.sc[i + 1];
+        const nxv = F.nx[i] * side, nzv = F.nz[i] * side, a = M.road.v(X(x0), gy + H[i] - 1.0, Z(z0), nxv, 0, nzv, CONCRETE), b = M.road.v(X(x1), gy + H[i + 1] - 1.0, Z(z1), nxv, 0, nzv, CONCRETE), c2 = M.road.v(X(x1), gy + H[i + 1] + 0.75, Z(z1), nxv, 0, nzv, CONCRETE), d = M.road.v(X(x0), gy + H[i] + 0.75, Z(z0), nxv, 0, nzv, CONCRETE);
+        M.road.tri(a, b, c2, nxv, 0, nzv); M.road.tri(a, c2, d, nxv, 0, nzv); } };
+      wall(hw + 0.2, 1); wall(-hw - 0.2, -1);
+      for (let i = 0; i + 1 < F.n; i++) { const a = M.road.v(X(pts[i * 2] + F.nx[i] * (-hw - 0.2)), gy + H[i] - 1.0, Z(pts[i * 2 + 1] + F.nz[i] * (-hw - 0.2)), 0, -1, 0, CONCRETE), b = M.road.v(X(pts[i * 2] + F.nx[i] * (hw + 0.2)), gy + H[i] - 1.0, Z(pts[i * 2 + 1] + F.nz[i] * (hw + 0.2)), 0, -1, 0, CONCRETE), c2 = M.road.v(X(pts[i * 2 + 2] + F.nx[i + 1] * (hw + 0.2)), gy + H[i + 1] - 1.0, Z(pts[i * 2 + 3] + F.nz[i + 1] * (hw + 0.2)), 0, -1, 0, CONCRETE), d = M.road.v(X(pts[i * 2 + 2] + F.nx[i + 1] * (-hw - 0.2)), gy + H[i + 1] - 1.0, Z(pts[i * 2 + 3] + F.nz[i + 1] * (-hw - 0.2)), 0, -1, 0, CONCRETE); M.road.tri(a, b, c2, 0, -1, 0); M.road.tri(a, c2, d, 0, -1, 0); }
+      let nextPier = 8; for (let i = 0; i < F.n; i++) if (F.arc[i] >= nextPier) { nextPier += 28; if (H[i] < 2.5) continue; const x = pts[i * 2], z = pts[i * 2 + 1]; if (!pierFree(x, z, 1.2)) continue; const px = X(x), pz = Z(z), r = 0.9, y0 = gy, y1 = gy + H[i] - 1.0; const cs = [[-r, -r], [r, -r], [r, r], [-r, r]];
+        for (let k = 0; k < 4; k++) { const [x0, z0] = cs[k], [x1, z1] = cs[(k + 1) % 4], nxv = (x0 + x1) / 2 > 0 ? 1 : (x0 + x1) / 2 < 0 ? -1 : 0, nzv = (z0 + z1) / 2 > 0 ? 1 : (z0 + z1) / 2 < 0 ? -1 : 0, a = M.road.v(px + x0, y0, pz + z0, nxv, 0, nzv, CONCRETE), b = M.road.v(px + x1, y0, pz + z1, nxv, 0, nzv, CONCRETE), c2 = M.road.v(px + x1, y1, pz + z1, nxv, 0, nzv, CONCRETE), d = M.road.v(px + x0, y1, pz + z0, nxv, 0, nzv, CONCRETE); M.road.tri(a, b, c2, nxv, 0, nzv); M.road.tri(a, c2, d, nxv, 0, nzv); } }
+      /* the same surface for the physics: a ribbon of triangles over the carriageway where the deck is above the ground */
+      const pos = [], idx = []; let prev = -1; for (let i = 0; i < F.n; i++) { if (H[i] < 0.05 && (i + 1 >= F.n || H[i + 1] < 0.05) && (i === 0 || H[i - 1] < 0.05)) { prev = -1; continue; } const v = pos.length / 3, k = F.sc[i]; pos.push(pts[i * 2] + F.nx[i] * hw * k, gy + H[i], pts[i * 2 + 1] + F.nz[i] * hw * k, pts[i * 2] - F.nx[i] * hw * k, gy + H[i], pts[i * 2 + 1] - F.nz[i] * hw * k); if (prev >= 0) idx.push(prev, prev + 1, v, prev + 1, v + 1, v); prev = v; }
+      if (idx.length) out.decks.push({ pos, idx, hw, id, lay });
+    }
+    /* lane marks: a dashed line on the centre of a two-way street, between the lanes of a one-way street; none near a junction (the piece ends that are real nodes) */
+    if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) {
+      const divs = []; if (two) { divs.push(0); const side = Math.floor(lanes / 2); for (let k = 1; k < side; k++) divs.push(k * w / lanes, -k * w / lanes); } else for (let k = 1; k < lanes; k++) divs.push(-hw + k * w / lanes);
+      const total = F.arc[F.n - 1], lo = clip & 1 ? 0 : 9, hi = total - (clip & 2 ? 0 : 9);
+      const at = sa => { let i = 0; while (i + 2 < F.n && F.arc[i + 1] < sa) i++; const f = Math.max(0, Math.min(1, (sa - F.arc[i]) / Math.max(0.01, F.arc[i + 1] - F.arc[i]))), j = i + 1; return { x: pts[i * 2] + (pts[j * 2] - pts[i * 2]) * f, z: pts[i * 2 + 1] + (pts[j * 2 + 1] - pts[i * 2 + 1]) * f, nx: F.nx[i] + (F.nx[j] - F.nx[i]) * f, nz: F.nz[i] + (F.nz[j] - F.nz[i]) * f, y: H[i] + (H[j] - H[i]) * f }; };
+      for (const off of divs) for (let s0 = lo; s0 + 3 < hi; s0 += 9) {
+        const m = M.mark; let prev = -1; for (let k = 0; k <= 2; k++) { const q = at(s0 + k * 1.5), y = gy + q.y, e = 0.08;
+          const va = m.v(X(q.x + q.nx * (off - e)), y, Z(q.z + q.nz * (off - e)), 0, 1, 0, MARK), vb = m.v(X(q.x + q.nx * (off + e)), y, Z(q.z + q.nz * (off + e)), 0, 1, 0, MARK); if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va; }
+      }
+    }
+    out.claims.push({ shape: { t: 'line', pts: s.pts, hw: hw + (walk ? 1.8 : 0) }, layer: Math.max(0, lay), owner: 'street' }); out.nStreets++;
+  }
+  /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */
+  const B = M.bldg;
+  for (const b of tile.buildings) {
+    const r = b.ring, n = r.length / 2; if (n < 3) continue; const L = b.landmark ? lm.get(b.landmark) : null, hgt = Math.max(3, (L && L.height) || b.height || 9), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
+    let wall; if (L && L.type) wall = LM_WALL[L.type] || (L.type.includes('station') ? LM_WALL.station : 0); else wall = 0;
+    if (!wall) { const pal = WALLS[b.use] || WALLS.other, k = hash(b.id); wall = pal[Math.floor(k * pal.length) % pal.length]; }
+    const wc = shade(wall, 0.9 + 0.2 * hash(b.id * 7 + 1)), rc = L && L.type ? shade(wall, 0.8) : shade(0x77726a, 0.85 + 0.3 * hash(b.id * 3)); let area = 0, cx = 0, cz = 0, x0 = Infinity, x1b = -Infinity, z0 = Infinity, z1b = -Infinity;
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n, xi = r[i * 2], zi = r[i * 2 + 1], xj = r[j * 2], zj = r[j * 2 + 1]; area += xi * zj - xj * zi; cx += xi; cz += zi; x0 = Math.min(x0, xi); x1b = Math.max(x1b, xi); z0 = Math.min(z0, zi); z1b = Math.max(z1b, zi); }
+    const ccw = area > 0;                                                                // the pack says counter-clockwise; walls are built for either
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, ax = r[i * 2], az = r[i * 2 + 1], bx = r[j * 2], bz = r[j * 2 + 1], dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 0.05) continue;
+      let nx = dz / l, nz = -dx / l; if (!ccw) { nx = -nx; nz = -nz; } const u1 = l / 3.6, v0 = (y0 - gy) / 3.2, v1 = (y1 - gy) / 3.2;
+      const a = B.v(X(ax), y0, Z(az), nx, 0, nz, wc, 0, v0), bq = B.v(X(bx), y0, Z(bz), nx, 0, nz, wc, u1, v0), c = B.v(X(bx), y1, Z(bz), nx, 0, nz, wc, u1, v1), d = B.v(X(ax), y1, Z(az), nx, 0, nz, wc, 0, v1);
+      B.tri(a, bq, c, nx, 0, nz); B.tri(a, c, d, nx, 0, nz);
+      if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * 0.7, az + dz * t - nz * 0.7, 1.25); } void mx; void mz; }
+    }
+    const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
+    let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }
+    if (tris) { const all = contour.concat(...holes), base = B.p.length / 3; for (const q of all) B.v(X(q.x), y1, Z(q.y), 0, 1, 0, rc, 0.06, 0.06); for (const t of tris) B.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0); }
+    out.nBuildings++; if (x1b - x0 > 2 && z1b - z0 > 2) out.claims.push({ shape: { t: 'rect', x: (x0 + x1b) / 2, z: (z0 + z1b) / 2, hx: (x1b - x0) / 2, hz: (z1b - z0) / 2, yaw: 0 }, kind: 'building', owner: 'building' });
+    if (L && (L.importance >= 3 || (L.type || '').includes('station'))) out.labels.push({ id: L.id, text: L.name.en, x: cx / n, z: cz / n, y: y1 + 10 });
+  }
+  void SAND;
+  /* ---- the meshes ---- */
+  return { M, out };
+}
+
+export function makeMaterials() {
+  const flat = (f, u) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0, envMapIntensity: 0.25, polygonOffset: true, polygonOffsetFactor: f, polygonOffsetUnits: u });
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#e6e6e6'; g.fillRect(0, 56, 64, 8); g.fillStyle = '#5d7184'; g.fillRect(14, 12, 36, 32); g.fillStyle = '#c9d4dc'; g.fillRect(14, 12, 36, 5); g.fillStyle = '#d8d8d8'; g.fillRect(31, 12, 2, 32);
+  const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  return { ground: flat(-1, -1), park: flat(-2, -3), walk: flat(-2, -4), road: flat(-3, -5), mark: flat(-5, -9), bldg: new THREE.MeshStandardMaterial({ vertexColors: true, map: tex, roughness: 0.92, metalness: 0, envMapIntensity: 0.3 }), tex };
+}
