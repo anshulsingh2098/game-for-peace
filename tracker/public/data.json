@@ -298,6 +298,14 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a02c4051",
+     "t": "A-2026-11-18-20: Delhi look part 3 (species crowns, medians, haze, colony trees) and the green-data check (docs/DELHI_GREEN_DATA.md)",
+     "d": "Anshul's Claude: continue L2, L3 and P3 from docs/NEXT_PHASES.md; measure draw calls and triangles on a phone before adding more trees.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
      "id": "a7b81c0f",
      "t": "A-2026-11-18-19: Delhi greenery part 2 (broad two-blob trees, forest, scrub, farmland, hedges) and Anshul's done and left (docs/STATUS.md)",
      "d": "Anshul's Claude: pull PR 96 before touching tilemesh.js or streetlife.js; L3 continues from the list in docs/NEXT_PHASES.md.",
@@ -488,14 +496,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-20, from Rajul's Claude"
-    },
-    {
-     "id": "a407a5e1",
-     "t": "Autodrive levels and drive-mode styles; PRs 42 and 43 merged",
-     "d": "pull main; drive Mumbai to Goa and try E in each drive mode; review input/autodrive.js. Autodrive does not stop at signals yet (WORK_REMAINING 9.5).",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
     }
    ]
   ],
@@ -555,6 +555,14 @@
   [
    "Open pull requests",
    [
+    {
+     "id": "a2365585",
+     "t": "PR 97: Fix Delhi stuck on loading screen (builder boost + progress)",
+     "d": "Open pull request on branch claude/delhi-loading-fix. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 97"
+    },
     {
      "id": "a7e81ae1",
      "t": "PR 96: Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
@@ -1417,6 +1425,11 @@
  ],
  "prs": [
   [
+   "97",
+   "Fix Delhi stuck on loading screen (builder boost + progress)",
+   "open"
+  ],
+  [
    "96",
    "Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
    "open"
@@ -1610,11 +1623,6 @@
    "58",
    "D5: the game renders the Delhi city pack (?play&city=delhi)",
    "merged"
-  ],
-  [
-   "57",
-   "Delhi transit data (D2 metro and railway stations, D3 buses)",
-   "merged"
   ]
  ],
  "branches": [
@@ -1638,5 +1646,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T19:40:21.632Z"
+ "generated": "2026-11-17T19:44:50.598Z"
 }
