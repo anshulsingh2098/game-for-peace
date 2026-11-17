@@ -5,6 +5,8 @@
    (docs/DELHI_TRANSIT.md 4.2: Old Delhi in red sandstone, Nizamuddin with green roofs); there are no trains on these tracks yet and the tracks are not joined to the India-world rail network. Browser only. */
 import * as THREE from 'three';
 import { Soup, C, fbox, frame, pt, slab } from './transit_geo.js';
+import { TrainArt } from '../train_art.js';
+import { consist, lengthOf, hash, locoNumber, headcode } from '../train_consist.js';
 
 const RAD = 650, KEEP = 950, PLAT_H = 0.9, RAIL = C(0x8d9298), BALLAST = C(0x4f4b45), PLAT = C(0xc4bdae), PLAT_SIDE = C(0x86827a), TACT = C(0xe6b800), COL = C(0x6f7378), BRIDGE = C(0x8a8f96), RAILING = C(0x59606a);
 const ROOFS = { NDLS: 0x8d98a3, DLI: 0xb5603f, NZM: 0x4f9a63, ANVT: 0xc9d1d6, DEE: 0x9aa3ab, DEC: 0xa7b4bd }, DEFAULT_ROOF = 0x9aa3ab;
@@ -71,23 +73,45 @@ export class RailStations {
   constructor(T) {
     this.T = T; this.built = new Map(); this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.3, side: THREE.DoubleSide }); this.fleet = [];
     for (const loco of [false, true]) { const m = new THREE.InstancedMesh(vehicleGeometry(loco), this.mat, loco ? 80 : 800); m.count = 0; m.frustumCulled = false; m.castShadow = true; T.group.add(m); this.fleet.push(m); }
-    this.dummy = new THREE.Matrix4(); this.vx = new THREE.Vector3(); this.vy = new THREE.Vector3(0, 1, 0); this.vz = new THREE.Vector3(); this.list = (T.data.rail && T.data.rail.stations || []).filter(s => s.bodies && s.bodies.length); this.stats = { stations: 0, tris: 0, calls: 0 };
+    this.art = new TrainArt(); this.real = new Map(); this.dummy = new THREE.Matrix4(); this.vx = new THREE.Vector3(); this.vy = new THREE.Vector3(0, 1, 0); this.vz = new THREE.Vector3(); this.list = (T.data.rail && T.data.rail.stations || []).filter(s => s.bodies && s.bodies.length); this.stats = { stations: 0, tris: 0, calls: 0 };
   }
   /* the standing rakes of every built station into the two instanced meshes */
+  /* where the rake of track r of kit k is at time t: the centre along the station axis, or null while it is away (cycle 300 s) */
+  rakeU(k, r, t) {
+    const { uc, uA, uB } = k.rakeSpan, c = (t + r.ph) % 300, ease = x => x * x * (3 - 2 * x); let f; if (c < 70) f = -1 + ease(c / 70); else if (c < 170) f = 0; else if (c < 240) f = ease((c - 170) / 70); else return null;
+    return r.dir > 0 ? (f < 0 ? uc + (uc - uA) * f : uc + (uB - uc) * f) : (f < 0 ? uc - (uB - uc) * f : uc - (uc - uA) * f);
+  }
+  /* the two rake tracks nearest to the player get real vehicles (train_art.js, the India world's coaches and locomotives, built from train_consist.js); every other rake is instanced and simple */
+  pickReal(px, pz) {
+    const all = []; for (const k of this.built.values()) for (const r of k.rakeTracks) { const p = pt(k.rakeSpan.F0, k.rakeSpan.uc, r.v, 0); all.push({ k, r, d: Math.hypot(p[0] - px, p[2] - pz) }); } all.sort((a, b) => a.d - b.d);
+    const want = new Set(all.slice(0, 2).filter(a => a.d < 450).map(a => a.r)); for (const [r, tr] of [...this.real]) if (!want.has(r)) { this.releaseReal(r, tr); }
+    for (const a of all) if (want.has(a.r) && !this.real.has(a.r)) this.assembleReal(a.k, a.r);
+  }
+  assembleReal(k, r) {
+    try {
+      const T = this.T, styles = ['rajdhani', 'express', 'vande', 'passenger'], style = styles[Math.floor(hash(k.st.x | 0, Math.round(r.v)) * 4)], seed = (k.st.x | 0) * 31 + Math.round(r.v * 10), cs = consist(style, null, seed), dests = ['Mumbai', 'Kolkata', 'Jaipur', 'Lucknow', 'Chennai', 'Amritsar', 'Bhopal', 'Patna'], to = dests[seed % dests.length], real = { name: k.st.name.en + '-' + to + ' Express', n: String(12000 + (seed % 900)), stops: [['from'], ['to']] };
+      const ctx = { cs, real: style === 'passenger' ? null : real, local: style === 'passenger' ? { name: 'PASSENGER' } : null, names: { from: k.st.name.en, to }, seed, loco: { no: locoNumber(seed, style), head: headcode(style, real) } }, vs = [], objs = [];
+      cs.items.forEach((item, i) => { item.i = i; const v = this.art.build(item, ctx); T.group.add(v.obj); vs.push(v); objs.push(v.obj); });
+      this.real.set(r, { vs, objs, total: vs.reduce((a, v) => a + v.length, 0), k });
+    } catch (e) { console.warn('real rake failed, instanced instead', e); this.real.set(r, { vs: [], objs: [], total: 0, k, failed: true }); }
+  }
+  releaseReal(r, tr) { for (const o of tr.objs) this.T.group.remove(o); for (const v of tr.vs) v.dispose(); this.real.delete(r); }
   layoutRakes(t = this.T.t) {
-    const T = this.T, ox = T.origin.x, oz = T.origin.z, n = [0, 0], ease = x => x * x * (3 - 2 * x);
-    for (const k of this.built.values()) { const { F0, uc, uA, uB } = k.rakeSpan; for (const r of k.rakeTracks) {
-      const c = (t + r.ph) % 300; let f; if (c < 70) f = -1 + ease(c / 70) * 1; else if (c < 170) f = 0; else if (c < 240) f = ease((c - 170) / 70); else continue;     // -1 at the entry end, 0 at the platform, +1 at the exit end
-      const uC = r.dir > 0 ? (f < 0 ? uc + (uc - uA) * f : uc + (uB - uc) * f) : (f < 0 ? uc - (uB - uc) * f : uc - (uc - uA) * f);
+    const T = this.T, ox = T.origin.x, oz = T.origin.z, n = [0, 0];
+    for (const k of this.built.values()) { const { F0 } = k.rakeSpan; for (const r of k.rakeTracks) {
+      const uC = this.rakeU(k, r, t), rl = this.real.get(r); if (rl && !rl.failed) { rl.objs.forEach(o => { o.visible = uC !== null; }); }
+      if (uC === null) continue;
+      if (rl && !rl.failed) { let back = 0; const dx = F0.tx * r.dir, dz = F0.tz * r.dir, head = uC + r.dir * rl.total / 2;
+        rl.vs.forEach((v, i) => { const L = v.length, u = head - r.dir * (back + L / 2), p = pt(F0, u, r.v, 0); back += L; rl.objs[i].position.set(p[0] - ox, T.city.gy + 0.2, p[2] - oz); rl.objs[i].rotation.y = -Math.atan2(dz, dx); }); continue; }
       for (let j = 0; j < 11; j++) { const i = j === 0 ? 1 : 0, m = this.fleet[i]; if (n[i] >= m.instanceMatrix.count) continue; const u = uC + (r.dir > 0 ? 5 - j : j - 5) * 24.5, p = pt(F0, u, r.v, 0.2);
         this.vx.set(F0.tx, 0, F0.tz); this.vz.set(-F0.tz, 0, F0.tx); this.dummy.makeBasis(this.vx, this.vy, this.vz); this.dummy.setPosition(p[0] - ox, T.city.gy + 0.2, p[2] - oz); m.setMatrixAt(n[i]++, this.dummy); } } }
     this.fleet.forEach((m, i) => { m.count = n[i]; m.instanceMatrix.needsUpdate = true; });
   }
   update(px, pz) {
-    const T = this.T, S = T.S; this.layoutRakes(); let want = null, wd = Infinity;
+    const T = this.T, S = T.S; this.pickT = (this.pickT || 0) - 1; if (this.pickT <= 0) { this.pickT = 30; this.pickReal(px, pz); } this.layoutRakes(); let want = null, wd = Infinity;
     for (const st of this.list) { if (this.built.has(st.id)) continue; const d = Math.hypot(st.x - px, st.z - pz); if (d < RAD && d < wd && T.city.tiles.has(Math.floor(st.x / S) + '_' + Math.floor(st.z / S))) { wd = d; want = st; } }
     if (want) { const k = new RailKit(T, want); this.built.set(want.id, k); T.group.add(k.group); this.refresh(); this.layoutRakes(); }
-    for (const [id, k] of [...this.built]) if (Math.hypot(k.st.x - px, k.st.z - pz) > KEEP) { T.group.remove(k.group); k.dispose(); T.unclaim('metro:rs:' + id); this.built.delete(id); this.refresh(); this.layoutRakes(); }
+    for (const [id, k] of [...this.built]) if (Math.hypot(k.st.x - px, k.st.z - pz) > KEEP) { for (const [r, tr] of [...this.real]) if (tr.k === k) this.releaseReal(r, tr); T.group.remove(k.group); k.dispose(); T.unclaim('metro:rs:' + id); this.built.delete(id); this.refresh(); this.layoutRakes(); }
   }
   reposition() { for (const k of this.built.values()) k.reposition(); this.layoutRakes(); }
   refresh() { let t = 0, c = 2; for (const k of this.built.values()) { t += k.tris; c += k.calls; } this.stats = { stations: this.built.size, tris: t, calls: c }; }

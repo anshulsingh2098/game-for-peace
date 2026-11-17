@@ -2,6 +2,10 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 01:00  D6b: stairs with escalators, fare gates, real railway coaches at the Delhi stations, sea moved below the stations
+Branch: claude/delhi-d6b  Commit: see the PR
+What changed: `transit_geo.js` (`flight`, `gates`), `transit_station.js`, `transit_underground.js`, `transit_rail.js` (two real rakes from `train_art.js` and `train_consist.js`), small hook in `cityworld.js` (`cityConfig`: sea at -30 m so it does not cut through the underground stations), `tools/selftest.mjs` (103 checks). Docs: `docs/DELHI_TRANSIT.md` section 11 (cost, what is not done), WORK_REMAINING D6b.*.
+For the other stream: nothing.
 ## 2026-11-17 23:50  D8: Delhi landmark models (22 places built, 8 of them partly)
 Branch: claude/delhi-d8-landmarks-d40d41  Commit: see the PR
 What changed: new `src/world/city/landmarks/` (`index.js` manager, `kit.js` primitives and materials, `geo.js`, `plans.js` registry, `plans_axis.js`, `plans_mughal.js`, `plans_modern.js`). Shared files, smallest changes: `src/world/city/cityworld.js` (create `this.lmx`, call `lmx.update` each frame, pass `skip` to the tile mesher, add `lmx.circles` to `near`, `reposition`, `setNight`, `summary`), `src/world/city/tilemesh.js` (one line: a landmark with a model is not drawn as a plain block), `tools/selftest.mjs` (+1 check, 104), `tools/build_landmarks_doc.mjs` (appends `tools/city_data/delhi_model_status.md`, the status table, to `docs/DELHI_LANDMARKS.md`). The models are procedural (no files, no images), from each landmark's footprint box, yaw and height in `landmarks.json`; collision circles come back through `city.near`; name boards and info cards from the same record; keep-out claims for the extra ground. Measured (hidden pane, medium): at India Gate 411 draw calls and 364k triangles in view, the 22 models together about 150k triangles (largest: Red Fort 36k), a model builds in 0 to 26 ms (the Jama Masjid 90 ms once).
