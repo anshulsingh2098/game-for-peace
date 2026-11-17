@@ -15,6 +15,19 @@ export class Mesher {
     if ((uy * vz - uz * vy) * nx + (uz * vx - ux * vz) * ny + (ux * vy - uy * vx) * nz >= 0) this.i.push(a, b, c); else this.i.push(a, c, b);
   }
   get empty() { return !this.i.length; }
+  /* the mesh cut into square cells of `cell` metres (by the centre of each triangle): [{ gx, gz, geo }]. A tile is 1000 m, so one mesh per tile cannot be hidden or culled by distance; a cell can. */
+  cells(cell) {
+    const P = this.p, I = this.i, by = new Map();
+    for (let t = 0; t < I.length; t += 3) { const a = I[t], b = I[t + 1], c = I[t + 2], gx = Math.floor((P[a * 3] + P[b * 3] + P[c * 3]) / 3 / cell), gz = Math.floor((P[a * 3 + 2] + P[b * 3 + 2] + P[c * 3 + 2]) / 3 / cell), k = gx + ',' + gz; let e = by.get(k); if (!e) by.set(k, e = { gx, gz, I: [] }); e.I.push(a, b, c); }
+    const out = [];
+    for (const e of by.values()) {
+      const map = new Map(), p = [], n = [], c = [], u = [], idx = [];
+      for (const v of e.I) { let w = map.get(v); if (w === undefined) { w = p.length / 3; map.set(v, w); p.push(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]); n.push(this.n[v * 3], this.n[v * 3 + 1], this.n[v * 3 + 2]); c.push(this.c[v * 3], this.c[v * 3 + 1], this.c[v * 3 + 2]); u.push(this.u[v * 2], this.u[v * 2 + 1]); } idx.push(w); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(u, 2));
+      g.setIndex(p.length / 3 > 65535 ? new THREE.Uint32BufferAttribute(idx, 1) : new THREE.Uint16BufferAttribute(idx, 1)); g.computeBoundingSphere(); out.push({ gx: e.gx, gz: e.gz, geo: g });
+    }
+    return out;
+  }
   geometry() {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(this.u, 2));
     g.setIndex(this.i.length > 65535 ? new THREE.Uint32BufferAttribute(this.i, 1) : new THREE.Uint16BufferAttribute(this.i, 1)); g.computeBoundingSphere(); return g;

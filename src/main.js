@@ -127,6 +127,7 @@ for (const url of ['api/settings', 'settings.json']) {             // the publis
 registerRoot('world', () => config); applyWorld(config);
 if (q.get('road')) config.road.style = roadStyleById(q.get('road')).id;                  // ?road=highway|boulevard|dirt|gravel
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };
+if (cityMode) config.view = { ...config.view, rings: [{ r: 1, res: 8 }, { r: 2, res: 4 }, { r: 4, res: 4 }], far: { ...config.view.far, r: Math.min(config.view.far.r, 6), res: 4 } };      // a city stands on flat land and draws its own ground over the engine's: the terrain under it needs few vertices (it was 284k triangles of hidden ground)
 document.body.classList.toggle('debug', q.has('debug')); document.body.classList.toggle('dev', q.has('dev') || q.has('debug')); document.body.classList.toggle('touch', matchMedia('(pointer: coarse)').matches || q.has('touch'));
 
 const canvas = $('#view'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true });

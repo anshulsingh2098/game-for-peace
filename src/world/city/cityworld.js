@@ -22,7 +22,7 @@ export function cityConfig(base, seed) {
     road: { ...base.road, style: 'two-lane', start: { x: -200000, z: 0, y: 8 }, guide: [0, 0, 300, 0, 600, 0, 900, 0] } };
 }
 
-const RADIUS = 1300, KEEP = 1900, CELL = 16, SLICE_MS = 3, FAR = 3800, LOD_NEAR = 450;                 // the detailed ring, when it is dropped, a tile's size, the budget of a frame for meshing, the far skyline radius, the radius of lane marks and kerbs
+const CELLED = { walk: 250, prop: 250, mark: 500, sign: 500, ban: 500, ad: 500 }, LOD_OF = { walk: 450, prop: 350, mark: 400, sign: 280, ban: 280, ad: 350 }, RADIUS = 1300, KEEP = 1900, CELL = 16, SLICE_MS = 3, FAR = 3800, LOD_NEAR = 450;                 // the detailed ring, when it is dropped, a tile's size, the budget of a frame for meshing, the far skyline radius, the radius of lane marks and kerbs
 export class CityWorld {
   constructor(scene, origin, terrain, { base = 'assets/cities/delhi' } = {}) {
     this.base = base; this.scene = scene; this.origin = origin; this.terrain = terrain; this.ko = terrain.keepout; this.gy = terrain.base(0, 0); this.pack = new CityPack(base); this.group = new THREE.Group(); scene.add(this.group);
@@ -51,7 +51,7 @@ export class CityWorld {
     want.sort((a, b) => a[0] - b[0]); for (const [, i, j] of want) { if (this.loading.size >= 3) break; this.fetchTile(i, j); }
     if (this.job) this.stepJob(px, pz); else if (this.ready.length) { this.ready.sort((a, b) => Math.hypot((a.tx + 0.5) * S - px, (a.tz + 0.5) * S - pz) - Math.hypot((b.tx + 0.5) * S - px, (b.tz + 0.5) * S - pz)); const t = this.ready.shift(), k = this.tileKey(t.tx, t.tz); this.loading.delete(k); if (!this.tiles.has(k)) this.startJob(t); }
     this.updateFar(px, pz);
-    for (const [k, t] of this.tiles) { const d = Math.hypot(Math.max(t.tx * S - px, 0, px - (t.tx + 1) * S), Math.max(t.tz * S - pz, 0, pz - (t.tz + 1) * S)); if (d > KEEP) this.drop(k); else for (const m of t.meshes) { if (m.userData.near) m.visible = d < LOD_NEAR; if (m.userData.bld) m.castShadow = d < 450; } }
+    for (const [k, t] of this.tiles) { const d = Math.hypot(Math.max(t.tx * S - px, 0, px - (t.tx + 1) * S), Math.max(t.tz * S - pz, 0, pz - (t.tz + 1) * S)); if (d > KEEP) this.drop(k); else for (const m of t.meshes) { const c = m.userData.cell, dm = c ? Math.hypot(Math.max(t.tx * S + c.x0 - px, 0, px - (t.tx * S + c.x1)), Math.max(t.tz * S + c.z0 - pz, 0, pz - (t.tz * S + c.z1))) : d; if (m.userData.near) m.visible = dm < (m.userData.lod || LOD_NEAR); if (m.userData.bld) m.castShadow = dm < 450; } }
   }
   /* the far skyline: tiles beyond the detailed ring, as boxes of their tall and big buildings (skyline.js), one fetched at a time while nothing else is loading */
   updateFar(px, pz) {
@@ -68,9 +68,10 @@ export class CityWorld {
     const j = this.job, t = performance.now(); this.deadline = t + SLICE_MS; const r = j.gen.next(); const dt = performance.now() - t; j.cpu += dt; j.slice = Math.max(j.slice || 0, dt);
     if (r.done) { this.job = null; const t1 = performance.now(); this.build(j.tile, r.value.M, r.value.out); const bt = performance.now() - t1; this.stats.ms = j.cpu + bt; this.stats.buildMs = bt; this.stats.buildMax = Math.max(this.stats.buildMax || 0, bt); this.stats.sliceMax = Math.max(this.stats.sliceMax || 0, j.slice || 0); this.stats.slices = (this.stats.slices || 0) + 1; }
   }
+  flagMesh(m, name) { m.receiveShadow = name !== 'sky' && !name.startsWith('bldg') || name === 'bldg'; m.matrixAutoUpdate = false; m.updateMatrix(); m.userData.near = name === 'mark' || name === 'walk' || name === 'sign' || name === 'ad' || name === 'ban' || name === 'prop'; m.userData.bld = name.startsWith('bldg') || name === 'shop'; m.userData.lod = LOD_OF[name] || LOD_NEAR; m.castShadow = m.userData.bld; }
   build(tile, M, out) {
     const S = this.pack.size, k = this.tileKey(tile.tx, tile.tz);
-    const grp = new THREE.Group(), meshes = []; for (const name of ['ground', 'park', 'walk', 'road', 'mark', 'bldg', 'bldgO', 'bldgG', 'shop', 'sign', 'ad', 'ban', 'prop']) { if (!M[name] || M[name].empty) continue; const m = new THREE.Mesh(M[name].geometry(), this.mats[name]); m.receiveShadow = name !== 'sky' && !name.startsWith('bldg') || name === 'bldg'; m.matrixAutoUpdate = false; m.updateMatrix(); m.userData.near = name === 'mark' || name === 'walk' || name === 'sign' || name === 'ad' || name === 'ban' || name === 'prop'; m.userData.bld = name.startsWith('bldg') || name === 'shop'; m.castShadow = m.userData.bld; grp.add(m); meshes.push(m); }
+    const grp = new THREE.Group(), meshes = []; for (const name of ['ground', 'park', 'walk', 'road', 'mark', 'bldg', 'bldgO', 'bldgG', 'shop', 'sign', 'ad', 'ban', 'prop']) { if (!M[name] || M[name].empty) continue; const cs = CELLED[name]; if (cs) { for (const c of M[name].cells(cs)) { const m = new THREE.Mesh(c.geo, this.mats[name]); this.flagMesh(m, name); m.userData.cell = { x0: c.gx * cs, z0: c.gz * cs, x1: (c.gx + 1) * cs, z1: (c.gz + 1) * cs }; grp.add(m); meshes.push(m); } continue; } const m = new THREE.Mesh(M[name].geometry(), this.mats[name]); m.receiveShadow = name !== 'sky' && !name.startsWith('bldg') || name === 'bldg'; m.matrixAutoUpdate = false; m.updateMatrix(); m.userData.near = name === 'mark' || name === 'walk' || name === 'sign' || name === 'ad' || name === 'ban' || name === 'prop'; m.userData.bld = name.startsWith('bldg') || name === 'shop'; m.castShadow = m.userData.bld; grp.add(m); meshes.push(m); }
     grp.position.set(tile.tx * S - this.origin.x, 0, tile.tz * S - this.origin.z); this.group.add(grp);
     /* the registry: the streets and buildings of this tile (one notification of the scenery for the whole tile, not one per claim) */
     const owner = 'city:tile:' + k, L = this.ko.listeners.slice(); this.ko.listeners.length = 0; let bb = [Infinity, Infinity, -Infinity, -Infinity];
