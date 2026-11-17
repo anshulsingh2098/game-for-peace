@@ -137,6 +137,12 @@ export function* buildTileSteps(tile, ctx) {
       const pos = [], idx = []; let prev = -1; for (let i = 0; i < F.n; i++) { if (H[i] < 0.05 && (i + 1 >= F.n || H[i + 1] < 0.05) && (i === 0 || H[i - 1] < 0.05)) { prev = -1; continue; } const v = pos.length / 3, k = F.sc[i]; pos.push(pts[i * 2] + F.nx[i] * hw * k, gy + H[i], pts[i * 2 + 1] + F.nz[i] * hw * k, pts[i * 2] - F.nx[i] * hw * k, gy + H[i], pts[i * 2 + 1] - F.nz[i] * hw * k); if (prev >= 0) idx.push(prev, prev + 1, v, prev + 1, v + 1, v); prev = v; }
       if (idx.length) out.decks.push({ pos, idx, hw, id, lay });
     }
+    /* zebra crossings: at a real end of the piece that is a node flagged crossing (2) or signal (1), stripes across the carriageway 5 m back from the node (kerbs have a gap there: see mouthFree users) */
+    if (!deck && !sunk && ['primary', 'secondary', 'tertiary', 'residential'].includes(cls) && w >= 4) for (const end of [0, 1]) {
+      if (clip & (end ? 2 : 1)) continue; const node = end ? G.b[id] : G.a[id], fl = G.nodeFlags[node]; if (!(fl & 3)) continue; const nx0 = G.xz[node * 2], nz0 = G.xz[node * 2 + 1], e0 = end ? pts.length - 2 : 0; if (Math.hypot(pts[e0] - nx0, pts[e0 + 1] - nz0) > 3) continue;
+      const i0 = end ? F.n - 1 : 0, i1 = end ? F.n - 2 : 1, dx = pts[i1 * 2] - pts[i0 * 2], dz = pts[i1 * 2 + 1] - pts[i0 * 2 + 1], L = Math.hypot(dx, dz) || 1, tx = dx / L, tz = dz / L, cx = pts[i0 * 2] + tx * 5, cz = pts[i0 * 2 + 1] + tz * 5, nxv = -tz, nzv = tx;
+      for (let o = -hw + 0.5; o < hw - 0.3; o += 1.0) { const a = [cx + nxv * o - tx * 1.4, cz + nzv * o - tz * 1.4], b = [cx + nxv * (o + 0.5) - tx * 1.4, cz + nzv * (o + 0.5) - tz * 1.4], c2 = [cx + nxv * (o + 0.5) + tx * 1.4, cz + nzv * (o + 0.5) + tz * 1.4], d = [cx + nxv * o + tx * 1.4, cz + nzv * o + tz * 1.4]; const m = M.mark, y = gy; const v0 = m.v(X(a[0]), y, Z(a[1]), 0, 1, 0, MARK), v1 = m.v(X(b[0]), y, Z(b[1]), 0, 1, 0, MARK), v2 = m.v(X(c2[0]), y, Z(c2[1]), 0, 1, 0, MARK), v3 = m.v(X(d[0]), y, Z(d[1]), 0, 1, 0, MARK); m.tri(v0, v1, v2, 0, 1, 0); m.tri(v0, v2, v3, 0, 1, 0); }
+    }
     /* lane marks: a dashed line on the centre of a two-way street, between the lanes of a one-way street; none near a junction (the piece ends that are real nodes) */
     if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) {
       const divs = []; if (two) { divs.push(0); const side = Math.floor(lanes / 2); for (let k = 1; k < side; k++) divs.push(k * w / lanes, -k * w / lanes); } else for (let k = 1; k < lanes; k++) divs.push(-hw + k * w / lanes);

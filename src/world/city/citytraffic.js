@@ -12,7 +12,7 @@ export class CityTraffic {
     this.origin = origin; this.G = G; this.max = 34; this.want = 0; this.cars = []; this.pieces = new Map(); this.ends = new Map(); this.tile = new Map();
     const body = new THREE.BoxGeometry(1.8, 0.8, 4.2), cab = new THREE.BoxGeometry(1.6, 0.65, 2.1), mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0.2 }), glass = new THREE.MeshStandardMaterial({ color: 0x1c242c, roughness: 0.2, metalness: 0.3 });
     this.body = new THREE.InstancedMesh(body, mat, this.max); this.cab = new THREE.InstancedMesh(cab, glass, this.max); for (const m of [this.body, this.cab]) { m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
-    this.sig = new Map(); this.time = 0; { const xz = G.xz, f = G.nodeFlags; for (let i = 0; i < G.nodes; i++) if (f[i] & 1) { const k = Math.floor(xz[i * 2] / 12) + ',' + Math.floor(xz[i * 2 + 1] / 12); let l = this.sig.get(k); if (!l) this.sig.set(k, l = []); l.push(i); } }       // the signalised nodes (flag 1) by 12 m cell
+    this.sig = new Map(); this.xing = new Map(); this.peds = null; this.time = 0; { const xz = G.xz, f = G.nodeFlags; for (let i = 0; i < G.nodes; i++) { const k = Math.floor(xz[i * 2] / 12) + ',' + Math.floor(xz[i * 2 + 1] / 12); if (f[i] & 1) { let l = this.sig.get(k); if (!l) this.sig.set(k, l = []); l.push(i); } else if (f[i] & 2) { let l = this.xing.get(k); if (!l) this.xing.set(k, l = []); l.push(i); } } }       // the signalised nodes (flag 1) by 12 m cell
     this.col = new THREE.Color(); this.m4 = new THREE.Matrix4(); this.q = new THREE.Quaternion(); this.up = new THREE.Vector3(0, 1, 0); this.sc = new THREE.Vector3(1, 1, 1); this.pos = new THREE.Vector3();
   }
   setMode(m) { this.want = MODES[m] === undefined ? 10 : MODES[m]; }
@@ -25,6 +25,8 @@ export class CityTraffic {
     this.tile.set(k, ids);
   }
   removeTile(k) { const l = this.tile.get(k); if (!l) return; for (const pc of l) { pc.alive = false; this.pieces.delete(pc); } for (const [key, arr] of this.ends) { const n = arr.filter(e => e.pc.alive); if (n.length) this.ends.set(key, n); else this.ends.delete(key); } this.tile.delete(k); }
+  /* is there a crossing (flag 2) or signal (flag 1) node within 6 m of (x, z) */
+  crossingAt(x, z) { if (this.signalAt(x, z) >= 0) return true; const G = this.G, i0 = Math.floor(x / 12), j0 = Math.floor(z / 12); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = this.xing.get((i0 + a) + ',' + (j0 + b)); if (l) for (const n of l) if (Math.hypot(G.xz[n * 2] - x, G.xz[n * 2 + 1] - z) < 6) return true; } return false; }
   /* the signalised node within 6 m of (x, z) or -1 */
   signalAt(x, z) { const G = this.G, i0 = Math.floor(x / 12), j0 = Math.floor(z / 12); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = this.sig.get((i0 + a) + ',' + (j0 + b)); if (l) for (const n of l) if (Math.hypot(G.xz[n * 2] - x, G.xz[n * 2 + 1] - z) < 6) return n; } return -1; }
   /* a signal shows green to one axis (0: east-west, 1: north-south) at a time, 14 s each, offset per junction */
@@ -47,7 +49,7 @@ export class CityTraffic {
       if (!c.pc.alive || Math.hypot(c.x - px, c.z - pz) > 700) { const r = this.spawn(px, pz); if (r) cars[n] = r; else cars.splice(n--, 1); continue; }
       /* the gap to what is ahead on this lane: another car, or the player */
       this.at(c.pc, c.s, o); const tx = o.tx * c.dir, tz = o.tz * c.dir; let gap = 99;
-      for (const k of [...cars, { x: px, z: pz, player: true }]) { if (k === c) continue; const dx = k.x - c.x, dz = k.z - c.z, ahead = dx * tx + dz * tz, side = Math.abs(-dx * tz + dz * tx); if (ahead > 0 && ahead < gap && side < (k.player ? 2.4 : 2.0)) gap = ahead; }
+      for (const k of [...cars, ...(this.peds ? this.peds.filter(p => p.state === 'cross') : []), { x: px, z: pz, player: true }]) { if (k === c) continue; const dx = k.x - c.x, dz = k.z - c.z, ahead = dx * tx + dz * tz, side = Math.abs(-dx * tz + dz * tx); if (ahead > 0 && ahead < gap && side < (k.player ? 2.4 : 2.0)) gap = ahead; }
       { const rem = c.dir > 0 ? c.pc.len - c.s : c.s; if (rem < 22 && rem > 0.5) { const q = c.pc.s.pts, ex = c.dir > 0 ? q[q.length - 2] : q[0], ez = c.dir > 0 ? q[q.length - 1] : q[1], nd = this.signalAt(ex, ez); if (nd >= 0 && !this.green(nd, tx, tz)) gap = Math.min(gap, rem - 1.5); } }       // a red signal at the end of the piece is a wall
       const want = gap < 9 ? 0 : Math.min(c.pc.speed, c.v + 3 * dt) * Math.min(1, (gap - 9) / 14); c.v += Math.max(-9 * dt, Math.min(2.5 * dt, want - c.v)); c.s += c.dir * c.v * dt;
       if (c.s > c.pc.len || c.s < 0) {                                    // the end of the piece: continue on another that starts here, else turn this car round at a dead end (or retire it)

@@ -23,7 +23,7 @@ export class CityWorld {
     this.mats = makeMaterials(); this.far = new Map(); this.farLoading = new Set(); this.cutCells = new Map(); this.openCuts = []; this.cuts = installCutHoles([this.mats.ground, this.mats.park, this.mats.walk]); this.tiles = new Map(); this.loading = new Map(); this.ready = []; this.circ = new Map(); this.geomMap = new Map(); this.onStreets = null; this.deckCells = new Map(); this.stats = { tiles: 0, buildings: 0, streets: 0, ms: 0, loaded: 0, failed: 0 }; this.labels = new Map();
   }
   async init() {
-    await this.pack.init(); const { landmarks } = this.pack; this.traffic = new CityTraffic(this.scene, this.origin, this.pack.G); this.peds = new CityPeds(this.scene, this.origin, this.traffic);
+    await this.pack.init(); const { landmarks } = this.pack; this.traffic = new CityTraffic(this.scene, this.origin, this.pack.G); this.peds = new CityPeds(this.scene, this.origin, this.traffic); this.traffic.peds = this.peds.list;
     for (const l of landmarks) if (l.footprint && l.footprint.length >= 6) { const station = (l.type || '').includes('station') || /station|terminal/.test(l.id); this.ko.add('city:lm:' + l.id, station ? 'station' : 'landmark', footprintRect(l.footprint, l.yaw || 0)); }       // landmarks and stations claim their ground
     this.pack.nearestStreet = (x, z) => this.nearestStreet(x, z); return this;
   }

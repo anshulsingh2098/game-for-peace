@@ -32,7 +32,7 @@ export class CityPeds {
       else { p.s += p.dir * p.v * dt; p.phase += dt * 6;
         if (p.s > p.pc.len || p.s < 0) {
           const end = p.dir > 0 ? p.pc.len : 0; this.pos(p, end, o); const ex = o.x, ez = o.z;
-          if (rnd() < 0.3) { p.s = end; p.state = 'wait'; p.wait = 1 + rnd() * 3; }                                               // cross here, once the street is clear
+          if (tr.crossingAt(ex, ez) && rnd() < 0.5) { p.s = end; p.state = 'wait'; p.wait = 1 + rnd() * 3; }                     // cross at a zebra (a flagged node), once the street is clear
           else { const opts = []; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = tr.ends.get(tr.key(ex + a * 8, ez + b * 8)); if (l) for (const e of l) if (e.pc !== p.pc && e.pc.alive && WALKABLE.has(e.pc.cls) && Math.hypot(e.x - ex, e.z - ez) < 4) opts.push(e); }
             if (opts.length) { const e = opts[Math.floor(rnd() * opts.length)]; p.pc = e.pc; p.dir = e.end === 0 ? 1 : -1; p.s = e.end === 0 ? 0.1 : e.pc.len - 0.1; } else { p.dir = -p.dir; p.s = Math.max(0.1, Math.min(p.pc.len - 0.1, p.s)); } } } }
       this.pos(p, Math.max(0, Math.min(p.pc.len, p.s)), o); const off = (p.pc.w / 2 + 0.9) * (p.side * (1 - 2 * Math.min(1, p.state === 'cross' ? p.cross : 0)));       // lateral: the pavement, or somewhere across the street
