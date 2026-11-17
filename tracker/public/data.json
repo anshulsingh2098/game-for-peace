@@ -1,5 +1,5 @@
 {
- "commit": "a0441f8",
+ "commit": "8ba6b4b",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -86,16 +86,40 @@
     },
     {
      "id": "aaf026cf",
-     "t": "B6: Get the owner's answers on the Lite/Full plan",
-     "d": "Ask the owner the four questions at the end of docs/LITE_AND_FULL_PLAN.md and write the answers in docs/DECISIONS.md. Needs the owner (a person). Accepted when all four are recorded.",
+     "t": "B6: Get the owner's remaining answers on the Lite/Full plan",
+     "d": "The owner accepted the split on 18 Nov 2026 (docs/DECISIONS.md): Lite is Delhi only, Full is a downloadable PC and phone app. Still ask: how many cars in Lite, the minimum device, PC or phone first, the \"get the full game\" button; record them in docs/DECISIONS.md. Original text: Ask the owner the four questions at the end of docs/LITE_AND_FULL_PLAN.md and write the answers in docs/DECISIONS.md. Needs the owner (a pe…",
      "s": "todo",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
     },
     {
      "id": "ad639baa",
-     "t": "B7: No-reload switch between the India map and a city (v2)",
+     "t": "B7: No-reload switch between the India map and a city (v2; Full build only after the Lite/Full split)",
      "d": "Phase 3. Reserve src/main.js first (log entry). Make the world set-up re-runnable, switch with the existing black fade, keep the old page-load hand-over behind ?reload=1. Accepted when going from the highway into Delhi and back needs no page load, in the browser and in the self-test where it can be tested.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a8c99775",
+     "t": "B14: Add the build switch and boot Lite into Delhi",
+     "d": "One constant BUILD = lite | full read in src/main.js and tools/stage_cloudflare.py (small, reserve the shared files first). Lite boots straight into the Delhi city: no India map, no highway entry, no \"Other cities\", no location picker; the stage script for Lite ships only Delhi assets. Full is today's game. Accepted when ? opens Delhi in Lite, one self-test covers both builds, and the live web game is the Lite build…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ab3db113",
+     "t": "B15: Web Lite budgets",
+     "d": "Measure and meet the gates in docs/LITE_AND_FULL_PLAN.md: first drive in under 10 s and under 25 MB downloaded on a normal connection, 60 fps on an M-series Mac and a mid laptop, 30 fps on a mid phone, no hitch over 50 ms. Numbers (commit, device, tier, window visible, p95, p99) go in PERFORMANCE.md. Needs real devices (a person).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ae74e15a",
+     "t": "B16: Full app packaging plan",
+     "d": "A one-page decision note (docs/FULL_APP.md): a PC wrapper (Tauri or Electron) and a phone wrapper (Capacitor) around the same engine first, local asset packs for India and each city, saves shared with Lite, and the benchmarks that decide a WebGPU or native engine later. No build yet. Accepted when the owner has read and answered it.",
      "s": "todo",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
@@ -572,36 +596,12 @@
      "r": "PR 97"
     },
     {
-     "id": "a7e81ae1",
-     "t": "PR 96: Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
-     "d": "Open pull request on branch fix/delhi-green. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 96"
-    },
-    {
      "id": "a94ddabe",
      "t": "PR 95: Product split: Web Lite (Delhi only) and Full (downloadable PC and phone app); tasks B14-B16",
      "d": "Open pull request on branch docs/lite-and-full. Waiting for review and the owner's merge.",
      "s": "doing",
      "w": "Rajul",
      "r": "PR 95"
-    },
-    {
-     "id": "aabb1b0d",
-     "t": "PR 94: No Enter Delhi city button: the city loads by itself near Delhi",
-     "d": "Open pull request on branch feat/auto-enter-city. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 94"
-    },
-    {
-     "id": "ad244372",
-     "t": "PR 93: Restore cars, engine sound and sky to before PR 90; keep NPCs and animated exit",
-     "d": "Open pull request on branch fix/restore-cars-sound. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 93"
     }
    ]
   ],
@@ -1445,7 +1445,7 @@
   [
    "96",
    "Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
-   "open"
+   "merged"
   ],
   [
    "95",
@@ -1455,12 +1455,12 @@
   [
    "94",
    "No Enter Delhi city button: the city loads by itself near Delhi",
-   "open"
+   "merged"
   ],
   [
    "93",
    "Restore cars, engine sound and sky to before PR 90; keep NPCs and animated exit",
-   "open"
+   "merged"
   ],
   [
    "92",
@@ -1636,15 +1636,15 @@
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 323 behind main)"
+   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 339 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 60 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 76 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 58 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 74 behind main)"
   ]
  ],
  "tests": null,
@@ -1654,5 +1654,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T20:11:34.339Z"
+ "generated": "2026-11-17T20:18:39.962Z"
 }
