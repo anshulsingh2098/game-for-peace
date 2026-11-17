@@ -18,6 +18,13 @@ function boardTexture(st) {
   g.font = 'bold 34px system-ui, sans-serif'; g.fillText(st.id, 512, 218); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
+/* platform number boards: one atlas, a row per label ("1", "3-4"), white on railway blue, a small "PLATFORM" line above */
+function platformTexture(labels) {
+  const R = 128, c = document.createElement('canvas'); c.width = 256; c.height = R * labels.length; const g = c.getContext('2d'); g.textAlign = 'center'; g.textBaseline = 'middle';
+  labels.forEach((t, i) => { const y = i * R; g.fillStyle = '#1b3f8b'; g.fillRect(0, y, 256, R); g.fillStyle = '#f2f2ee'; g.fillRect(0, y, 256, 6); g.fillRect(0, y + R - 6, 256, 6); g.font = 'bold 22px system-ui, sans-serif'; g.fillText('PLATFORM', 128, y + 26); let s = 76; do { g.font = 'bold ' + s + 'px system-ui, sans-serif'; s -= 6; } while (g.measureText(t).width > 220 && s > 24); g.fillText(t, 128, y + 78); });
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+
 /* a coach (23.5 m, blue with a white stripe: a guess at the common look) and a locomotive (20 m), rail top at y = 0 */
 function vehicleGeometry(loco) {
   const S = new Soup(0, 0), F = frame(0, 0, 1, 0), L = loco ? 20 : 23.5, W = 3.2, body = C(loco ? 0x2d4f86 : 0x2a4d96), white = C(0xf0f0ee), dark = C(0x1d2024), glass = C(0x16212b), q = (u0, u1, y0, y1, l, col) => S.quad([u0, y0, l], [u1, y0, l], [u1, y1, l], [u0, y1, l], col);
@@ -40,6 +47,7 @@ class RailKit {
     /* a rake (a locomotive and ten coaches) on every third track runs in, stands 100 s at the platforms and runs out again (cycle 300 s, every track shifted): instanced by RailStations. Not the real timetable (rail_timetable.js). */
     this.rakeTracks = vs.filter((v, k) => k % 3 === 1).map((v, i) => ({ v, ph: i * 83, dir: i % 2 ? -1 : 1 })); this.rakeSpan = { F0, uc: (uMin + uMax) / 2, uA: uMin - 260, uB: uMax + 260 };
     /* platforms, ramps, roofs, boards */
+    const plab = []; let pn = 1;
     for (const b of P) {
       const a0 = b.u - b.len / 2, a1 = b.u + b.len / 2, v0 = b.v - b.w / 2, v1 = b.v + b.w / 2; fbox(S, F0, a0, a1, v0, v1, 0, PLAT_H, PLAT_SIDE, PLAT);
       for (const v of [v0, v1]) S.quad(UP(a0, v + (v === v0 ? 0.0 : -0.6), PLAT_H + 0.012), UP(a1, v + (v === v0 ? 0.0 : -0.6), PLAT_H + 0.012), UP(a1, v + (v === v0 ? 0.6 : 0), PLAT_H + 0.012), UP(a0, v + (v === v0 ? 0.6 : 0), PLAT_H + 0.012), TACT);
@@ -48,6 +56,7 @@ class RailKit {
       claims.push({ kind: 'station', layer: 0, shape: { t: 'rect', x: UP(b.u, b.v, 0)[0], z: UP(b.u, b.v, 0)[2], hx: b.len / 2, hz: b.w / 2, yaw } });
       const r0 = a0 + b.len * 0.14, r1 = a1 - b.len * 0.14, w = Math.min(b.w + 1.2, 24); if (b.w >= 4) { fbox(S, F0, r0, r1, b.v - w / 2, b.v + w / 2, 5.0, 5.35, roof, roof); for (let u = r0 + 6; u < r1; u += 20) for (const vv of b.w > 12 ? [b.v - b.w / 2 + 0.6, b.v, b.v + b.w / 2 - 0.6] : [b.v]) fbox(S, F0, u - 0.18, u + 0.18, vv - 0.18, vv + 0.18, PLAT_H, 5.0, COL); }
       for (const f of [-0.3, 0.3]) bq(UP(b.u + f * b.len - 3.5, b.v, PLAT_H + 3.4), UP(b.u + f * b.len + 3.5, b.v, PLAT_H + 3.4), 1.7);
+      const two = b.type === 'island', lab = two ? pn + '-' + (pn + 1) : String(pn); pn += two ? 2 : 1; if (b.w >= 4) for (const f of [-0.42, -0.12, 0.18, 0.42]) plab.push({ lab, u: b.u + f * b.len, v: b.v, hw: Math.min(0.9, b.w / 5) });       // number boards hang under the roof, facing along the platform (readable walking along it)
     }
     /* signal gantries across all tracks, every 90 m past the platforms */
     if (vs.length) for (const u of [uMin - 80, uMin - 170, uMax + 80, uMax + 170]) { const va = vs[0] - 3, vb = vs[vs.length - 1] + 3; fbox(S, F0, u - 0.3, u + 0.3, va - 0.25, va + 0.25, 0, 8, COL); fbox(S, F0, u - 0.3, u + 0.3, vb - 0.25, vb + 0.25, 0, 8, COL); fbox(S, F0, u - 0.25, u + 0.25, va, vb, 7.6, 8.0, COL); }
@@ -62,11 +71,14 @@ class RailKit {
     T.claim('metro:rs:' + st.id, claims);
     const add = (So, mat, shadow) => { if (So.empty) return; const g = So.geometry(); this.geos.push(g); const m = new THREE.Mesh(g, mat); m.castShadow = !!shadow; m.receiveShadow = true; this.group.add(m); this.tris += So.tris; this.calls++; };
     this.mat = T.mat.clone(); this.mat.polygonOffset = true; this.mat.polygonOffsetFactor = -12; this.mat.polygonOffsetUnits = -24; add(S, this.mat, true);       // low things (platform tops, rails) must win the depth test against the city ground, which is pulled forward by polygon offset
-     const tex = boardTexture(st); this.tex.push(tex); this.boardMat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.FrontSide, toneMapped: false }); add(N, this.boardMat);
+     if (plab.length) { const labs = [...new Set(plab.map(p => p.lab))], tx = platformTexture(labs); this.tex.push(tx); const PN = new Soup(ox, oz);
+      for (const p of plab) { const i = labs.indexOf(p.lab), v0 = 1 - (i + 1) / labs.length, v1 = 1 - i / labs.length, y = PLAT_H + 3.0, h = p.hw * 0.56, uv = [0, v0, 1, v0, 1, v1, 0, v1]; for (const [a, b] of [[UP(p.u, p.v - p.hw, y), UP(p.u, p.v + p.hw, y)], [UP(p.u, p.v + p.hw, y), UP(p.u, p.v - p.hw, y)]]) PN.quad(a, b, [b[0], b[1] + h, b[2]], [a[0], a[1] + h, a[2]], [1, 1, 1], uv); }
+      this.numMat = new THREE.MeshBasicMaterial({ map: tx, side: THREE.FrontSide, toneMapped: false }); add(PN, this.numMat); }
+    const tex = boardTexture(st); this.tex.push(tex); this.boardMat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.FrontSide, toneMapped: false }); add(N, this.boardMat);
     this.ox = ox; this.oz = oz; this.group.position.set(ox - T.origin.x, T.city.gy, oz - T.origin.z);
   }
   reposition() { this.group.position.set(this.ox - this.T.origin.x, this.T.city.gy, this.oz - this.T.origin.z); }
-  dispose() { if (this.mat) this.mat.dispose(); for (const g of this.geos) g.dispose(); for (const t of this.tex) t.dispose(); if (this.boardMat) this.boardMat.dispose(); }
+  dispose() { if (this.mat) this.mat.dispose(); for (const g of this.geos) g.dispose(); for (const t of this.tex) t.dispose(); if (this.boardMat) this.boardMat.dispose(); if (this.numMat) this.numMat.dispose(); }
 }
 
 export class RailStations {
