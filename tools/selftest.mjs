@@ -1285,6 +1285,12 @@ test('Delhi map rules and audit: the Connaught Place station block is left out, 
   const now = JSON.parse(execFileSync(process.execPath, [new URL('./audit_city.mjs', import.meta.url).pathname, '--json'], { encoding: 'utf8' })), base = JSON.parse(readFileSync(new URL('./city_audit_baseline.json', import.meta.url), 'utf8')).counts;
   for (const k of Object.keys(base)) assert.ok(now[k] <= base[k], 'audit class ' + k + ' got worse: ' + now[k] + ' against ' + base[k]);
 });
+test('Delhi roads out: every gate joins an India highway toward a city, and every city reachable from Delhi has a gate to leave by', async () => {
+  const { RoadNetwork } = await import('../src/world/network.js'), { mapGates, gateForCity } = await import('../src/world/city/gates.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, net = new RoadNetwork(JSON.parse(readFileSync(new URL('../assets/india/skeleton.json', import.meta.url), 'utf8'))), { M } = loadPack(dir);
+  const g = mapGates(net, 'delhi', M.gates); assert.equal(g.length, M.gates.length); for (const x of g) { assert.ok(x.road && x.toward, 'gate ' + x.id + ' joins no highway'); assert.ok(net.cities.get(x.toward), 'gate ' + x.id + ' leads toward an unknown city'); }
+  let n = 0, miss = [], byGate = {}; for (const c of net.cities.values()) { if (c.id === 'delhi') continue; const rt = net.route('delhi', c.id); if (!rt || !rt.legs || !rt.legs.length) continue; n++; const r = gateForCity(net, 'delhi', g, c.id); if (!r) miss.push(c.id); else byGate[r.gate.toward] = (byGate[r.gate.toward] || 0) + 1; }
+  assert.ok(n >= 10, 'cities reachable from Delhi: ' + n); assert.deepEqual(miss, [], 'cities with no gate to leave by: ' + miss.join(', ')); assert.ok(Object.keys(byGate).length >= 4, 'the cities spread over several exits: ' + JSON.stringify(byGate)); console.log('     roads out of Delhi: ' + g.length + ' gates, ' + n + ' cities reachable, by exit ' + JSON.stringify(byGate));
+});
 test('Delhi identity (D7): identity.json is valid, zones lie inside the pack, every shop kind has name boards, areas answer', async () => {
   const I = await import('../src/world/city/identity.js'), J = JSON.parse(readFileSync(new URL('../assets/cities/delhi/identity.json', import.meta.url))), M = JSON.parse(readFileSync(new URL('../assets/cities/delhi/manifest.json', import.meta.url)));
   const ID = new I.Identity(J, M.origin); assert.equal(J.format, 1);

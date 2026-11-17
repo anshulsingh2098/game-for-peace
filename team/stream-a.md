@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 19:30  City map: the roads out of Delhi, an Other cities list, the destination carried into the India map
+Branch: claude/city-exits  Commit: see the PR
+What changed: the owner asked how to get from Delhi onto a highway and to another city: the gates were mapped to highways but the city map did not show it. `src/ui/citymap.js` (Stream B-style UI, owner's request): every green gate pin now carries a label `To <next city> \u00b7 <NH or road name>` (always drawn), an `Other cities` button lists the 97 cities reachable from Delhi with the distance and the exit (a tap routes you to that gate), the title reads `To Mumbai (To Jaipur \u00b7 NH48): 45.6 km`; `src/world/city/gates.js` `gateForCity()` (the gate on the first road of the shortest route, else the gate pointing most nearly toward the next city: the Delhi-Kolkata road shares the southern exits with the Agra road, so Mathura and Kolkata had no gate of their own); `src/main.js` (shared, small): `wireGates()`, the chosen city travels through the gate as `&nav=<city id>` (`updateGateExit` and `leaveCity`), and the India map starts its GPS toward it (`startNav`, 'Navigating to Mumbai', '-> Mumbai (1105 km): keep on this road'); `tools/selftest.mjs` 108 checks (every gate joins a highway toward a known city; all 97 reachable cities have an exit: Agra 52, Jaipur 20, Kanpur 14, Ambala 10, Dehradun 1). Seen in the browser: the Other cities list, a route to the Jaipur NH48 exit, driving out of the nh48-south-16 gate, and the India map's navigation to Mumbai. Not done: the exit from the India map back to a city through another city's gate is unchanged; gates are only labelled in the city map (no signs in the 3D world); gate mapping by direction is approximate for gates with a poor score (nh9-west-20, nh9-east-21).
+For the other stream: nothing.
+Status: open
+
+
 ## 2026-11-18 05:00  A-2026-11-18-08: deployed version b6be7032 (bundle, prefetch, Anshul's cartoon NPCs) to the owner's account
 Branch: claude/audit-fixes (PR 83)  Commit: 30c799e (deployed)
 What changed: deploy only, from a scratch copy (stage, `tools/bundle.mjs`, `wrangler@4 deploy`, account `mailrajulsingh.in@gmail.com`). Live checks in the built-in browser: India title ready in 2.3 s (68 requests), Delhi city loads from `dist/game.js` with 6 tiles, the three small NPC models (0.83 MB) load, no failed requests on the page. Not checked: whether cartoon walkers appear and animate (none were in view at the start), a real phone, flyover traffic.
