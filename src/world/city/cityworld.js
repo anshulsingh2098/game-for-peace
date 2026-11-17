@@ -24,6 +24,7 @@ export function cityConfig(base, seed) {
     road: { ...base.road, style: 'two-lane', start: { x: -200000, z: 0, y: 8 }, guide: [0, 0, 300, 0, 600, 0, 900, 0] } };
 }
 
+const BOOST_MS = 22, NO_BOOST = typeof location !== 'undefined' && new URLSearchParams(location.search).has('noboost');       // while the loading screen is up the city builder gets 22 ms a frame instead of 3 (main.js sets `boost`); ?noboost for comparing
 const NO_INFILL = typeof location !== 'undefined' && new URLSearchParams(location.search).has('noinfill'), KERB_WALL = false, SHADOW_D = 200, CELLED = { infill: 250, infillShop: 250, walk: 250, prop: 250, mark: 500, sign: 500, ban: 500, ad: 500 }, LOD_OF = { infill: 520, infillShop: 520, walk: 450, prop: 350, mark: 400, sign: 280, ban: 280, ad: 350 }, RADIUS = 1300, KEEP = 1900, CELL = 16, SLICE_MS = 3, FAR = 3800, LOD_NEAR = 450;                 // the detailed ring, when it is dropped, a tile's size, the budget of a frame for meshing, the far skyline radius, the radius of lane marks and kerbs
 export class CityWorld {
   constructor(scene, origin, terrain, { base = 'assets/cities/delhi' } = {}) {
@@ -68,7 +69,7 @@ export class CityWorld {
   /* a tile is meshed in slices of about SLICE_MS a frame (tilemesh.js buildTileSteps), then added to the scene in one go */
   startJob(tile) { this.job = { tile, t0: performance.now(), cpu: 0, gen: buildTileSteps(tile, { infill: !NO_INFILL, G: this.pack.G, lm: this.pack.lm, gy: this.gy, size: this.pack.size, skip: this.lmx.skip, life: this.life && { identity: this.identity, art: this.art, month: this.month, stops: this.stops.get(tile.tx + '_' + tile.tz) || [] }, yieldNow: () => performance.now() > this.deadline }) }; this.stepJob(); }
   stepJob() {
-    const j = this.job, t = performance.now(); this.deadline = t + SLICE_MS; const r = j.gen.next(); const dt = performance.now() - t; j.cpu += dt; j.slice = Math.max(j.slice || 0, dt);
+    const j = this.job, t = performance.now(); this.deadline = t + (this.boost && !NO_BOOST ? BOOST_MS : SLICE_MS); const r = j.gen.next(); const dt = performance.now() - t; j.cpu += dt; j.slice = Math.max(j.slice || 0, dt);
     if (r.done) { this.job = null; const t1 = performance.now(); this.build(j.tile, r.value.M, r.value.out); const bt = performance.now() - t1; this.stats.ms = j.cpu + bt; this.stats.buildMs = bt; this.stats.buildMax = Math.max(this.stats.buildMax || 0, bt); this.stats.sliceMax = Math.max(this.stats.sliceMax || 0, j.slice || 0); this.stats.slices = (this.stats.slices || 0) + 1; }
   }
   flagMesh(m, name) { m.receiveShadow = name !== 'sky' && !name.startsWith('bldg') || name === 'bldg'; m.matrixAutoUpdate = false; m.updateMatrix(); m.userData.near = name === 'mark' || name === 'walk' || name === 'sign' || name === 'ad' || name === 'ban' || name === 'prop' || name === 'infill' || name === 'infillShop'; m.userData.bld = name.startsWith('bldg') || name === 'shop'; m.userData.lod = LOD_OF[name] || LOD_NEAR; m.castShadow = m.userData.bld; }
