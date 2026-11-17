@@ -1,0 +1,10 @@
+{
+ "note": "counts from tools/audit_city.mjs; a class must not get worse (selftest)",
+ "counts": {
+  "park_building": 30,
+  "street_building": 119,
+  "void_block": 4684,
+  "landmark_offset": 3,
+  "footway_run": 94
+ }
+}
