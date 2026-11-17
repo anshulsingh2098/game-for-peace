@@ -205,3 +205,14 @@ Still open (what is left of 12):
 | 12.10 | Metro and rail inside the enclave are not drawn; register viaducts and stations in the keep-out registry when D6 builds them (11.5). | P2 [build] |
 | 12.11 | The India highway you arrive on may not be the gate you leave on; Delhi to the other NCR cities (Gurgaon, Noida) has no pack. | P3 [build] |
 | 12.12 | Nobody who knows Delhi has looked at it: street layout, colours and heights need a person's list of what feels wrong (city card). | P1 [person] |
+
+## D6 leftovers (17 Nov 2026)
+
+| ID | What |
+|---|---|
+| D6.1 | Underground station interiors built, not walked (DELHI_TRANSIT 10.2); still open: tunnels between stations, open cuttings at portals, several levels, joined concourses at interchanges, better lighting |
+| D6.2 | Stairs done for the lead line's outer platforms; still open: other lines at interchanges, walking it in the game, railings at the stair opening |
+| D6.3 | Rakes run in, stand and leave at railway stations (fake 300 s cycle); still open: the real timetable (rail_timetable.js), the proper coach art (train_art.js), link to the India-world rail network |
+| D6.4 | Look check done for Blue Line and Laxmi Nagar only (DELHI_TRANSIT 10.1); still to check: other lines' liveries, cars per train, speeds, PSD, railway stations (round signs done) |
+| D6.5 | Ride animation instead of a fade; no sound |
+| D6.6 | Buildings under viaducts (needs the tile renderer to take Metro claims) |

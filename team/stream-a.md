@@ -2,10 +2,20 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 23:00  D6 merged with the D5b renderer (PR 62); Metro minimap uses the loaded transit data
+Branch: claude/delhi-d6-metro-2b04f7  Commit: see the PR
+What changed: merged origin/main into the D6 branch; conflicts in cityworld.js, main.js, selftest.mjs, this log resolved (both sides kept, 103 checks). `main.js` now gives `cityMap.setTransit(city.transit.data)` instead of a second fetch. Also since the first D6 entry: underground station interiors (`transit_underground.js`), platform stairs, round signs, railway rakes, walkable surfaces; see `docs/DELHI_TRANSIT.md` section 10.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-17 18:00  Delhi renderer fixes: city GPS, gate fade, underpasses, kerbs, performance, people, look
 Branch: claude/delhi-d5b-fixes-fa289f  Commit: see the PR
 What changed: new `src/ui/citymap.js`, `src/world/city/{citynav,gates,cuts,skyline,citypeds}.js`; `cityworld.js`, `tilemesh.js`, `citytraffic.js`, `pack.js` extended (graph `name`/`dn` columns, `underDepth`). Shared files, smallest changes: `src/main.js` (city map hook, autodrive on a route path, gate fade and carry, enclave save, camera floor in a city), `src/input/autodrive.js` (`lookMin`, `forward`), `src/vehicle/physics.js` and `rapier-vehicle.js` (`o.kerb` circles are skipped below 2.5 m/s), `src/world/network.js` (`worldStart(city, { road, toward })`), `src/core/saved.js` (`enclave`), `tools/selftest.mjs` (102 checks).
 For the other stream: nothing required. Review the two vehicle-physics lines (kerb) and `autodrive.forward`. Deploy is still open from the D5b entry. Test in a visible browser window: `?play&q=med&city=delhi`, P for the map, pick India Gate, E for autodrive; `?bench=30&city=delhi` (needs a visible window).
+## 2026-11-17 18:00  D6: Delhi Metro and railway stations drawn in the city enclave
+Branch: claude/delhi-d6-metro-2b04f7  Commit: see the PR
+What changed: new `src/world/city/transit_plan.js`, `transit_geo.js`, `transit.js`, `transit_station.js`, `transit_rail.js`, `transit_ui.js`; shared files touched with a few lines: `src/world/city/cityworld.js` (init, update, reposition, near, deck, summary), `src/main.js` (`city.transit.onTeleport`, `footY`, `__next.city`), `tools/selftest.mjs` (one new check, 100 now). Docs: `docs/DELHI_TRANSIT.md` section 10, CITY_PLAN, WORK_REMAINING D6.*, HANDOFF.
+For the other stream: nothing to run. Press J near a Metro entrance for fast travel. Not deployed.
 Status: open
 
 ## 2026-11-24 18:00  D5b: ambient traffic in the Delhi enclave; the stage script now includes the city pack
