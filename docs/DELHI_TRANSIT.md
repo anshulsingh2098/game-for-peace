@@ -1,0 +1,162 @@
+# Delhi transit: Metro, railway stations, buses (packages D2 and D3, written 23 Nov 2026)
+
+What this is: the data and the notes for everything on rails or buses in Delhi NCR, from open sources, plus a plan for drawing it (D6). The data file is `assets/cities/delhi/transit.json` (format in `docs/CITY_PACK.md` section 5). Nothing is drawn yet.
+
+**Honest summary.** The *geometry and the lists* are data: 11 metro lines with 28 directional tracks (405 km of polyline, with a grade of elevated, underground or at grade along every metre), 285 station records (253 Delhi Metro), 14 depots, 47 railway stations (the 13 main ones with platform bodies, building footprints, foot bridges and entrances), 479 bus routes, 2,101 stops, 3 ISBTs and 71 depots and bus stands. The *look* (colours, signage, how a station day feels) is written from Wikipedia text and general knowledge, **no photographs were looked at in this pass**, and section 9 lists everything not verified. D6 must look at reference photos (Wikimedia Commons categories, look only, nothing copied) before it draws.
+
+## 1. Sources and licences
+
+| Source | What was taken | Licence (as found) | Used for |
+|---|---|---|---|
+| OpenStreetMap, Overpass API (`overpass-api.de`, one request per query, retried with back-off) | route relations, track ways with `tunnel` / `bridge` / `layer` / `gauge` / `electrified`, station nodes with `ref`, `name:hi`, `wikidata`, platforms, entrances, depots, bus relations and stops | ODbL 1.0, credit "(c) OpenStreetMap contributors"; derived data files must stay ODbL (share-alike) | everything geometric |
+| Wikipedia (`en.wikipedia.org` API): the *List of Delhi Metro stations*, the line, Metro, railway station, DTC, Noida Metro, Rapid Metro and ISBT articles | station layout (elevated, underground, at grade), platform type (island, side), opening dates, renames, gauge, depots, platform and track counts of railway stations, fleet facts | CC BY-SA 4.0. Only facts were read; no sentence was copied | cross-checks and the attributes OSM lacks |
+| Wikidata | Hindi names where OSM has none (about 330 items) | CC0 | names |
+| Delhi Open Transit Data (`otd.delhi.gov.in`) | **not downloaded.** Only the public pages and the Terms PDF were read | **not an open licence.** The Terms say the user must accept them and state the use, intent, manner, time frame and identity before using the contents; DoT may refuse without reason; "use of the Contents for any other purpose" is a violation of its copyright; the download form asks for usage type and purpose | see below |
+| DMRC pages, data.gov.in | not used | not checked | |
+| Wikimedia Commons | not used (no photos looked at in this pass) | per file | look reference for D6, never copied |
+
+**Decision for the owner: the DTC / cluster / Delhi Metro GTFS.** The portal (static DTC data: 3,464 stops, 543 routes, 16,562 trips; DMRC static data: 262 stops, 36 routes; last updated June 2024 and Aug 2023) is the only source of timetables and frequencies. Taking it means clicking through a legal agreement with a stated purpose and an identity, and then shipping derived data in a public game repository, which the Terms do not clearly allow. I did not do that for you. Options: (a) you accept the Terms yourself with the real purpose and ask DoT in writing whether derived route and frequency data may be published in an open-source game; (b) keep OSM-only (what is here) and give frequencies as a guess. Until you decide the bus part is OSM only and has **no timetable and no frequency**.
+
+Credits to put on the credits screen and in `ATTRIBUTION.txt` (that file belongs to the street-pack session; `transit.json` carries the same list in `sources`): "Map data (c) OpenStreetMap contributors, ODbL. Station facts from Wikipedia (CC BY-SA 4.0) and Wikidata (CC0)."
+
+Every download is logged in `docs/OPEN_DATA.md`. Raw files stay in the git-ignored `data/raw/delhi_transit/` (37 MB, of which the metro route file is 28.6 MB).
+
+## 2. The data and how to rebuild it
+
+```bash
+node tools/fetch_delhi_transit.mjs         # Overpass queries into data/raw/delhi_transit/ (skips files that exist; the public server is often busy, it retries)
+node tools/fetch_wikidata_labels.mjs       # Wikidata labels
+node tools/fetch_wiki_pages.mjs "Title"    # Wikipedia pages, 1 request per 4 s (the API rate-limits)
+node tools/build_delhi_transit.mjs         # writes assets/cities/delhi/transit.json (deterministic: same raw files, same bytes)
+node tools/validate_transit.mjs            # counts, every station on its line, lines meet at interchanges, rail and bus parts
+```
+`transit.json` is 444 KB (125 KB gzipped): metro 213 KB, rail 51 KB, bus 171 KB. Coordinates are in the pack frame (CITY_PACK section 1): metres, x east, z south, origin 28.6139 N 77.2090 E, equirectangular with R = 6,371,008.8 m. The pack's street builder must use the same constants (`tools/lib_transit.mjs` `project`/`unproject`).
+
+How the track lines were made: each OSM route relation (one per line and direction) lists its track ways in an order that is wrong at junctions and crossovers, so the builder does not trust the order: it builds a graph of all track vertices of the relation, snaps each stop to the track, and joins consecutive stops by the shortest path (`routeThrough`). Result: no route has a jump (checked), each direction is one ordered polyline simplified to 1.5 m, with grade runs and the distance along the track of every stop. Grade comes from OSM tags (`tunnel=yes` or `layer<0` underground, `bridge` or `layer>=1` elevated, else ground); within 120 m of a station where Wikipedia disagrees, the track was re-graded to Wikipedia's word so a platform never floats on the wrong structure.
+
+## 3. Delhi Metro
+
+### 3.1 The network (from `transit.json`; km are track length of one direction of each section)
+| Line | Ref | OSM colour | Stations | km | Underground / elevated / ground km | Stations u / e / g | Island platforms | Gauge mm | Power | Sections |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Red | 1 | #FF4040 | 29 | 33.4 | 0 / 30.3 / 3.1 | 0 / 25 / 4 | 2 | 1676 | 25 kV overhead | Rithala to Shaheed Sthal (New Bus Adda) |
+| Yellow | 2 | #FFDF00 | 37 | 47.7 | 22.8 / 24.4 / 0.6 | 20 / 17 / 0 | 16 | 1676 | 25 kV | Samaypur Badli to Millennium City Centre Gurugram |
+| Blue | 3 and 4 | #4169E1 | 57 | 63.8 | 3.1 / 57.6 / 3.1 | 4 / 52 / 1 | 2 | 1676 | 25 kV | Dwarka Sector 21 to Noida Electronic City (50 stations) and the branch Yamuna Bank to Vaishali (8) |
+| Green | 5 | #008000 | 24 | 27.9 | 0 / 27.5 / 0.3 | 0 / 23 / 1 | 1 | 1435 | 25 kV | Inderlok to Brigadier Hoshiyar Singh (Bahadurgarh) and the branch Ashok Park Main to Kirti Nagar |
+| Violet | 6 | #553592 | 34 | 44.9 | 14.3 / 30.6 / 0 | 11 / 23 / 0 | 10 | 1435 | overhead | Kashmere Gate to Raja Nahar Singh (Ballabhgarh) |
+| Pink | 7 | #FC8EAC | 46 | 70.7 | 17.8 / 51.3 / 1.7 | 12 / 34 / 0 | 12 | 1435 | 25 kV | Majlis Park, the ring round the west and south, to Maujpur-Babarpur and Shiv Vihar; the OSM relation runs one long loop |
+| Magenta | 8 | #CC338B | 33 | 47.4 | 23.8 / 23.2 / 0.4 | 16 / 17 / 0 | 17 | 1435 | 25 kV | Janakpuri West to Botanical Garden (26 stations) and the Phase 4 stretch Majlis Park to Deepali Chowk (7) |
+| Grey | 9 | #838996 | 4 | 4.9 | 1.9 / 2.7 / 0.2 | 2 / 2 / 0 | 0 | 1435 | 25 kV | Dwarka to Dhansa Bus Stand |
+| Airport Express (Orange) | AEx | #FF8C00 | 7 | 23.7 | 15.9 / 7.8 / 0 | 6 / 1 / 0 | 3 | 1435 | overhead | New Delhi to Dwarka Sector 21 and on to Dwarka Sector 25 (Yashobhoomi) |
+| Aqua (Noida Metro, NMRC) | Aqua | OSM "aqua" (hex chosen here) | 21 | 28.0 | 0 / 28 / 0 | 0 / 21 / 0 | not in the Wikipedia list | 1435 | overhead | Noida Sector 51 to Depot Station (Greater Noida) |
+| Rapid Metro Gurgaon | RMGL | OSM "gray" | 11 | 12.2 | 0 / 12.2 / 0 | 0 / 11 / 0 | not in the list | 1435 | 750 V third rail | Sikandarpur to Sector 55-56 |
+
+Totals: 253 Delhi Metro station records (Wikipedia counts 244 unique stations and 271 station-lines; here an interchange whose platforms sit in two separate buildings more than 160 m apart is two records joined by a `transfers` entry), 303 station-line pairs, 17 stations that serve two or three lines in one building, 11 walking transfers. The Delhi–Meerut RapidX (Namo Bharat) is regional rail by another company (NCRTC) and mostly outside the box; it is not in the file. Gauge: Wikipedia says Red, Blue and Yellow are broad gauge (1,676 mm) and every later line standard (1,435 mm); OSM says the same except it tags the Grey Line 1,676 and gives no gauge for the Airport Express (the table follows Wikipedia, `osmGauge` keeps OSM's).
+
+Opening years (Wikipedia list, first and last station dates): Red 2002 to 2019, Yellow 2004 to 2015, Blue 2005 to 2019, Green 2010 to 2022, Violet 2010 to 2018, Pink 2018 to 2026, Magenta 2017 to 2026, Grey 2019 to 2021, Airport Express 2011 to 2023. Per station the date is in `per[].opened`. The first section opened on 25 December 2002 (Red, Shahdara to Tis Hazari).
+
+### 3.2 Where OSM and Wikipedia disagree (decided in the data)
+- **Names.** The Wikipedia list uses today's names (2025-26 renames); OSM often has the old name. `name.en` is OSM's (the one on most maps), `nameNow` is Wikipedia's where it differs: Rohini West is now Dr. Baba Saheb Ambedkar Hospital, Rohini East is Rohini, Rajendra Nagar is Major Mohit Sharma Rajendra Nagar, IGI Airport is Indira Gandhi International Airport, GTB Nagar is Guru Tegh Bahadur Nagar, and so on (18 stations). Wikipedia's older "formerly known as" notes also list Lok Kalyan Marg (was Race Course), Seva Teerth (was Udyog Bhawan), Supreme Court (was Pragati Maidan), Millennium City Centre Gurugram (was HUDA City Centre); OSM may have either. The game must show one name per station and the sign must agree with the voice: pick `nameNow` for display if you want current names.
+- **Station grade** (Wikipedia list against the OSM track tags, 253 comparisons). 5 stations disagree: Adarsh Nagar (Yellow: OSM ground, Wikipedia elevated), Rohini East (Red: OSM underground, Wikipedia elevated; the OSM tag is almost certainly a layer mistake), Shahdara and Seelampur (Red: OSM elevated, Wikipedia at grade), Tis Hazari (Red: OSM ground, Wikipedia elevated). Wikipedia's word is in `per[].grade`, OSM's in `per[].osmGrade`, and the track near the station was re-graded to Wikipedia's. **Not verified either way**: needs a photo or a site look.
+- **Gauge**: Grey Line and Airport Express, above.
+- **Depots**: the Wikipedia depot table lists 14 operational depot sites (Mukundpur twice, for Pink and Magenta) and three more under construction (Narela, Mangolpuri, Indraprastha); OSM has the same 14: Shastri Park, Khyber Pass, Sultanpur, Samaypur Badli (Siraspur), Najafgarh, Yamuna Bank, Mundka, Modern Industrial Estate Bahadurgarh, Sarita Vihar, Neelam Chowk Ajronda, Dwarka Sector 21, Mukundpur, Vinod Nagar (Ghazipur), Kalindi Kunj and Jasola Vihar. Only a centre point and the nearest line are stored; the yard layout is in OSM (`service=yard` ways) and was not reduced.
+- **Platform count** on the metro is not a count: Wikipedia gives island or side per line and station, which fixes the platform *type* (island: one platform body, two faces; side: two platforms) and nothing about terminal stations with extra turnback or third platforms.
+
+### 3.3 Interchanges
+In one building (OSM, lines in `transit.json`): Rajiv Chowk (Yellow, Blue), Kashmere Gate (Red, Yellow, Violet), Central Secretariat (Yellow, Violet), Mandi House (Blue, Violet), Inderlok (Red, Green), Kirti Nagar (Blue, Green), Janakpuri West (Blue, Magenta), Dwarka Sector 21 (Blue, Airport Express), Anand Vihar, Karkarduma, Mayur Vihar I (Blue, Pink), Welcome (Red, Pink), Punjabi Bagh West (Green, Pink), Majlis Park (Magenta, Pink), Haiderpur Badli Mor (Yellow, Magenta), Botanical Garden (Blue, Magenta), Dwarka (Blue, Grey). Separate buildings joined on foot (`transfers`, metres between the two station records): New Delhi (Yellow) to the Airport Express terminal 117, Sikandarpur (Yellow) to the Rapid Metro station 143, Dilli Haat INA 177, Hauz Khas 190, Azadpur 208, Madhuban Chowk (Red to Magenta) 215, Netaji Subhash Place 228, Kalkaji Mandir 231, Lajpat Nagar 235, Blue Line Noida Sector 52 to Aqua Line Noida Sector 51 253, Rajouri Garden (Blue to Pink) 281. Wikipedia counts 27 transfer stations.
+
+### 3.4 How a Delhi Metro station looks and works (general knowledge: **not verified, no photographs looked at**; D6 checks every line)
+- **Elevated station (the common one: 193 of 271 station-lines).** Street entrance with stairs, an escalator and a lift beside the road under the viaduct; a concourse over the road with ticket counters, token and card machines, a security check (bag scanner and a hand-held frisk, separate queue for women) *before* the fare gates; automatic fare gates (token into the slot, smart card on the reader; a Customer Care counter); then stairs, escalators and a lift up to the platform level. Almost always **side platforms** (207 of 271), one per direction, under a barrel or flat roof of steel and glass.
+- **Underground station (71).** Entrances down from the street into a concourse with the same fare-gate line, then a platform level below, usually a **central island platform** (64 island in the list) between the two tracks; deep interchanges have three or more levels (Kashmere Gate, Rajiv Chowk, Central Secretariat).
+- **Platform.** A yellow tactile strip and a yellow safety line at the edge; the first coach is the women's coach (marked on the floor and on boards); hanging boards "towards <last station>" in Hindi and English with the line's colour; LED displays showing the next trains; coach-position markers; on the newest underground stations (Phase 3 and 4: Magenta, Pink) full-height **platform screen doors**, which the older stations (the Yellow Line's first underground section) do not have. All of this is from general knowledge.
+- **Signs.** Line colour on the name boards and the route strips, station name in Hindi and English (some stations add Urdu or Punjabi), a pictogram system for exits. Announcements are pre-recorded in Hindi then English: next station, "doors will open on the left/right", "mind the gap"; the game's SpeechSynthesis voice (see `OPEN_DATA.md`) is the plan, no recordings.
+- **Trains.** Four, six or eight cars (Wikipedia: Phase 1 was four coaches, designed to extend to eight; Phase 2 four and six cars, 1,178 and 1,792 passengers; standard-gauge four-car trains 1,506). Stainless steel or white body with a line-coloured band and the DMRC logo; sliding doors, four per side per car; third-rail only at Rapid Metro, everything else overhead 25 kV. Operating speeds: about 80 km/h on most lines, higher on the Airport Express and the newest lines (from memory, not verified). Signalling: cab signalling, ATC; Wikipedia credits Alstom (Red, Yellow), Siemens (Blue), Bombardier CITYFLO 350 (Green, Violet).
+- **Viaduct.** A twin-track elevated deck on single round piers, box or U girders, over the middle of the road; height and pier spacing (assume 25 to 30 m between piers, deck about 10 to 13 m over the road; typical figures, not measured) come from D6's look at photos and from the real height of the city's flyovers.
+- **Underground.** Tunnels from cut-and-cover boxes at stations and bored sections between; a ground portal where the track comes up (the grade runs mark these).
+
+## 4. Railway stations (Indian Railways in Delhi)
+
+### 4.1 The list
+`transit.json` `rail.stations` has 47 stations of the Delhi region: code, name (Hindi from OSM or Wikidata), position, class, platform faces counted from OSM `ref` tags, Wikipedia's platform and track counts, the dominant track direction (`axis`, radians, in the pack frame), platform bodies (island or side, centre, length, width), entrances (OSM nodes), foot bridges and tunnels (OSM ways), building footprints and canopies for the 13 main stations (second Overpass query), the Metro stations within 450 m, and a note.
+
+| Station | Code | Platforms: OSM faces / Wikipedia | Tracks (Wikipedia) | Layout from OSM (platform bodies) | Metro beside it |
+|---|---|---|---|---|---|
+| New Delhi | NDLS | 16 / 16 | 20 | platform 1 side (Paharganj side), islands 2/3, 4/5, 6/7, 8/9, 10/11, 12/13, 14/15, platform 16 side (Ajmeri Gate side); platforms about 480 to 750 m long | New Delhi (Yellow), Airport Express terminal |
+| Old Delhi (Delhi Junction) | DLI | 16 / 16 | 18 | platform 1 side at the main entrance, islands 2/3, 4/5, 6/7, 9/10, 11/12 (OSM also has 11/13, a mapping error), 14/15, singles 8 and 16 | Chandni Chowk (Yellow) |
+| Hazrat Nizamuddin | NZM | 7 / 9 | 13 | platform 1 side, islands 2/3, 4/5, 6/7 | Sarai Kale Khan Nizamuddin (Pink) |
+| Anand Vihar Terminal | ANVT | 3 / 7 | 12 | OSM puts platforms 1, 2/3 at the terminal and 1, 2, 4/5, 6/7, 8, 9 at the neighbouring Anand Vihar halt (ANVR): together 1 to 9 | Anand Vihar (Blue, Pink) |
+| Delhi Sarai Rohilla | DEE | 3 / 5 | 12 | platform 1 side, island 2/3 (OSM misses two) | none (not within 450 m) |
+| Delhi Cantonment | DEC | 5 / 4 | 4 | platform 1 side, islands 2/3 and 4/5 | none |
+| Delhi Shahdara Junction | DSA | not mapped / not stated | not stated | three platform bodies without numbers | Shahdara (Red) |
+| Subzi Mandi (Sabzi Mandi) | SZM | not mapped | not stated | none mapped | Pratap Nagar (Red) |
+| Delhi Kishanganj | DKZ | not mapped / 3 | 6 | | |
+| Tilak Bridge | TKJ | 7 (includes Shivaji Bridge neighbours) / 2 | 4 | | ITO, Mandi House |
+| Okhla, Delhi Safdarjung, Delhi Azadpur, Sarojini Nagar, Lodhi Colony, Pragati Maidan, Patel Nagar, Brar Square, Lajpat Nagar, Sadar Bazar and the others of the Delhi Ring Railway and the Ghaziabad, Gurgaon and Faridabad lines | | | | position, 1 or 2 platform bodies, direction | |
+
+Disagreements: New Delhi and Old Delhi agree with Wikipedia (16 and 16). Nizamuddin: OSM has 7 platform faces, Wikipedia 9. Anand Vihar Terminal: Wikipedia 7, OSM splits them between two station nodes. Sarai Rohilla: OSM has 3 faces, Wikipedia 5. Cantonment: OSM 5, Wikipedia 4. Tilak Bridge: OSM's 7 includes platforms of the neighbouring Shivaji Bridge halt. The validator pins the OSM counts (16, 16, 7, 3, 3, 5) so a re-run that changes them is noticed.
+
+### 4.2 Station cards (the five main ones, and Sarai Rohilla)
+Sources: Wikipedia text, the OSM footprints and platform polygons, general knowledge (marked). **No photograph was looked at.**
+
+**New Delhi (NDLS)**, the main terminal and through station, between Paharganj (platform 1 side) and Ajmeri Gate (platform 16 side). Tracks run roughly north-north-west to south-south-east (`axis` 78 degrees measured from +x towards +z, which points south in the pack frame). 16 platforms: two single-faced platforms at the ends and seven islands between, 500 to 750 m long (24-coach trains). Two entrances face each other across the tracks, joined by foot bridges (OSM: 60 foot-bridge ways and 7 foot tunnels near the station). Ajmeri Gate side: a three-storey 9,000 m2 building opened September 2009 (Wikipedia), about 43 x 142 m in OSM, with a long canopy over the approach; Paharganj side: the older 1956 building, with a large forecourt to the east; a 442 m foot bridge from the Paharganj entrance to the Bhavbhuti Marg parking and a 242 m skywalk from the Ajmeri Gate foot bridges to the Metro and parking (Wikipedia). OSM shows roofs over the platforms as long strips (up to 520 m by 86 m). A redevelopment (new buildings on both sides, 4 phases, target January 2029) is in progress per Wikipedia; the game should show the station as it is on a chosen date, and the plan has to choose. Look (general knowledge, to verify): Paharganj front a cream and red-brown mid-century block with a clock-less long portico and "NEW DELHI" in big white letters on a red band; Ajmeri Gate front a modern glass and steel face; Indian Railways yellow platform boards with black Hindi, English and Urdu text (see 4.3). A station day: constant crowd on the foot bridges, porters in red shirts with brass badges, tea and snack vendors and book stalls on platforms, announcements in Hindi and English, trains of blue ICF coaches and white Vande Bharat sets, a Metro entrance across the road.
+
+**Old Delhi (DLI, "Delhi Junction")**, opened 1864, present building 1903 (Wikipedia). Red sandstone in the style of the nearby Red Fort, with white trim and (originally six) clock towers; one survives as a water tank. 16 platforms (renumbered September 2011, platform 1 at the main entrance by Mori Gate and Chandni Chowk, platform 16 by the Kashmere Gate entrance added in the 1990s), 18 tracks, four pit lines. Tracks run almost east-west in the pack frame (6 degrees). The main building in OSM is 341 x 72 m. A very crowded, old-city station: rickshaws and e-rickshaws outside, the Chandni Chowk Metro beside it. Colour: red-brown stone, cream details (Wikipedia says red stone to match the Red Fort; the exact tone is for D6).
+
+**Hazrat Nizamuddin (NZM)**, opened 1926; a terminus for many long-distance trains; 9 platforms and 13 tracks per Wikipedia (7 faces mapped in OSM: platform 1 side and islands 2/3, 4/5, 6/7). Tracks run north-south. The Sarai Kale Khan multimodal hub (Pink Line, ISBT, RapidX station) is about 600 m to the east (OSM positions); which side the main building and approach road are on is not verified. 2019 revamp (Wikipedia): green polycarbonate platform roofs, new colour scheme for the shelters, murals along the approach road, fountains and landscaping in front, lifts and escalators on all platforms, designated lanes for autos and cabs.
+
+**Anand Vihar Terminal (ANVT)**, inaugurated 19 December 2009; a two-storey terminal building with separate arrival and departure areas, a coach maintenance yard, feeder lines to Sahibabad, a separate suburban building with two platforms; 7 platforms and 12 tracks (Wikipedia). Tracks run north-east to south-west (`axis` 138 degrees). OSM has a 174 x 158 m and a 220 x 102 m building and five roof blocks. 2025-26 airport-style upgrade (Wikipedia). Metro (Blue and Pink) and the Anand Vihar ISBT are next to it.
+
+**Delhi Sarai Rohilla (DEE)**, a terminal for trains to Haryana, Rajasthan, Punjab and Gujarat (and, per Wikipedia, Mumbai and Bengaluru services); 5 platforms and 12 tracks; two platforms of the Vivekanandpuri halt share a foot bridge with it; three washing lines. It was a metre-gauge terminal (broad gauge traffic since the 1990s).
+
+**Delhi Cantonment (DEC)**: 4 or 5 platforms (Wikipedia 4, OSM 5), metre gauge until 1991; a new "airport-like" building with separate arrival and departure areas was built in 2025-26. Vande Bharat trains to Jodhpur, Bikaner and Ajmer start here.
+
+**Shahdara (DSA)**: junction since 1910, on the Delhi-Ghaziabad line, with the Shahdara Metro (Red) beside it. **Subzi Mandi (SZM)**: on the Delhi-Panipat line beside Pratap Nagar Metro. **Delhi Kishanganj, Safdarjung, Okhla, Tilak Bridge**: small suburban stations on the Delhi Ring Railway and the main lines, 2 to 4 platforms (Wikipedia). The Delhi Ring Railway circles the city and carries few trains.
+
+### 4.3 Signage and a station day (Indian Railways in general; **from memory, to verify**)
+Station name boards: yellow background, black text, the station name in Hindi, English and the local second language (Urdu or Punjabi), with the station code and the height above sea level below; platform number boards hang from the roof; coach-position indicators and a digital train indicator board; announcements in Hindi and English by an automated voice, sometimes interrupted by a live one. Crowds peak in the morning and late evening for the Rajdhanis, Shatabdis and the night expresses; porters, tea and water vendors, newspaper and book stalls, parcel trolleys; trains of 22 to 24 coaches, WAP-7 electric locomotives (20.56 m, already in `train_art.js`), Vande Bharat sets. `docs/OPEN_DATA.md` has the sound and announcement policy (synthesised voice; real clips only with the owner's files).
+
+## 5. Buses
+
+OSM route relations (Overpass, 698 relations, 295 distinct numbers) reduce to 479 route directions with at least two positioned stops; 2,101 stops; 3 ISBTs; 35 depots; 36 terminals and bus stands (`bus.places`). A route is **a sequence of stop indices**; the line between two stops is a straight segment, so a route polyline is the stop chain, to be snapped to the pack's street graph when a bus drives it (D5 street graph; the other session). Per route: number (`ref`), `from` and `to` where tagged, length of the chain, operator class.
+
+- **Operators.** Only 101 relations name DTC, 2 the cluster scheme, 2 Noida, and 374 name no operator at all (Delhi's rule is a 50:50 mix of DTC and cluster buses on every route, so one number is normally both). The game should pick the livery per bus, not per route.
+- **ISBTs.** Kashmere Gate (Maharana Pratap ISBT, since 1976; 45 departure bays, 8 idle bays, 13 arrival bays, a DTC block for city buses; Wikipedia), Anand Vihar (Swami Vivekanand ISBT, 1996; 154 bays in 2026), Sarai Kale Khan.
+- **DTC fleet (Wikipedia, 2025 to 2026).** About 6,300 buses: 4,538 electric and 1,759 CNG in April 2026 (a March 2025 source says 4,359 buses: 3,109 CNG and 1,250 electric; the two sources are a year apart), 37 depots, three ISBTs. CNG low-floor buses came from the 2010 Commonwealth Games order (3,125: Tata Marcopolo Starbus and Ashok Leyland ultra-low-floor; air-conditioned and non-air-conditioned), electric buses since 2021; all later orders are low-floor.
+- **Cluster scheme.** Private operators under a DIMTS contract, about 2,700 buses (September 2025), **coloured by type: orange for non-air-conditioned, blue for air-conditioned** (Wikipedia). The owner's brief said "orange and red". These disagree; DTC's own green livery is not described in the sources I read. **Do not fix the livery until D7 looks at photos.** Pink buses (free travel for women, "Saheli") exist; unverified here.
+- **Depots and ISBT positions** are in `bus.places` (kind `depot`, `terminal`, `isbt`), with the operator where tagged.
+- **Frequency class: not available.** OSM carries no timetable; stop_times exist only in the GTFS (section 1). D7 can use a guess: ring and trunk numbers higher, feeder lower.
+
+## 6. What this does for the game (plan for D6 and later)
+
+**Build order (smallest slice first).**
+1. **A generic elevated viaduct** along any route path using the grade runs (`e`), and **a ground track with a cutting** for `g`; trains on rails following a route path with the stop distances (`stops[i][1]` is the metres along the path). This alone draws 300 of the 400 km. Check with the Blue Line, 57 stations nearly all elevated.
+2. **One elevated station kit**: street level with entrance and stairs, a concourse over the road, two side platforms, a roof. Place it at every elevated station from `per.layout = side`, oriented by the path.
+3. **One underground station kit**: concourse, island platform (`layout = island`), two tracks, shown by a cut-away or entered by stairs from street entrances (`entrances[]` are real positions). The first line to dress fully: **Yellow Line from Kashmere Gate through New Delhi and Rajiv Chowk to Central Secretariat** (underground, island platforms, three interchanges), then the elevated Blue Line from Rajiv Chowk through Mandi House, Pragati Maidan (Supreme Court) and Akshardham to Yamuna Bank.
+4. **Two main railway stations**: New Delhi and Old Delhi, using `bodies` (platform lengths and widths), `buildings`, `footbridges` and `entrances`. These two plus Hazrat Nizamuddin are the stations you will recognise.
+5. **Boarding as fast travel** between Metro stations on one line and at interchanges (`transfers`), using `stations[]` and the line colours.
+6. **Buses**: DTC and cluster buses driving `bus.routes` snapped to the street graph, stopping at `bus.stops`; the three ISBTs as places.
+
+**Order of lines by recognisability and cost**: Yellow (underground core and elevated ends), Blue, Airport Express (New Delhi to Dwarka, the one visitors ride), then Violet, Red (all elevated, simple), Green, Pink, Magenta, Grey, Aqua, Rapid Metro.
+
+**Rules the data gives D6.** Every station is within 160 m of its track (validated); a route has no gaps (validated); coordinates are the pack frame; a station's `per[line].grade` and `layout` choose the kit; track heights are not in the data (the terrain is the game's DEM): an elevated deck is the ground height plus a viaduct height, and a station platform is at deck height. The keep-out registry (`src/world/keepout.js`) should receive the metro viaduct line and the stations as claims (`line` and `rect`), like `registerRail` does, so buildings and trees stay away; that is D6's change, not made here.
+
+## 7. Checks that run
+
+`node tools/validate_transit.mjs` (also in `tools/selftest.mjs`): the file is format 1 with the current builder version; ODbL credit present; line count and per-route station counts equal Wikipedia's (Red 29, Yellow 37, Blue 50 and 8, Green 22 and 3, Violet 34, Pink 46, Magenta 26 and 7, Grey 4, Airport 7, Aqua 21, Rapid 11); every station within 160 m of every line it claims; no route has a gap, a straight segment over 2.5 km or out-of-order stops; every named main interchange serves its lines and the two tracks come within 160 m of each other there; 244 to 262 Delhi Metro station records; Hindi names for all stations; at least 12 depots; the main railway stations present with their platform counts; bus routes, stops, three ISBTs and 25 depots. `daily_check.py` does not run it (the file only changes when someone rebuilds it).
+
+## 8. Numbers for the budget (CITY_PACK section 4)
+`transit.json` 444 KB, 125 KB gzipped, loaded once with the pack (budget 30 MB per pack). 4,909 track vertices for 405 km; the viaduct mesh is generated at run time from them.
+
+## 9. What I could not verify
+1. **All "how it looks" statements** (station colours, signage, platform fittings, train livery, speeds, viaduct dimensions, a station day) are from general knowledge or Wikipedia text; no photograph was looked at. D6 and D7 must check them against reference photos before drawing.
+2. **DTC green and the cluster colours** (section 5) disagree between the owner's brief and Wikipedia; the livery of the pink and electric buses is not known to me.
+3. **Bus timetables, frequencies, which operator runs which route** are not in OSM and the GTFS was not taken (section 1). Route geometry is a stop chain, not road geometry.
+4. **Station grade** at 5 stations (3.2); **Hindi names** by rule for 9 Rapid Metro and Aqua stops (`hiSrc` says `rule`), not checked by a native speaker; OSM Hindi names are as tagged.
+5. **Platform counts** for Nizamuddin, Anand Vihar Terminal, Sarai Rohilla, Cantonment and Tilak Bridge (4.1) differ between sources; the true current count needs the Railways' own station page or a visit. Delhi Shahdara, Subzi Mandi and the smaller stations have no platform numbers mapped.
+6. **Track layout inside stations** (how many tracks at each, where the crossovers are, where the approach lines join) is not reduced: the OSM `rail_ways` are in the raw folder, and `rail.js` (the railway session's) owns the game's own rail network. This file does not tell the railway code where to put turnouts at NDLS.
+7. **Wikipedia renames of 2025-26** are copied as Wikipedia states them; I did not check DMRC's own pages (not fetched).
+8. **Aqua and Rapid Metro platform layout** is not in the Wikipedia list (side platforms are typical for elevated stations; not verified).
+9. **Metro line colours**: OSM's hex values; DMRC's own colour codes were not checked, and Aqua's hex was chosen here.
+10. **The 2026 openings** (Magenta Phase 4, Pink extension, Yashobhoomi) come from Wikipedia's list as of the date of the download; later changes are not in the data.
+11. **Depot yard shapes**, **underground station box dimensions**, **entrance building types** (OSM has entrance nodes only) and **platform heights** are not in the data.
+12. **Station codes** are OSM `ref` tags, not checked against DMRC's list; `NDLS` is both a metro station id (the Airport Express terminal) and the railway code of New Delhi: the metro and rail ids live in separate lists (`metro.stations`, `rail.stations`).

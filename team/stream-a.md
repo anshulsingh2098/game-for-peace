@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-23 12:00  Delhi transit data (D2 metro and railway stations, D3 buses)
+Branch: claude/magical-lichterman-8e5391  Commit: see the PR
+What changed: new `assets/cities/delhi/transit.json` (format 1, 444 KB: 11 metro lines with grade runs, 285 stations, 14 depots, 47 railway stations, 479 bus routes), `tools/build_delhi_transit.mjs` (+ `build_delhi_bus.mjs`, `lib_transit.mjs`, `lib_wikilist.mjs`, three fetchers), `tools/validate_transit.mjs`, `docs/DELHI_TRANSIT.md`. Shared files, small edits: `tools/selftest.mjs` (one check, 90 in all, imports the validator), `docs/CITY_PACK.md` (section 5 transit.json now has the real format 1), `docs/OPEN_DATA.md` (every download logged), `docs/CITY_PLAN.md` and `docs/WORK_REMAINING.md` (section 11, decision 1.11), `HANDOFF.md`, `CHECKLIST.md`. Raw files (37 MB) are in git-ignored `data/raw/delhi_transit/`.
+For the other stream: nothing needed from Stream B. For the street-pack session (`tools/build_city.mjs`): use `project()` and `ORIGIN` from `tools/lib_transit.mjs` (origin 28.6139, 77.2090; R = 6,371,008.8 m) so streets and transit share one frame; `ATTRIBUTION.txt` should carry the Wikipedia (CC BY-SA 4.0) and Wikidata (CC0) lines from `transit.json` `sources`; the rail session: `rail.stations[].bodies` and `axis` hold the OSM platform layout of New Delhi and Old Delhi if you want to match the station there (nothing in `rail_*.js` was touched). For the owner: decision 1.11, the Delhi Open Transit Data GTFS needs a click-through agreement with a stated purpose, so I did not take it; buses have no timetable or frequency until then. No photograph was looked at: every look statement in the doc is unverified.
+Status: open
+
 ## 2026-11-22 19:00  Owner answers recorded (CITY_PLAN, CITY_PACK)
 Branch: claude/goofy-liskov-0a8557
 What changed: docs only: enclave entry like a bypass, downloads approved (log each file), all well-known places, invented look-alike brands.

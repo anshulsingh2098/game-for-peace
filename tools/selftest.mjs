@@ -46,6 +46,9 @@ import { KeepOut, RANK, railClaim, stationClaim, registerRail, roadProvider } fr
 import { crossingAt } from '../src/world/navgraph.js';
 import { PedSim, LEVELS, MAX_PEDS, SPAWN_MIN } from '../src/pedestrians/sim.js';
 import { OnFoot, FOOT, chooseExit, Interactions } from '../src/player/onfoot.js';
+import { validateTransit, EXPECT as TRANSIT_EXPECT } from './validate_transit.mjs';
+import { project as tProject, unproject as tUnproject, routeThrough, simplify as tSimplify, nearestOnPath } from './lib_transit.mjs';
+import { readFileSync as tReadFile } from 'node:fs';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -1068,6 +1071,19 @@ test('keepout + district: no building stands on a railway, a station, a landmark
 });
 test('keepout: scatter respects claims (terrain.addZone registers a landmark; a plot claim removes the trees under it)', () => {
   const cfg = locationConfig('mumbai', 'peace'), t = createTerrain(cfg); t.addZone(100, 100, 30, 5, 10); assert.ok(t.keepout.point(110, 100, 0, { as: 'scenery' }) && !t.keepout.point(160, 100, 0, { as: 'scenery' }), 'a levelled landmark zone is a claim'); assert.ok(t.keepout.point(100, 100, 0, { as: 'landmark' }) && !t.keepout.point(100, 100, 0, { as: 'station' }));
+});
+test('delhi transit pack (assets/cities/delhi/transit.json): projection, track routing, and the shipped file is valid (counts, every station on its line, lines meet at interchanges, rail and bus parts)', () => {
+  const [x, z] = tProject(28.6428, 77.2190), [la, lo] = tUnproject(x, z); assert.ok(Math.abs(la - 28.6428) < 1e-9 && Math.abs(lo - 77.2190) < 1e-9, 'projection round-trips'); assert.ok(x > 800 && x < 1200 && z < -3000 && z > -3500, 'New Delhi station is about 1 km east and 3.2 km north of the pack origin (Connaught Place)');
+  // routeThrough: joins stops over a Y of pieces in service order, whatever order the pieces come in, and never takes the other branch
+  const pieces = [[[100, 0, 'e'], [200, 0, 'e'], [300, 0, 'e']], [[0, 0, 'u'], [100, 0, 'u']], [[300, 0, 'e'], [400, 100, 'g']], [[300, 0, 'e'], [400, -100, 'g']]];
+  const r = routeThrough(pieces, [[0, 0], [200, 0], [400, 100]]); assert.deepEqual(r.gaps, []); assert.equal(r.pts[0][0], 0); assert.equal(r.pts[r.pts.length - 1][1], 100); assert.ok(r.pts.every((p, i) => !i || p[0] >= r.pts[i - 1][0] - 1e-9), 'monotonic along the line'); assert.equal(r.stopsAt.length, 3);
+  const sp = tSimplify([[0, 0], [10, 0.2], [20, 0], [30, 5], [40, 0]], 1, new Set([1])); assert.ok(sp.includes(1) && sp.includes(3) && sp[0] === 0 && sp[sp.length - 1] === 4, 'simplify keeps required points and real corners');
+  const doc = JSON.parse(tReadFile(new URL('../assets/cities/delhi/transit.json', import.meta.url))); const res = validateTransit(doc);
+  assert.deepEqual(res.errors, [], 'transit.json is valid:\n' + res.errors.join('\n')); assert.equal(doc.metro.lines.length, TRANSIT_EXPECT.lineIds.length, 'every metro line is there (' + TRANSIT_EXPECT.lineIds.join(', ') + ')');
+  assert.ok(res.stats.delhiMetroStations >= 244 && res.stats.stationLines >= 295, 'metro stations counted'); assert.ok(doc.rail.stations.find(s => s.id === 'NDLS').platforms.osmCount === 16, 'New Delhi has 16 platforms');
+  assert.ok(tReadFile(new URL('../assets/cities/delhi/transit.json', import.meta.url)).length < 1.5e6, 'transit.json stays under 1.5 MB');
+  // a metro station lies on its own track: Rajiv Chowk, both lines
+  const rc = doc.metro.stations.find(s => s.name.en === 'Rajiv Chowk'); assert.ok(rc && rc.lines.includes('blue') && rc.lines.includes('yellow')); for (const l of ['blue', 'yellow']) assert.ok(doc.metro.lines.find(L => L.id === l).routes.some(rt => nearestOnPath(rt.path, [rc.x, rc.z]).d < 120), 'Rajiv Chowk is on the ' + l + ' line');
 });
 
 console.log(`\n${passed} checks passed`);
