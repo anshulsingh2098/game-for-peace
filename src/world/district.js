@@ -4,7 +4,7 @@
    `near(x, z, r)`. Browser only (canvas textures); the layout is tested through district_plan.js. */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { planPiece, PALETTES, SHOP, FLOOR_H, GROUND_H, FRONT_GAP } from './district_plan.js';
+import { planPiece, PLOT_SHRINK, PALETTES, SHOP, FLOOR_H, GROUND_H, FRONT_GAP } from './district_plan.js';
 import { STEP } from './navgraph.js';
 
 function textures() {
@@ -49,7 +49,8 @@ export class District {
   }
   setNight(on) { const v = on ? 0.9 : 0; if (this.wall.emissiveIntensity !== v) this.wall.emissiveIntensity = v; }
   build(k) {
-    const r = this.road, st = this.style, s0 = k * this.len, s1 = s0 + this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, plan = planPiece({ road: r, terrain: this.t, seed: this.seed, k, s0, s1, spec: this.spec, blocked: this.blocked });
+    const r = this.road, st = this.style, s0 = k * this.len, s1 = s0 + this.len, o = r.at(s0, {}), ox = o.x, oz = o.z, ko = this.t.keepout || null, plan = planPiece({ road: r, terrain: this.t, seed: this.seed, k, s0, s1, spec: this.spec, blocked: this.blocked, keepout: ko, ignore: ko ? ko.nameOf(r, 'road') : null });
+    if (ko) { const owner = 'plot:' + this.seed + ':' + k; ko.removeOwner(owner); for (const pl of plan.plots) ko.add(owner, 'building', { t: 'rect', x: pl.x, z: pl.z, hx: pl.w / 2 - PLOT_SHRINK, hz: pl.d / 2 - PLOT_SHRINK, yaw: Math.atan2(pl.tz, pl.tx) }); }       // the plots claim their ground: scatter, props and the next plot ask
     const walls = [], furn = [], walk = { P: [], I: [] }, zebra = { P: [], I: [] }, p = {};
     const quad = (A, a, b, c, d) => { const v = A.P.length / 3; A.P.push(...a, ...b, ...c, ...d); A.I.push(v, v + 1, v + 2, v + 1, v + 3, v + 2); };
     // plots
@@ -101,7 +102,7 @@ export class District {
     const grp = new THREE.Group(); const addMerged = (list, mat) => { if (!list.length) return; const g = mergeGeometries(list); list.forEach(x => x.dispose()); const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; grp.add(m); };
     addMerged(walls, this.wall); addMerged(furn, this.furn);
     for (const [A, mat, shadow] of [[walk, this.walk, false], [zebra, this.paint, false]]) if (A.P.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(A.P, 3)); g.setIndex(A.I); g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.receiveShadow = shadow || mat === this.walk; grp.add(m); }
-    grp.userData = { x: ox, z: oz, circles: plan.circles, s0, s1 }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
+    grp.userData = { x: ox, z: oz, circles: plan.circles, s0, s1, owner: ko ? 'plot:' + this.seed + ':' + k : null }; grp.position.set(ox - this.origin.x, 0, oz - this.origin.z); this.group.add(grp); return grp;
   }
   /* obstacle circles near (x, z) within r: the world.near contract (a list of lists of { x, z, r, slide }) */
   near(x, z, r) {
@@ -109,7 +110,7 @@ export class District {
     for (const g of this.pieces.values()) { if (!g) continue; const c = g.userData.circles; if (!c.length) continue; const l = []; for (const q of c) if (Math.abs(q.x - x) < r + 4 && Math.abs(q.z - z) < r + 4) l.push(q); if (l.length) out.push(l); }
     return out;
   }
-  drop(grp) { if (!grp) return; this.group.remove(grp); grp.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  drop(grp) { if (!grp) return; if (grp.userData.owner && this.t.keepout) this.t.keepout.removeOwner(grp.userData.owner); this.group.remove(grp); grp.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   reposition() { for (const g of this.pieces.values()) if (g) g.position.set(g.userData.x - this.origin.x, 0, g.userData.z - this.origin.z); }
   dispose() { for (const g of this.pieces.values()) this.drop(g); this.pieces.clear(); this.group.parent && this.group.parent.remove(this.group); this.tex.map.dispose(); this.tex.glow.dispose(); for (const m of [this.wall, this.furn, this.walk, this.paint]) m.dispose(); }
 }

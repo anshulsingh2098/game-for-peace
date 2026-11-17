@@ -1,47 +1,28 @@
-/* Signalling and operating constants of the railway control layer (pure: no three.js, no DOM). Real practice and the sources are in docs/RAIL_OPERATIONS.md; every number below is marked
-   REAL (found in a source), GAME (a choice, because the world is drawn 1:100 and a real block of 1 to 2 km would be longer than most edges) or UNCONFIRMED (no source found).
-   Units: game metres and seconds (a train is real size and real speed; the land between cities is 100 times smaller). */
+/* Railway signals (pure; rail_view.js draws them). Placement and aspects follow Indian Railways practice as far as the sources allow (docs/OPEN_DATA.md):
+   colour-light (MACLS) signals stand on the LEFT of the line they govern as seen by the driver, a distant signal stands well back of the first stop signal (the home) so a train can stop at the home,
+   the home protects the station or junction (before the first points), block signals divide a long section so two trains never share a block, and a gate signal protects a level crossing (a yellow "G" plate).
+   Aspects: red (stop), yellow (caution: the next signal is red), double yellow (attention: the next signal is yellow; four-aspect only), green (proceed).
+   Not verified: exact distances (a home is placed 150 m before a node, a distant 650 m before it, block signals about 900 m apart: the game's metres, not scaled), the order of lamps on the head. */
+export const HOME_BEFORE = 150, DISTANT_BEFORE = 650, BLOCK_EVERY = 900, MIN_APART = 220;
 
-/* precedence classes, 0 is served first (docs/RAIL_OPERATIONS.md section 5: the official numbered list could not be opened, so the order is the commonly described one) */
-export const PRIORITY = { premium: 0, mail: 1, suburban: 2, passenger: 3, freight: 4 };
-export const PRIORITY_NAMES = ['Rajdhani / Shatabdi / Duronto / Vande Bharat', 'Superfast / Mail / Express', 'Suburban', 'Passenger', 'Freight'];
-/* the precedence class of a real timetable train (DataMeet types: Raj, Shtb, JShtb, Drnt, SF, GR, Exp) */
-export function classOf(t) {
-  const s = String(t.name || '').toLowerCase(), ty = String(t.type || '');
-  if (/vande|rajdhani|shatabdi|duronto|tejas/.test(s) || /^(Raj|Shtb|JShtb|Drnt)$/.test(ty)) return 'premium';
-  return 'mail';
+/* the signals of an edge of length `len` whose ends are the nodes a (s = 0) and b (s = len): [{ s, dir (+1 governs trains running towards b), kind, side }] sorted by s.
+   node: function end('a' | 'b') -> { station, junction } or null. Signals for dir -1 stand at the same places for the other direction. */
+export function planSignals(len, endA, endB, gates = []) {
+  const out = []; const add = (s, dir, kind) => { if (s > 25 && s < len - 25) out.push({ s, dir, kind }); };
+  if (endA) { add(HOME_BEFORE, -1, 'home'); if (len > 1100) add(DISTANT_BEFORE, -1, 'distant'); }                    // trains arriving at node a run in the -s direction
+  if (endB) { add(len - HOME_BEFORE, 1, 'home'); if (len > 1100) add(len - DISTANT_BEFORE, 1, 'distant'); }
+  for (let s = BLOCK_EVERY; s < len - 300; s += BLOCK_EVERY) for (const dir of [1, -1]) if (!out.some(o => o.dir === dir && Math.abs(o.s - s) < MIN_APART)) add(s, dir, 'block');
+  for (const g of gates) for (const dir of [1, -1]) add(g - dir * 260, dir, 'gate');                                         // a gate signal 260 m before a level crossing
+  return out.sort((x, y) => x.s - y.s);
 }
-
-export const SIG = {
-  BLOCK_AUTO: 700,          // GAME: automatic-block signal spacing (REAL: about 1 km, UNCONFIRMED; shortened for the 1:100 world)
-  LOOP_LEN: 480,            // GAME: loop length, must hold the longest train (REAL: loops of 650 to 800 m exist, UNCONFIRMED standard)
-  LOOP_MIN_EDGE: 700,       // GAME: an edge shorter than this gets no loop
-  LOOP_GAP: 60,             // GAME: stub of single line between a loop's points and the node (REAL: advanced starter 180 m beyond points)
-  LOOP_SPACING: 1700,       // GAME: another crossing loop every this many metres on a long single line
-  LOOP_SPEED: 8.3,          // REAL: loop turnout 15 km/h conventional (30 km/h under Kavach trial); the game uses 30 km/h (8.3 m/s)
-  LOOP_TURNOUT: 70,         // GAME: length of the turnout at each end of a loop where the loop speed applies
-  LAST_LINE: false,         // GAME: forbid taking the last free line of a loop unless the train can go straight on
-  BRAKE_USE: 0.85,          // the driver, and Kavach, brake with 85 % of the train's capability so a stop is always possible
-  STOP_GAP: 3,              // m a train stops short of a signal
-  RECOVERY: 0.07,           // UNCONFIRMED: running-time allowance (recovery margin) built into every booked run
-  PUNCTUAL: 90,             // UNCONFIRMED: a train is punctual when it arrives within this many seconds of the booking (REAL: 15 min of 1440 on the clock is the nearest official figure)
-  HOLD_MAX: 420,            // GAME: longest a controller keeps a lower class train in a loop for a higher one
-  STUCK_LIMIT: 1500,        // GAME: a train that has not moved for this long is treated as deadlocked and taken out (should never happen, the self-test counts it)
-  PLAN_AHEAD: 500,          // GAME: seconds ahead the control office plans for trains that have not started yet
-  LOOKAHEAD: 7000,          // m of route the controller looks along for higher class trains that need the same line
-  TURNAROUND: 25,           // GAME: a terminating train stands this long (passengers alight), then the rake leaves for the yard (REAL minimum turnaround: UNCONFIRMED)
-  GATE_CLOSE_T: 8,          // GAME: seconds a level crossing barrier takes to come down
-  GATE_LEAD: 6,             // GAME: extra seconds the gate is closed before the train needs it
-  GATE_AFTER: 6,            // m past the crossing the train's tail must be before the gate opens
-  GATE_ZONE: 10,            // m before the crossing a train stops if the gate is not down
-};
-
-/* aspects of a four-aspect colour light signal (REAL): red stop, yellow be ready to stop at the next signal, double yellow the next is yellow, green clear; n = clear blocks ahead */
-export const aspectFor = n => n <= 0 ? 'R' : n === 1 ? 'Y' : n === 2 ? 'YY' : 'G';
-export const brakeDist = (v, b) => v * v / (2 * b);
-/* time (s) of a leg of length L between two stops for a train that accelerates, cruises and brakes (closed form, no signals in the way) */
-export function legTime(L, vmax, accel, brake) {
-  L = Math.max(L, 1); const da = vmax * vmax / (2 * accel), db = vmax * vmax / (2 * brake);
-  if (da + db > L) { const vt = Math.sqrt(2 * L / (1 / accel + 1 / brake)); return vt / accel + vt / brake; }
-  return vmax / accel + vmax / brake + (L - da - db) / vmax;
+/* the aspect of signal k of `sigs` for trains running in its direction, from which blocks are occupied.
+   occupied(from, to): is any train between distances from and to of the edge. A signal's block runs to the next signal of the same direction (or the edge end). closedGate: for a 'gate' signal, whether the gate is shut. */
+export function aspectOf(sigs, k, len, occupied, closedGate = true) {
+  const sg = sigs[k], dir = sg.dir, same = sigs.filter(o => o.dir === dir), idx = same.indexOf(sg), ahead = dir > 0 ? same.slice(idx + 1) : same.slice(0, idx).reverse();
+  const end = (ahead[0] ? ahead[0].s : (dir > 0 ? len : 0)), blk = dir > 0 ? [sg.s, end] : [end, sg.s];
+  if (sg.kind === 'gate' && !closedGate) return 'red';
+  if (occupied(blk[0], blk[1])) return 'red';
+  if (sg.kind === 'distant' || sg.kind === 'block') { const nx = ahead[0]; if (nx) { const e2 = ahead[1] ? ahead[1].s : (dir > 0 ? len : 0), b2 = dir > 0 ? [nx.s, e2] : [e2, nx.s]; if (occupied(b2[0], b2[1])) return 'yellow'; } }
+  return 'green';
 }
+export const ASPECT_LAMPS = { red: [1, 0, 0, 0], yellow: [0, 1, 0, 0], green: [0, 0, 1, 0], double: [0, 1, 0, 1] };           // lamps top to bottom: red, yellow, green, yellow

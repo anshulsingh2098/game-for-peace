@@ -2,15 +2,52 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
-## 2026-11-23 12:00  Railway control office (AI traffic control)
-Branch: claude/clever-dhawan-907ed4  Commit: see PR
-What changed: new `world/rail_signals.js`, `rail_control_graph.js`, `rail_control.js`, `rail_services.js`, `docs/RAIL_CONTROL.md`, `docs/RAIL_OPERATIONS.md`; `world/rail_view.js` (draws control office trains, signals, gates; `?control=off` = old behaviour), `main.js` (clock from `rail.clockMin()`, real platform in announcements, try/catch around RailView), `tools/selftest.mjs` (3 checks, 84 total), `docs/WORK_REMAINING.md` 7.7, `CHECKLIST.md`. Railway clock is now 1 minute per 8 s.
+## 2026-11-23 18:00  Railway control office merged with main's signals, gates and station loops (PR 53)
+Branch: claude/clever-dhawan-907ed4
+What changed: my signal constants file is now `world/rail_control_signals.js` (main's `rail_signals.js` planner is untouched). `rail_view.js` keeps main's drawing (signals with lit lamps, boom gates, loops and crossovers) and gets the control office on top: `spansFor(li)` and `closedAt(line, s)` feed the drawn signals, lamps, barriers and the road-traffic gates from the control office's real train positions and gate state (a gate is down before the train needs it, and a train stops short of it otherwise). No second set of signal posts is drawn. Drawn aspects come from main's planner and occupancy, the control office brakes at its own block signals (700 m), so the two agree on occupancy, not on lamp positions.
 For the other stream: nothing needed.
 Status: open
+
+## 2026-11-22 19:00  Owner answers recorded (CITY_PLAN, CITY_PACK)
+Branch: claude/goofy-liskov-0a8557
+What changed: docs only: enclave entry like a bypass, downloads approved (log each file), all well-known places, invented look-alike brands.
+For the other stream: nothing.
+Status: done
+
+## 2026-11-22 18:00  City plan Phase 0: keep-out registry and the city architecture note
+Branch: claude/goofy-liskov-0a8557  Commit: see the PR
+What changed: `src/world/keepout.js` (new, pure: claims for lines, circles, rectangles and providers; rank station > landmark > rail > road > building > scenery; `railClaim`, `stationClaim`, `registerRail`, `roadProvider`). Shared or other files, each a small edit: `terrain.js` (`terrain.keepout`, `addZone` registers a landmark claim), `district_plan.js` (whole-plot rectangle check, own-piece overlap check, furniture and signals ask; new params `keepout`, `ignore`), `district.js` (registers and drops its plots), `scatter.js` (trees ask; tiles re-plant when a claim lands on them; CRLF file), `rail_view.js` (**two small edits for the railway-control session**: the constructor calls `registerRail`, and `buildStation` skips a building that would stand on a road), `main.js` (one line: `roadProvider(terrain.keepout, roadSet)` in `makeWorld`), `tools/selftest.mjs` (4 checks, 86 in all), `docs/CITY_PACK.md` (new), `docs/CITY_PLAN.md`, `docs/WORK_REMAINING.md` (section 10), `docs/DISTRICT.md`, `CHECKLIST.md`, `HANDOFF.md`.
+For the other stream: if you add anything that covers ground (a new rail object, a station, a depot, a car park, a landmark), register it: `terrain.keepout.add(owner, kind, { t: 'rect' | 'line' | 'circle', ... })`, and ask `terrain.keepout.point/rect(..., { as: 'building' | 'scenery' })` before placing. The railway-control session: keep `registerRail` and the `ko` check in `buildStation` when you change `rail_view.js`; if you change the station layout (120 m platforms, 34 x 9 m building 17 m beyond the outer track) change `STATION_HALF_LEN` and the `stationClaim` size in `keepout.js` to match. Nothing to run.
+Status: open
+
+## 2026-11-22 15:00  City plan (docs/CITY_PLAN.md): cities one by one, Delhi NCR first
+Branch: claude/flyover-physics-262398
+What changed: `docs/CITY_PLAN.md` (new), `HANDOFF.md` (new section). No code.
+For the other stream: nothing yet. Phase 0 (keep-out registry, city scale decision) will touch `district_plan.js`, `rail_view.js`, `landmarks.js` (Stream A) and probably `main.js`.
+Status: open
+
 ## 2026-11-22 12:00  Overpasses: multi-level roads in the physics and the road set
 Branch: claude/flyover-physics-262398
 What changed: `world/interchange.js` (new, pure: crossings and overpasses), `world/router.js` (`Road.addLift`, lift in `at`/`nearest`/`bridgeW`, `waterW`), `world/roadset.js` (layers: `drive(x, z, natural, y)`, `deck`, `deckMesh`, `grade` follows the ground road), `world/terrain.js` (`drive(x, z, y)`, `deck`), `world/road.js` (`RoadMesh.refresh`), `world/bridges.js` (no pier on the road below, truss only over water), `world/bridge_rails.js`, `world/highway_plan.js`, `world/district_plan.js` (circles carry `y`). Your files, small edits: `vehicle/rapier-vehicle.js` (`buildPatch` makes a deck trimesh beside the ground heightfield; `reset(x, z, yaw, yHint)`; `collide` skips circles of the other level), `vehicle/physics.js` (hint passed), `traffic/sim.js` (car circles carry `y`). `main.js` (shared): `world.height(x, z, y)`, `world.ground`, `world.deck`, `world.deckMesh`, `raiseOverpasses` in `buildCityRoads` and `updateBranches`, `placeOnRoad` passes the road height, `__next.roadSet`. Self-test: one new check (78 checks): a car drives over and under a crossing, no layer snapping, traffic on the deck. `tools/vehicle_acceptance.mjs` passes. India world: two highways cross at Agra (`?play&q=med&india=world&at=agra`, the North-South road goes over the Golden Quadrilateral twice, at about 1.4 and 1.7 km from the start point; use the browser console `__next.branches` to find them: the road `ns` has two `lifts`).
 For the other stream: please review the vehicle changes (they are yours). Any new world object that stands on a road should give its obstacle circles a `y` (the road height) so a car on the other level does not hit it. Known: the autodrive planner does not know about layers (it follows the road it is on, which works); slip roads are not built, so you cannot change roads at an overpass.
+
+## 2026-11-23 01:00  Railway signals, gates across the road, no level crossing on expressways, no piers on roads, switching
+Branch: feat/rail-signals (on top of PR 50)
+What changed: new `world/rail_signals.js`; `world/rail_view.js` (signals with lit lamps, boom barriers across the real road, cross-board, flashing lamps, gate hut, piers skipped near roads, station passing loop with turnouts, crossovers), `world/rail.js` (expressway kinds are always bridges), `traffic/sim.js` (a `gates` list: cars stop at a closed barrier; additive), `main.js` (registers each gate with the traffic of its road); 85 self-test checks.
+For the other stream: please look at the small `gates` check in `traffic/sim.js` step.
+Status: open
+
+## 2026-11-22 22:00  Loco classes and liveries, diesel sections, Vande Bharat routes, maintenance trains
+Branch: feat/rail-over-road (PR 50)
+What changed: `world/train_consist.js` (`locoSpec`, vande 8 or 16 cars, maintenance consist), `world/train_art.js` (Vande Bharat look, diesel locos, yellow track machine, green and brown liveries), `world/rail_view.js` (electrified sections only get wire; diesel elsewhere), `world/rail.js` (maintenance style), `tools/build_india_trains.mjs` and `assets/india/trains.json` (13 Vande Bharat services by hand); 84 self-test checks.
+For the other stream: nothing needed.
+Status: open
+
+## 2026-11-22 20:00  Rail over road: a smooth ramp instead of a bump
+Branch: feat/rail-over-road
+What changed: `world/rail.js` (`classifyCrossings`), `world/rail_grade.js` (crossings force the profile up 7.2 m with 2.4 percent ramps), `world/rail_view.js` (no extra lift, no abutment boxes; viaduct piers and a deck do the rest), `main.js`; 83 self-test checks. Follows the flyover session's note that the old short lift looked wrong.
+For the other stream: nothing needed. The road still crosses at ground level under the rail; with multi-level roads the road could dip instead, later.
+Status: open
 
 ## 2026-11-22 15:00  Multi-track rail, Indian train look
 Branch: feat/rail-realism (same PR 48)

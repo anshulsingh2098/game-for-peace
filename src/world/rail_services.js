@@ -6,7 +6,7 @@
 import { STYLES } from './rail.js';
 import { RAIL_SPEED, styleOf } from './rail_timetable.js';
 import { consist, lengthOf, hash } from './train_consist.js';
-import { PRIORITY, SIG, classOf, legTime } from './rail_signals.js';
+import { PRIORITY, SIG, classOf, legTime } from './rail_control_signals.js';
 
 
 /* control seconds per railway minute: one minute on the station boards is this many seconds of simulation (a game day is 1440 times this). The real timetable cannot be run at the board's one second per minute

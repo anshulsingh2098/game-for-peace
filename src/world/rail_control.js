@@ -8,7 +8,7 @@
    - level crossing gates come down before a train needs the crossing and the train stops short if they are not down;
    - a train that has been stuck too long (a deadlock, which the design should make impossible) is taken out and counted, so the self-test can prove there were none.
    Positions are route coordinates (m along the train's route); placeAt() turns one into an edge, a distance on it and a lane for the view. */
-import { SIG, PRIORITY, aspectFor, brakeDist } from './rail_signals.js';
+import { SIG, PRIORITY, aspectFor, brakeDist } from './rail_control_signals.js';
 
 export const STEP = 0.5, DAY = 1440;
 

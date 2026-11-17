@@ -5,7 +5,7 @@
    Nodes (stations, junctions) are held by a train while its body is over them. A station has platforms: the lines of the block at the node end of each edge (numbered 1, 2, ...).
    Routes are lists of steps { edge, fwd }; segsFor() turns them into a flat list of segments (blocks and nodes) in travel order with route coordinates, which the controller reserves one by one. */
 import { laneOffsets, TRACK_GAP } from './rail_timetable.js';
-import { SIG } from './rail_signals.js';
+import { SIG } from './rail_control_signals.js';
 
 const DIRS = { 1: [0], 2: [1, -1], 3: [1, 0, -1], 4: [1, 1, -1, -1] };
 

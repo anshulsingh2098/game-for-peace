@@ -55,7 +55,7 @@ export class TrafficSim {
   constructor(road, { seed = 'traffic', mode = 'low', drive = 'right', ahead = 700, behind = 350, minSpawnGap = 150, scale = 1 } = {}) {
     this.scale = scale; this.road = road; this.signalled = SIGNAL_STYLES.includes(road.style.id); this.occupied = new Set();            // crossing indices with pedestrians on them (set by the pedestrian sim): vehicles stop for them
      this.crossCache = new Map(); this.seed = String(seed); this.drive = drive; this.ahead = ahead; this.behind = behind; this.minSpawnGap = minSpawnGap;
-    this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.junctions = []; this.pool = new Pool({ cap: MODES.high + 8, make: blankCar, reset: resetCar }); this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
+    this.lanes = laneOffsets(road.style); this.limit = LIMIT[road.style.id] || 20; this.kinds = DEFAULT_KINDS; this.cars = []; this.junctions = []; this.gates = []; this.pool = new Pool({ cap: MODES.high + 8, make: blankCar, reset: resetCar }); this.seen = new Set(); this.nextId = 1; this._p = {}; this._q = {}; this.time = 0;
     this.setMode(mode);
   }
   isCrossing(i) { let v = this.crossCache.get(i); if (v === undefined) { v = crossingAt(this.road, i, this._q); this.crossCache.set(i, v); } return v; }
@@ -126,6 +126,7 @@ export class TrafficSim {
         if (Math.abs(pl - c.lat) < 2.2 && along > -3 && along < 80) { const same = Math.cos((player.yaw || 0) - (c.dir > 0 ? p.th : p.th + Math.PI)), pv = Math.max(0, (player.u || 0) * same); if (along < safe) want = Math.min(want, pv * clamp((along - 2) / (safe - 2), 0, 1)); if (along < 2) want = 0; }
         if (Math.hypot(player.x - c.x, player.z - c.z) < 3.4 && c.bump <= 0) { c.bump = 3; c.speed *= 0.4; }          // bumped by the player: slows, then carries on
       }
+      for (const gt of this.gates) { const d = (gt.s - c.s) * c.dir, dist = d - gt.along - c.len / 2 - 1; if (dist < -2 || dist > 90) continue; if (gt.closed()) want = Math.min(want, Math.sqrt(2 * 3 * Math.max(0, dist - 1.5))); }       // a level crossing with its barriers down: stop at the barrier
       if (this.signalled || this.occupied.size) {                                                                                         // a red (or amber, too late to stop) signal ahead is a stopped car at the stop line
         const m = CROSS_EVERY / STEP, i0 = c.dir > 0 ? Math.ceil(c.s / STEP / m) : Math.floor(c.s / STEP / m);
         for (let n = 0; n < 3; n++) { const i = (i0 + n * c.dir) * m, sline = i * STEP - c.dir * (6 + c.len / 2), dist = (sline - c.s) * c.dir; if (dist < -1) continue; if (dist > 70) break; if (!this.isCrossing(i)) continue;

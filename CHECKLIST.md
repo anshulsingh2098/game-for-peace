@@ -50,6 +50,8 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] **Overpass** (`?play&q=med&india=world&at=agra`, then find the crossings in the console: `__next.branches.find(b => b.id === 'ns').road.lifts`): the six-lane NH44 rises on a concrete deck with parapets and piers over the road below, twice; drive over it, then under it (Travel or Back to road onto the Golden Quadrilateral): the car stays on its level, nothing invisible stops it, the sky road does not catch the wheels, traffic on the deck is up on the deck.
 - [ ] **Saved choices**: in the browser console `localStorage.setItem('gfp-next', '{"paint":null,"radioVol":"loud","vehicle":"x"}')` then reload: the game starts normally with defaults and no red errors.
 
+- [ ] **City overlaps (22 Nov 2026):** open `?play&q=med&india=world&at=agra`, then `at=delhi` and `at=mumbai`; fly or drive round the station and the main road and look from above (Camera button): no building, lamp or tree stands on a track, a station or another highway, and no two buildings pass through each other. Write what you find in your team log.
+
 ## 4. Tuner (`http://localhost:8765/tuner.html`)
 
 - [ ] Panel connects ("about 290 settings"). Move a weather fog slider: the game changes live.
