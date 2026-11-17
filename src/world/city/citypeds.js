@@ -56,6 +56,6 @@ export class CityPeds {
     for (const t of c.tiles.values()) { const sp = t.stalls; if (!sp) continue; for (let i = 0; i < sp.length; i += 2) { if (Math.abs(sp[i] - px) > 110 || Math.abs(sp[i + 1] - pz) > 110) continue; const k = hash(sp[i] * 5 + sp[i + 1]); mk(sp[i] + 1.3, sp[i + 1] + 0.4, k * 6.28, k, vend[Math.floor(k * vend.length) % vend.length]); } }
     this.extra = E.slice(0, 120);
   }
-  carNear(x, z, r) { for (const c of this.traffic.cars) if (Math.hypot(c.x - x, c.z - z) < r) return true; return false; }
+  carNear(x, z, r) { for (const c of this.traffic.cars) if (Math.abs(c.h || 0) < 3 && Math.hypot(c.x - x, c.z - z) < r) return true; return false; }
   circles(x, z, r) { const out = []; for (const p of this.list) if (Math.abs(p.x - x) < r + 2 && Math.abs(p.z - z) < r + 2) out.push({ x: p.x, z: p.z, r: 0.35, y: this.gy, ped: true }); return out; }
 }

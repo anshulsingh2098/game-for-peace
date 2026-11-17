@@ -44,8 +44,8 @@ export class CityWorld {
   }
   tileKey(tx, tz) { return tx + '_' + tz; }
   /* call every frame: wanted tiles are fetched, one is built per frame, far ones are dropped */
-  update(px, pz, dt = 0.016) {
-    this.traffic.update(dt, px, pz); if (this.buses) this.buses.update(dt, px, pz, this.gy); this.transit.update(px, pz, dt); this.peds.update(dt, px, pz, this.gy); this.cuts.set(this.openCuts, this.origin, px, pz); this.lmx.update(px, pz);
+  update(px, pz, dt = 0.016, py) {
+    this.traffic.update(dt, px, pz, undefined, py); if (this.buses) this.buses.update(dt, px, pz, this.gy); this.transit.update(px, pz, dt); this.peds.update(dt, px, pz, this.gy); this.cuts.set(this.openCuts, this.origin, px, pz); this.lmx.update(px, pz);
     const S = this.pack.size, tx0 = Math.floor((px - RADIUS) / S), tx1 = Math.floor((px + RADIUS) / S), tz0 = Math.floor((pz - RADIUS) / S), tz1 = Math.floor((pz + RADIUS) / S), want = [];
     for (let i = tx0; i <= tx1; i++) for (let j = tz0; j <= tz1; j++) { const k = this.tileKey(i, j); if (this.tiles.has(k) || this.loading.has(k) || !this.pack.hasTile(i, j)) continue; { const r = this.retry.get(k); if (r && performance.now() < r.at) continue; }      // a tile that failed waits 1 s, 2 s, 4 s ... (at most 30 s) before it is asked for again (audit R10)
     const d = Math.hypot(Math.max(i * S - px, 0, px - (i + 1) * S), Math.max(j * S - pz, 0, pz - (j + 1) * S)); if (d < RADIUS) want.push([d, i, j]); }

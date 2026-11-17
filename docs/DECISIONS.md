@@ -2,6 +2,8 @@
 
 Newest first. A decision here is the owner's word; an agent follows it and does not ask again. To change one, the owner says so and the line is edited with a date.
 
+## 17 Nov 2026 (later): R14 yes, flyovers and underpasses carry ambient city traffic. Built as v4 in `src/world/city/citytraffic.js`.
+
 ## 17 Nov 2026: answers to the independent studio audit (`Game_for_Peace_Independent_Studio_Audit.md`, baseline 4e21bf8)
 | # | Decision | Where it landed |
 |---|---|---|

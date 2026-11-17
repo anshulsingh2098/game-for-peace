@@ -18,7 +18,7 @@ Ledger as of commit `774a667` on `main`, plus branch `claude/audit-fixes` (17 No
 | N9 regions | yes | yes | yes | n/a | no | no |
 | N10 navigation | yes | yes | yes | n/a | no | no |
 | N11 district | yes (Delhi enclave is the real city) | yes | yes | no | no | no |
-| N12 traffic | partly (city traffic has signal and crossing logic, ground layer only: flyovers and underpasses carry no ambient cars, R14) | yes | yes | no | no | no |
+| N12 traffic | partly (city traffic has signal and crossing logic, flyovers, ramps and underpasses carry cars since v4, R14, not yet seen in a browser) | yes | yes | no | no | no |
 | N13 pedestrians | partly (boxes, no rigged art) | yes | yes | no | no | no |
 | N14 on foot | yes (capsule controller, this branch) | yes | no | no | no | no |
 | N15 activities, saves | partly (settings and scores only, no world resume) | yes | yes | no | no | no |
@@ -41,7 +41,7 @@ Ledger as of commit `774a667` on `main`, plus branch `claude/audit-fixes` (17 No
 | OSM2World "LGPL" in `docs/OPEN_DATA.md`, `docs/CITY_PLAN.md` | MIT at the audited commit; confirm before use. |
 
 ## Open audit findings (17 Nov 2026) and where each stands
-Fixed on `claude/audit-fixes`: R01, R04, R05, R06, R07, R11, R15 (v1), R16, R17 (licence), R18, R19; R10 in part (v2: failed city tiles wait 1 s, 2 s, 4 s ... up to 30 s before being asked again; still open: a byte budget for the raw tile cache and an AbortSignal through the fetch). Planned, not built: R08 (`docs/SHARED_SIM_PLAN.md`), R14 (needs the owner's call on flyover traffic). **Measured (v3, `node tools/measure_city.mjs`, a desktop):** reading the graph 12 ms, `JSON.parse` 41 ms, decode 12 ms, router build 43 ms; city routes 80 to 140 ms for a route across the city (about 5 to 9 dropped frames at 60 fps), so a long route on the main thread is a real hitch and a phone will be several times worse: the cooperative or worker router in `docs/SHARED_SIM_PLAN.md` step 2 is justified, to be sized with a phone measurement. Not touched, need people: R02 (devices), R13 (per-landmark height checks come with the Delhi person's list). R12, R20: after Delhi.
+Fixed on `claude/audit-fixes`: R01, R04, R05, R06, R07, R11, R15 (v1), R16, R17 (licence), R18, R19; R10 in part (v2: failed city tiles wait 1 s, 2 s, 4 s ... up to 30 s before being asked again; still open: a byte budget for the raw tile cache and an AbortSignal through the fetch). Planned, not built: R08 (`docs/SHARED_SIM_PLAN.md`), R14 was decided yes (owner, 17 Nov 2026) and built as v4 (below). **Measured (v3, `node tools/measure_city.mjs`, a desktop):** reading the graph 12 ms, `JSON.parse` 41 ms, decode 12 ms, router build 43 ms; city routes 80 to 140 ms for a route across the city (about 5 to 9 dropped frames at 60 fps), so a long route on the main thread is a real hitch and a phone will be several times worse: the cooperative or worker router in `docs/SHARED_SIM_PLAN.md` step 2 is justified, to be sized with a phone measurement. Not touched, need people: R02 (devices), R13 (per-landmark height checks come with the Delhi person's list). R12, R20: after Delhi.
 Known gaps after the fixes: nothing has been tried on a rendered page this session; R04's rollback is in `main.js`, which no headless test can import; the capsule has no camera collision, no stairs or interiors yet (N18).
 
 ## Acceptance protocol (AP-04)
