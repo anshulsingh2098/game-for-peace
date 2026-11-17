@@ -1257,6 +1257,7 @@ test('Delhi infill (P1): lots are inside blocks, clear of streets, mapped buildi
     }
     assert.ok(STYLE.oldDelhi.fill > STYLE.lutyens.fill, 'Old Delhi is denser than Lutyens');
   }
+});
 test('Delhi map rules and audit: the Connaught Place station block is left out, no landmark is, and no audit class is worse than its baseline', async () => {
   const { buildingsToSkip } = await import('../src/world/city/rules.js'), { execFileSync } = await import('node:child_process'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
   const tile = cityPack.decodeTile(JSON.parse(readFileSync(dir + 'tiles/2_-5.json', 'utf8')), M.tileSize), skip = buildingsToSkip(tile, G);
