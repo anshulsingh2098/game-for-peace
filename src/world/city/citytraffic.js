@@ -3,13 +3,14 @@
    traffic pack's models, and they have no signals yet. Obstacle circles go to the vehicle physics through `circles()`, so the player cannot drive through them. Browser only. */
 import * as THREE from 'three';
 
+const PARK_MAX = 300, AUTO = [0xe3b21a, 0x2e8b57, 0x2e8b57, 0xe3b21a];
 const MODES = { off: 0, low: 10, mid: 22, high: 34 }, CELL = 8, PAINT = [0xf2f2f2, 0xf2f2f2, 0xd9d9d9, 0x1b1b1d, 0x9a9da3, 0xb11f1f, 0x2a4f8a, 0xe8c547, 0x3a3a3c, 0xcfd2d6];
 const DRIVABLE = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential']);
 const rnd = (() => { let s = 12345; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
 
 export class CityTraffic {
   constructor(scene, origin, G) {
-    this.origin = origin; this.G = G; this.max = 34; this.want = 0; this.cars = []; this.pieces = new Map(); this.ends = new Map(); this.tile = new Map();
+    this.origin = origin; this.G = G; this.max = 34 + PARK_MAX; this.parked = new Map(); this.px = 0; this.pz = 0; this.scA = new THREE.Vector3(0.78, 0.95, 0.62); this.want = 0; this.cars = []; this.pieces = new Map(); this.ends = new Map(); this.tile = new Map();
     const body = new THREE.BoxGeometry(1.8, 0.8, 4.2), cab = new THREE.BoxGeometry(1.6, 0.65, 2.1), mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0.2 }), glass = new THREE.MeshStandardMaterial({ color: 0x1c242c, roughness: 0.2, metalness: 0.3 });
     this.body = new THREE.InstancedMesh(body, mat, this.max); this.cab = new THREE.InstancedMesh(cab, glass, this.max); for (const m of [this.body, this.cab]) { m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
     this.sig = new Map(); this.xing = new Map(); this.peds = null; this.time = 0; { const xz = G.xz, f = G.nodeFlags; for (let i = 0; i < G.nodes; i++) { const k = Math.floor(xz[i * 2] / 12) + ',' + Math.floor(xz[i * 2 + 1] / 12); if (f[i] & 1) { let l = this.sig.get(k); if (!l) this.sig.set(k, l = []); l.push(i); } else if (f[i] & 2) { let l = this.xing.get(k); if (!l) this.xing.set(k, l = []); l.push(i); } } }       // the signalised nodes (flag 1) by 12 m cell
@@ -22,9 +23,10 @@ export class CityTraffic {
     for (const s of streets) { const id = s.id; if (G.layer[id] !== 0 || !DRIVABLE.has(G.classes[G.cls[id]]) || s.pts.length < 4) continue; const p = s.pts, cum = [0]; for (let i = 2; i < p.length; i += 2) cum.push(cum[cum.length - 1] + Math.hypot(p[i] - p[i - 2], p[i + 1] - p[i - 1])); const len = cum[cum.length - 1]; if (len < 6) continue;
       const w = s.width !== undefined ? s.width : Math.max(1, G.lanes[id] * 3), pc = { s, id, cum, len, w, one: G.oneway[id], cls: G.classes[G.cls[id]], speed: Math.min(15, Math.max(5, (G.speed[id] || 30) / 3.6 * 0.6)), alive: true, tile: k };
       ids.push(pc); this.pieces.set(pc, true); for (const e of [0, 1]) { const x = e ? p[p.length - 2] : p[0], z = e ? p[p.length - 1] : p[1], key = this.key(x, z); let l = this.ends.get(key); if (!l) this.ends.set(key, l = []); l.push({ pc, end: e, x, z }); } }
-    this.tile.set(k, ids);
+    const pk = []; for (const pc of ids) { if (pc.cls !== 'residential' && pc.cls !== 'tertiary') continue; const side = rnd() < 0.5 ? 1 : -1; for (let s = 12; s < pc.len - 12; s += 8 + rnd() * 6) { if (rnd() > 0.4) continue; const o = this.at(pc, s, {}); if (this.crossingAt(o.x, o.z)) continue; const off = (pc.w / 2 + 0.3) * side, nx = -o.tz, nz = o.tx; pk.push({ x: o.x + nx * off, z: o.z + nz * off, yaw: Math.atan2(o.tz, o.tx), paint: PAINT[Math.floor(rnd() * PAINT.length)] }); } }
+    this.parked.set(k, pk); this.tile.set(k, ids);
   }
-  removeTile(k) { const l = this.tile.get(k); if (!l) return; for (const pc of l) { pc.alive = false; this.pieces.delete(pc); } for (const [key, arr] of this.ends) { const n = arr.filter(e => e.pc.alive); if (n.length) this.ends.set(key, n); else this.ends.delete(key); } this.tile.delete(k); }
+  removeTile(k) { this.parked.delete(k); const l = this.tile.get(k); if (!l) return; for (const pc of l) { pc.alive = false; this.pieces.delete(pc); } for (const [key, arr] of this.ends) { const n = arr.filter(e => e.pc.alive); if (n.length) this.ends.set(key, n); else this.ends.delete(key); } this.tile.delete(k); }
   /* is there a crossing (flag 2) or signal (flag 1) node within 6 m of (x, z) */
   crossingAt(x, z) { if (this.signalAt(x, z) >= 0) return true; const G = this.G, i0 = Math.floor(x / 12), j0 = Math.floor(z / 12); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = this.xing.get((i0 + a) + ',' + (j0 + b)); if (l) for (const n of l) if (Math.hypot(G.xz[n * 2] - x, G.xz[n * 2 + 1] - z) < 6) return true; } return false; }
   /* the signalised node within 6 m of (x, z) or -1 */
@@ -38,10 +40,11 @@ export class CityTraffic {
   spawn(px, pz) {
     const list = [...this.pieces.keys()]; if (!list.length) return null;
     for (let t = 0; t < 30; t++) { const pc = list[Math.floor(rnd() * list.length)], s = rnd() * pc.len, o = this.at(pc, s, {}), d = Math.hypot(o.x - px, o.z - pz); if (d < 90 || d > 520) continue; const dir = pc.one !== 0 ? pc.one : rnd() < 0.5 ? 1 : -1; if (!this.canGo(pc, dir)) continue;
-      return { pc, dir, s, v: pc.speed * (0.6 + 0.4 * rnd()), paint: PAINT[Math.floor(rnd() * PAINT.length)], x: o.x, z: o.z, yaw: 0, lat: 0, wait: 0 }; }
+      return { pc, dir, s, v: pc.speed * (0.6 + 0.4 * rnd()), auto: rnd() < 0.22, paint: PAINT[Math.floor(rnd() * PAINT.length)], x: o.x, z: o.z, yaw: 0, lat: 0, wait: 0 }; }
     return null;
   }
   update(dt, px, pz, pyaw) {
+    this.px = px; this.pz = pz;
     const cars = this.cars; this.time += dt; while (cars.length > this.want) cars.pop();
     if (cars.length < this.want && this.pieces.size) { const c = this.spawn(px, pz); if (c) cars.push(c); }
     const o = {}, SIDE = {};
@@ -62,13 +65,17 @@ export class CityTraffic {
     void SIDE; void pyaw; this.draw();
   }
   draw() {
-    const n = this.cars.length, gy = this.gy || 0; this.body.count = this.cab.count = n;
-    for (let i = 0; i < n; i++) { const c = this.cars[i]; this.q.setFromAxisAngle(this.up, -c.yaw + Math.PI / 2); this.pos.set(c.x - this.origin.x, gy + 0.75, c.z - this.origin.z); this.m4.compose(this.pos, this.q, this.sc); this.body.setMatrixAt(i, this.m4); this.col.setHex(c.paint); this.body.setColorAt(i, this.col);
-      const cx = Math.cos(c.yaw) * -0.2, cz = Math.sin(c.yaw) * -0.2; this.pos.set(c.x - this.origin.x + cx, gy + 1.45, c.z - this.origin.z + cz); this.m4.compose(this.pos, this.q, this.sc); this.cab.setMatrixAt(i, this.m4); }
+    const n = this.cars.length, gy = this.gy || 0, pk = this.parkedNear(); this.body.count = this.cab.count = n + pk.length;
+    for (let i = 0; i < n; i++) { const c = this.cars[i]; this.q.setFromAxisAngle(this.up, -c.yaw + Math.PI / 2); this.pos.set(c.x - this.origin.x, gy + 0.75, c.z - this.origin.z); this.m4.compose(this.pos, this.q, c.auto ? this.scA : this.sc); this.body.setMatrixAt(i, this.m4); this.col.setHex(c.auto ? AUTO[c.paint % 4] : c.paint); this.body.setColorAt(i, this.col);
+      const cx = Math.cos(c.yaw) * -0.2, cz = Math.sin(c.yaw) * -0.2; this.pos.set(c.x - this.origin.x + cx, gy + 1.45, c.z - this.origin.z + cz); this.m4.compose(this.pos, this.q, c.auto ? this.scA : this.sc); this.cab.setMatrixAt(i, this.m4); }
+    for (let j = 0; j < pk.length; j++) { const c = pk[j], i = n + j; this.q.setFromAxisAngle(this.up, -c.yaw + Math.PI / 2); this.pos.set(c.x - this.origin.x, gy + 0.75, c.z - this.origin.z); this.m4.compose(this.pos, this.q, this.sc); this.body.setMatrixAt(i, this.m4); this.col.setHex(c.paint); this.body.setColorAt(i, this.col);
+      this.pos.set(c.x - this.origin.x - Math.cos(c.yaw) * 0.2, gy + 1.45, c.z - this.origin.z - Math.sin(c.yaw) * 0.2); this.m4.compose(this.pos, this.q, this.sc); this.cab.setMatrixAt(i, this.m4); }
     this.body.instanceMatrix.needsUpdate = this.cab.instanceMatrix.needsUpdate = true; if (this.body.instanceColor) this.body.instanceColor.needsUpdate = true;
   }
   /* the nearest car in front of `ph` ({ x, z, yaw }) within `range` m and 2.3 m either side of its heading: { gap, speed } or null (autodrive's leader) */
   leaderAhead(ph, range) { const fx = Math.cos(ph.yaw), fz = Math.sin(ph.yaw); let best = null; for (const c of this.cars) { const dx = c.x - ph.x, dz = c.z - ph.z, ahead = dx * fx + dz * fz, side = Math.abs(-dx * fz + dz * fx); if (ahead > 0 && ahead < range && side < 2.3 && (!best || ahead < best.gap)) best = { gap: ahead - 2.1, speed: c.v }; } return best; }
   /* obstacle circles near (x, z) for the vehicle physics (front and rear of each car) */
-  circles(x, z, r) { const out = []; for (const c of this.cars) { if (Math.abs(c.x - x) > r + 4 || Math.abs(c.z - z) > r + 4) continue; const cx = Math.cos(c.yaw), sz = Math.sin(c.yaw); out.push({ x: c.x + cx * 1.2, z: c.z + sz * 1.2, r: 1.2, y: this.gy, traffic: true }, { x: c.x - cx * 1.2, z: c.z - sz * 1.2, r: 1.2, y: this.gy, traffic: true }); } return out; }
+  /* parked cars within 220 m of the player (at most PARK_MAX) */
+  parkedNear() { const out = []; for (const l of this.parked.values()) for (const c of l) if (Math.abs(c.x - this.px) < 220 && Math.abs(c.z - this.pz) < 220) { out.push(c); if (out.length >= PARK_MAX) return out; } return out; }
+  circles(x, z, r) { const out = []; for (const l of this.parked.values()) for (const c of l) { if (Math.abs(c.x - x) > r + 3 || Math.abs(c.z - z) > r + 3) continue; const cx = Math.cos(c.yaw), sz = Math.sin(c.yaw); out.push({ x: c.x + cx * 1.2, z: c.z + sz * 1.2, r: 1.2, y: this.gy }, { x: c.x - cx * 1.2, z: c.z - sz * 1.2, r: 1.2, y: this.gy }); } for (const c of this.cars) { if (Math.abs(c.x - x) > r + 4 || Math.abs(c.z - z) > r + 4) continue; const cx = Math.cos(c.yaw), sz = Math.sin(c.yaw); out.push({ x: c.x + cx * 1.2, z: c.z + sz * 1.2, r: 1.2, y: this.gy, traffic: true }, { x: c.x - cx * 1.2, z: c.z - sz * 1.2, r: 1.2, y: this.gy, traffic: true }); } return out; }
 }
