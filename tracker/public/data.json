@@ -556,6 +556,14 @@
    "Open pull requests",
    [
     {
+     "id": "ae409460",
+     "t": "PR 98: Plan: rail, road, building and height conflicts (C0-C6)",
+     "d": "Open pull request on branch docs/city-conflicts. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 98"
+    },
+    {
      "id": "a2365585",
      "t": "PR 97: Fix Delhi stuck on loading screen (builder boost + progress)",
      "d": "Open pull request on branch claude/delhi-loading-fix. Waiting for review and the owner's merge.",
@@ -1425,6 +1433,11 @@
  ],
  "prs": [
   [
+   "98",
+   "Plan: rail, road, building and height conflicts (C0-C6)",
+   "open"
+  ],
+  [
    "97",
    "Fix Delhi stuck on loading screen (builder boost + progress)",
    "open"
@@ -1618,11 +1631,6 @@
    "59",
    "Docs after merging D1 to D5: handoff, plan and remaining work",
    "merged"
-  ],
-  [
-   "58",
-   "D5: the game renders the Delhi city pack (?play&city=delhi)",
-   "merged"
   ]
  ],
  "branches": [
@@ -1646,5 +1654,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T19:59:56.985Z"
+ "generated": "2026-11-17T20:11:34.339Z"
 }
