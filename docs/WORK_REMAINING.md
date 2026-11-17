@@ -170,7 +170,7 @@ Done: `assets/cities/delhi/transit.json` (11 metro lines, 285 stations, 14 depot
 | 11.3 | Five stations where OSM and Wikipedia disagree on elevated or ground (`DELHI_TRANSIT.md` 3.2) and five railway stations whose platform counts differ (4.1): someone who knows Delhi checks them. | P2 [person] |
 | 11.4 | Bus routes are stop chains, not roads: snap to the street graph when D1 and D5 land. | P2 [build] |
 | 11.5 | Register the metro viaduct and the stations in the keep-out registry (`src/world/keepout.js`) as D6 builds them; the railway session owns `rail_*.js`, nothing was changed there. | P2 [build] |
-| 11.6 | `docs/CITY_PLAN.md` on `main` does not carry the Delhi flagship table (it is on `docs/handoff-23nov`): the status lines for D2 and D3 are at the end of the file; merge them into the table. | P3 |
+| 11.6 | (done 24 Nov: the flagship table is on `main`, with the package status line) | |
 | 11.7 | The data is a snapshot of Nov 2026 (Wikipedia list with the 2026 openings and renames, OSM as of the fetch); rerun the fetchers and `build_delhi_transit.mjs` to refresh (the public Overpass server is often busy and the fetcher retries). | P3 |
 ## 11. City pipeline and the Delhi pack, leftovers (D1 and D4)
 | # | Limit | Tag |
@@ -182,3 +182,20 @@ Done: `assets/cities/delhi/transit.json` (11 metro lines, 285 stations, 14 depot
 | 11.5 | 5,135 footprints that lie mostly on a street and 311 duplicates are dropped; the street widths that decide this are guessed from lanes. Look at a few dense lanes (Old Delhi, urban villages) in D5 for missing houses. | P2 [person] |
 | 11.6 | Gates: 25 gates, ids like `nh44-north-14`; merged by ref and 250 m; some are minor (SH18, NH344P). The mapping of each gate to the India world's highway (`india`) and the 1:100 world's gate positions belongs to the enclave work (Phase 2). `rail_gates` is empty. | P2 [build] |
 | 11.7 | Blocks are plain faces of the street graph (no street width taken off); the renderer must inset them. Landuse polygons are clipped at tile edges with Sutherland-Hodgman (concave shapes may show an edge along the tile border). | P3 [build] |
+
+## 12. The Delhi enclave renderer, leftovers (D5, 24 Nov 2026)
+Done: `?play&city=delhi[&at=<spawn|landmark|gate id>]` (`src/world/city/`), streets, flyovers with ramps and piers (driveable), blocks, parks, water, extruded footprints, landmark buildings and stations at real footprints, keep-out claims, gate entry and exit by page reload, picker link. Measured on a desktop at medium: 326 to 370 draw calls, 206k to 270k triangles.
+| # | What | Priority |
+|---|---|---|
+| 12.1 | **Deploy:** `tools/stage_cloudflare.py` skips `assets/cities/`, but the location picker's Delhi now opens the enclave: stage the pack (19.8 MB gzip, 1,925 files, check the Cloudflare file limits) before any deploy, or revert the picker line in `setLocation`. | P1 [build] |
+| 12.2 | Nothing measured on a phone or for frame time (the browser pane was hidden, 2 fps): run `?bench=30&city=delhi` on a desktop and two phones; the budget is `docs/CITY_PACK.md` section 4. Tile builds take 3 to 41 ms in one frame (hitch): move meshing to a worker or split a tile. | P1 [person] |
+| 12.3 | Underpasses (layer -1 streets) are not drawn and not driveable: a street ends at a portal. | P1 [build] |
+| 12.4 | Sidewalks are painted flat: no kerbs, a car drives over pavements. Add kerb collision in the physics. | P2 [build] |
+| 12.5 | No traffic, pedestrians, signals or parking on the pack graph (`traffic` is off in the enclave; the engine's placeholder road sits at x = -200 km). Needs the "fixed road" object of `docs/CITY_PACK.md` section 3 or a new simulation on the graph. | P1 [build] |
+| 12.6 | No GPS, minimap or Travel inside the city (the India GPS is off); autodrive cannot follow pack streets. A* on the pack graph exists in `tools/lib/graphroute.mjs` (port it). | P2 [build] |
+| 12.7 | The gate transition is a page reload; the plan wants a 0.5 s fade with the car carried over. Gates are chosen by heading, the pack's NH numbers do not match the India skeleton. The save has no `city` field. | P2 [build] |
+| 12.8 | Look: one flat-coloured box per building with a window texture; no facade kits by use, no roofs, no night windows, no shadows from buildings, no far skyline or impostors beyond 1.3 km, ground colour is a flat fill. Heights are 97 % guesses. | P2 [build] |
+| 12.9 | Station buildings are plain boxes from OSM footprints (Anand Vihar and Sarai Rohilla are 24 m squares from the list, not real footprints); no platforms or tracks (D6). | P2 [build] |
+| 12.10 | Metro and rail inside the enclave are not drawn; register viaducts and stations in the keep-out registry when D6 builds them (11.5). | P2 [build] |
+| 12.11 | The India highway you arrive on may not be the gate you leave on; Delhi to the other NCR cities (Gurgaon, Noida) has no pack. | P3 [build] |
+| 12.12 | Nobody who knows Delhi has looked at it: street layout, colours and heights need a person's list of what feels wrong (city card). | P1 [person] |
