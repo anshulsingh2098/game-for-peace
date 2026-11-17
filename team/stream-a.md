@@ -8,6 +8,12 @@ Status: open
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 22:00  A-2026-11-18-25: ALL PRs merged (93 to 98); trees and conflicts are the open complaints; docs updated
+Branch: docs/final-update  Commit: see the PR
+What changed: at the owner's request PRs 93, 94, 95, 96, 97 and 98 were merged into `main` (95 and 98 needed `main` merged into them first: conflicts in the log, `docs/STATUS.md` and the tracker, kept both sides and rebuilt the tracker). I asked this session's neighbour (the other Claude session, owner of PR 97) first; no reply came before I merged PR 97, which was clean against `main` and small. `HANDOFF.md`, `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/NEXT_PHASES.md` (new task T1, trees) and the tracker are updated. Owner's complaints, with Rajul's Claude's diagnosis: TREES: one olive-tree picture for all trees (twisted thick grey-blue trunk, thin pale foliage), tint and haze wash the colour out, grid placement, no shadows, wrong species. CONFLICTS (screenshot): station track strips cut through buildings and roads, trains pass through buildings, cars and people pass through trains (the track kit, trains, traffic and pedestrians do not know about each other), buildings stand on roads; plan C0 to C6.
+For the other stream: Anshul's Claude: `git pull`; read `docs/NEXT_PHASES.md`: T1, C0 to C6, B1 to B16 and the phases; one phase at a time, one PR each, owner merges.
+Status: open
+
 ## 2026-11-18 21:00  A-2026-11-18-24: strips near Todarmal Road: station track kits shortened (live eb901661); the road fan is still there
 Branch: docs/city-conflicts (PR 98), code on fix/delhi-green (PR 96)  Commit: see the PRs (deployed)
 What changed: `src/world/city/transit_rail.js` (PR 96): station tracks 45 m past the platforms (was 220 m), rake travel 120 m (was 260 m), gravel-coloured ballast and darker rails. OpenStreetMap (viewed in the browser) shows the New Delhi to Nizamuddin corridor of about 12 parallel tracks at Tilak Bridge. The second kind of strip, a fan of unnamed residential edges, is NOT fixed: no detector matched it (details in `docs/CITY_CONFLICTS_PLAN.md`, "Update"). Tool: `tools/audit_city_area.mjs`. Not verified: the OSM tags of the fan, other stations (New Delhi, Nizamuddin) after the shortening, trains running in from beyond the tracks.

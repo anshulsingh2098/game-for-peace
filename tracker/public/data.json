@@ -1,5 +1,5 @@
 {
- "commit": "bab1354",
+ "commit": "b34dfba",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -285,6 +285,14 @@
      "r": "docs/NEXT_PHASES.md"
     },
     {
+     "id": "aba1e053",
+     "t": "T1: Trees that look like Delhi",
+     "d": "The owner (18 Nov 2026) says the trees look wrong. Diagnosis (Rajul's Claude): one picture (island_tree_02, an olive-like tree) is used for every broadleaf tree, so all trees have the same twisted thick grey-blue trunk and thin pale foliage; the tint plus the haze washes the colour out; trees stand on a jittered grid so lawns look planted in rows; no shadows. Fix: 5 to 8 pictures made or sourced for neem, peepal, ja…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
      "id": "a6c8b6ca",
      "t": "C0: City conflicts, measure first",
      "d": "docs/CITY_CONFLICTS_PLAN.md: write tools/audit_city.mjs (street crossings, buildings on roads, height jumps and missing ramps, sunken streets without floors, unflagged road and rail crossings) with the worst 50 spots as links. Accepted when the owner's defects appear in the report. Needs from the owner: coordinates (menu line, Copy) and the build address for each defect.",
@@ -377,6 +385,14 @@
   [
    "Asked of Anshul in the team log",
    [
+    {
+     "id": "ad590fda",
+     "t": "A-2026-11-18-25: ALL PRs merged (93 to 98); trees and conflicts are the open complaints; docs updated",
+     "d": "Anshul's Claude: git pull; read docs/NEXT_PHASES.md: T1, C0 to C6, B1 to B16 and the phases; one phase at a time, one PR each, owner merges.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
     {
      "id": "a96fc4d1",
      "t": "A-2026-11-18-24: strips near Todarmal Road: station track kits shortened (live eb901661); the road fan is still there",
@@ -568,14 +584,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-21, from Rajul's Claude"
-    },
-    {
-     "id": "aac9c7c0",
-     "t": "Railways: track, trains, level crossings",
-     "d": "the train circles are in world.near; road traffic does not stop at the barriers yet (a toll-style speed cap in traffic/sim.js would do it).",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-21, from Rajul's Claude"
     }
    ]
   ],
@@ -629,27 +637,6 @@
      "s": "todo",
      "w": "Rajul",
      "r": "stream-b.md 2026-11-17, from Anshul's Claude"
-    }
-   ]
-  ],
-  [
-   "Open pull requests",
-   [
-    {
-     "id": "ae409460",
-     "t": "PR 98: Plan: rail, road, building and height conflicts (C0-C6)",
-     "d": "Open pull request on branch docs/city-conflicts. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 98"
-    },
-    {
-     "id": "a2365585",
-     "t": "PR 97: Fix Delhi stuck on loading screen (builder boost + progress)",
-     "d": "Open pull request on branch claude/delhi-loading-fix. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 97"
     }
    ]
   ],
@@ -1483,12 +1470,12 @@
   [
    "98",
    "Plan: rail, road, building and height conflicts (C0-C6)",
-   "open"
+   "merged"
   ],
   [
    "97",
    "Fix Delhi stuck on loading screen (builder boost + progress)",
-   "open"
+   "merged"
   ],
   [
    "96",
@@ -1684,15 +1671,15 @@
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 342 behind main)"
+   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 349 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 79 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 86 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 77 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 84 behind main)"
   ]
  ],
  "tests": null,
@@ -1702,5 +1689,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T20:19:00.784Z"
+ "generated": "2026-11-17T20:23:06.232Z"
 }
