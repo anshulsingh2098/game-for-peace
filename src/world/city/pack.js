@@ -58,7 +58,11 @@ export function footprintRect(fp, yaw) {
 function insidePoly(f, x, z) { let c = false; const n = f.length / 2; for (let i = 0, j = n - 1; i < n; j = i++) { const xi = f[i * 2], zi = f[i * 2 + 1], xj = f[j * 2], zj = f[j * 2 + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; }
 
 export class CityPack {
-  constructor(base, fetchJson) { this.base = base.replace(/\/$/, ''); this.get = fetchJson || (async u => { const r = await fetch(u); if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }); this.have = null; }
+  /* fetchJson(url, { signal }) -> parsed JSON (the default is fetch; a test passes its own). opt.maxRawBytes: the most raw tile JSON kept in memory (default 32 MB, audit R10). */
+  constructor(base, fetchJson, opt = {}) {
+    this.base = base.replace(/\/$/, ''); this.sizes = new WeakMap(); this.maxRawBytes = opt.maxRawBytes ?? 32e6; this.maxRawTiles = opt.maxRawTiles ?? 64; this.have = null;
+    this.get = fetchJson || (async (u, o) => { const r = await fetch(u, o && o.signal ? { signal: o.signal } : undefined); if (!r.ok) throw new Error(u + ' ' + r.status); const t = await r.text(), j = JSON.parse(t); if (j && typeof j === 'object') this.sizes.set(j, t.length); return j; });
+  }
   async init() {
     const [M, g, L] = await Promise.all([this.get(this.base + '/manifest.json'), this.get(this.base + '/graph.json'), this.get(this.base + '/landmarks.json')]);
     if (M.format > 1) throw new Error('city pack format ' + M.format + ' is newer than this game reads'); this.M = M; this.size = M.tileSize; this.G = decodeGraphColumns(g); this.landmarks = L.landmarks; this.lm = new Map(L.landmarks.map(l => [l.id, l]));
@@ -67,7 +71,31 @@ export class CityPack {
   /* how many streets meet at each node (a node whose streets are all raised, deg <= up, is on a flyover) */
   degrees() { if (this.deg) return this.deg; const G = this.G, d = new Uint16Array(G.nodes); for (let i = 0; i < G.n; i++) { d[G.a[i]]++; d[G.b[i]]++; } return (this.deg = d); }
   hasTile(tx, tz) { return this.have.has(tx + '_' + tz); }
-  async tile(tx, tz) { if (!this.hasTile(tx, tz)) return null; const u = this.base + '/tiles/' + tx + '_' + tz + '.json', c = this.raw || (this.raw = new Map()); let p = c.get(u); if (p) { c.delete(u); } else { p = this.get(u); p.catch(() => c.delete(u)); } c.set(u, p); if (c.size > 64) c.delete(c.keys().next().value); return decodeTile(await p, this.size); }       /* the near city and the far skyline both ask for a tile: the raw JSON is fetched and parsed once (decodeTile copies, it never changes it), the last 64 are kept */
+  /* the raw tile JSON cache: bounded in bytes AND in count, least recently used goes first. A tile that is still loading counts 0 bytes until it arrives. */
+  rawStats() { const c = this.raw || new Map(); let bytes = 0, pending = 0; for (const e of c.values()) { if (e.done) bytes += e.bytes; else pending++; } return { entries: c.size, bytes, pending, max: this.maxRawBytes }; }
+  trimRaw(keep) {
+    const c = this.raw; if (!c) return; let bytes = 0; for (const e of c.values()) bytes += e.bytes;
+    for (const [u, e] of c) { if (c.size <= this.maxRawTiles && bytes <= this.maxRawBytes) break; if (e === keep) continue; c.delete(u); bytes -= e.bytes; }
+  }
+  startRaw(u) {
+    const c = this.raw, e = { p: null, bytes: 0, done: false, users: 0, ac: new AbortController() };
+    e.p = this.get(u, { signal: e.ac.signal }); e.p.then(j => { e.done = true; e.bytes = this.sizes.get(j) ?? JSON.stringify(j).length; if (c.get(u) === e) this.trimRaw(e); }, () => { if (c.get(u) === e) c.delete(u); });
+    return e;
+  }
+  /* a tile; signal (optional AbortSignal): abort it when the tile is no longer wanted. The fetch is shared by everyone asking for the same tile, so it is only cancelled
+     (and its cache slot freed) when every asker has gone; an asker that aborts gets an AbortError. */
+  async tile(tx, tz, signal) {
+    if (!this.hasTile(tx, tz)) return null; const cancelled = () => Object.assign(new Error('tile fetch cancelled'), { name: 'AbortError' }); if (signal && signal.aborted) throw cancelled();
+    const u = this.base + '/tiles/' + tx + '_' + tz + '.json', c = this.raw || (this.raw = new Map()); let e = c.get(u); if (e) c.delete(u); else e = this.startRaw(u);
+    c.set(u, e); this.trimRaw(e); e.users++; let off = null;
+    try {
+      const raw = signal ? await Promise.race([e.p, new Promise((_, no) => { off = () => no(cancelled()); signal.addEventListener('abort', off, { once: true }); })]) : await e.p;
+      return decodeTile(raw, this.size);
+    } finally {
+      if (off) signal.removeEventListener('abort', off); e.users--;
+      if (signal && signal.aborted && e.users <= 0 && !e.done) { e.ac.abort(); if (c.get(u) === e) c.delete(u); }
+    }
+  }
   /* where to start: ?at=<spawn, landmark or gate id>, default the centre spawn. Returns { x, z, yaw (game), name } */
   start(id) {
     const M = this.M, sp = M.spawns.find(s => s.id === id) || M.spawns.find(s => s.id === 'centre') || M.spawns[0];

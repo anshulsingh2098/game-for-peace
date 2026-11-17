@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18  B11 done: city tile cache has a byte budget, and tile fetches can be cancelled (R10)
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: `src/world/city/pack.js` (Stream A's world file, changed because the task asked for it): the raw tile JSON cache is now bounded by bytes (`maxRawBytes`, default 32 MB) as well as count (`maxRawTiles`, 64), least recently used first; the default fetch measures each tile's text length. `pack.tile(tx, tz, signal)` takes an optional AbortSignal: the fetch is shared by everyone asking for the same tile, so it is cancelled (and its cache slot freed) only when every asker has aborted; an asker that aborts gets an `AbortError`; a failed fetch leaves no slot. New `pack.rawStats()` ({ entries, bytes, pending, max }). The constructor's `fetchJson` is now called as `fetchJson(url, { signal })` (a second argument; old callers that ignore it still work). `tools/selftest.mjs` (shared): one new test, passes. Existing callers (`cityworld.js`) pass no signal, so nothing changes for them yet.
+For the other stream: nothing needed. If you want the far skyline or near tiles to be cancelled when they leave range, `cityworld.js` can create an `AbortController` per wanted tile and pass its signal to `pack.tile(...)` (not done: your file).
+Status: open
+
 ## 2026-11-18  B5 findings 1, 2 and 4 fixed (runtime.remove, airborne cliff climb)
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed: `src/core/runtime.js`: `remove()` now clears `inited` before `dispose`, so a system removed during a frame is not updated or rendered afterwards (reproduced: old code logged `dispose,update`); the misplaced `resetClock` comment is back above `resetClock`. `src/player/onfoot.js`: `tryMove` refuses a rise taller than `maxStep` in the air too (reproduced: with a jump at frame 32 the old code put the character on top of a 3 m wall; now it stops at the wall). Shared file `tools/selftest.mjs`: two new tests (on foot: jump timing swept against a 3 m wall, and a 0.9 m ledge is still jumpable; runtime: remove during a frame); both fail on the old code and pass now. Finding 3 (`chooseExit` ignores `y0`/`y1`) is left: it fails safe.
