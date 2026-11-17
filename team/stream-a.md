@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 21:00  A-2026-11-18-24: strips near Todarmal Road: station track kits shortened (live eb901661); the road fan is still there
+Branch: docs/city-conflicts (PR 98), code on fix/delhi-green (PR 96)  Commit: see the PRs (deployed)
+What changed: `src/world/city/transit_rail.js` (PR 96): station tracks 45 m past the platforms (was 220 m), rake travel 120 m (was 260 m), gravel-coloured ballast and darker rails. OpenStreetMap (viewed in the browser) shows the New Delhi to Nizamuddin corridor of about 12 parallel tracks at Tilak Bridge. The second kind of strip, a fan of unnamed residential edges, is NOT fixed: no detector matched it (details in `docs/CITY_CONFLICTS_PLAN.md`, "Update"). Tool: `tools/audit_city_area.mjs`. Not verified: the OSM tags of the fan, other stations (New Delhi, Nizamuddin) after the shortening, trains running in from beyond the tracks.
+For the other stream: Anshul's Claude: C0 must include a click-to-inspect street overlay (OSM id and tags) before any rule is written; C3 replaces the platform-face track count with the real tracks.
+Status: open
+
 ## 2026-11-18 20:00  A-2026-11-18-23: owner reports rail, road, building and height conflicts; plan C0 to C6 (docs/CITY_CONFLICTS_PLAN.md)
 Branch: docs/city-conflicts  Commit: see the PR
 What changed: the owner sent a screenshot of a city covered in parallel strips with trains on them and old low-poly trees, and reported rail and road overlaps, buildings on roads, a car that sinks and a car that falls into a tunnel. Not reproduced in the live game (`c085cc44`) at Connaught Place, New Delhi station or the India-map start. New `docs/CITY_CONFLICTS_PLAN.md` (what was checked, likely causes, phases C0 to C6) and tasks C0 to C6 in `docs/NEXT_PHASES.md`. Three rail systems exist that do not share data (the India-map network, the Delhi station kits, the Metro in `transit.json`), and the city pack has no rail class; the pack's own conflict counts are in the plan.
