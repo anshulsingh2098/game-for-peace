@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 15:00  Delhi look, first step: real asphalt and paving textures on the city's roads and pavements
+Branch: claude/delhi-look-roads (on claude/delhi-flicker, PR 79)  Commit: see the PR
+What changed: `tilemesh.js` (`TEX_ROAD` 5 m and `TEX_WALK` 4 m, both divisors of 1000 so tiles meet; road and pavement strips get world-space UVs; `makeMaterials` builds `road` and `walk` from `assets/roads/asphalt_*` and `pavement_*` (colour, normal, roughness maps, already in the repo for the India map) with the vertex colours kept as a tint (`color` 2.6 and 1.55) and the same depth offsets). Before, every road and pavement in the city was one flat vertex colour. Seen in the browser at the default start: grain, patches and paving. Cost: none measurable (257 calls, 224k triangles at q=med). Tried and not enabled: `?fx=1` (ambient occlusion, bloom) adds contact shadows and a warmer grade but made each frame very slow in the browser pane. Not done (the owner compared with a GTA V frame: roads, junctions and proportions look basic): junction shaping (rounded corners, kerb radii), road wear and lane arrows, facade relief, real trees and props, car and traffic models, grade and lighting; see the look plan in the PR.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-18 14:30  Delhi flicker, the grey rectangles: footways crossing a road are now zebra crossings (added to PR 79)
 Branch: claude/delhi-flicker  Commit: see the PR
 What changed: `tilemesh.js` only: a footway or cycleway is drawn grey (pavement colour, +5.5 cm) where it runs beside streets, and where it crosses a carriageway (checked with `mouthFree` on the street's own samples) it is drawn as white zebra bars across the road (0.9 m pitch, markings layer) instead of a grey slab. The owner's screenshot showed light grey rectangles across the road in front of the car that flickered: they were footway strips lying in the road's own plane (64 such crossings within 500 m of the default start; the nearest 9 m ahead of the start). Seen in the browser: the crossing at the default start. Side-street mouths: the pavement strip of the main street now lies under the side street's road (3 cm under 5 cm) instead of in its plane.
