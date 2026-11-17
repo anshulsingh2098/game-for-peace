@@ -30,12 +30,15 @@ function box(m, cx, y0, cz, sx, sy, sz, ux, uz, c, cTop) {
 /* a tree: a trunk and a broad crown of one or two lathed blobs (neem, peepal and jamun in Delhi are 12 to 25 m with wide spreading crowns, so the sizes of identity.json are scaled up, and the crown has a second blob to the side so it is not one ball); `big` scales a whole tree (scrub and forest trees are smaller) */
 /* the crown shapes of the main Delhi trees as extra blobs: [dx in crown radii, dy in crown heights, dz, radius scale, height scale]: neem a wide dome of clumps, peepal very broad and low, jamun tall and dense, kikar a flat umbrella */
 const BLOBS = { neem: { main: 1, more: [[0.55, 0.12, 0.2, 0.62, 0.7], [-0.5, 0.1, -0.3, 0.6, 0.68], [0.1, 0.32, -0.5, 0.5, 0.6]] }, peepal: { main: 1.05, more: [[0.65, 0.05, 0.1, 0.7, 0.6], [-0.65, 0.05, 0.1, 0.7, 0.6], [0.0, 0.25, 0.55, 0.55, 0.5]] }, jamun: { main: 0.9, more: [[0.3, 0.3, 0.15, 0.55, 0.7], [-0.25, 0.45, -0.2, 0.45, 0.5]] }, gulmohar: { main: 1, more: [[0.6, 0.05, 0.1, 0.65, 0.5], [-0.6, 0.05, -0.1, 0.65, 0.5]] }, amaltas: { main: 0.9, more: [[0.5, 0.1, 0.2, 0.55, 0.6]] } };
-const WHITE_C = new THREE.Color(0xffffff);
+const WHITE_C = new THREE.Color(0xffffff), TREE_PIC = { neem: 'delhi_neem', peepal: 'delhi_peepal', jamun: 'delhi_jamun', gulmohar: 'delhi_gulmohar', amaltas: 'delhi_amaltas', kikar: 'delhi_kikar' };
+/* a smooth 0..1 field over the ground (two slow waves): where it is high trees stand in clumps, where it is low there are lawns */
+const clump = (x, z) => 0.5 + 0.25 * Math.sin(x * 0.021 + 1.3) * Math.cos(z * 0.017) + 0.25 * Math.sin((x + z) * 0.033 + 0.7);
 function tree(m, x, y0, z, sp, k, bloom, big = 1, cards = null) {
   const S = 1.4 * big, bu = sp.id === 'bougainvillea', h = sp.h * S * (0.8 + 0.4 * k), r = sp.r * S * (0.8 + 0.4 * ((k * 7) % 1)), th = bu ? 0 : h * 0.4, prof = PROFILE[sp.shape] || PROFILE.round, base = C(bloom && sp.bloom ? sp.bloom : sp.canopy).clone().multiplyScalar(0.85);
   if (cards && !bu) {          // leaf cards: a real-scan tree picture on three crossed planes (6 triangles, not 160), tinted by species; cone trees (ashoka) use the fir card
-    const cone = sp.shape === 'cone', t = base.clone().lerp(WHITE_C, 0.45), W = cone ? 2 * r * 0.95 * (1.405 / 0.861) : 2 * r * 1.05 * (4.544 / 4.208), H = cone ? h * (1.405 / 1.301) : h * (4.544 / 3.407), off = cone ? 0.04 * H : 0.13 * H;
-    (cone ? cards.b : cards.a).push(x, y0 - off, z, W, H, t.r, t.g, t.b, k * 6.2832); return;
+    const cone = sp.shape === 'cone', key = cone ? 'fir_sapling_0' : TREE_PIC[sp.id] || 'delhi_neem', t = (cone ? base.clone().lerp(WHITE_C, 0.45) : WHITE_C.clone().multiplyScalar(0.92 + 0.12 * ((k * 9) % 1))),
+      W = cone ? 2 * r * 0.95 * (1.405 / 0.861) : 2 * r / 0.88, H = cone ? h * (1.405 / 1.301) : h / 0.85, off = cone ? 0.04 * H : 0.05 * H;      // the Delhi pictures are drawn with the crown at 88 percent of the width, the tree 85 percent of the height and the foot 5 percent up (tools/make_tree_cards.py)
+    (cards[key] || (cards[key] = [])).push(x, y0 - off, z, W, H, t.r, t.g, t.b, k * 6.2832); (cards.shadow || (cards.shadow = [])).push(x, y0, z, r * 1.7); return;
   }
   if (!bu) { const tw = 0.32 + 0.012 * h; box(m, x, y0, z, tw, th + 0.8, tw, 1, 0, C(PALE.wood)); }
   const y1 = y0 + th, ch = h - th;
@@ -58,7 +61,7 @@ function inPoly(r, x, z) { let ins = false; const n = r.length / 2; for (let i =
 export function* buildStreetLife(tile, ctx, out) {
   const { G, gy, size, identity: ID, art, Mesher } = ctx, ox = tile.tx * size, oz = tile.tz * size, seed = tile.tx * 7919 + tile.tz * 104729, rnd = (i, k = 0) => hash(seed + i * 31 + k * 977);
   const M = { sign: new Mesher(), ad: new Mesher(), ban: new Mesher(), prop: new Mesher() }, st = { signs: 0, stacked: 0, awnings: 0, stalls: 0, kiosks: 0, hoardings: 0, shelters: 0, poles: 0, trees: 0, spans: 0 };
-  const CARDS = ctx.cards === false ? null : { a: [], b: [] }; out.cards = CARDS; const plant = (lx, y0, lz, spc, kk, bloom, big) => tree(M.prop, lx, y0, lz, spc, kk, bloom, big, CARDS);
+  const CARDS = ctx.cards === false ? null : {}; out.cards = CARDS; const plant = (lx, y0, lz, spc, kk, bloom, big) => tree(M.prop, lx, y0, lz, spc, kk, bloom, big, CARDS);
   /* local frame in, circles absolute out */
   const L = (x, z) => [x - ox, z - oz], circle = (x, z, r) => out.circles.push(x, z, r), WHITE = C(0xffffff);
   /* the street pieces of the tile (ground level), with a grid of their segments for "where is the nearest street" */
@@ -155,7 +158,7 @@ export function* buildStreetLife(tile, ctx, out) {
     for (const p of [...(tile.parks || []), ...(tile.blocks || []).filter(b => b.landuse === 'residential').map(b => ({ ring: b.ring, holes: b.holes, class: 'colony' }))]) { const R = p.ring; if (!R || R.length < 8) continue; if (p.class === 'colony' && nc >= CAP_COLONY) continue; if (ctx.yieldNow && ctx.yieldNow()) yield; const [STEP, base, big] = KIND[p.class] || [12, 0.4, 1]; let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (let i = 0; i < R.length; i += 2) { x0 = Math.min(x0, R[i]); x1 = Math.max(x1, R[i]); z0 = Math.min(z0, R[i + 1]); z1 = Math.max(z1, R[i + 1]); }
       for (let gx = x0 + STEP / 2; gx < x1 && np < CAP_PARK; gx += STEP) for (let gz = z0 + STEP / 2; gz < z1 && np < CAP_PARK; gz += STEP) {
         const key = Math.floor(gx * 3) * 7919 + Math.floor(gz * 5); const px = gx + (rnd(901, key) - 0.5) * STEP * 0.8, pz = gz + (rnd(902, key) - 0.5) * STEP * 0.8; if (!inPoly(R, px, pz)) continue; let hole = false; for (const h of p.holes || []) if (inPoly(h, px, pz)) { hole = true; break; } if (hole) continue;
-        const an = ID.areaNameAt(px, pz), A = ID.area(an), dens = Math.min(0.92, base * (0.6 + 0.8 * A.trees.density)); if (rnd(903, key) > dens) continue; if (insideBuilding(px, pz, 2.0) || inRoad(px, pz, 1.0)) continue;
+        const an = ID.areaNameAt(px, pz), A = ID.area(an), dens = Math.min(0.92, base * (0.6 + 0.8 * A.trees.density)); if (rnd(903, key) > Math.min(0.95, dens * (0.15 + 1.7 * clump(px, pz)))) continue; if (insideBuilding(px, pz, 2.0) || inRoad(px, pz, 1.0)) continue;
         const forest = p.class === 'forest' || p.class === 'scrub', list = forest ? ['neem', 'peepal', 'jamun'] : A.trees.species, id = list[Math.floor(rnd(904, key) * list.length)], spc = ID.species.get(id); if (!spc || spc.id === 'bougainvillea') continue; const [lx, lz] = L(px, pz); plant(lx, gy, lz, spc, rnd(905, key), bloomOnP(spc), big * (forest ? 0.8 + 0.4 * rnd(906, key) : 1)); np++; if (p.class === 'colony') nc++; st.trees++; circle(px, pz, 0.4); } }
   }
   /* ---- hedges: a low clipped hedge along the outer edge of the avenues of Lutyens' Delhi, DDA colonies and Connaught Place ---- */

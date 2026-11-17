@@ -11,7 +11,7 @@ const CFG = {
 };
 
 export class Sound {
-  constructor() { this.ctx = null; this.music = 0.5; this.sfx = 0.6; this.engineOn = false; this.voice = null; this.vid = null; this.prev = {}; this.rpmSm = 0; this.lastT = 0; this._thunder = false; this.samples = null; }
+  constructor() { this.samplesState = /[?&]engine=synth/.test(location.search) ? 'off' : 'loading'; this.ctx = null; this.music = 0.5; this.sfx = 0.6; this.engineOn = false; this.voice = null; this.vid = null; this.prev = {}; this.rpmSm = 0; this.lastT = 0; this._thunder = false; this.samples = null; }
   init() {
     if (this.ctx) return this.ctx;
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
@@ -36,7 +36,7 @@ export class Sound {
      Every loop plays all the time as one continuous looping source; the two loops nearest the current pitch are crossfaded (equal power) and pitch-shifted a
      little to hit the exact note, so there is never a click, and never two copies of the same loop out of step. If the files cannot load, the synthesised engine is used. */
   async loadSamples() {
-    if (/[?&]engine=synth/.test(location.search)) return;                                                       // ?engine=synth: the old synthesised engine, to compare by ear
+    if (this.samplesState === 'off') return;                                                       // ?engine=synth: the old synthesised engine, to compare by ear
     try {
       const meta = await (await fetch('assets/audio/engine_car.json')).json(), c = this.ctx;
       const loops = await Promise.all(meta.loops.map(async l => ({ pitch: l.pitch, buf: await c.decodeAudioData(await (await fetch('assets/audio/' + l.file)).arrayBuffer()) })));
@@ -45,8 +45,8 @@ export class Sound {
         l.g = c.createGain(); l.g.gain.value = 0; l.g.connect(out);
         l.src = c.createBufferSource(); l.src.buffer = l.buf; l.src.loop = true; l.src.connect(l.g); l.src.start(0, Math.random() * l.buf.duration);          // started at a random point so loops are not in step
       }
-      this.samples = { loops, out };
-    } catch (e) { this.samples = null; }
+      this.samples = { loops, out }; this.samplesState = 'ready';
+    } catch (e) { this.samples = null; this.samplesState = 'failed'; }
   }
   sampleEngine(rr, th, loud, cfg, t) {
     const S = this.samples, T = 62 * Math.pow(330 / 62, rr), L = S.loops, lt = Math.log(T);                    // target pitch: 62 Hz at idle up to 330 Hz at the limit (the range of the recording)
@@ -140,7 +140,7 @@ export class Sound {
     const c = this.ctx, t = c.currentTime, now = performance.now(), dt = Math.min(0.1, (now - (this.lastT || now)) / 1000) || 0.016; this.lastT = now;
     const cfg = CFG[s.id] || CFG.car, v = this.voice, r = clamp(s.v / s.top, 0, 1), th = s.throttle, fp = s.view === 'first';
     const P = this.prev; this.cabin.frequency.setTargetAtTime(fp ? 2300 : 18000, t, 0.15); this.wet.gain.setTargetAtTime((fp ? 0.04 : 0.16) + 0.22 * (s.tunnel || 0), t, 0.2);
-    const loud = (fp ? 1.25 : 1) * (s.buff ? 1.25 : 1), sampled = !!this.samples && cfg.kind === 'v8';
+    const loud = (fp ? 1.25 : 1) * (s.buff ? 1.25 : 1), sampled = !!this.samples && cfg.kind === 'v8', hold = cfg.kind === 'v8' && this.samplesState === 'loading';          // hold: the recorded engine is still loading, so the car is silent (not the synthesised engine for a few seconds, then the recording)
     if (this.samples && !sampled) this.samples.out.gain.setTargetAtTime(0, t, 0.1);
     if (cfg.kind === 'ev') {                                                                // ---- electric motor
       const fm = 160 + r * 2900 + th * 120; this.rpmSm += (fm - this.rpmSm) * Math.min(1, dt * 5); const f = this.rpmSm, tc = 0.07;
@@ -164,9 +164,9 @@ export class Sound {
       const spool = clamp(th * rr * 1.2 + (s.buff ? 0.5 : 0), 0, 1); v.tw.frequency.setTargetAtTime(500 + spool * (cfg.kind === 'diesel' ? 1100 : 850), t, 0.15); v.gtw.gain.setTargetAtTime(spool * spool * (cfg.kind === 'diesel' ? 0.015 : 0.005), t, 0.2);
       const shiftDip = P.gear !== undefined && P.gear !== gear && s.v > 4 ? 1 : 0;                                              // gear change: brief throttle cut
       if (shiftDip) { v.out.gain.cancelScheduledValues(t); v.out.gain.setValueAtTime(v.out.gain.value * 0.35, t); if (cfg.kind === 'v8' && !sampled) this.pops(1, 0.08); else this.burst(0, 3800, 0.25, 0.1, 'highpass'); }
-      v.out.gain.setTargetAtTime(sampled ? 0 : cfg.vol * (0.11 + 0.14 * th + 0.07 * rr) * loud, t + (shiftDip ? 0.09 : 0), 0.07);
+      v.out.gain.setTargetAtTime(sampled || hold ? 0 : cfg.vol * (0.11 + 0.14 * th + 0.07 * rr) * loud, t + (shiftDip ? 0.09 : 0), 0.07);
       if (sampled) this.sampleEngine(rr, th, loud, cfg, t);                                                         // the car's real engine recording
-      if (P.throttle > 0.7 && th < 0.3 && rr > 0.6) { if (cfg.kind === 'v8') { if (!sampled && (Math.random() < 0.45 || s.buff)) this.pops(2 + Math.floor(rand(0, 3)), 0.12 + (s.buff ? 0.14 : 0)); } else this.burst(0, 260, 0.5, 0.22, 'bandpass', 0.8); }   // lift off: exhaust crackle, turbo blow-off / engine brake
+      if (P.throttle > 0.7 && th < 0.3 && rr > 0.6) { if (cfg.kind === 'v8') { if (!sampled && !hold && (Math.random() < 0.45 || s.buff)) this.pops(2 + Math.floor(rand(0, 3)), 0.12 + (s.buff ? 0.14 : 0)); } else this.burst(0, 260, 0.5, 0.22, 'bandpass', 0.8); }   // lift off: exhaust crackle, turbo blow-off / engine brake
       if (cfg.kind === 'diesel' && s.brake && !P.brake && s.v > 9) this.airBrake();
       if (s.buff && !P.buff && cfg.kind === 'v8') { this.whoosh(); this.pops(5, 0.3); }
       P.gear = gear;
