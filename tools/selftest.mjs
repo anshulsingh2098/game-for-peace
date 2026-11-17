@@ -1228,6 +1228,7 @@ test('Delhi Metro plan (D6): every route has a height profile within 4 %, every 
     for (let k = 0; k < R.stops.length; k++) { const a = k === 0 ? 0 : tt.arrive[k]; const st = tt.state(a + 5); assert.ok(st && st.stop === k && Math.abs(st.s - R.stops[k].s) < 0.5, R.id + ' stands at stop ' + k); }
     let prev = -1; for (let tau = 0; tau < tt.T; tau += 7) { const st = tt.state(tau); assert.ok(st.s >= prev - 1e-6, R.id + ' never goes backwards'); prev = st.s; }
   }
+  { let off = 0, all = 0; for (const [, e] of N.stations) for (const c of e.calls) { const per = e.st.per.find(p => p.line === c.R.line); all++; if (Math.abs(c.R.at(c.s).h - P.pinHeight(P.kitOf(per))) > 0.6) off++; } assert.ok(off <= 12, off + ' of ' + all + ' station calls are off their kit height (the profile comes down before tunnels)'); }
   const e = N.stations.get('RC') || [...N.stations.values()].find(x => x.st.name.en === 'Rajiv Chowk'); assert.ok(e && e.st.per.length === 2, 'Rajiv Chowk serves two lines');
 });
 

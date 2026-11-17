@@ -12,7 +12,7 @@ import { buildSkyline } from './skyline.js';
 
 /* the world config of a city: the region's palette and plants, on flat land (no hills, no sea) with the engine's own placeholder road parked far away (the engine always has one road; here it only gives the vehicle code something to ask) */
 export function cityConfig(base, seed) {
-  const T = base.terrain, flatT = { ...T, seaLevel: 0, seabed: -40, lowland: 8, continent: { ...T.continent, rise: 0 }, coast: { lo: -9, hi: -8 }, hills: { ...T.hills, amp: 0 }, mountains: { ...T.mountains, amp: 0 }, detail: { ...T.detail, amp: 0 } };
+  const T = base.terrain, flatT = { ...T, seaLevel: -30, seabed: -60, lowland: 8, continent: { ...T.continent, rise: 0 }, coast: { lo: -9, hi: -8 }, hills: { ...T.hills, amp: 0 }, mountains: { ...T.mountains, amp: 0 }, detail: { ...T.detail, amp: 0 } };
   return { ...base, location: 'default', seed, terrain: flatT, palette: { ...base.palette, grass: [0.6, 0.55, 0.42], grass2: [0.5, 0.48, 0.36], dry: [0.62, 0.56, 0.42] }, scatter: { ...base.scatter, trees: 0.0006, rocks: 0, bushes: 0.0004, tufts: 0.002, clearRoad: 6 },
     road: { ...base.road, style: 'two-lane', start: { x: -200000, z: 0, y: 8 }, guide: [0, 0, 300, 0, 600, 0, 900, 0] } };
 }

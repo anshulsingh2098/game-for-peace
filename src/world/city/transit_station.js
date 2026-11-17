@@ -5,12 +5,12 @@
    entrance kiosks (at the OSM entrance positions, moved off streets and buildings up to 12 m) with a dark stair opening. Name boards in Hindi and English, the line colours as bands. The look is guesswork
    (docs/DELHI_TRANSIT.md section 9). Browser only. */
 import * as THREE from 'three';
-import { Soup, C, fbox, frame, pt, slab, extrude, walkAlong } from './transit_geo.js';
+import { Soup, C, fbox, frame, pt, slab, extrude, walkAlong, flight, gates } from './transit_geo.js';
 import { buildUnderground } from './transit_underground.js';
 import { kitOf, platformLen, lineColour, nextArrival, DWELL, RAIL_H, GIRDER } from './transit_plan.js';
 
 const PLAT = C(0xa7a29a), PLAT_SIDE = C(0x8f8b83), PLAT_DK = C(0x6f6c66), TACTILE = C(0xe6b800), ROOF = [C(0x4b525a), C(0x7b848c)], COL = C(0x2e3a52), STEEL = C(0x9aa0a6), GLASS = C(0xa8d4e6), GLAZE = C(0x7e9db0), WALL = C(0xd8d2c4), BAND = C(0x9a968e), DARK = C(0x0d0f12), STAIR = C(0x6d6a65), STAIR_T = C(0xcfd5d9);
-const PW = 4.0, EDGE = 1.5, ISLAND_MIN = 8;
+const FL = { step: C(0x8e8a82), tread: C(0xc4c0b6), belt: C(0x2d3034), rail: C(0x15171a) }, PW = 4.0, EDGE = 1.5, ISLAND_MIN = 8;
 
 const px = (F, u, l) => pt(F, u, l, 0);
 function fit(g, text, font, max, size) { let s = size; do { g.font = font.replace('#', s); s -= 4; } while (g.measureText(text).width > max && s > 20); }
@@ -53,7 +53,7 @@ export class StationKit {
       let lo = Infinity, hi = -Infinity; const rows = [];
       for (const p of plats) {
         const R = p.t.R, q0 = R.at(p.t.s), sg = p.t.sg, L0 = sg > 0 ? p.l0 : -p.l1, L1 = sg > 0 ? p.l1 : -p.l0; let sa = p.t.s - Lp / 2, sb = p.t.s + Lp / 2;
-        if (it === lead && it.kit === 'elevated' && (p === plats[0] || p === plats[plats.length - 1])) {       // the stair to the platform comes up at this platform's end in the lead direction: the platform stops 15 m short there and the concourse reaches under the gap
+        if (it === lead && it.kit === 'elevated' && Math.abs(q0.h - RAIL_H) < 0.6 && (p === plats[0] || p === plats[plats.length - 1])) {       // the stair to the platform comes up at this platform's end in the lead direction: the platform stops 15 m short there and the concourse reaches under the gap
           const sgn = p === plats[0] ? 1 : -1, fwd = q0.tx * Fa.tx + q0.tz * Fa.tz > 0, endS = (sgn > 0) === fwd ? 1 : -1; if (endS > 0) sb -= 15; else sa += 15;
           const c = p.edges.length === 2 ? (p.l0 + p.l1) / 2 : p.l0 > 0 ? p.l0 + 2.5 : p.l1 - 2.5; holes.push({ sgn, R, sg, c, endS, sE: endS > 0 ? p.t.s + Lp / 2 : p.t.s - Lp / 2, l: p.t.l + c });
         }
@@ -76,15 +76,15 @@ export class StationKit {
     }
 
     /* the concourse (elevated stations) in the frame of the lead line, over every platform of the interchange, and the stair towers */
-    if (this.items.some(i => i.kit === 'elevated') && box.u0 < box.u1) {
+    if (this.items.some(i => i.kit === 'elevated') && box.u0 < box.u1 && Math.abs(A.p.h - RAIL_H) < 0.6) {       // (a station whose profile height is off by 0.6 m or more, next to a tunnel, gets platforms and kiosks only)
       const u0 = box.u0 + (holes.some(h => h.sgn < 0) ? 1 : 10), u1 = box.u1 - (holes.some(h => h.sgn > 0) ? 1 : 10), l0 = Math.max(box.l0, -40), l1 = Math.min(box.l1, 40), top = RAIL_H - GIRDER - 0.2, uc = (u0 + u1) / 2, lc = (l0 + l1) / 2;
       const wall = (ua, la, ub, lb, y0, y1, col) => solid.quad(pt(Fa, ua, la, y0), pt(Fa, ub, lb, y0), pt(Fa, ub, lb, y1), pt(Fa, ua, la, y1), col);       // hollow: four walls, a floor you can walk on (5.5 m) and a ceiling
       for (const [ya, yb, cw] of [[5.5, 6.1, BAND], [6.1, 8.9, GLAZE], [8.9, top, BAND]]) { wall(u0, l0, u1, l0, ya, yb, cw); wall(u0, l1, u1, l1, ya, yb, cw); wall(u0, l0, u0, l1, ya, yb, cw); wall(u1, l0, u1, l1, ya, yb, cw); }
       fbox(solid, Fa, u0, u1, l0, l1, 5.2, 5.5, BAND, C(0xcfcac0)); { const uA = u0 + (holes.some(h => h.sgn < 0) ? 15 : 0), uB = u1 - (holes.some(h => h.sgn > 0) ? 15 : 0); fbox(solid, Fa, uA, uB, l0, l1, top - 0.3, top, BAND, BAND);       // ceiling, with a hole where a stair goes up through it
         for (const h of holes) { const ua = h.sgn > 0 ? uB : u0, ub = h.sgn > 0 ? u1 : uA, hl = Math.max(l0 + 1.5, Math.min(l1 - 1.5, (() => { const q = h.R.at(h.sE - h.endS * 8), l = h.sg * h.c; return toFrame(q.x - q.tz * l, q.z + q.tx * l).l; })())); fbox(solid, Fa, ua, ub, l0, hl - 1.5, top - 0.3, top, BAND, BAND); fbox(solid, Fa, ua, ub, hl + 1.5, l1, top - 0.3, top, BAND, BAND);
-          const at = (off, y) => { const q = h.R.at(h.sE - h.endS * off), l = h.sg * h.c; return [q.x - q.tz * l, y, q.z + q.tx * l]; }, f = at(1.5, 5.5), t = at(14.5, 12.5); slab(solid, f[0], f[2], 5.5, t[0], t[2], 12.5, 2.4, 0.4, STAIR, STAIR_T);
+          const at = (off, y) => { const q = h.R.at(h.sE - h.endS * off), l = h.sg * h.c; return [q.x - q.tz * l, y, q.z + q.tx * l]; }, f = at(1.5, 5.5), t = at(14.5, 12.5); flight(solid, f[0], f[2], 5.5, t[0], t[2], 12.5, FL);
           const dx = t[0] - f[0], dz = t[2] - f[2], L = Math.hypot(dx, dz); this.walk.push({ x: f[0], z: f[2], tx: dx / L, tz: dz / L, u0: 0, u1: L, l0: -1.2, l1: 1.2, ya: 5.5, yb: 12.5 }); } }
-       this.walk.push({ x: Fa.x, z: Fa.z, tx: Fa.tx, tz: Fa.tz, u0, u1, l0, l1, ya: 5.5, yb: 5.5 }); const cp = pt(Fa, uc, lc, 0); this.access.push({ x: cp[0], z: cp[2] });
+       this.walk.push({ x: Fa.x, z: Fa.z, tx: Fa.tx, tz: Fa.tz, u0, u1, l0, l1, ya: 5.5, yb: 5.5 }); gates(solid, Fa, uc - 3, lc - 2, 5.5, 4); const cp = pt(Fa, uc, lc, 0); this.access.push({ x: cp[0], z: cp[2] });
       for (const sg of [-1, 1]) { const l = sg > 0 ? l1 + 0.06 : l0 - 0.06, a = pt(Fa, uc - 5.4 * sg, l, 6.35), b = pt(Fa, uc + 5.4 * sg, l, 6.35); bq(names, sg > 0 ? a : b, sg > 0 ? b : a, 2.7); }
       claims.push({ kind: 'station', layer: 1, shape: { t: 'rect', x: Fa.x + Fa.tx * uc - Fa.tz * lc, z: Fa.z + Fa.tz * uc + Fa.tx * lc, hx: (u1 - u0) / 2, hz: (l1 - l0) / 2, yaw: Math.atan2(Fa.tz, Fa.tx) } });
       const yaw = Math.atan2(Fa.tz, Fa.tx); let placedT = 0;
@@ -96,7 +96,7 @@ export class StationKit {
           const a = Math.max(sd.lo, Math.min(sd.hi, sd.c + off)), fp = sd.ax === 'l' ? pt(Fa, a, sd.w + sd.sg * run, 0) : pt(Fa, sd.w + sd.sg * run, a, 0), wp = sd.ax === 'l' ? pt(Fa, a, sd.w, 5.5) : pt(Fa, sd.w, a, 5.5);
           if (!free(fp[0], fp[2], 1.7, 1.7, yaw, 0.8)) continue;
           { const dx = wp[0] - fp[0], dz = wp[2] - fp[2], L = Math.hypot(dx, dz); this.walk.push({ x: fp[0], z: fp[2], tx: dx / L, tz: dz / L, u0: 0, u1: L, l0: -1.5, l1: 1.5, ya: 0.25, yb: 5.5 }); }
-          slab(solid, fp[0], fp[2], 0.25, wp[0], wp[2], 5.5, 3.0, 0.5, STAIR, STAIR_T); slab(solid, fp[0], fp[2], 2.9, wp[0], wp[2], 8.4, 3.4, 0.12, STAIR_T);
+          flight(solid, fp[0], fp[2], 0.25, wp[0], wp[2], 5.5, FL); slab(solid, fp[0], fp[2], 2.9, wp[0], wp[2], 8.4, 3.4, 0.12, STAIR_T);
           const dl = sd.ax === 'l' ? [a - 1.7, a + 1.7, sd.sg > 0 ? sd.w + 0.05 : sd.w - 0.85, sd.sg > 0 ? sd.w + 0.85 : sd.w - 0.05] : [sd.sg > 0 ? sd.w + 0.05 : sd.w - 0.85, sd.sg > 0 ? sd.w + 0.85 : sd.w - 0.05, a - 1.7, a + 1.7];
           fbox(solid, Fa, dl[0], dl[1], dl[2], dl[3], 5.5, 8.4, DARK);
           claims.push({ kind: 'station', layer: 0, shape: { t: 'rect', x: fp[0], z: fp[2], hx: 1.7, hz: 1.7, yaw } }); this.access.push({ x: fp[0], z: fp[2] }); placedT++; done = true; break; } if (done) break; }
@@ -104,7 +104,7 @@ export class StationKit {
       this.towers = placedT;
     }
 
-    const ugItems = this.items.filter(i => i.kit === 'underground'); this.ug = null; if (ugItems.length) buildUnderground(this, T, ugItems, { lit, glass, names, signs, bq, depQuads, claims });
+    const ugItems = this.items.filter(i => i.kit === 'underground'); this.ug = null; if (ugItems.length) { buildUnderground(this, T, ugItems, { lit, glass, names, signs, bq, depQuads, claims }); if (!this.ug.anchors.length) this.ug = null; }
     /* the entrance kiosks at the OSM entrance positions (shifted off streets and buildings) */
     const yaw = Math.atan2(Fa.tz, Fa.tx), ents = st.entrances.length ? st.entrances : [[Fa.x - Fa.tz * 16, Fa.z + Fa.tx * 16], [Fa.x + Fa.tz * 16, Fa.z - Fa.tx * 16]], hx = up ? 3.8 : 2.8, hz = up ? 2.8 : 2.2; this.blocked = 0;
     for (const [ex, ez] of ents) {

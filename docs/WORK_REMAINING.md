@@ -216,3 +216,12 @@ Still open (what is left of 12):
 | D6.4 | Look check done for Blue Line and Laxmi Nagar only (DELHI_TRANSIT 10.1); still to check: other lines' liveries, cars per train, speeds, PSD, railway stations (round signs done) |
 | D6.5 | Ride animation instead of a fade; no sound |
 | D6.6 | Buildings under viaducts (needs the tile renderer to take Metro claims) |
+
+## D6b leftovers (17 Nov 2026)
+
+| ID | What |
+|---|---|
+| D6b.1 | Look check of the other lines and the railway stations against photographs (Google blocked, Commons thumbnails did not load) |
+| D6b.2 | Railway trains through the real control layer (`rail_control*.js`, `rail_timetable.js`); the station tracks joined to the India-world rail graph |
+| D6b.3 | Tunnels between stations, open cuttings at portals, deep multi-level stations, tiled walls and lighting underground |
+| D6b.4 | Measure the Metro in a dense interchange view and on a phone |

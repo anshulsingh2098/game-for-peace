@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 01:00  D6b: stairs with escalators, fare gates, real railway coaches at the Delhi stations, sea moved below the stations
+Branch: claude/delhi-d6b  Commit: see the PR
+What changed: `transit_geo.js` (`flight`, `gates`), `transit_station.js`, `transit_underground.js`, `transit_rail.js` (two real rakes from `train_art.js` and `train_consist.js`), small hook in `cityworld.js` (`cityConfig`: sea at -30 m so it does not cut through the underground stations), `tools/selftest.mjs` (103 checks). Docs: `docs/DELHI_TRANSIT.md` section 11 (cost, what is not done), WORK_REMAINING D6b.*.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-17 23:00  D6 merged with the D5b renderer (PR 62); Metro minimap uses the loaded transit data
 Branch: claude/delhi-d6-metro-2b04f7  Commit: see the PR
 What changed: merged origin/main into the D6 branch; conflicts in cityworld.js, main.js, selftest.mjs, this log resolved (both sides kept, 103 checks). `main.js` now gives `cityMap.setTransit(city.transit.data)` instead of a second fetch. Also since the first D6 entry: underground station interiors (`transit_underground.js`), platform stairs, round signs, railway rakes, walkable surfaces; see `docs/DELHI_TRANSIT.md` section 10.

@@ -48,3 +48,19 @@ export function extrude(S, R, i0, i1, ring, cols, closed = true, dyExtra = 0) {
 export function walkAlong(list, R, s0, s1, L0, L1, y) {
   for (let a = s0; a < s1; a += 12) { const q = R.at(a + 6); list.push({ x: q.x, z: q.z, tx: q.tx, tz: q.tz, u0: -7, u1: 7, l0: L0, l1: L1, ya: y, yb: y }); }
 }
+
+/* a flight from (x0, z0) at y0 to (x1, z1) at y1: a stair of real steps (0.17 m rise) on one side, an escalator (dark belt, handrails) beside it, handrails at the edges and between. `c` = { step, tread, belt, rail }. About 600 triangles for a 5 m rise. */
+export function flight(S, x0, z0, y0, x1, z1, y1, c) {
+  const dx = x1 - x0, dz = z1 - z0, L = Math.hypot(dx, dz) || 1, tx = dx / L, tz = dz / L, nx = -tz, nz = tx, n = Math.max(2, Math.round(Math.abs(y1 - y0) / 0.17)), yb = Math.min(y0, y1) - 0.3, off = l => [x0 + nx * l, z0 + nz * l, x1 + nx * l, z1 + nz * l];
+  const F = frame(x0 - nx * 0.6, z0 - nz * 0.6, tx, tz); for (let i = 0; i < n; i++) fbox(S, F, i * L / n, (i + 1) * L / n, -0.55, 0.55, yb, y0 + (i + 1) * (y1 - y0) / n, c.step, c.tread);
+  const e = off(0.65); slab(S, e[0], e[1], y0 + 0.02, e[2], e[3], y1 + 0.02, 0.95, 0.3, c.belt, c.belt);
+  for (const l of [-1.2, -0.05, 1.2]) { const h = off(l); slab(S, h[0], h[1], y0 + 1.0, h[2], h[3], y1 + 1.0, 0.08, 0.08, c.rail, c.rail); }
+}
+
+/* a line of automatic fare gates (AFC) across the concourse at frame position u: `n` gates 0.55 m wide with 1.0 m passages, a green light on top (the passage) and a Customer Care counter at one end */
+export function gates(S, F, u, lc, y, n) {
+  const body = C(0x6a7077), top = C(0x2f9e4f), w = 1.35; const l0 = lc - n * w / 2;
+  for (let i = 0; i <= n; i++) { const l = l0 + i * w; fbox(S, F, u - 0.9, u + 0.9, l - 0.2, l + 0.2, y, y + 1.0, body, body); }
+  for (let i = 0; i < n; i++) { const l = l0 + i * w + w / 2; S.quad(pt(F, u - 0.9, l - 0.15, y + 1.12), pt(F, u + 0.9, l - 0.15, y + 1.12), pt(F, u + 0.9, l + 0.15, y + 1.12), pt(F, u - 0.9, l + 0.15, y + 1.12), top); }
+  fbox(S, F, u - 1.2, u + 1.2, l0 + n * w + 1.0, l0 + n * w + 4.0, y, y + 1.1, C(0xb9bec4), C(0xe9ecee));
+}
