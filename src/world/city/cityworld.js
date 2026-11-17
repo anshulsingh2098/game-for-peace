@@ -9,6 +9,7 @@ import { CityPeds } from './citypeds.js';
 import { CityTransit } from './transit.js';
 import { installCutHoles } from './cuts.js';
 import { buildSkyline } from './skyline.js';
+import { CityLandmarks } from './landmarks/index.js';
 import { loadIdentity } from './identity.js';
 import { StreetArt } from './streetart.js';
 import { CityBuses } from './citybus.js';
@@ -31,6 +32,7 @@ export class CityWorld {
     await this.pack.init(); const { landmarks } = this.pack;
     await this.initLife(); this.traffic = new CityTraffic(this.scene, this.origin, this.pack.G, this.identity); this.peds = new CityPeds(this.scene, this.origin, this.traffic, this); this.traffic.peds = this.peds.list; this.transit = new CityTransit(this); await this.transit.init(); if (this.identity) { this.buses = new CityBuses(this).init(); this.traffic.buses = this.buses.list; this.traffic.onMode = m => this.buses.setMode(m); } const bs = this.transit.data && this.transit.data.bus && this.transit.data.bus.stops; if (bs) for (const q of bs) { const k = Math.floor(q[0] / this.pack.size) + '_' + Math.floor(q[1] / this.pack.size); let l = this.stops.get(k); if (!l) this.stops.set(k, l = []); l.push(q); }     // the Delhi Metro (transit*.js, D6)
     for (const l of landmarks) if (l.footprint && l.footprint.length >= 6) { const station = (l.type || '').includes('station') || /station|terminal/.test(l.id); this.ko.add('city:lm:' + l.id, station ? 'station' : 'landmark', footprintRect(l.footprint, l.yaw || 0)); }       // landmarks and stations claim their ground
+    this.lmx = new CityLandmarks(this).init();                                                                                                   // the landmark models (landmarks/, D8): they replace the plain extruded footprints
     this.pack.nearestStreet = (x, z) => this.nearestStreet(x, z); return this;
   }
   /* D7: the identity of the city (identity.json), the canvas art and the bus stops by tile; without them the city is drawn plain */
@@ -43,7 +45,7 @@ export class CityWorld {
   tileKey(tx, tz) { return tx + '_' + tz; }
   /* call every frame: wanted tiles are fetched, one is built per frame, far ones are dropped */
   update(px, pz, dt = 0.016) {
-    this.traffic.update(dt, px, pz); if (this.buses) this.buses.update(dt, px, pz, this.gy); this.transit.update(px, pz, dt); this.peds.update(dt, px, pz, this.gy); this.cuts.set(this.openCuts, this.origin, px, pz);
+    this.traffic.update(dt, px, pz); if (this.buses) this.buses.update(dt, px, pz, this.gy); this.transit.update(px, pz, dt); this.peds.update(dt, px, pz, this.gy); this.cuts.set(this.openCuts, this.origin, px, pz); this.lmx.update(px, pz);
     const S = this.pack.size, tx0 = Math.floor((px - RADIUS) / S), tx1 = Math.floor((px + RADIUS) / S), tz0 = Math.floor((pz - RADIUS) / S), tz1 = Math.floor((pz + RADIUS) / S), want = [];
     for (let i = tx0; i <= tx1; i++) for (let j = tz0; j <= tz1; j++) { const k = this.tileKey(i, j); if (this.tiles.has(k) || this.loading.has(k) || !this.pack.hasTile(i, j)) continue; const d = Math.hypot(Math.max(i * S - px, 0, px - (i + 1) * S), Math.max(j * S - pz, 0, pz - (j + 1) * S)); if (d < RADIUS) want.push([d, i, j]); }
     want.sort((a, b) => a[0] - b[0]); for (const [, i, j] of want) { if (this.loading.size >= 3) break; this.fetchTile(i, j); }
@@ -61,7 +63,7 @@ export class CityWorld {
   }
   fetchTile(tx, tz) { const k = this.tileKey(tx, tz); this.loading.set(k, true); this.pack.tile(tx, tz).then(t => { if (t && this.loading.has(k)) this.ready.push(t); else this.loading.delete(k); }).catch(e => { this.stats.failed++; console.warn('city tile', k, e); this.loading.delete(k); }); }
   /* a tile is meshed in slices of about SLICE_MS a frame (tilemesh.js buildTileSteps), then added to the scene in one go */
-  startJob(tile) { this.job = { tile, t0: performance.now(), cpu: 0, gen: buildTileSteps(tile, { G: this.pack.G, lm: this.pack.lm, gy: this.gy, size: this.pack.size, life: this.life && { identity: this.identity, art: this.art, month: this.month, stops: this.stops.get(tile.tx + '_' + tile.tz) || [] }, yieldNow: () => performance.now() > this.deadline }) }; this.stepJob(); }
+  startJob(tile) { this.job = { tile, t0: performance.now(), cpu: 0, gen: buildTileSteps(tile, { G: this.pack.G, lm: this.pack.lm, gy: this.gy, size: this.pack.size, skip: this.lmx.skip, life: this.life && { identity: this.identity, art: this.art, month: this.month, stops: this.stops.get(tile.tx + '_' + tile.tz) || [] }, yieldNow: () => performance.now() > this.deadline }) }; this.stepJob(); }
   stepJob() {
     const j = this.job, t = performance.now(); this.deadline = t + SLICE_MS; const r = j.gen.next(); const dt = performance.now() - t; j.cpu += dt; j.slice = Math.max(j.slice || 0, dt);
     if (r.done) { this.job = null; const t1 = performance.now(); this.build(j.tile, r.value.M, r.value.out); const bt = performance.now() - t1; this.stats.ms = j.cpu + bt; this.stats.buildMs = bt; this.stats.buildMax = Math.max(this.stats.buildMax || 0, bt); this.stats.sliceMax = Math.max(this.stats.sliceMax || 0, j.slice || 0); this.stats.slices = (this.stats.slices || 0) + 1; }
@@ -96,8 +98,8 @@ export class CityWorld {
     this.traffic.removeTile(k); for (const s of t.streets) { const l = this.geomMap.get(s.id); if (l) { const n = l.filter(q => q.k !== k); if (n.length) this.geomMap.set(s.id, n); else this.geomMap.delete(s.id); } } this.tiles.delete(k); this.refreshStats();
   }
   refreshStats() { let b = 0, s = 0; for (const t of this.tiles.values()) { for (const m of t.meshes) if (m.userData.bld) b += m.geometry.index.count / 3; s += t.decks.length; } this.stats.tiles = this.tiles.size; this.stats.tris = b; this.stats.decks = s; }
-  setNight(on) { if (on !== this.night) { this.night = on; this.mats.setNight(on); if (this.art) this.art.setNight(on); } }
-  reposition() { for (const t of this.tiles.values()) t.grp.position.set(t.tx * this.pack.size - this.origin.x, 0, t.tz * this.pack.size - this.origin.z); for (const f of this.far.values()) { f.mesh.position.set(f.tx * this.pack.size - this.origin.x, 0, f.tz * this.pack.size - this.origin.z); f.mesh.updateMatrix(); } this.transit.reposition(); }
+  setNight(on) { if (on !== this.night) { this.night = on; this.mats.setNight(on); this.lmx.setNight(on); if (this.art) this.art.setNight(on); } }
+  reposition() { for (const t of this.tiles.values()) t.grp.position.set(t.tx * this.pack.size - this.origin.x, 0, t.tz * this.pack.size - this.origin.z); for (const f of this.far.values()) { f.mesh.position.set(f.tx * this.pack.size - this.origin.x, 0, f.tz * this.pack.size - this.origin.z); f.mesh.updateMatrix(); } this.transit.reposition(); this.lmx.reposition(); }
   /* the loaded geometry of street edge `id` as flat points running a -> b (pieces from several tiles are chained), or null when no tile with it is loaded: for the GPS route line and autodrive */
   edgeGeom(id) {
     const l = this.geomMap.get(id); if (!l) return null; const G = this.pack.G, A = G.a[id], ax = G.xz[A * 2], az = G.xz[A * 2 + 1]; if (l.length === 1) { const p = l[0].pts; return Math.hypot(p[0] - ax, p[1] - az) <= Math.hypot(p[p.length - 2] - ax, p[p.length - 1] - az) ? p : this.rev(p); }
@@ -110,7 +112,7 @@ export class CityWorld {
     const i0 = Math.floor((x - r) / CELL), i1 = Math.floor((x + r) / CELL), j0 = Math.floor((z - r) / CELL), j1 = Math.floor((z + r) / CELL), S = this.pack.size, out = [];
     for (let tx = Math.floor((x - r) / S); tx <= Math.floor((x + r) / S); tx++) for (let tz = Math.floor((z - r) / S); tz <= Math.floor((z + r) / S); tz++) { const t = this.tiles.get(this.tileKey(tx, tz)); if (!t) continue; const a = t.circ.arr;
       for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const l = t.circ.cells.get(this.ck(i, j)); if (l) for (const n of l) if (Math.abs(a[n] - x) < r + Math.abs(a[n + 2]) && Math.abs(a[n + 1] - z) < r + Math.abs(a[n + 2])) out.push({ x: a[n], z: a[n + 1], r: Math.abs(a[n + 2]), y: this.gy, kerb: a[n + 2] < 0 }); } }
-    const tc = this.traffic.circles(x, z, r).concat(this.peds.circles(x, z, r), this.transit.circles(x, z, r), this.buses ? this.buses.circles(x, z, r) : []); return out.length || tc.length ? [out.concat(tc)] : [];
+    const tc = this.traffic.circles(x, z, r).concat(this.peds.circles(x, z, r), this.transit.circles(x, z, r), this.lmx.circles(x, z, r), this.buses ? this.buses.circles(x, z, r) : []); return out.length || tc.length ? [out.concat(tc)] : [];
   }
   /* deck triangles of the flyovers around (cx, cz) for the physics, in world metres: { pos, idx } or null */
   deckMesh(cx, cz, half) {
