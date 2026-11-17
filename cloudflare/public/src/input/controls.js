@@ -1,8 +1,8 @@
 /* Driving controls from keyboard, on-screen touch pads and a gamepad, merged into one input:
    { steer -1..1 (right is +), throttle 0..1, brake 0..1 }. One-shot actions arrive through on(name, fn):
-   'view', 'reset', 'fly', 'pause', 'buff'. */
+   'view', 'reset', 'fly', 'pause', 'buff', 'shiftUp', 'shiftDown', 'gearbox'. */
 const KEYS = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' };
-const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', Space: 'buff' };
+const ACTIONS = { KeyC: 'view', KeyB: 'reset', KeyF: 'fly', Escape: 'pause', Space: 'buff', KeyE: 'shiftUp', KeyZ: 'shiftDown', KeyN: 'gearbox' };
 
 export class Controls {
   constructor() {
@@ -18,6 +18,8 @@ export class Controls {
   }
   on(name, fn) { this.handlers[name] = fn; }
   fire(name) { if (this.handlers[name]) this.handlers[name](); }
+  /* on-screen gear buttons: up and down */
+  bindShift(up, down) { for (const [el, name] of [[up, 'shiftUp'], [down, 'shiftDown']]) if (el) el.addEventListener('pointerdown', e => { e.preventDefault(); this.fire(name); }); }
   /* wire up elements carrying data-k="left|right|up|down" as hold-to-press pads */
   bindPads(els) {
     for (const el of els) {
@@ -34,7 +36,7 @@ export class Controls {
       const b = i => gp.buttons[i] && gp.buttons[i].pressed, v = i => gp.buttons[i] ? gp.buttons[i].value : 0, ax = gp.axes[0] || 0, dead = x => x > 0.15 ? x : 0;
       if (Math.abs(ax) > 0.12) steer += ax; if (b(14)) steer = -1; if (b(15)) steer = 1;
       up = Math.max(up, dead(v(7)), b(12) ? 1 : 0); down = Math.max(down, dead(v(6)), b(13) ? 1 : 0);
-      const edge = i => b(i) && !this.prev[i]; if (edge(0)) this.fire('buff'); if (edge(3)) this.fire('view'); if (edge(1)) this.fire('reset'); if (edge(9)) this.fire('pause');
+      const edge = i => b(i) && !this.prev[i]; if (edge(0)) this.fire('buff'); if (edge(3)) this.fire('view'); if (edge(1)) this.fire('reset'); if (edge(9)) this.fire('pause'); if (edge(5)) this.fire('shiftUp'); if (edge(4)) this.fire('shiftDown');
       this.prev = gp.buttons.map(x => x.pressed);
     }
     const i = this.input; i.steer = Math.max(-1, Math.min(1, steer)); i.throttle = up; i.brake = down; return i;

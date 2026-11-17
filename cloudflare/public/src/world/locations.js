@@ -23,17 +23,17 @@ export const LOCATIONS = [
     config: {
       terrain: { seaLevel: 0, seabed: 2500, lowland: 3000, continent: { scale: 8000, rise: 200 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1800, amp: 320 },
         hills: { scale: 1300, amp: 180, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4600, start: -0.3, full: 0.15, scale: 11500, amp: 2100, octaves: 5, gain: 0.38, sharp: 1.3 } },
-      palette: { grass: [0.52, 0.5, 0.3], grass2: [0.4, 0.42, 0.24], dry: [0.6, 0.52, 0.36], alpine: [0.5, 0.45, 0.36], rock: [0.5, 0.44, 0.38], treeline: 3500, snowline: 4300 },
+      palette: { grass: [0.52, 0.5, 0.3], grass2: [0.4, 0.42, 0.24], dry: [0.6, 0.52, 0.36], alpine: [0.5, 0.45, 0.36], rock: [0.5, 0.44, 0.38], treeline: 3500, snowline: 3300 },
       scatter: { trees: 0.003, rocks: 0.0016, bushes: 0.0008, tufts: 0.004, pineBias: 0.6, tint: [0.85, 0.95, 0.85] }, water: { color: '#2f6a78' },
-      road: { maxAlt: 7500, maxGrade: 0.1, hardGrade: 0.15, minRadius: 55 } },
-    sky: { time: 'day', weather: 'clear' } },
+      road: { maxAlt: 7500, maxGrade: 0.1, hardGrade: 0.15, minRadius: 55, tunnelName: 'ATAL TUNNEL, ROHTANG' } },
+    sky: { time: 'day', weather: 'snow' } },
 
   { id: 'california', name: 'California Coast', blurb: 'Golden hills tumbling to a deep blue Pacific. Sun, sea air and wide skies.', accent: '#ffc857',
     config: {
       terrain: { seaLevel: 0, lowland: 28, continent: { scale: 5200, rise: 60 }, coast: { lo: -0.3, hi: -0.12 }, warp: { scale: 1300, amp: 230 },
         hills: { scale: 760, amp: 85, octaves: 5, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 3800, start: 0.1, full: 0.5, scale: 4000, amp: 380, octaves: 5, gain: 0.4, sharp: 1.6 } },
       palette: { grass: [0.8, 0.72, 0.36], grass2: [0.58, 0.54, 0.26], dry: [0.78, 0.66, 0.4], alpine: [0.6, 0.55, 0.38], rock: [0.58, 0.52, 0.44], sand: [0.9, 0.82, 0.62], treeline: 420, snowline: 900 },
-      scatter: { trees: 0.0028, rocks: 0.0008, bushes: 0.0018, tufts: 0.012, pineBias: -0.1, tint: [1.12, 1.0, 0.7] }, water: { color: '#1a6a8e' } },
+      scatter: { trees: 0.0028, rocks: 0.0008, bushes: 0.0018, tufts: 0.012, pineBias: -0.1, tint: [1.12, 1.0, 0.7] }, water: { color: '#1a6a8e' }, road: { style: 'highway' } },
     sky: { time: 'day', weather: 'clear' } },
 
   { id: 'south', name: 'Southern Coast', blurb: 'Palm-green flats, bright sand and warm turquoise water. Lush and humid.', accent: '#3ee0b0',
@@ -50,7 +50,7 @@ export const LOCATIONS = [
       terrain: { seaLevel: 0, lowland: 7, continent: { scale: 3800, rise: 20 }, coast: { lo: -0.3, hi: -0.1 }, warp: { scale: 1000, amp: 150 },
         hills: { scale: 520, amp: 9, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.6, full: 0.95, scale: 3400, amp: 120, octaves: 4, gain: 0.4, sharp: 1.5 } },
       palette: { grass: [0.56, 0.66, 0.28], grass2: [0.36, 0.52, 0.2], dry: [0.72, 0.64, 0.4], alpine: [0.5, 0.52, 0.34], rock: [0.52, 0.47, 0.4], sand: [0.9, 0.82, 0.62], treeline: 400, snowline: 2500 },
-      scatter: { trees: 0.0042, rocks: 0.0003, bushes: 0.0016, tufts: 0.008, pineBias: -0.95, tint: [1.0, 1.04, 0.78] }, water: { color: '#2a7f8e' }, road: { maxAlt: 150 } },
+      scatter: { trees: 0.0042, rocks: 0.0003, bushes: 0.0016, tufts: 0.008, pineBias: -0.95, tint: [1.0, 1.04, 0.78] }, water: { color: '#2a7f8e' }, road: { style: 'boulevard', maxAlt: 150 } },
     sky: { time: 'dusk', weather: 'clear' },
     landmarks: [{ kind: 'marine', s: -250, off: 40, sea: 'front' }, { kind: 'gateway', s: 650, off: 70, sea: true }, { kind: 'tajHotel', after: 'gateway', gap: 130, range: 500, off: 95, sea: true }] },
 
@@ -59,7 +59,7 @@ export const LOCATIONS = [
       terrain: { seaLevel: 0, seabed: -20, lowland: 24, continent: { scale: 6000, rise: 14 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1200, amp: 120 },
         hills: { scale: 600, amp: 8, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.9, full: 1.4, scale: 3400, amp: 60, octaves: 3, gain: 0.4, sharp: 1.5 } },
       palette: { grass: [0.58, 0.64, 0.3], grass2: [0.4, 0.5, 0.22], dry: [0.74, 0.64, 0.4], alpine: [0.55, 0.52, 0.34], rock: [0.56, 0.5, 0.42], sand: [0.88, 0.8, 0.6], treeline: 600, snowline: 3000 },
-      scatter: { trees: 0.0036, rocks: 0.0002, bushes: 0.0016, tufts: 0.007, pineBias: -0.95, tint: [1.0, 1.0, 0.76] }, water: { color: '#4a7f88' }, road: { maxAlt: 200 } },
+      scatter: { trees: 0.0036, rocks: 0.0002, bushes: 0.0016, tufts: 0.007, pineBias: -0.95, tint: [1.0, 1.0, 0.76] }, water: { color: '#4a7f88' }, road: { style: 'boulevard', maxAlt: 200 } },
     sky: { time: 'day', weather: 'clear' },
     landmarks: [{ kind: 'indiaGate', s: 500, off: 95 }] },
 
@@ -68,7 +68,7 @@ export const LOCATIONS = [
       terrain: { seaLevel: 0, seabed: -20, lowland: 26, continent: { scale: 6000, rise: 12 }, coast: { lo: -3, hi: -2.5 }, warp: { scale: 1200, amp: 110 },
         hills: { scale: 620, amp: 7, octaves: 4, lacunarity: 2.05, gain: 0.5 }, mountains: { maskScale: 4200, start: 0.9, full: 1.4, scale: 3400, amp: 50, octaves: 3, gain: 0.4, sharp: 1.5 } },
       palette: { grass: [0.6, 0.64, 0.3], grass2: [0.44, 0.5, 0.22], dry: [0.78, 0.66, 0.42], alpine: [0.56, 0.52, 0.34], rock: [0.58, 0.5, 0.42], sand: [0.9, 0.82, 0.62], treeline: 600, snowline: 3000 },
-      scatter: { trees: 0.003, rocks: 0.0002, bushes: 0.0014, tufts: 0.006, pineBias: -0.95, tint: [1.0, 0.98, 0.74] }, water: { color: '#5d8f94' }, road: { maxAlt: 200 } },
+      scatter: { trees: 0.003, rocks: 0.0002, bushes: 0.0014, tufts: 0.006, pineBias: -0.95, tint: [1.0, 0.98, 0.74] }, water: { color: '#5d8f94' }, road: { style: 'boulevard', maxAlt: 200 } },
     sky: { time: 'dawn', weather: 'clear' },
     landmarks: [{ kind: 'tajMahal', s: 600, off: 250 }] }
 ];
