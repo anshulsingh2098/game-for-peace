@@ -4,10 +4,11 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
+import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
 
 /* layers that lie in the ground plane are given real height steps (metres over the ground: it was 0 for all of them and only depth offsets told them apart, which shimmers with distance): ground 0, parks and water, pavement, road, markings */
-const TEX_ROAD = 5, TEX_WALK = 4;       // metres one tile of the road and pavement textures covers (a divisor of 1000, so tiles meet without a seam)
+const ZEBRA_MAX = 16, TEX_ROAD = 5, TEX_WALK = 4;       // metres one tile of the road and pavement textures covers (a divisor of 1000, so tiles meet without a seam)
 const LIFT = { park: 0.015, walk: 0.03, road: 0.05, mark: 0.07 };
 const WALL_R = 1.1;                   // a wall circle's radius, and how far its centre sits inside the footprint edge: the circle ends exactly at the drawn wall (it was 1.25 m wide, 0.7 m inside: an invisible 0.55 m of wall in the street)
 export class Mesher {
@@ -131,6 +132,8 @@ export function* buildTileSteps(tile, ctx) {
   for (const s of tile.streets) { const lay = G.layer[s.id]; if (lay === 0) { const w = pieceWidth(G, s) / 2 + 1; for (let i = 0; i + 3 < s.pts.length; i += 2) hashSeg(s.pts[i], s.pts[i + 1], s.pts[i + 2], s.pts[i + 3], w, s.id); } }
   /* is (x, z) clear of every ground carriageway of the tile except street `id`'s own (a kerb stops at a side street's mouth) */
   const mouthFree = (x, z, id) => { const l = groundSeg.get(Math.floor(x / CELLQ) + ',' + Math.floor(z / CELLQ)); if (!l) return true; for (const [x0, z0, x1, z1, hw, sid] of l) { if (sid === id) continue; const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)) : 0; if (Math.hypot(x - (x0 + dx * t), z - (z0 + dz * t)) < hw - 0.3) return false; } return true; };
+  /* the direction (unit dx, dz) of the nearest OTHER ground street's segment whose carriageway covers (x, z), or null: what a footway is crossing */
+  const roadAt = (x, z, id) => { const l = groundSeg.get(Math.floor(x / CELLQ) + ',' + Math.floor(z / CELLQ)); if (!l) return null; let best = null, bd = 1e9; for (const [x0, z0, x1, z1, hw, sid] of l) { if (sid === id || hw < 3.0) continue; const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)) : 0, d = Math.hypot(x - (x0 + dx * t), z - (z0 + dz * t)); if (d < hw - 0.3 && d < bd) { bd = d; const Ls = Math.sqrt(L2) || 1; best = { dx: dx / Ls, dz: dz / Ls }; } } return best; };
   const KERB_H = 0.12, KERB_W = 0.3, KERBC = col(0xb4b0a6);
   /* a kerb along one side of a street: a raised stone (0.12 m, the car physics gets wall circles of negative radius = mountable at walking pace) in 3 m pieces, none where a side street joins */
   const kerb = (pts, F, hw, side, id) => {
@@ -176,14 +179,16 @@ export function* buildTileSteps(tile, ctx) {
       }
     };
     const hw = w / 2;
-    if (cls === 'footway' || cls === 'cycleway') {                                         // a footway: grey where it runs beside the streets; where it crosses a carriageway it is a zebra crossing (white bars across the road), not a grey slab lying in the road's plane (which flickered)
-      const mk = M.mark, WH = col(0xf1eee4); let arc = 0, nextBar = 0.5, prevA = -1, prevB = -1;
-      for (let i = 0; i + 1 < F.n; i++) {
-        const x0 = pts[i * 2], z0 = pts[i * 2 + 1], x1 = pts[i * 2 + 2], z1 = pts[i * 2 + 3], dx = x1 - x0, dz = z1 - z0, L = Math.hypot(dx, dz); if (L < 1e-6) continue; const ux = dx / L, uz = dz / L, nxs = -uz, nzs = ux;
-        const inRoad = !mouthFree((x0 + x1) / 2, (z0 + z1) / 2, id) && cls === 'footway';
-        if (!inRoad) { const ya = gy + H[i] + LIFT.walk + 0.025, yb = gy + H[i + 1] + LIFT.walk + 0.025, k0 = F.sc[i], k1 = F.sc[i + 1]; const a0 = m0(M.walk, X(x0 + F.nx[i] * -hw * k0), ya, Z(z0 + F.nz[i] * -hw * k0), rc), a1 = m0(M.walk, X(x0 + F.nx[i] * hw * k0), ya, Z(z0 + F.nz[i] * hw * k0), rc), b0 = m0(M.walk, X(x1 + F.nx[i + 1] * -hw * k1), yb, Z(z1 + F.nz[i + 1] * -hw * k1), rc), b1 = m0(M.walk, X(x1 + F.nx[i + 1] * hw * k1), yb, Z(z1 + F.nz[i + 1] * hw * k1), rc); M.walk.tri(a0, a1, b0, 0, 1, 0); M.walk.tri(a1, b1, b0, 0, 1, 0); }
-        else { while (nextBar < arc + L) { const t = (nextBar - arc) / L, cx = x0 + dx * t, cz = z0 + dz * t, y = gy + H[i] + LIFT.mark + 0.0, hl = Math.max(hw, 1.1), bw = 0.25; const q0 = mk.v(X(cx - ux * bw + nxs * hl), y, Z(cz - uz * bw + nzs * hl), 0, 1, 0, WH), q1 = mk.v(X(cx + ux * bw + nxs * hl), y, Z(cz + uz * bw + nzs * hl), 0, 1, 0, WH), q2 = mk.v(X(cx + ux * bw - nxs * hl), y, Z(cz + uz * bw - nzs * hl), 0, 1, 0, WH), q3 = mk.v(X(cx - ux * bw - nxs * hl), y, Z(cz - uz * bw - nzs * hl), 0, 1, 0, WH); mk.tri(q0, q1, q2, 0, 1, 0); mk.tri(q0, q2, q3, 0, 1, 0); nextBar += 0.9; } }
-        arc += L; void prevA; void prevB;
+    if (cls === 'footway' || cls === 'cycleway') {                                         // a footway: grey beside the streets; where it crosses a carriageway at a real angle over a short span it is a zebra crossing (white bars across the road); a footway that runs along or inside a lane stays grey
+      const mk = M.mark, WH = col(0xf1eee4), nseg = F.n - 1, info = []; let arc = 0, nextBar = 0.5;
+      for (let i = 0; i < nseg; i++) { const dx = pts[i * 2 + 2] - pts[i * 2], dz = pts[i * 2 + 3] - pts[i * 2 + 1], L = Math.hypot(dx, dz); let cand = false, inR = false; if (L > 1e-6 && cls === 'footway') { const r = roadAt((pts[i * 2] + pts[i * 2 + 2]) / 2, (pts[i * 2 + 1] + pts[i * 2 + 3]) / 2, id); if (r) { inR = true; cand = Math.abs((dx * r.dz - dz * r.dx) / L) >= 0.64; } } info.push({ L, cand, inR, ok: false }); }
+      for (let i = 0; i < nseg;) { if (!info[i].cand) { i++; continue; } let j = i, len = 0; while (j < nseg && info[j].cand) { len += info[j].L; j++; } const ok = len <= ZEBRA_MAX; for (let q = i; q < j; q++) info[q].ok = ok; i = j; }       // a run of crossing segments is a zebra only when it is short (a road is crossed in 16 m or less)
+      for (let i = 0; i < nseg; i++) {
+        const x0 = pts[i * 2], z0 = pts[i * 2 + 1], x1 = pts[i * 2 + 2], z1 = pts[i * 2 + 3], dx = x1 - x0, dz = z1 - z0, L = info[i].L; if (L < 1e-6) continue; const ux = dx / L, uz = dz / L, nxs = -uz, nzs = ux;
+        if (!info[i].ok && info[i].inR) { arc += L; continue; }       // a footway lying inside a carriageway and not crossing it (mapped along the road's centre or inside its guessed width) is not drawn: it would lie on the asphalt
+        if (!info[i].ok) { const ya = gy + H[i] + LIFT.walk + 0.025, yb = gy + H[i + 1] + LIFT.walk + 0.025, k0 = F.sc[i], k1 = F.sc[i + 1]; const a0 = m0(M.walk, X(x0 + F.nx[i] * -hw * k0), ya, Z(z0 + F.nz[i] * -hw * k0), rc), a1 = m0(M.walk, X(x0 + F.nx[i] * hw * k0), ya, Z(z0 + F.nz[i] * hw * k0), rc), b0 = m0(M.walk, X(x1 + F.nx[i + 1] * -hw * k1), yb, Z(z1 + F.nz[i + 1] * -hw * k1), rc), b1 = m0(M.walk, X(x1 + F.nx[i + 1] * hw * k1), yb, Z(z1 + F.nz[i + 1] * hw * k1), rc); M.walk.tri(a0, a1, b0, 0, 1, 0); M.walk.tri(a1, b1, b0, 0, 1, 0); }
+        else { while (nextBar < arc + L) { const t = (nextBar - arc) / L, cx = x0 + dx * t, cz = z0 + dz * t, y = gy + H[i] + LIFT.mark, hl = Math.max(hw, 1.1), bw = 0.25; const q0 = mk.v(X(cx - ux * bw + nxs * hl), y, Z(cz - uz * bw + nzs * hl), 0, 1, 0, WH), q1 = mk.v(X(cx + ux * bw + nxs * hl), y, Z(cz + uz * bw + nzs * hl), 0, 1, 0, WH), q2 = mk.v(X(cx + ux * bw - nxs * hl), y, Z(cz + uz * bw - nzs * hl), 0, 1, 0, WH), q3 = mk.v(X(cx - ux * bw - nxs * hl), y, Z(cz - uz * bw - nzs * hl), 0, 1, 0, WH); mk.tri(q0, q1, q2, 0, 1, 0); mk.tri(q0, q2, q3, 0, 1, 0); nextBar += 0.9; } }
+        arc += L;
       }
       out.nStreets++; continue;
     }
@@ -225,8 +230,10 @@ export function* buildTileSteps(tile, ctx) {
   /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */
   const B = M.bldg;
   junctionShapes(J, M, X, Z, gy, out); yield;
+  const ruled = buildingsToSkip(tile, G); out.nRuled = ruled.size;                      // rules.js: a class of map error left out everywhere
   for (const b of tile.buildings) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
+    if (ruled.has(b)) continue;
     const r = b.ring, n = r.length / 2; if (n < 3) continue; const L = b.landmark ? lm.get(b.landmark) : null, kit = L && L.type ? 'gov' : { office: 'off', hotel: 'off', civic: 'gov', religious: 'gov', transit: 'gov' }[b.use] || 'res', B = kit === 'off' ? M.bldgO : kit === 'gov' ? M.bldgG : M.bldg, shopB = !L && (b.use === 'commercial' || b.use === 'retail') && (b.height || 9) >= 5, hgt = Math.max(3, (L && L.height) || guessHeight(b, hash)), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
     if (L && ctx.skip && ctx.skip.has(L.id)) continue;                                    // a landmark with its own model (landmarks/, D8) is not drawn as a plain block
     let wall; if (L && L.type) wall = LM_WALL[L.type] || (L.type.includes('station') ? LM_WALL.station : 0); else wall = 0;
