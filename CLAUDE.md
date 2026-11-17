@@ -21,6 +21,12 @@ Each stream **writes only its own** log file, so the two never conflict. Both **
 - find a problem in the other stream's area (describe it; do not edit their files);
 - need the other person to run a command, pull, or decide something.
 
+**Reserve before you edit a shared file.** The log entry after an edit is not enough. Before touching a shared file, read the other stream's log and `git log origin/main -3 -- <file>`; if the other stream or another session has it open, wait or ask the user. Where practical, make the shared-file change in its own small commit.
+
+**Status words.** `Status: open` means the other stream must act. `Status: info` means a notification only, nobody has to reply. `Status: done` means finished or answered. Give each entry that needs action an ID in its title (`A-2026-11-17-01`) so a reply can say "Re: A-2026-11-17-01: done". Close your own old `open` entries when nothing is left to do.
+
+**Evidence, not adjectives.** In an entry, say separately what is *implemented*, what the *self-test* covers, what was *seen in a browser*, what was tried on a *real device*, and what a person has *accepted*. A phase is not "done" because the code exists. Put the commit hash, and for performance the device, quality tier, whether the window was visible, and p95 or p99. Never quote a hidden-tab frame rate as device performance. Status for the whole project lives in `docs/STATUS.md`; owner decisions in `docs/DECISIONS.md` (follow them, do not ask again).
+
 Entry format (keep it short; exact commands in code blocks):
 
 ```

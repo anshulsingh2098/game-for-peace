@@ -1,6 +1,6 @@
 # Asset sources and licences
 
-Every outside asset: where it came from, who made it, under what licence.
+Every outside asset: where it came from, who made it, under what licence. "Project licence" in a row means `LICENSE.md` at the top of the repository (all rights reserved for our own work).
 
 | File | What | Source | Author | Licence |
 |---|---|---|---|---|

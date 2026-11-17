@@ -1,5 +1,7 @@
 # Handoff
 
+> **Read `docs/STATUS.md` first.** It is the one status ledger; where this file disagrees with it, this file is superseded. Dates written inside this file can be wrong (some are in the future): trust git history. Owner decisions are in `docs/DECISIONS.md`.
+
 State of the work as of 14 November 2026, end of Rajul's session. Read `OVERVIEW.md` first for what the project is, `CLAUDE.md` for how the two Claudes work together, `CHECKLIST.md` for the daily checks, and `PARALLEL_PLAN.md` ("Phases from here") and `team/photoreal-plan.md` for the plans.
 
 ## State on D8, the Delhi landmark models (17 Nov 2026, branch `claude/delhi-d8-landmarks-d40d41`, PR against main)

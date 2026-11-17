@@ -794,6 +794,26 @@ test('on foot: climbs a kerb, is stopped by a wall, a steep slope and deep water
   const pushed = new OnFoot(footWorld({ near: () => [[{ x: 0.2, z: 0, r: 1.5 }]] })); pushed.place(0, 0, 0); pushed.step(1 / 60, {}); assert.ok(Math.hypot(pushed.x - 0.2, pushed.z) >= 1.5 + FOOT.radius - 0.2 - 1e-6, 'a car that drives up pushes the character out');
   const ledge = new OnFoot(footWorld({ height: x => x > 4 ? -5 : 0 })); ledge.place(0, 0, 0); let fell = false; walk(ledge, 6, { throttle: 1, run: 1 }, f => { if (!f.grounded) fell = true; }); assert.ok(fell && ledge.grounded && ledge.y === -5, 'walks off a ledge, falls and lands');
 });
+test('audit R05: a handle only resolves in the registry or pool that made it; a long stall is counted as dropped time (R16)', () => {
+  const A = new Registry({ car: 4 }), B = new Registry({ car: 4 }), ha = A.create('car', { n: 'a' }), hb = B.create('car', { n: 'b' });
+  assert.notEqual(ha, hb, 'two registries never hand out the same number'); assert.equal(B.get(ha), null, 'a foreign handle does not resolve'); assert.equal(B.destroy(ha), null); assert.equal(A.get(ha).n, 'a'); assert.equal(B.get(hb).n, 'b');
+  A.clear(); assert.equal(A.get(ha), null); const ha2 = A.create('car', {}); assert.notEqual(ha2, ha, 'a reused slot gets a new generation');
+  const mk = () => new Pool({ cap: 2, make: () => ({}), reset: () => {} }), P = mk(), Q = mk(), a = P.acquire(), b = Q.acquire(); assert.notEqual(a.handle, b.handle); assert.equal(Q.get(a.handle), null); assert.equal(Q.release(a.handle), false); assert.equal(P.get(a.handle), a.obj);
+  const rt = new GameRuntime(); rt.frame(0); rt.frame(10000); assert.equal(rt.lastDt, 0.05); assert.ok(Math.abs(rt.droppedTime - 9.95) < 1e-9, 'the discarded wall time is counted: ' + rt.droppedTime);
+});
+test('audit R06: a car standing at every exit spot means no exit', () => {
+  const car = { x: 0, z: 0, yaw: 0, halfWidth: 1, halfLength: 2.2 }, cars = [{ x: 0, z: 1.9, r: 1.2, traffic: 1 }, { x: 0, z: -1.9, r: 1.2, traffic: 1 }, { x: -3.4, z: 0, r: 1.2, traffic: 1 }];
+  assert.equal(chooseExit(car, footWorld({ near: () => [cars] })), null, 'traffic blocks the exit like anything else'); assert.ok(chooseExit(car, footWorld({ near: () => [[cars[0]]] })).z < 0, 'the free side is used');
+});
+test('audit R07: the capsule is swept (no tunnelling through a thin wall), slides, steps over low things, walks under high things and is stopped by tall ones', () => {
+  const walkTo = (circles, input = { throttle: 1, run: 1 }, secs = 2, dt = 1 / 20) => { const f = new OnFoot(footWorld({ near: () => [circles] })); f.place(0, 0, 0); for (let t = 0; t < secs; t += dt) f.step(dt, input); return f; };
+  const thin = walkTo([{ x: 3, z: 0, r: 0.12 }]); assert.ok(thin.x < 3, 'a thin post at a slow frame rate is not skipped: x=' + thin.x);
+  const wall = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 3 }]); assert.ok(wall.x < 3, 'a tall wall stops the character');
+  const kerb = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 0.3 }]); assert.ok(kerb.x > 4, 'a kerb is stepped over: x=' + kerb.x);
+  const deck = walkTo([{ x: 3, z: 0, r: 0.6, y0: 4.5, y1: 6 }]); assert.ok(deck.x > 4, 'a bridge deck above the head is walked under: x=' + deck.x);
+  const low = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 1.6 }, { x: 3.5, z: 0.4, r: 0.6, y0: 0, y1: 1.6 }]); assert.ok(low.x < 4, 'two overlapping walls still stop it, with no jitter into them');
+  const slideF = walkTo([{ x: 3, z: 0.3, r: 1, y0: 0, y1: 3 }], { throttle: 1, steer: 0 }, 3); assert.ok(Math.abs(slideF.z) > 0.3 || slideF.x < 3, 'it slides along the face instead of sticking');
+});
 test('enter and exit: a safe exit beside the door, none when boxed in; the interaction contract picks the nearest enabled item in range', () => {
   const car = { x: 0, z: 0, yaw: 0, halfWidth: 1, halfLength: 2.2 }; const free = chooseExit(car, footWorld()); assert.ok(free && Math.abs(free.z - 1.9) < 1e-9 && free.x === 0 && free.yaw === 0, 'the left side first: ' + JSON.stringify(free));
   const leftBlocked = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }]] })); assert.ok(leftBlocked && leftBlocked.z < 0, 'the right side when the left is blocked'); const behind = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }, { x: 0, z: -1.9, r: 1 }]] })); assert.ok(behind && behind.x < -3, 'behind when both sides are blocked');

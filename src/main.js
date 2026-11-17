@@ -150,7 +150,7 @@ const shadowsOn = q.get('shadows') ? q.get('shadows') !== 'off' : quality !== 'l
 renderer.shadowMap.enabled = shadowsOn; renderer.shadowMap.type = quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap; env.setShadows(shadowsOn ? (quality === 'high' ? 4096 : 2048) : 0, quality === 'high' ? 90 : 70);
 /* saved choices for this preview */
 const loaded = loadSave((() => { try { return localStorage; } catch (e) { return { getItem: () => null, setItem() { throw e; }, removeItem() {} }; } })(), { vehicles: VEHICLES.length, vehicleIds: VEHICLES.map(v => v.id), locations: LOCATIONS.map(l => l.id) });      // versioned, checked, recovers from damage (core/save.js)
-const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, traffic: quality === 'low' ? 'off' : quality === 'med' ? 'low' : 'mid', ...loaded.data }, save = () => writeSave((() => { try { return localStorage; } catch (e) { return { setItem() { throw e; } }; } })(), S, loaded);
+const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, traffic: quality === 'low' ? 'off' : quality === 'med' ? 'low' : 'mid', ...loaded.data }; let saveFailShown = false, save = () => { const ok = writeSave((() => { try { return localStorage; } catch (e) { return { setItem() { throw e; } }; } })(), S, loaded); if (!ok && !saveFailShown) { saveFailShown = true; setTimeout(() => { try { toast(loaded.readOnly ? 'This save is from a newer version: your changes will not be kept' : 'Could not save: your changes will be lost when you close the game'); } catch (e) { /* page not ready */ } }, 0); } return ok; };       // a failed write is shown once (audit R11)
 if (cityMode) S.enclave = 'delhi'; else if (S.enclave) { delete S.enclave; save(); }                          // the save remembers that you were last inside a city (saved.js `enclave`)
 env.setTime(S.time); env.setWeather(S.weather);
 
@@ -456,7 +456,11 @@ const gameFrame = (x, z) => { const g = guideWorld(), n0 = indiaRoute.net.cities
 function ensureCityJunction(c) { if (!buildCityRoads(c)) throw new Error('the road to ' + c.name + ' is not built yet'); }
 const sectors = new SectorManager({ bus,
   meta: s => { const meta = { region: config.location, assets: ['traffic:pack'], cities: [] }; if (guideWorld()) { const cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, gf = gameFrame(cx, cz), ll = fromGame(gf.x, gf.z), r = regionAt(ll.lat, ll.lon, REGIONS); if (r) { meta.region = r.id; meta.blend = r.blend; } meta.cities = cityNodes().filter(c => c.x >= s.x0 && c.x < s.x1 && c.z >= s.z0 && c.z < s.z1); } return meta; },
-  load: async (s, signal) => { for (const k of s.meta.assets) await assetCache.acquire(k); if (nav) nav.loadSector(s.sx, s.sz); for (const c of s.meta.cities) ensureCityJunction(c); return { held: s.meta.assets.slice(), cities: s.meta.cities.map(c => c.id) }; },
+  load: async (s, signal) => {       // all or nothing: a failure part-way hands back everything this load took (audit R04), so a retry starts clean
+    const held = [], cities = []; let navOn = false;
+    try { for (const k of s.meta.assets) { await assetCache.acquire(k); held.push(k); } if (nav) { nav.loadSector(s.sx, s.sz); navOn = true; } for (const c of s.meta.cities) { ensureCityJunction(c); cities.push(c.id); } }
+    catch (e) { for (const id of cities) { try { dropBranches(id); } catch (x) { /* already gone */ } } if (navOn && nav) { try { nav.unloadSector(s.sx, s.sz); } catch (x) { /* already gone */ } } for (const k of held) { try { assetCache.release(k); } catch (x) { /* already released */ } } throw e; }
+    return { held, cities }; },
   unload: s => { if (nav) nav.unloadSector(s.sx, s.sz); if (s.data && s.data.cities) for (const id of s.data.cities) dropBranches(id); if (s.data && s.data.held) for (const k of s.data.held) assetCache.release(k); } });
 bus.on('world:rebuilt', () => { sectors.reset(); if (rail) { rail.dispose(); rail = null; } gateReg.clear(); });                                                    // a new world: every sector starts again
 runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'sectors', order: 10, update: (dt, now) => sectors.update(focus.x, focus.z, focus, now) });

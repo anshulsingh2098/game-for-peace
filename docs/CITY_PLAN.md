@@ -21,7 +21,7 @@ Rules that always apply: every download needs the owner's yes (file, source, siz
 | Climate, rain, heat, fog, dust, monsoon | IMD normals; Koppen-Geiger; NASA POWER or ERA5 (Copernicus) | public / CC BY (verify) | Drives per-city weather tables |
 | Land cover, trees, parks | ESA WorldCover (CC BY 4.0), OSM `natural=wood`, `landuse=forest`; city species lists from forest-department or botanical sources | CC BY / ODbL | Neem, peepal, gulmohar, ashoka, bougainvillea in Delhi; coconut and rain trees on the coast, etc. |
 | People and traffic mix | Census of India and city transport surveys (modal share), road traffic data | public (verify) | Two-wheelers, autos, e-rickshaws, buses, taxis, metro; clothing and crowd by area |
-| Tools (code) | osmium, osmium-tool, ogr2ogr, OSM2World (LGPL) as a reference | permissive / LGPL | Build-time only, in `tools/` |
+| Tools (code) | osmium, osmium-tool, ogr2ogr, OSM2World (MIT per the 17 Nov 2026 audit; confirm before use) as a reference | permissive | Build-time only, in `tools/` |
 
 ## Phases (finish and verify each before the next)
 

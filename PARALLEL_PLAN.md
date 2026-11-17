@@ -1,5 +1,7 @@
 # Parallel plan: two people, two Claudes, no collisions
 
+> **Read `docs/STATUS.md` first.** It is the one status ledger; where this file disagrees with it, this file is superseded. Dates written inside this file can be wrong (some are in the future): trust git history. Owner decisions are in `docs/DECISIONS.md`.
+
 Built from `HANDOFF.md` and `OVERVIEW.md` (state of 14 Nov 2026, branch `phase/3-driving`). Read those first.
 
 Two streams. Each person owns one stream and one set of files. Claude only edits files its stream owns.

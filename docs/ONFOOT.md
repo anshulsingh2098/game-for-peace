@@ -16,3 +16,12 @@ Events: `vehicle:exited` and `vehicle:entered` carry a Registry handle (type `ve
 Anything usable registers with `Interactions.add({ id, x, z, r, prompt, onUse, enabled })`; the nearest in range supplies the prompt.
 
 Not built in this increment: interiors, other vehicles to enter, a rigged or animated player model (a box figure with swinging legs is used), a camera that avoids walls, phone-specific on-foot touch controls (only the G button; walking uses the existing pads). Not measured on a real phone.
+
+## The capsule controller (17 Nov 2026, audit R07)
+`OnFoot` is now a swept capsule (radius 0.35 m, height 1.8 m), the usual open-world design:
+- **Sweep:** each frame's move is cut into pieces of at most half the radius, so a thin post or a fast sprint at a slow frame rate cannot be skipped.
+- **Slide:** a blocked piece slides along the obstacle, up to three times, so corners and two walls at once work; an obstacle behind the movement is ignored.
+- **Height:** an obstacle circle may carry `y0` (underside) and `y1` (top). It blocks only if it overlaps the capsule's band above the step height, so the character steps over a kerb (`y1` low), walks under a bridge deck or canopy (`y0` above the head), and is stopped by a wall. Circles with neither field are columns, as before, so the existing world works unchanged.
+- **Ground:** step-up to `maxStep`, slope limit judged over the next half metre, water wade limit, ledge fall, jump, unchanged.
+Not built yet: camera collision, stairs and multi-storey floors, interiors (N18), and the world supplying `y0`/`y1` for decks and canopies (Stream A data; until then every circle is a column). `chooseExit` now treats cars as obstacles too (audit R06): with every exit spot taken the character stays in the vehicle ("No room to get out here").
+Tests: `tools/selftest.mjs`, "audit R07" and "audit R06".
