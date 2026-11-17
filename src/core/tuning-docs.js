@@ -49,6 +49,8 @@ export const DOCS = {
   'handling.brakeMul': ['Brake strength multiplier on top of each vehicle\'s own brake value. Higher stops in less distance.', '0.8 to 2 (1.35 default)'],
   'handling.gripMul': ['Tyre grip multiplier on top of each vehicle\'s own grip. Higher corners faster and slides later.', '0.8 to 1.6 (1.12 default)'],
   'handling.power.car': ['Engine strength multiplier for the simple engine, car entry (unused while the car has powertrain data).', '1 to 2'],
+  'handling.power.sport': ['Engine strength multiplier for the simple engine, Ember RS entry (unused while the car has powertrain data).', '1 to 2'],
+  'handling.power.rally': ['Engine strength multiplier for the simple engine, Dust Runner entry (unused while the car has powertrain data).', '1 to 2'],
   'handling.power.truck': ['Engine strength multiplier on top of the truck\'s own acceleration. Higher launches harder.', '0.8 to 2'],
   'handling.power.bike': ['Engine strength multiplier on top of the bike\'s own acceleration. Higher launches harder.', '0.8 to 2'],
   'vehicles.*.body.pt.kw': ['Peak engine power in kilowatts (330 kW is about 450 hp). The biggest single number for how hard the car pulls.', 'Hatchback 90 to 150, sports coupe 250 to 400, supercar 450 to 600'],

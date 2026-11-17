@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17  My cars rebuilt on top of main (branch vehicle/cars-on-main)
+Branch: vehicle/cars-on-main  Commit: see `git log`
+What changed: started from `origin/main` and re-added Stream B's car work on top of Rajul's physics, which wins everywhere (powertrain, tyres, drive modes, steering, My music, performance governor). Added: the Ember RS (`sport`) and Dust Runner (`rally`) in `src/vehicle/defs.js` with powertrain data, tuning in `rapier-vehicle.js` (`TUNE.sport`, `TUNE.rally` with four driven wheels, `ARCADE.power`), help text in `src/core/tuning-docs.js`; rebuilt models for all three cars (`assets/car_0{1,2,3}_*.glb`, `dev/carkit.py`, `dev/build_car*.py`); ride height lift and hiding the `Interior` mesh in first person (`vehicle.js`); a night moon (`env/environment.js`); birdsong and crickets (`audio/engine.js`, called from the shared layers; fields `night` and `fog` added in `main.js`).
+Dropped on purpose: my manual gearbox (`drivetrain.js`), my steering and slip tuning, my adaptive resolution (main has the governor). Self-test: all car checks pass for five vehicles (top speed, braking, resting on wheels); the later `city pack delhi` check fails here, also on untouched `main`, because of the space in this PC's folder path.
+For the other stream: nothing needed. To use it: merge `vehicle/cars-on-main` into `main`.
+Status: open
+
 ## 2026-11-17 22:00  N13 first increment: pedestrians on the sidewalks
 Branch: feat/n13-pedestrians
 What changed: new `src/pedestrians/sim.js` (bounded pool of 48, sidewalk-only spawn, walk and cross edges of the navigation graph, kerb waiting for the signal or a gap, `occupied` crossings that stop vehicles, archetypes commuter, vendor and tourist, gap keeping, despawn), new `src/pedestrians/pedestrians.js` (instanced figures with swinging legs), `src/world/navgraph.js` `nodesNear`, `src/traffic/sim.js` (`occupied` crossings stop cars; signal cycle now 44 s with 20 s of red so a pedestrian can cross a boulevard), `main.js` wiring for regions with a district and a population (follows the traffic level). Two new self-tests (57 checks): sidewalk-only, cap, signal discipline, cars stop for people, deterministic, levels, unload, pool. Checked in Mumbai: 22 walkers, 4 crossings in 90 s, figures visible on both sidewalks, no errors. `docs/PEDESTRIANS.md`: boxes not rigged models, no reactions, not solid to the car, no phone numbers.

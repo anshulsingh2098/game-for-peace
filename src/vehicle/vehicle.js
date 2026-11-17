@@ -39,6 +39,8 @@ export class VehicleView {
       if (/^Rider/.test(o.name)) this.riders.push(o);
       if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = m.userData.env ?? 0.7; }); }
     });
+    const lift = { car: 0.08, sport: 0.07, rally: 0.05 }[def.id] || 0;                                    // ride height: the body sits higher over the wheels, so the tyres no longer look half buried in the arches
+    if (lift) { let top = this.model; while (top.children.length === 1 && !top.children.some(c => /^Wheel_/.test(c.name))) top = top.children[0]; if (!top.children.some(c => /^Wheel_/.test(c.name))) top = this.model.children[0]; for (const c of top.children) if (!/^Wheel_/.test(c.name)) c.position.y += lift; }
     this.buildCockpit(def.id); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
   }
   /* dashboard and steering wheel for the driver view (the models have no interior) */
@@ -77,7 +79,7 @@ export class VehicleView {
   setView(v) {
     this.view = v; const fp = v === 'first'; if (!this.model) return;
     this.model.traverse(o => {                                  // the models' glass is opaque, so from inside the cabin and glass are hidden
-      if (o.name === 'Cab' || o.name === 'Cabin') o.visible = !fp;
+      if (o.name === 'Cab' || o.name === 'Cabin' || o.name === 'Interior') o.visible = !fp;
       if (o.isMesh) [].concat(o.material).forEach(m => { if (m.name === 'Glass') { m.colorWrite = !fp; m.depthWrite = !fp; } });
     });
     if (this.cockpit) this.cockpit.visible = fp; for (const o of this.riders) o.visible = !fp;

@@ -27,12 +27,14 @@ const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
    yawAssist how hard the car is pulled toward the yaw rate the steering asks for (1/s): crisp turn-in, and it holds a drift
    maxYaw    the fastest turn rate (rad/s) the assist asks for.  Off with ?arcade=0 */
 export const ARCADE = { on: !/[?&]arcade=0/.test(typeof location !== 'undefined' ? location.search : ''), latGrip: 2.6, latPower: 0.3, latHand: 0.12, slideSpeed: 14, yawAssist: 8, maxYaw: 1.2,
-  tyre: true, tyreAssist: 0.5, lockGrip: 1, combined: 0.6, steerLock: 3.5, steerRate: 2.5, tyreB: 10, tyreC: 1.9, tyreE: 0.9, downforce: 0.9, power: { car: 1.45, truck: 1.3, bike: 1.2 }, curve: 3, aeroMul: 0.55, brakeMul: 1.35, gripMul: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
+  tyre: true, tyreAssist: 0.5, lockGrip: 1, combined: 0.6, steerLock: 3.5, steerRate: 2.5, tyreB: 10, tyreC: 1.9, tyreE: 0.9, downforce: 0.9, power: { car: 1.45, sport: 1.45, rally: 1.4, truck: 1.3, bike: 1.2 }, curve: 3, aeroMul: 0.55, brakeMul: 1.35, gripMul: 1.12 };      // power: engine strength x (a hard launch and a long pull); curve: how late the pull fades toward top speed (2 = old, 3+ = keeps pulling); aero: air drag x; brake, grip: x
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* per-vehicle suspension and body tuning (stiffness is per unit mass, so it reads as a natural frequency) */
 const TUNE = {
   car:   { rest: 0.26, travel: 0.20, k: 32, comp: 3.6, relax: 5.0, hy: 0.32, extraL: 0.55, rollK: 0, rollC: 0, ang: 0.4 },
+  sport: { rest: 0.22, travel: 0.17, k: 38, comp: 3.8, relax: 5.2, hy: 0.30, extraL: 0.5, rollK: 0, rollC: 0, ang: 0.4 },
+  rally: { rest: 0.32, travel: 0.26, k: 28, comp: 3.2, relax: 4.4, hy: 0.34, extraL: 0.5, rollK: 0, rollC: 0, ang: 0.45, awd: true },      // long travel, four driven wheels
   truck: { rest: 0.40, travel: 0.30, k: 18, comp: 2.8, relax: 3.8, hy: 0.9,  extraL: 1.2,  rollK: 0, rollC: 0, ang: 0.6 },
   bike:  { rest: 0.24, travel: 0.18, k: 38, comp: 4.0, relax: 5.5, hy: 0.3,  extraL: 0.3,  rollK: 16000, rollC: 2400, pitchK: 22000, pitchC: 3000, ang: 0.8 }
 };
@@ -52,7 +54,7 @@ function makeCar(world, p, id, startY) {
     vc.setWheelSuspensionStiffness(i, T.k); vc.setWheelSuspensionCompression(i, T.comp); vc.setWheelSuspensionRelaxation(i, T.relax);
     vc.setWheelMaxSuspensionTravel(i, T.travel); vc.setWheelMaxSuspensionForce(i, 1e7); vc.setWheelFrictionSlip(i, 1); vc.setWheelSideFrictionStiffness(i, 1);
   }
-  return { body, vc, wheels: wheels.map(([x, z, front]) => ({ x, z, front, side: x === 0 ? 0 : x > 0 ? 1 : -1, drive: !front })), T, cy };
+  return { body, vc, wheels: wheels.map(([x, z, front]) => ({ x, z, front, side: x === 0 ? 0 : x > 0 ? 1 : -1, drive: !front || !!T.awd })), T, cy };
 }
 
 /* anti-roll and anti-pitch springs about the body's forward and left axes: tall vehicles lean but do not tip over, and a bike stays upright and
