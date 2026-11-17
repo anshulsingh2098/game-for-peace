@@ -1319,4 +1319,12 @@ test('prefetch: each file once, one at a time in order, a failure is tried again
     Object.defineProperty(globalThis, 'navigator', { value: { connection: { saveData: true } }, configurable: true }); assert.equal(P.prefetch(P.CITY_FILES), 0, 'save-data: nothing');
   } finally { globalThis.fetch = realFetch; delete globalThis.navigator; }
 });
+test('gzfetch: the gzip copy is used and unpacked, a host that already unpacked it works, a missing copy falls back to the plain file', async () => {
+  const G = await import('../src/core/gzfetch.js'), data = Uint8Array.from({ length: 5000 }, (_, i) => i % 251), gz = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  assert.ok(G.isGzip(gz) && !G.isGzip(data));
+  const mk = map => async u => { const v = map[u]; return v ? { ok: true, arrayBuffer: async () => v.buffer.slice(v.byteOffset, v.byteOffset + v.byteLength) } : { ok: false, status: 404 }; };
+  const same = (a, b) => assert.deepEqual(new Uint8Array(a), b);
+  same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': gz })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': data })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin': data })), data);
+  await assert.rejects(() => G.fetchGrid('x.bin', mk({})));
+});
 console.log(`\n${passed} checks passed`);

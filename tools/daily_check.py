@@ -33,7 +33,7 @@ code, out = run('git', 'log', '-1', '--format=%h %s', 'origin/main'); note('PASS
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 try:
     import stage_cloudflare
-    staged = set(stage_cloudflare.wanted()); need = [f for f in ('assets/india/terrain.bin', 'assets/india/terrain.json', 'assets/cities/delhi/ATTRIBUTION.txt', 'licenses.html') if os.path.isfile(os.path.join(ROOT, f))]
+    staged = set(stage_cloudflare.wanted()); need = [f for f in ('assets/india/terrain.bin', 'assets/india/terrain.bin.gz', 'assets/india/terrain.json', 'assets/cities/delhi/ATTRIBUTION.txt', 'licenses.html') if os.path.isfile(os.path.join(ROOT, f))]
     missing = [f for f in need if f not in staged]
     note('PASS' if not missing else 'FAIL', 'stage script includes terrain, data and attribution files', ', '.join(missing) if missing else f'{len(staged)} files')
 except Exception as e:

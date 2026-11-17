@@ -64,6 +64,7 @@ import { Gps } from './ui/gps.js';
 import { CityNav, CityMap } from './ui/citymap.js';
 import { mapGates, pickGate, gateForCity } from './world/city/gates.js';
 import { prefetch, CITY_FILES, INDIA_FILES } from './world/prefetch.js';
+import { fetchGrid } from './core/gzfetch.js';
 import { installCutHoles } from './world/city/cuts.js';
 import { RailLine, RailNetwork, classifyCrossings } from './world/rail.js';
 import { RailGrade } from './world/rail_grade.js';
@@ -122,7 +123,7 @@ if (indiaRoute) config.road = { ...config.road, guide: indiaRoute.pts, guideBack
 /* real elevation and land cover under the India roads (assets/india/terrain.bin, tools/build_india_grids.py); ?real=off keeps the procedural land. The terrain's origin is the start city. */
 if (indiaRoute && q.get('real') !== 'off') {
   try {
-    const meta = await (await fetch('assets/india/terrain.json')).json(), buf = await (await fetch('assets/india/terrain.bin')).arrayBuffer(), N = meta.nx * meta.nz, V = 0.035, n0 = indiaRoute.net.cities.get(indiaRoute.from);
+    const meta = await (await fetch('assets/india/terrain.json')).json(), buf = await fetchGrid('assets/india/terrain.bin'), N = meta.nx * meta.nz, V = 0.035, n0 = indiaRoute.net.cities.get(indiaRoute.from);
     const macro = { cell: meta.cell, x0: meta.x0, z0: meta.z0, nx: meta.nx, nz: meta.nz, vscale: V, ox: n0.x, oz: n0.z, h: new Int16Array(buf, 0, N), rel: new Uint8Array(buf, N * 2, N), tree: new Uint8Array(buf, N * 3, N), crop: new Uint8Array(buf, N * 4, N), grass: new Uint8Array(buf, N * 5, N), bare: new Uint8Array(buf, N * 6, N), built: new Uint8Array(buf, N * 7, N) };
     { const R = { cell: 500, x0: meta.x0, z0: meta.z0, nx: Math.ceil(meta.nx * meta.cell / 500), nz: Math.ceil(meta.nz * meta.cell / 500) }, M = R.nx * R.nz; R.a = new Uint8Array(M); R.b = new Uint8Array(M); R.w = new Uint8Array(M);       // which region each 50 km square belongs to, and the blend toward the next one
       for (let j = 0; j < R.nz; j++) for (let i = 0; i < R.nx; i++) { const ll = fromGame(R.x0 + (i + 0.5) * R.cell, R.z0 + (j + 0.5) * R.cell), r = regionAt(ll.lat, ll.lon, REGIONS), k = j * R.nx + i; R.a[k] = REGIONS.findIndex(x => x.id === r.id); R.b[k] = r.second ? REGIONS.findIndex(x => x.id === r.second) : R.a[k]; R.w[k] = Math.round(r.blend * 255); }
@@ -161,7 +162,7 @@ env.setTime(S.time); env.setWeather(S.weather);
 
 const natureLevel = q.get('nature') || (quality === 'low' ? 'low' : 'full'), groundLevel = q.get('ground') || (quality === 'low' ? 'flat' : quality === 'med' ? 'lite' : 'full');      // quality tiers: low keeps the cheap ground and fewer scenery variants, med a lighter photographic ground, high everything
 /* the loading screen (next.html #loading): what is still loading, shown until the first frame is drawn */
-const loadState = { world: true, physics: q.get('phys') === 'old', scenery: natureLevel === 'flat', city: !cityMode, car: false }, loadEl = $('#loading'), loadMsg = $('#loadMsg'), loadBar = $('#loadBar');
+const loadState = { world: true, physics: q.get('phys') === 'old', scenery: true, city: !cityMode, car: false }, loadEl = $('#loading'), loadMsg = $('#loadMsg'), loadBar = $('#loadBar');
 const LOAD_TEXT = { city: 'Building Delhi…', physics: 'Starting the physics…', scenery: 'Growing the trees…', car: 'Getting the car ready…' };
 function loadUpdate() { const keys = Object.keys(loadState), done = keys.filter(k => loadState[k]).length, next = keys.find(k => !loadState[k]); if (loadBar) loadBar.style.width = Math.max(5, done / keys.length * 100) + '%'; if (loadMsg && next) loadMsg.textContent = LOAD_TEXT[next] || 'Building the world…'; }
 /* in a city the loading screen waits for the first ring of tiles (5, or all that are near), so the game does not start on bare plains (20 s at most) */

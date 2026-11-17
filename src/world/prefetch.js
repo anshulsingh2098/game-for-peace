@@ -3,7 +3,7 @@
    Rules: each file once per page; one at a time; low priority; nothing on a "save data" connection; a failed fetch is forgotten and may be tried again later. Pure browser code. */
 const CITY = 'assets/cities/delhi/', INDIA = 'assets/india/';
 export const CITY_FILES = [CITY + 'manifest.json', CITY + 'identity.json', CITY + 'landmarks.json', CITY + 'transit.json', CITY + 'graph.json'];           // graph.json is the big one (14.6 MB), last
-export const INDIA_FILES = [INDIA + 'skeleton.json', INDIA + 'rails.json', INDIA + 'trains.json', INDIA + 'terrain.json', INDIA + 'terrain.bin'];
+export const INDIA_FILES = [INDIA + 'skeleton.json', INDIA + 'rails.json', INDIA + 'trains.json', INDIA + 'terrain.json', INDIA + 'terrain.bin.gz'];
 const seen = new Set(), queue = []; let busy = false;
 const allowed = () => { try { const c = navigator.connection; return !(c && c.saveData); } catch (e) { return true; } };
 async function pump() {
