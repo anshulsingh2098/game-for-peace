@@ -187,7 +187,7 @@ function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.leng
     const net = indiaRoute.net, n0 = net.cities.get(indiaRoute.from), g0 = config.road.guide; railNet = new RailNetwork(net.rails); railBook = net.trainsJson ? new TrainBook(net.trainsJson, railNet) : null; railTracks = railNet.edges.map(e => railBook ? railBook.tracks(e.edgeId) : 1); railCross = classifyCrossings(railNet.edges, [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), [...net.cities.values()], railNet.stations); railGrade = new RailGrade({ crossings: railCross, tracks: railTracks, edges: railNet.edges, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), natural: (x, z) => terrain.base(x, z) }); terrain.attachRail(railGrade); } }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
-let city = null, cityStart = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
+let city = null, cityStart = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); city.traffic.setMode(S.traffic); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
 function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
@@ -354,7 +354,7 @@ menu = new Menu({
     if (k === 'time') { S.time = v; save(); env.setTime(v); } else if (k === 'weather') { S.weather = v; save(); env.setWeather(v); } else if (k === 'lights') { S.lights = v; save(); }
     else if (k === 'sfx') { S.muted = v === 'off'; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } }
     else if (k === 'rumble') { S.rumble = v; save(); }
-    else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (peds) peds.setLevel(v); }
+    else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (city) city.traffic.setMode(v); if (peds) peds.setLevel(v); }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
   currentCity: () => currentCityId(), travel: id => goWorld(id), navigate: id => setNav(id), indiaMap: () => goWorld(currentCityId()), inWorld: () => !!indiaRoute, navTarget: () => navDest,
@@ -632,7 +632,7 @@ function update(dt, now) {
     try { rail = new RailView({ crossings: railCross, tracks: railTracks, scene, terrain, origin: grid.origin, network: railNet, grade: railGrade, book: railBook, roads: [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), cities: cityList, names: Object.fromEntries(cityList.map(c => [c.id, { en: c.name, hi: HINDI[c.id] || '' }])), toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }), control: q.get('control') !== 'off' }); } catch (e) { console.error('RAILVIEW', e && e.stack || e); rail = null; railNet = null; } }
   if (rail) { rail.update(dt, px, pz); updateRailLife(dt, px, pz); }
   if (grid.rebase(px, pz)) { if (city) city.reposition(); if (rail) rail.reposition(); far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
-  if (city) { city.update(px, pz); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
+  if (city) { city.update(px, pz, dt); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }

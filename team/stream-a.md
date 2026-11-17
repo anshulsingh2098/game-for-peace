@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-24 18:00  D5b: ambient traffic in the Delhi enclave; the stage script now includes the city pack
+Branch: d5b-traffic  Commit: see the PR
+What changed: `src/world/city/citytraffic.js` (cars on the pack streets, left-hand, one-ways, slow behind a car or the player, obstacle circles for the physics; Settings > Traffic 10/22/34); `tools/stage_cloudflare.py` no longer skips `assets/cities/` (2,251 files, 102.5 MB raw, 1,925 of them the Delhi pack; `.gitignore` keeps the staged copy out of git: `cloudflare/public/assets/cities/`).
+For the other stream: **deploy** (Anshul, signed in as rawatanshul525): `git switch main && git pull && python tools/stage_cloudflare.py && cd cloudflare && npx wrangler whoami && npx wrangler deploy`. The Delhi pack in the deploy is 19.8 MB gzip; check wrangler reports no file over 25 MiB (largest is graph.json, 14.6 MB) and under 20,000 files. Rajul's machine is signed in as another account, so nothing was deployed.
+Status: open
+
 ## 2026-11-24 14:00  D5 follow-up: highway gates and the menu link to the Delhi enclave
 Branch: claude/keen-gauss-3b2756  Commit: see the PR
 What changed: `src/main.js` (shared): driving into Delhi in the India world reloads into `?play&city=delhi&at=<gate>` (the gate of `manifest.json` whose way in best matches your heading, preferring the highway's NH number); driving out through a gate (within 40 m, heading outward, over 3 m/s) reloads the India world at Delhi with `&fromcity=1` (which switches the auto-entry off so there is no loop); choosing Delhi in the location picker opens the enclave. Tested in the browser: exit, entry, no loop. It is a page reload with the loading screen, not the 0.5 s fade of CITY_PACK section 3. The gate chosen is by heading only; the pack's `india` NH numbers rarely match the skeleton's (NH19 has no gate), so the highway you arrive on may not be the one you leave on.
