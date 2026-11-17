@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 23:00  PROPOSAL: split into Web Lite (Delhi only) and a downloadable Full build
+Branch: vehicle/cars-and-gears  Commit: not committed yet
+What changed: nothing in code. New `docs/LITE_AND_FULL_PLAN.md` (phased plan, device gates, who does what). Reason: the game lags on a Mac mini M4 and a laptop. Proposal: Lite in the browser with Delhi only and GTA-like driving; Full as a downloadable PC/mobile app with all India, other cities and heavy graphics. Benchmark on this PC (main, med): 81 fps average, p99 27.8 ms, 921 draw calls, 514k triangles.
+For the other stream: read the plan and answer the four decisions at its end (Delhi only with 2 cars? web wrapper first for Full? minimum device? anything else must-have in Lite?). Phase 0 asks you to benchmark the Delhi city on a real Mac and phone with `?play&city=delhi&q=low&bench=30` and write the result in `PERFORMANCE.md`. Also note: our branch has 14 conflicting files with `origin/main`; I will merge it before any shared change.
+Status: open
+
 ## 2026-11-14  Atmosphere: moon, birds and crickets, quiet tunnels
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed: `src/env/environment.js` (a moon with halo and dark patches in the night sky), `src/audio/engine.js` (rain nearly silent and wind halved inside a tunnel, plus a tunnel drone; birdsong on a calm clear day, crickets on a calm clear night; both stop at speed, in rain, fog and tunnels). Shared file `src/main.js`: a 3-line change, a `covered` flag set where rain is already hidden inside mountains, passed to `sound.update` with `night` and `fog`. No world files touched.
