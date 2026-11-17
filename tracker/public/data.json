@@ -1,5 +1,5 @@
 {
- "commit": "8ba6b4b",
+ "commit": "bab1354",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -285,6 +285,62 @@
      "r": "docs/NEXT_PHASES.md"
     },
     {
+     "id": "a6c8b6ca",
+     "t": "C0: City conflicts, measure first",
+     "d": "docs/CITY_CONFLICTS_PLAN.md: write tools/audit_city.mjs (street crossings, buildings on roads, height jumps and missing ramps, sunken streets without floors, unflagged road and rail crossings) with the worst 50 spots as links. Accepted when the owner's defects appear in the report. Needs from the owner: coordinates (menu line, Copy) and the build address for each defect.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a664db70",
+     "t": "C1: Heights and falls",
+     "d": "one surfaceAt, ramp fixes, automatic return to the road when the car is under the surface with no tunnel there; accepted by the scripted 150-street drive with no sink and no fall.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a683666d",
+     "t": "C2: Buildings against roads",
+     "d": "roads win; accepted when the audit shows under 1 percent of today's overlaps and 8 screenshots are clean.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ac41a7ce",
+     "t": "C3: One rail model",
+     "d": "one source of truth for tracks; remove duplicates and yard strips drawn as roads; accepted when no two tracks are within 1 m and every track belongs to a line or yard.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ab732d5e",
+     "t": "C4: Road and rail crossings",
+     "d": "level crossings or bridges everywhere; accepted when the audit finds none unflagged.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a3753087",
+     "t": "C5: Pack data fixes in the builder",
+     "d": "needs the 225 MB OSM extract (owner's yes); accepted when the pack's conflict counts fall.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ac2fbc9b",
+     "t": "C6: Regression",
+     "d": "the audit in the daily check and the street-driving test in the self-test.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
      "id": "a7f2fb81",
      "t": "N17: Services and events",
      "d": "Design note first (docs/SERVICES.md): fire, ambulance and (only if the owner confirms) police, as institutions with dispatch, response AI and consequences, on the existing traffic and navigation. Build one small slice. Starts only after P8 and the owner's go-ahead.",
@@ -321,6 +377,14 @@
   [
    "Asked of Anshul in the team log",
    [
+    {
+     "id": "a96fc4d1",
+     "t": "A-2026-11-18-24: strips near Todarmal Road: station track kits shortened (live eb901661); the road fan is still there",
+     "d": "Anshul's Claude: C0 must include a click-to-inspect street overlay (OSM id and tags) before any rule is written; C3 replaces the platform-face track count with the real tracks.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
     {
      "id": "a20f9279",
      "t": "A-2026-11-18-22: real-scan leaf-card trees, compound walls, cornices; speed (live c085cc44)",
@@ -512,14 +576,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-21, from Rajul's Claude"
-    },
-    {
-     "id": "a42f3869",
-     "t": "GPS, Indian milestones, field look, lag governor",
-     "d": "please check lag on a real phone (governor) and review the plate atlas draw call (one extra mesh per highway piece).",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-21, from Rajul's Claude"
     }
    ]
   ],
@@ -594,14 +650,6 @@
      "s": "doing",
      "w": "Rajul",
      "r": "PR 97"
-    },
-    {
-     "id": "a94ddabe",
-     "t": "PR 95: Product split: Web Lite (Delhi only) and Full (downloadable PC and phone app); tasks B14-B16",
-     "d": "Open pull request on branch docs/lite-and-full. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 95"
     }
    ]
   ],
@@ -1450,7 +1498,7 @@
   [
    "95",
    "Product split: Web Lite (Delhi only) and Full (downloadable PC and phone app); tasks B14-B16",
-   "open"
+   "merged"
   ],
   [
    "94",
@@ -1636,15 +1684,15 @@
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 339 behind main)"
+   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 342 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 76 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 79 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 74 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 77 behind main)"
   ]
  ],
  "tests": null,
@@ -1654,5 +1702,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T20:18:39.962Z"
+ "generated": "2026-11-17T20:19:00.784Z"
 }
