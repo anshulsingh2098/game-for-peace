@@ -23,10 +23,17 @@ function nameTexture(st, colours) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
+/* the round platform sign (photo: Laxmi Nagar): a white disc with a ring in the line colour (red in the photo), Hindi over English inside */
+function roundTexture(st, colour) {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#f7f6f2'; g.beginPath(); g.arc(128, 128, 124, 0, 7); g.fill(); g.strokeStyle = colour; g.lineWidth = 22; g.beginPath(); g.arc(128, 128, 112, 0, 7); g.stroke();
+  g.fillStyle = '#14161a'; g.textAlign = 'center'; g.textBaseline = 'middle'; if (st.name.hi) { fit(g, st.name.hi, 'bold #px "Noto Sans Devanagari","Kohinoor Devanagari","Devanagari Sangam MN","Mangal",system-ui,sans-serif', 170, 44); g.fillText(st.name.hi, 128, 100); } fit(g, st.name.en, 'bold #px system-ui, sans-serif', 170, 32); g.fillText(st.name.en, 128, st.name.hi ? 150 : 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+
 export class StationKit {
   constructor(T, e) {
     this.T = T; this.e = e; this.group = new THREE.Group(); this.circles = []; this.access = []; this.tris = 0; this.calls = 0; this.lastDep = -9; this.tex = []; this.geos = []; this.walk = [];
-    const st = e.st, ox = st.x, oz = st.z, solid = new Soup(ox, oz), glass = new Soup(ox, oz), names = new Soup(ox, oz), dep = new Soup(ox, oz), claims = [];
+    const st = e.st, ox = st.x, oz = st.z, solid = new Soup(ox, oz), glass = new Soup(ox, oz), names = new Soup(ox, oz), dep = new Soup(ox, oz), signs = new Soup(ox, oz), claims = [];
     this.items = []; for (const per of st.per) { const calls = e.calls.filter(c => c.R.line === per.line); if (!calls.length) continue; const tr = []; for (const c of calls) { const p = c.R.at(c.s); if (!tr.some(q => Math.hypot(q.p.x - p.x, q.p.z - p.z) < 2.5)) tr.push({ R: c.R, s: c.s, p: { ...p } }); } this.items.push({ per, line: T.lineOf.get(per.line), kit: kitOf(per), tracks: tr, colour: lineColour(T.lineOf.get(per.line)) }); }
     if (!this.items.length) return;
     this.colours = [...new Set(this.items.map(i => i.colour))]; this.nameTex = nameTexture(st, this.colours); this.tex.push(this.nameTex);
@@ -62,6 +69,7 @@ export class StationKit {
       extrude(solid, Ra, ia, ib, arch, cols, false);
       for (let u = -Lp / 2 + 9; u < Lp / 2 - 6; u += 18) { const q = Ra.at(sa + u), F = frame(q.x, q.z, q.tx, q.tz); for (const l of [lo + 0.35, hi - 0.35]) fbox(solid, F, -0.2, 0.2, l - lb - 0.25, l - lb + 0.25, q.h + 1.0, q.h + 3.9, COL); for (const r of rows) if (r.p.l0 > 0 && r.p.l1 < 99 && r.p.edges.length === 2) { const lc = lb + r.mid + (r.p.t.l - lb), top = 3.9 + 2.4 * Math.sin(Math.PI * Math.max(0, Math.min(1, (lc - lo + 0.3) / w))); fbox(solid, F, -0.25, 0.25, lc - lb - 0.3, lc - lb + 0.3, q.h + 1.0, q.h + top, COL); } }
       for (const r of rows) for (const f of [-0.33, -0.1, 0.12, 0.34]) { const R = r.R, s = r.p.t.s + f * Lp, q = R.at(s), side = r.p.l1 <= 0 ? -1 : 1, l = side < 0 ? r.p.l0 + 1.0 : r.p.l1 - 1.0; const a = pt({ x: q.x, z: q.z, tx: q.tx, tz: q.tz }, -3, l, q.h + 2.75), b = pt({ x: q.x, z: q.z, tx: q.tx, tz: q.tz }, 3, l, q.h + 2.75); bq(names, a, b, 1.5); }
+      for (const r of rows) for (const f of [-0.22, 0.22]) { const q = r.R.at(r.p.t.s + f * Lp), F = { x: q.x, z: q.z, tx: q.tx, tz: q.tz }, l = r.mid; fbox(solid, F, -0.05, 0.05, l - 0.05, l + 0.05, q.h + 1.0, q.h + 2.2, COL); const a = pt(F, 0.06, l - 0.55, q.h + 2.2), b = pt(F, 0.06, l + 0.55, q.h + 2.2), a2 = pt(F, -0.06, l + 0.55, q.h + 2.2), b2 = pt(F, -0.06, l - 0.55, q.h + 2.2); for (const [P0, P1] of [[a, b], [a2, b2]]) signs.quad(P0, P1, [P1[0], P1[1] + 1.1, P1[2]], [P0[0], P0[1] + 1.1, P0[2]], [1, 1, 1], [0, 0, 1, 0, 1, 1, 0, 1]); }       // round signs on poles, both faces
       for (const r of rows.slice(0, 2)) { const R = r.R, q = R.at(r.p.t.s - 0.2 * Lp), F = { x: q.x, z: q.z, tx: q.tx, tz: q.tz }; depQuads.push([pt(F, 0, r.mid - 1.6, q.h + 2.3), pt(F, 0, r.mid + 1.6, q.h + 2.3)]); }
       const cc = pt(Fa, toFrame(ts[0].p.x, ts[0].p.z).u, (lo + hi) / 2, 0); claims.push({ kind: 'station', layer: 1, shape: { t: 'rect', x: cc[0], z: cc[2], hx: Lp / 2, hz: (hi - lo) / 2, yaw: Math.atan2(Fa.tz, Fa.tx) } });
     }
@@ -111,6 +119,7 @@ export class StationKit {
     /* meshes: solid, glass, name boards (one texture), departure board (a second texture, redrawn live) */
     const add = (S, mat, shadow) => { if (S.empty) return null; const g = S.geometry(); this.geos.push(g); const m = new THREE.Mesh(g, mat); m.matrixAutoUpdate = true; m.castShadow = !!shadow; m.receiveShadow = true; this.group.add(m); this.tris += S.tris; this.calls++; return m; };
     add(solid, T.mat, true); add(glass, T.glassMat);
+    if (!signs.empty) { this.signTex = roundTexture(st, this.colours[0]); this.tex.push(this.signTex); this.signMat = new THREE.MeshBasicMaterial({ map: this.signTex, side: THREE.FrontSide, alphaTest: 0.5, toneMapped: false }); add(signs, this.signMat); }
     this.boardMat = new THREE.MeshBasicMaterial({ map: this.nameTex, side: THREE.FrontSide, toneMapped: false }); add(names, this.boardMat);
     if (depQuads.length) { this.depCanvas = document.createElement('canvas'); this.depCanvas.width = 512; this.depCanvas.height = 256; this.depTex = new THREE.CanvasTexture(this.depCanvas); this.depTex.colorSpace = THREE.SRGBColorSpace; this.tex.push(this.depTex);
       for (const [a, b] of depQuads) bq(dep, a, b, 1.5); this.depMat = new THREE.MeshBasicMaterial({ map: this.depTex, side: THREE.FrontSide, toneMapped: false }); add(dep, this.depMat); this.drawDep(T.t); }
@@ -129,5 +138,5 @@ export class StationKit {
     this.depTex.needsUpdate = true; this.lastDep = t;
   }
   update(t, dist) { if (this.depTex && dist < 130 && t - this.lastDep > 2) this.drawDep(t); }
-  dispose() { for (const g of this.geos) g.dispose(); for (const t of this.tex) t.dispose(); if (this.boardMat) this.boardMat.dispose(); if (this.depMat) this.depMat.dispose(); }
+  dispose() { for (const g of this.geos) g.dispose(); for (const t of this.tex) t.dispose(); if (this.boardMat) this.boardMat.dispose(); if (this.depMat) this.depMat.dispose(); if (this.signMat) this.signMat.dispose(); }
 }
