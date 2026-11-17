@@ -46,7 +46,7 @@
     },
     {
      "id": "acf5f839",
-     "t": "B1: Put your car, engine-sound and atmosphere work forward as separate small PRs, each for the owner's yes (the owner took them out of main on 17 Nov 2026 afte…",
+     "t": "B1: Put your engine-sound and atmosphere work forward as separate small PRs (the car models and definitions are back in main since 18 Nov: owner's yes), each f…",
      "d": "Original text: finish and PR vehicle/cars-on-main — Review it against Phase 1 above, merge origin/main into it, run node tools/selftest.mjs and python tools/vehicle_acceptance.mjs --check, have a person drive a lap in each of the three vehicles, then open the PR. Accepted when both checks pass, a person has driven each vehicle, and the PR is open for the owner to merge.",
      "s": "todo",
      "w": "Anshul",
@@ -1646,5 +1646,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T19:44:50.598Z"
+ "generated": "2026-11-17T19:50:56.540Z"
 }
