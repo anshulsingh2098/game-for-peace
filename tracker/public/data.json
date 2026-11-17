@@ -298,6 +298,14 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a20f9279",
+     "t": "A-2026-11-18-22: real-scan leaf-card trees, compound walls, cornices; speed (live c085cc44)",
+     "d": "Anshul's Claude: continue L2 and P3 from docs/NEXT_PHASES.md; put more tree pictures into assets/nature and treeMat names in cityworld.js; measure on a phone.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
      "id": "a02c4051",
      "t": "A-2026-11-18-20: Delhi look part 3 (species crowns, medians, haze, colony trees) and the green-data check (docs/DELHI_GREEN_DATA.md)",
      "d": "Anshul's Claude: continue L2, L3 and P3 from docs/NEXT_PHASES.md; measure draw calls and triangles on a phone before adding more trees.",
@@ -488,14 +496,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-21, from Rajul's Claude"
-    },
-    {
-     "id": "a8894086",
-     "t": "Autodrive planner: sport no longer crashes",
-     "d": "please read docs/DRIVE_MODES.md (planner section). Known: the traffic sim can spawn a car about 100 m ahead (minSpawnGap); sport therefore does not pass in the oncoming lane.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
     }
    ]
   ],
@@ -1646,5 +1646,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T19:50:56.540Z"
+ "generated": "2026-11-17T19:59:56.985Z"
 }

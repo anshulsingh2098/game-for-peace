@@ -242,6 +242,7 @@ export function* buildTileSteps(tile, ctx) {
   const ruled = buildingsToSkip(tile, G); out.nRuled = ruled.size;                      // rules.js: a class of map error left out everywhere
   /* P1 (infill.js): buildings where the map data is silent, in their own meshes (a distance limit, no shadows) */
   let infill = []; if (ctx.infill !== false) infill = yield* infillSteps(tile, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nInfill = infill.length; tile.buildings = tile.buildings.concat(infill); yield;
+  let cornN = 0;
   for (const b of tile.buildings) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     if (ruled.has(b)) continue;
@@ -253,6 +254,7 @@ export function* buildTileSteps(tile, ctx) {
     const wc = shade(wall, 0.9 + 0.2 * hash(b.id * 7 + 1)), rc = L && L.type ? shade(wall, 0.8) : shade(0x77726a, 0.85 + 0.3 * hash(b.id * 3)); let area = 0, cx = 0, cz = 0, x0 = Infinity, x1b = -Infinity, z0 = Infinity, z1b = -Infinity;
     for (let i = 0; i < n; i++) { const j = (i + 1) % n, xi = r[i * 2], zi = r[i * 2 + 1], xj = r[j * 2], zj = r[j * 2 + 1]; area += xi * zj - xj * zi; cx += xi; cz += zi; x0 = Math.min(x0, xi); x1b = Math.max(x1b, xi); z0 = Math.min(z0, zi); z1b = Math.max(z1b, zi); }
     const ccw = area > 0;                                                                // the pack says counter-clockwise; walls are built for either
+    const anB = ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(r[0], r[1]) : '', corn = !b.infill && !L && hgt >= 9 && (anB === 'cp' || anB === 'lutyens' || anB === 'oldDelhi') && cornN < 140 && (cornN++, true);          // a cornice on the taller buildings of Connaught Place, Lutyens' Delhi and Old Delhi (140 a tile at most: a lip along the roof edge, 6 triangles a wall)
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n, ax = r[i * 2], az = r[i * 2 + 1], bx = r[j * 2], bz = r[j * 2 + 1], dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 0.05) continue;
       let nx = dz / l, nz = -dx / l; if (!ccw) { nx = -nx; nz = -nz; } const u1 = l / 14.4, v0 = (y0 - gy) / 12.8, v1 = (y1 - gy) / 12.8, y2 = Math.min(y1, y0 + 2.4), AO = 0.6;
@@ -262,6 +264,9 @@ export function* buildTileSteps(tile, ctx) {
       if (shopB && y1 - y0 > 4) { const ys = y0 + 3.2, sc = shade(0xffffff, 0.7 + 0.3 * hash(b.id * 11 + i)); quad(b.infill ? M.infillShop : M.shop, y0, ys, dark(sc), sc, 0, 1); quad(B, ys, y1, wc, wc, (ys - gy) / 12.8, v1); }
       else if (b.infill) quad(B, y0, y1, wc, wc, v0, v1);                                  // infill: one quad a wall (it is drawn only near, and in the hundreds)
       else { quad(B, y0, y2, dark(wc), wc, v0, v0 + (y2 - y0) / 12.8); if (y1 > y2) quad(B, y2, y1, wc, wc, v0 + (y2 - y0) / 12.8, v1); }
+      if (corn && l > 2.5) { const cc = shade(wall, 1.12 + 0.1 * hash(b.id * 13 + i)), cd = cc.clone().multiplyScalar(0.78), ox = nx * 0.4, oz = nz * 0.4, yb = y1 - 0.35, yt = y1 + 0.25;
+        const f0 = B.v(X(ax + ox), yb, Z(az + oz), nx, 0, nz, cd, 0.06, 0.06), f1 = B.v(X(bx + ox), yb, Z(bz + oz), nx, 0, nz, cd, 0.06, 0.06), f2 = B.v(X(bx + ox), yt, Z(bz + oz), nx, 0, nz, cc, 0.06, 0.06), f3 = B.v(X(ax + ox), yt, Z(az + oz), nx, 0, nz, cc, 0.06, 0.06); B.tri(f0, f1, f2, nx, 0, nz); B.tri(f0, f2, f3, nx, 0, nz);
+        const t0 = B.v(X(ax + ox), yt, Z(az + oz), 0, 1, 0, cc, 0.06, 0.06), t1 = B.v(X(bx + ox), yt, Z(bz + oz), 0, 1, 0, cc, 0.06, 0.06), t2 = B.v(X(bx), yt, Z(bz), 0, 1, 0, cc, 0.06, 0.06), t3 = B.v(X(ax), yt, Z(az), 0, 1, 0, cc, 0.06, 0.06); B.tri(t0, t1, t2, 0, 1, 0); B.tri(t0, t2, t3, 0, 1, 0); B.tri(t0, t2, t1, 0, 1, 0); B.tri(t0, t3, t2, 0, 1, 0); }
       if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
     }
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
