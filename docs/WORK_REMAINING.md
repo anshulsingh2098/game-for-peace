@@ -27,7 +27,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 1.8 | The tuner page login and the live Publish setup (N5 leftovers) | |
 | 1.9 | (answered 22 Nov: agreed) **City scale: 1:1 city enclaves entered from the highway** (`docs/CITY_PACK.md` section 3), the budgets in section 4 and the pack format in section 5 | Blocks Phase 1 of `docs/CITY_PLAN.md` |
 | 1.10 | (answered 22 Nov: yes, download the maps needed; log each file in OPEN_DATA.md) OSM extract for Delhi NCR | CITY_PLAN Phase 1 |
-| 1.11 | **Delhi Open Transit Data GTFS** (DTC, cluster buses, DMRC timetables): it needs a click-through agreement with a stated purpose and identity, and the Terms restrict use to that purpose; not taken. Accept it yourself and ask DoT whether derived route and frequency data may be published in an open-source game, or keep OSM-only (no timetable or frequency). | `docs/DELHI_TRANSIT.md` section 1 |
+| 1.11 | **Delhi Open Transit Data GTFS** (DTC, cluster buses, DMRC timetables): it needs a click-through agreement with a stated purpose and identity, and the Terms restrict use to that purpose; not taken. Terms accepted by the owner on 17 Nov 2026 but the portal answers 403 Forbidden to every download (see OPEN_DATA.md): retry later or ask DoT via the Contact page, and ask whether derived route and frequency data may be published in an open-source game, or keep OSM-only (no timetable or frequency). | `docs/DELHI_TRANSIT.md` section 1 |
 
 ## 2. Engine and phases N7 to N10
 | # | Limit | Tag |
