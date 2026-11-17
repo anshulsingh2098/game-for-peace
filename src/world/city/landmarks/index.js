@@ -19,7 +19,7 @@ export class CityLandmarks {
     const fp = l.footprint, yaw = l.yaw || 0, c = Math.cos(yaw), s = Math.sin(yaw); let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
     for (let i = 0; i < fp.length; i += 2) { const u = fp[i] * c + fp[i + 1] * s, v = -fp[i] * s + fp[i + 1] * c; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
     const cu = (u0 + u1) / 2, cv = (v0 + v1) / 2, x = cu * c - cv * s, z = cu * s + cv * c, poly = []; for (let i = 0; i < fp.length; i += 2) poly.push([fp[i] * c + fp[i + 1] * s - cu, -fp[i] * s + fp[i + 1] * c - cv]);
-    return { id: l.id, l, x, z, yaw, hx: (u1 - u0) / 2, hz: (v1 - v0) / 2, h: l.height || 0, poly, R: Math.hypot((u1 - u0) / 2, (v1 - v0) / 2) };
+    return { toLocal: (dx, dz) => [dx * c + dz * s, -dx * s + dz * c], id: l.id, l, x, z, yaw, hx: (u1 - u0) / 2, hz: (v1 - v0) / 2, h: l.height || 0, poly, R: Math.hypot((u1 - u0) / 2, (v1 - v0) / 2) };
   }
   init() {
     const { landmarks } = this.city.pack, ko = this.city.ko; if (!landmarks) return this;

@@ -39,8 +39,22 @@ export class Kit {
   dome(cx, y0, cz, r, h, color, o = {}) { const pr = []; const n = o.rings || 7; for (let i = 0; i <= n; i++) { const a = (i / n) * Math.PI / 2; pr.push([Math.cos(a) * r, Math.sin(a) * h]); } this.lathe(cx, y0, cz, pr, color, o); }
   /* an onion dome: bulges to rb at a third of the height and closes to a point */
   onion(cx, y0, cz, rb, h, color, o = {}) { const pr = [[rb * 0.72, 0], [rb, h * 0.2], [rb * 0.96, h * 0.38], [rb * 0.62, h * 0.6], [rb * 0.2, h * 0.82], [0.02, h]]; this.lathe(cx, y0, cz, pr, color, o); }
+  /* a lofted shaft through rings [{ y, pts: [[x, z], ...] }] that all have the same number of points (a tapering, fluted or polygonal tower); caps close the top and the bottom */
+  loft(rings, color, o = {}) {
+    const N = rings[0].pts.length, P = [], I = []; let cx = 0, cz = 0; for (const [x, z] of rings[0].pts) { cx += x / N; cz += z / N; }
+    for (const r of rings) for (const [x, z] of r.pts) P.push(x, r.y, z);
+    for (let i = 0; i + 1 < rings.length; i++) for (let j = 0; j < N; j++) { const j2 = (j + 1) % N, a = i * N + j, b = i * N + j2, c = (i + 1) * N + j2, d = (i + 1) * N + j; I.push(a, b, c, a, c, d); }
+    if (o.caps !== false) { const top = rings.length - 1, ty = rings[top].y, by = rings[0].y; let tx = 0, tz = 0; for (const [x, z] of rings[top].pts) { tx += x / N; tz += z / N; } const t0 = P.length / 3; P.push(tx, ty, tz); for (let j = 0; j < N; j++) I.push(top * N + j, top * N + (j + 1) % N, t0); const b0 = P.length / 3; P.push(cx, by, cz); for (let j = 0; j < N; j++) I.push((j + 1) % N, j, b0); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals();
+    const pa = g.attributes.position, na = g.attributes.normal; const sx = rings[0].pts[0][0] - cx, sz = rings[0].pts[0][1] - cz, nx0 = na.getX(0), nz0 = na.getZ(0); if (sx * nx0 + sz * nz0 < 0) { for (let i = 0; i < na.count; i++) na.setXYZ(i, -na.getX(i), -na.getY(i), -na.getZ(i)); const ix = g.index.array; for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; } } void pa;
+    this.add(g, _m.clone().identity(), color, o);
+  }
+  /* a dome or onion dome in alternating bands of two colours (striped marble): profile [[r, y], ...] from the bottom up, `bands` bands */
+  striped(cx, y0, cz, profile, bands, c0, c1, o = {}) { const n = profile.length - 1, per = Math.max(1, Math.round(n / bands)); for (let i = 0; i < n; i += per) this.lathe(cx, y0, cz, profile.slice(i, Math.min(n, i + per) + 1), ((i / per) % 2 === 0) ? c0 : c1, o); }
   /* a prism over a polygon [[x, z], ...] from y0 up by h */
-  prism(poly, y0, h, color, o = {}) { this.add(prismGeo(poly, h), this.mx(0, y0, 0), color, o); }
+  prism(poly, y0, h, color, o = {}) { this.add(prismGeo(poly, h, o.hole), this.mx(0, y0, 0), color, o); }
+  /* a profile [[x, y], ...] in the vertical x-y plane, extruded `thick` along z (centred), moved to (cx, cz) and turned ry: wedges, gnomons, gables */
+  profile(pts, thick, cx, y0, cz, color, o = {}) { const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1]))), g = new THREE.ExtrudeGeometry(sh, { depth: thick, bevelEnabled: false }); g.translate(0, 0, -thick / 2); this.add(g, this.mx(cx, y0, cz, 1, 1, 1, o.ry || 0), color, o); }
   /* a flat polygon lying at y (default just above the ground) with its normal up: lawns, paths, water */
   flat(poly, color, o = {}) { this.add(flatGeo(poly), this.mx(0, o.y || 0, 0), color, o); }
   /* a rectangle on the ground, ry turns it */
@@ -50,7 +64,7 @@ export class Kit {
   /* a block of width w, height h and depth d with a round or pointed arch opening of width aw and height ah through its depth (depth along z, then turned by ry) */
   arch(cx, y0, cz, w, h, d, aw, ah, color, o = {}) { this.add(archGeo(w, h, d, aw, ah, !!o.pointed, !!o.cusp), this.mx(cx, y0, cz, 1, 1, 1, o.ry || 0), color, o); }
   /* stairs: n steps from the foot (cx, cz) climbing toward direction ry (0 = toward +x) to total height h; width w, tread run */
-  stairs(cx, y0, cz, w, run, n, h, color, o = {}) { const c = Math.cos(o.ry || 0), s = Math.sin(o.ry || 0); for (let i = 0; i < n; i++) { const t = (i + 0.5) * run; this.box(cx + c * t, y0, cz + s * t, run, h * (i + 1) / n, w, color, { ...o, ry: -(o.ry || 0) }); } }
+  stairs(cx, y0, cz, w, run, n, h, color, o = {}) { const c = Math.cos(o.ry || 0), s = Math.sin(o.ry || 0); for (let i = 0; i < n; i++) { const t = (i + 0.5) * run; this.box(cx + c * t, y0, cz + s * t, run, (h - 0.04) * (i + 1) / n, w, color, { ...o, ry: -(o.ry || 0) }); } }
   /* a row of columns between two points: n columns of radius r and height h standing on y0 with a beam on top */
   colonnade(x0, z0, x1, z1, y0, n, r, h, color, o = {}) { for (let i = 0; i < n; i++) { const t = n === 1 ? 0.5 : i / (n - 1); this.cyl(x0 + (x1 - x0) * t, y0, z0 + (z1 - z0) * t, r, r * (o.taper || 1), h, color, { ...o, seg: o.seg || 8 }); } if (o.beam !== false) { const L = Math.hypot(x1 - x0, z1 - z0), a = Math.atan2(z1 - z0, x1 - x0); this.box((x0 + x1) / 2, y0 + h, (z0 + z1) / 2, L + r * 2.2, o.beamH || r * 1.6, o.beamW || r * 2.8, o.beamColor || color, { ...o, ry: -a }); } }
   /* a tree: a trunk and a crown (two stacked blobs), in the detail layer unless o.d is false */
@@ -83,7 +97,7 @@ const blobGeo = () => memo('blob', () => new THREE.IcosahedronGeometry(1, 1));
 const discGeo = seg => memo('d' + seg, () => { const g = new THREE.CircleGeometry(1, seg); g.rotateX(-Math.PI / 2); return g; });
 const ringGeo = (k, seg, a0, a1) => { const g = new THREE.RingGeometry(k, 1, seg, 1, a0, a1 - a0); g.rotateX(-Math.PI / 2); return g; };
 function flatGeo(poly) { const sh = new THREE.Shape(poly.map(p => new THREE.Vector2(p[0], -p[1]))), g = new THREE.ShapeGeometry(sh); g.rotateX(-Math.PI / 2); return g; }
-function prismGeo(poly, h) { const sh = new THREE.Shape(poly.map(p => new THREE.Vector2(p[0], -p[1]))), g = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false }); g.rotateX(-Math.PI / 2); return g; }
+function prismGeo(poly, h, hole) { const sh = new THREE.Shape(poly.map(p => new THREE.Vector2(p[0], -p[1]))); if (hole) sh.holes.push(new THREE.Path(hole.map(p => new THREE.Vector2(p[0], -p[1])))); const g = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false }); g.rotateX(-Math.PI / 2); return g; }
 function archGeo(w, h, d, aw, ah, pointed, cusp) {
   const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, h); sh.lineTo(-w / 2, h); sh.closePath();
   const hole = new THREE.Path(), r = aw / 2, sp = ah - (pointed ? r * 1.15 : r); hole.moveTo(-r, 0); hole.lineTo(-r, Math.max(0, sp));
