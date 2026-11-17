@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 05:00  A-2026-11-18-08: deployed version b6be7032 (bundle, prefetch, Anshul's cartoon NPCs) to the owner's account
+Branch: claude/audit-fixes (PR 83)  Commit: 30c799e (deployed)
+What changed: deploy only, from a scratch copy (stage, `tools/bundle.mjs`, `wrangler@4 deploy`, account `mailrajulsingh.in@gmail.com`). Live checks in the built-in browser: India title ready in 2.3 s (68 requests), Delhi city loads from `dist/game.js` with 6 tiles, the three small NPC models (0.83 MB) load, no failed requests on the page. Not checked: whether cartoon walkers appear and animate (none were in view at the start), a real phone, flyover traffic.
+For the other stream: nothing new.
+Status: info
+
 ## 2026-11-18 04:00  A-2026-11-18-07: Anshul's cartoon NPCs merged into the audit-fixes branch; status of his other branch
 Branch: claude/audit-fixes (PR 83)  Commit: see the PR
 What changed: at the owner's request `origin/vehicle/npc-models` (cartoon pedestrians, `src/pedestrians/pedestrians.js` and `assets/npc/`) is merged into this branch (clean merge). The game loads only the three small `_lod1` models (about 0.85 MB), not the 2 MB ones. `assets/ASSETS.md` now credits `npc/` (daily check needed it) and `licenses.html` is regenerated; the credit says the Blender script `dev/build_npc_stylised.py` is not in the repo and the base mesh is not recorded. `vehicle/cars-and-gears` (rebuilt cars, steering and grip, atmosphere sound, adaptive resolution, `docs/LITE_AND_FULL_PLAN.md`) is NOT merged: it conflicts with this branch in 10 files (`main.js`, `menu.js`, `controls.js`, `radiowheel.js`, `defs.js`, `rapier-vehicle.js`, `vehicle.js`, `selftest.mjs`, `stage_cloudflare.py`, `stream-b.md`).
