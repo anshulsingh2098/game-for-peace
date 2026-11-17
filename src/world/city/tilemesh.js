@@ -4,6 +4,7 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
+import { infillSteps } from './infill.js';
 import { buildStreetLife } from './streetlife.js';
 
 const WALL_R = 1.1;                   // a wall circle's radius, and how far its centre sits inside the footprint edge: the circle ends exactly at the drawn wall (it was 1.25 m wide, 0.7 m inside: an invisible 0.55 m of wall in the street)
@@ -72,7 +73,7 @@ function guessHeight(b, hash) {
 }
 export function buildTile(tile, ctx) { const g = buildTileSteps(tile, { ...ctx, yieldNow: null }); let r; while (!(r = g.next()).done); return r.value; }
 export function* buildTileSteps(tile, ctx) {
-  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher() };
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y) => {                                           // a polygon (ring and holes in metres) lying at height y
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
@@ -172,9 +173,11 @@ export function* buildTileSteps(tile, ctx) {
   }
   /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */
   const B = M.bldg;
+  /* P1 (infill.js): buildings where the map data is silent, in their own meshes (a distance limit, no shadows) */
+  let infill = []; if (ctx.infill !== false) infill = yield* infillSteps(tile, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nInfill = infill.length; tile.buildings = tile.buildings.concat(infill); yield;
   for (const b of tile.buildings) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
-    const r = b.ring, n = r.length / 2; if (n < 3) continue; const L = b.landmark ? lm.get(b.landmark) : null, kit = L && L.type ? 'gov' : { office: 'off', hotel: 'off', civic: 'gov', religious: 'gov', transit: 'gov' }[b.use] || 'res', B = kit === 'off' ? M.bldgO : kit === 'gov' ? M.bldgG : M.bldg, shopB = !L && (b.use === 'commercial' || b.use === 'retail') && (b.height || 9) >= 5, hgt = Math.max(3, (L && L.height) || guessHeight(b, hash)), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
+    const r = b.ring, n = r.length / 2; if (n < 3) continue; const L = b.landmark ? lm.get(b.landmark) : null, kit = L && L.type ? 'gov' : { office: 'off', hotel: 'off', civic: 'gov', religious: 'gov', transit: 'gov' }[b.use] || 'res', B = b.infill ? M.infill : kit === 'off' ? M.bldgO : kit === 'gov' ? M.bldgG : M.bldg, shopB = !L && (b.use === 'commercial' || b.use === 'retail') && (b.height || 9) >= 5, hgt = Math.max(3, (L && L.height) || guessHeight(b, hash)), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
     if (L && ctx.skip && ctx.skip.has(L.id)) continue;                                    // a landmark with its own model (landmarks/, D8) is not drawn as a plain block
     let wall; if (L && L.type) wall = LM_WALL[L.type] || (L.type.includes('station') ? LM_WALL.station : 0); else wall = 0;
     if (!wall) { const pal = WALLS[b.use] || WALLS.other, k = hash(b.id); wall = pal[Math.floor(k * pal.length) % pal.length]; }
@@ -187,14 +190,15 @@ export function* buildTileSteps(tile, ctx) {
       /* a wall in two quads: the foot (2.4 m, darker at the ground like a shadow) and the rest; a shop's ground floor is its own quad with the shop-front texture */
       const quad = (m, ya, yb, ca, cb, va, vb) => { const q0 = m.v(X(ax), ya, Z(az), nx, 0, nz, ca, 0, va), q1 = m.v(X(bx), ya, Z(bz), nx, 0, nz, ca, u1, va), q2 = m.v(X(bx), yb, Z(bz), nx, 0, nz, cb, u1, vb), q3 = m.v(X(ax), yb, Z(az), nx, 0, nz, cb, 0, vb); m.tri(q0, q1, q2, nx, 0, nz); m.tri(q0, q2, q3, nx, 0, nz); };
       const dark = c0 => c0.clone().multiplyScalar(AO);
-      if (shopB && y1 - y0 > 4) { const ys = y0 + 3.2, sc = shade(0xffffff, 0.7 + 0.3 * hash(b.id * 11 + i)); quad(M.shop, y0, ys, dark(sc), sc, 0, 1); quad(B, ys, y1, wc, wc, (ys - gy) / 12.8, v1); }
+      if (shopB && y1 - y0 > 4) { const ys = y0 + 3.2, sc = shade(0xffffff, 0.7 + 0.3 * hash(b.id * 11 + i)); quad(b.infill ? M.infillShop : M.shop, y0, ys, dark(sc), sc, 0, 1); quad(B, ys, y1, wc, wc, (ys - gy) / 12.8, v1); }
+      else if (b.infill) quad(B, y0, y1, wc, wc, v0, v1);                                  // infill: one quad a wall (it is drawn only near, and in the hundreds)
       else { quad(B, y0, y2, dark(wc), wc, v0, v0 + (y2 - y0) / 12.8); if (y1 > y2) quad(B, y2, y1, wc, wc, v0 + (y2 - y0) / 12.8, v1); }
       if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
     }
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
     let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }
     if (tris) { const all = contour.concat(...holes), base = B.p.length / 3; for (const q of all) B.v(X(q.x), y1, Z(q.y), 0, 1, 0, rc, 0.06, 0.06); for (const t of tris) B.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0); }
-    if (!L && hgt >= 6 && hgt < 40 && (x1b - x0) > 8 && (z1b - z0) > 8 && hash(b.id * 5 + 3) < 0.4) { const rx = (x0 + x1b) / 2 + (hash(b.id) - 0.5) * (x1b - x0) * 0.3, rz = (z0 + z1b) / 2 + (hash(b.id + 9) - 0.5) * (z1b - z0) * 0.3, hs = 1.2 + hash(b.id * 3) * 0.8, hh = 1.6 + hash(b.id * 13) * 1.2, tank = hash(b.id * 17) < 0.5 ? shade(0x3a5a78, 1) : shade(0x9a9890, 1);       // a water tank or a stair head on the roof
+    if (!L && !b.infill && hgt >= 6 && hgt < 40 && (x1b - x0) > 8 && (z1b - z0) > 8 && hash(b.id * 5 + 3) < 0.4) { const rx = (x0 + x1b) / 2 + (hash(b.id) - 0.5) * (x1b - x0) * 0.3, rz = (z0 + z1b) / 2 + (hash(b.id + 9) - 0.5) * (z1b - z0) * 0.3, hs = 1.2 + hash(b.id * 3) * 0.8, hh = 1.6 + hash(b.id * 13) * 1.2, tank = hash(b.id * 17) < 0.5 ? shade(0x3a5a78, 1) : shade(0x9a9890, 1);       // a water tank or a stair head on the roof
       const bx0 = B.p.length / 3; for (const [dx, dz] of [[-hs, -hs], [hs, -hs], [hs, hs], [-hs, hs]]) { B.v(X(rx + dx), y1, Z(rz + dz), 0, 1, 0, tank, 0.06, 0.06); B.v(X(rx + dx), y1 + hh, Z(rz + dz), 0, 1, 0, tank, 0.06, 0.06); }
       for (let k = 0; k < 4; k++) { const k2 = (k + 1) % 4, a = bx0 + k * 2, b2 = bx0 + k2 * 2, mx = (k < 2 ? 0 : 0); void mx; const ex = k === 0 ? 0 : k === 1 ? 1 : k === 2 ? 0 : -1, ez = k === 0 ? -1 : k === 1 ? 0 : k === 2 ? 1 : 0; B.tri(a, b2, b2 + 1, ex, 0, ez); B.tri(a, b2 + 1, a + 1, ex, 0, ez); }
       B.tri(bx0 + 1, bx0 + 3, bx0 + 5, 0, 1, 0); B.tri(bx0 + 1, bx0 + 5, bx0 + 7, 0, 1, 0); }
