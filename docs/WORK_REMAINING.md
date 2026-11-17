@@ -216,3 +216,12 @@ Still open (what is left of 12):
 | D6.4 | Look check done for Blue Line and Laxmi Nagar only (DELHI_TRANSIT 10.1); still to check: other lines' liveries, cars per train, speeds, PSD, railway stations (round signs done) |
 | D6.5 | Ride animation instead of a fade; no sound |
 | D6.6 | Buildings under viaducts (needs the tile renderer to take Metro claims) |
+
+## D8 landmark models, leftovers (17 Nov 2026)
+- [ ] Compare each model with photographs (a person who knows Delhi): proportions, colours (sandstone reds, marble whites), the dome and minaret shapes; the first draft was written without looking at images.
+- [ ] Not built yet: Lodhi Garden tombs, Bharat Mandapam, Birla Mandir, National Museum, National War Memorial, Raj Ghat, Sis Ganj, Fatehpuri, Hauz Khas, Tughlaqabad, markets, stadiums, Dilli Haat, ISKCON; Kartavya Path's canals and the Jaipur Column.
+- [ ] Partly: Sansad (new), Akshardham, Purana Qila, Jantar Mantar (bowls not hollow), Agrasen ki Baoli (the shaft is drawn, not carved), T3 (no piers), station fronts (no platforms: D6b).
+- [ ] Measure on a phone (`?bench=30&city=delhi` at India Gate, Red Fort, Jama Masjid) and at night; shadows from the models (`castShadow` within 450 m) cost; decide a low tier that skips the detail layer.
+- [ ] Drive into each model's walls to check the circles seal (checked only that circles exist at the India Gate plinth); the platforms (Jama Masjid 5 m) are solid for cars; a way up the stairs is not built.
+- [ ] The Hindi on the boards needs a Devanagari system font; draw it from a canvas atlas font if a device lacks one.
+

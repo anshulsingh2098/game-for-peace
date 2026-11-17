@@ -1231,4 +1231,13 @@ test('Delhi Metro plan (D6): every route has a height profile within 4 %, every 
   const e = N.stations.get('RC') || [...N.stations.values()].find(x => x.st.name.en === 'Rajiv Chowk'); assert.ok(e && e.st.per.length === 2, 'Rajiv Chowk serves two lines');
 });
 
+test('Delhi landmark models (D8): every plan id is a landmark with a footprint, the plan files are balanced, and the plan geometry helpers (ray against a polygon, frames) are right', async () => {
+  const dir = new URL('../src/world/city/landmarks/', import.meta.url), { L } = loadPack(new URL('../assets/cities/delhi/', import.meta.url).pathname), lm = new Map(L.map(l => [l.id, l])); let n = 0;
+  for (const f of ['plans_axis.js', 'plans_mughal.js', 'plans_modern.js']) { const src = readFileSync(new URL(f, dir), 'utf8'); assert.equal((src.match(/{/g) || []).length, (src.match(/}/g) || []).length, f + ' has balanced braces');
+    for (const m of src.matchAll(/export const (?:AXIS|MUGHAL|MODERN) = {([^}]*)}/g)) for (const k of m[1].split(',')) { const key = (k.split(':')[0] || '').trim().replace(/['"]/g, ''); if (!key) continue; const id = key.replace(/([A-Z])/g, c => '-' + c.toLowerCase()); const l = lm.get(key) || lm.get(id); n++; if (l) assert.ok(l.footprint && l.footprint.length >= 8 && l.name.en && l.name.hi && l.card && l.card.text, key + ' has a footprint, both names and a card'); } }
+  assert.ok(n >= 19, 'at least 19 landmark plans registered (' + n + ')');
+  const { rayPoly, frame } = await import('../src/world/city/landmarks/geo.js'), sq = [[-10, -5], [10, -5], [10, 5], [-10, 5]], h = rayPoly(sq, 0, 0, 1, 0); assert.ok(Math.abs(h.x - 10) < 1e-9 && Math.abs(h.t - 10) < 1e-9 && Math.abs(h.ex) < 1e-9, 'the ray east hits the east side, whose edge runs along z'); assert.equal(rayPoly(sq, 20, 0, 1, 0), null, 'a ray pointing away hits nothing');
+  const F = frame(3, 4, Math.PI / 2), p = F.loc(10, 2); assert.ok(Math.abs(p[0] - 1) < 1e-9 && Math.abs(p[1] - 14) < 1e-9, 'u runs along the frame angle, v to its left');
+});
+
 console.log(`\n${passed} checks passed`);

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 23:50  D8: Delhi landmark models (22 places built, 8 of them partly)
+Branch: claude/delhi-d8-landmarks-d40d41  Commit: see the PR
+What changed: new `src/world/city/landmarks/` (`index.js` manager, `kit.js` primitives and materials, `geo.js`, `plans.js` registry, `plans_axis.js`, `plans_mughal.js`, `plans_modern.js`). Shared files, smallest changes: `src/world/city/cityworld.js` (create `this.lmx`, call `lmx.update` each frame, pass `skip` to the tile mesher, add `lmx.circles` to `near`, `reposition`, `setNight`, `summary`), `src/world/city/tilemesh.js` (one line: a landmark with a model is not drawn as a plain block), `tools/selftest.mjs` (+1 check, 104), `tools/build_landmarks_doc.mjs` (appends `tools/city_data/delhi_model_status.md`, the status table, to `docs/DELHI_LANDMARKS.md`). The models are procedural (no files, no images), from each landmark's footprint box, yaw and height in `landmarks.json`; collision circles come back through `city.near`; name boards and info cards from the same record; keep-out claims for the extra ground. Measured (hidden pane, medium): at India Gate 411 draw calls and 364k triangles in view, the 22 models together about 150k triangles (largest: Red Fort 36k), a model builds in 0 to 26 ms (the Jama Masjid 90 ms once).
+For the other stream: nothing to run. D7 and D6b: I touched no `streetlife*.js` or `transit*.js`; the railway station fronts (New Delhi, Old Delhi, Nizamuddin) are drawn by `landmarks/plans_modern.js`, platforms and canopies are still yours. A landmark with a plan is skipped by the tile mesher (`ctx.skip`), so its old label and plain block are gone; the model draws its own board.
+Status: open
+
 ## 2026-11-17 23:00  D6 merged with the D5b renderer (PR 62); Metro minimap uses the loaded transit data
 Branch: claude/delhi-d6-metro-2b04f7  Commit: see the PR
 What changed: merged origin/main into the D6 branch; conflicts in cityworld.js, main.js, selftest.mjs, this log resolved (both sides kept, 103 checks). `main.js` now gives `cityMap.setTransit(city.transit.data)` instead of a second fetch. Also since the first D6 entry: underground station interiors (`transit_underground.js`), platform stairs, round signs, railway rakes, walkable surfaces; see `docs/DELHI_TRANSIT.md` section 10.

@@ -43,5 +43,6 @@ for (const t of routes) {
   out.push('', `Total driving between stops: ${km(totDm)} km, about ${mins(totD)} min, plus the time at each stop.`, '');
 }
 out.push('## What is not here yet', '', '- Hotels, malls and other brands (by rule), Gurgaon\'s Cyber City and Noida (separate packs, later), the Buddh International Circuit and the Jewar airport site (outside the Delhi pack).', '- The Okhla Bird Sanctuary and the Delhi Ridge forests are mostly outside or only partly inside the NCT boundary; the Ridge appears as park and forest polygons in the tiles, not as a landmark.', '- Metro stations and lines are in `transit.json` (package D2), bus terminals beyond the three ISBTs in D3.', '- Models: nothing is built (package D8); `model` is a proposed procedural id for the top landmarks, `procedural:<id>` for the rest.', '');
+{ const f = path.join(ROOT, 'tools/city_data/delhi_model_status.md'); try { out.push(readFileSync(f, 'utf8')); } catch (e) { /* no status page */ } }                  // the hand-written D8 status table of the models
 writeFileSync(path.join(ROOT, 'docs/DELHI_LANDMARKS.md'), out.join('\n'));
 console.log('wrote docs/DELHI_LANDMARKS.md', out.length, 'lines');
