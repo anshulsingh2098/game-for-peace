@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 02:00  D6c (first part): platform number boards at the railway stations
+Branch: claude/delhi-d6c-platform-numbers  Commit: see the PR
+What changed: `src/world/city/transit_rail.js` only (number atlas texture, board quads, dispose); `docs/DELHI_TRANSIT.md` section 4 note. Boards are numbered in OSM order, not the real platform numbers. Checked in the browser at New Delhi: 36 boards, 144 triangles, no console errors; not seen by eye (the pane renders black).
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-18 01:00  D6b: stairs with escalators, fare gates, real railway coaches at the Delhi stations, sea moved below the stations
 Branch: claude/delhi-d6b  Commit: see the PR
 What changed: `transit_geo.js` (`flight`, `gates`), `transit_station.js`, `transit_underground.js`, `transit_rail.js` (two real rakes from `train_art.js` and `train_consist.js`), small hook in `cityworld.js` (`cityConfig`: sea at -30 m so it does not cut through the underground stations), `tools/selftest.mjs` (103 checks). Docs: `docs/DELHI_TRANSIT.md` section 11 (cost, what is not done), WORK_REMAINING D6b.*.
