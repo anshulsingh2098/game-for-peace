@@ -36,7 +36,7 @@ export class CityWorld {
     want.sort((a, b) => a[0] - b[0]); for (const [, i, j] of want) { if (this.loading.size >= 3) break; this.fetchTile(i, j); }
     if (this.job) this.stepJob(px, pz); else if (this.ready.length) { this.ready.sort((a, b) => Math.hypot((a.tx + 0.5) * S - px, (a.tz + 0.5) * S - pz) - Math.hypot((b.tx + 0.5) * S - px, (b.tz + 0.5) * S - pz)); const t = this.ready.shift(), k = this.tileKey(t.tx, t.tz); this.loading.delete(k); if (!this.tiles.has(k)) this.startJob(t); }
     this.updateFar(px, pz);
-    for (const [k, t] of this.tiles) { const d = Math.hypot(Math.max(t.tx * S - px, 0, px - (t.tx + 1) * S), Math.max(t.tz * S - pz, 0, pz - (t.tz + 1) * S)); if (d > KEEP) this.drop(k); else for (const m of t.meshes) if (m.userData.near) m.visible = d < LOD_NEAR; }
+    for (const [k, t] of this.tiles) { const d = Math.hypot(Math.max(t.tx * S - px, 0, px - (t.tx + 1) * S), Math.max(t.tz * S - pz, 0, pz - (t.tz + 1) * S)); if (d > KEEP) this.drop(k); else for (const m of t.meshes) { if (m.userData.near) m.visible = d < LOD_NEAR; if (m.userData.bld) m.castShadow = d < 450; } }
   }
   /* the far skyline: tiles beyond the detailed ring, as boxes of their tall and big buildings (skyline.js), one fetched at a time while nothing else is loading */
   updateFar(px, pz) {
@@ -55,7 +55,7 @@ export class CityWorld {
   }
   build(tile, M, out) {
     const S = this.pack.size, k = this.tileKey(tile.tx, tile.tz);
-    const grp = new THREE.Group(), meshes = []; for (const name of ['ground', 'park', 'walk', 'road', 'mark', 'bldg', 'bldgO', 'bldgG', 'shop']) { if (M[name].empty) continue; const m = new THREE.Mesh(M[name].geometry(), this.mats[name]); m.receiveShadow = name === 'ground' || name === 'road'; m.matrixAutoUpdate = false; m.updateMatrix(); m.userData.near = name === 'mark' || name === 'walk'; m.userData.bld = name.startsWith('bldg'); grp.add(m); meshes.push(m); }
+    const grp = new THREE.Group(), meshes = []; for (const name of ['ground', 'park', 'walk', 'road', 'mark', 'bldg', 'bldgO', 'bldgG', 'shop']) { if (M[name].empty) continue; const m = new THREE.Mesh(M[name].geometry(), this.mats[name]); m.receiveShadow = name !== 'sky' && !name.startsWith('bldg') || name === 'bldg'; m.matrixAutoUpdate = false; m.updateMatrix(); m.userData.near = name === 'mark' || name === 'walk'; m.userData.bld = name.startsWith('bldg') || name === 'shop'; m.castShadow = m.userData.bld; grp.add(m); meshes.push(m); }
     grp.position.set(tile.tx * S - this.origin.x, 0, tile.tz * S - this.origin.z); this.group.add(grp);
     /* the registry: the streets and buildings of this tile (one notification of the scenery for the whole tile, not one per claim) */
     const owner = 'city:tile:' + k, L = this.ko.listeners.slice(); this.ko.listeners.length = 0; let bb = [Infinity, Infinity, -Infinity, -Infinity];
