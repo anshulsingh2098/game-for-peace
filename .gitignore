@@ -29,3 +29,6 @@ Desktop.ini
 
 # raw downloaded map data (OpenStreetMap etc.): licences in docs/OPEN_DATA.md; only the small derived files in assets/ are committed
 data/
+
+# the city pack is staged into cloudflare/public by tools/stage_cloudflare.py at deploy time; it already lives in assets/cities (do not commit a second 77 MB copy)
+cloudflare/public/assets/cities/
