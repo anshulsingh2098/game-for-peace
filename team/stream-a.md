@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 14:30  Delhi flicker, the grey rectangles: footways crossing a road are now zebra crossings (added to PR 79)
+Branch: claude/delhi-flicker  Commit: see the PR
+What changed: `tilemesh.js` only: a footway or cycleway is drawn grey (pavement colour, +5.5 cm) where it runs beside streets, and where it crosses a carriageway (checked with `mouthFree` on the street's own samples) it is drawn as white zebra bars across the road (0.9 m pitch, markings layer) instead of a grey slab. The owner's screenshot showed light grey rectangles across the road in front of the car that flickered: they were footway strips lying in the road's own plane (64 such crossings within 500 m of the default start; the nearest 9 m ahead of the start). Seen in the browser: the crossing at the default start. Side-street mouths: the pavement strip of the main street now lies under the side street's road (3 cm under 5 cm) instead of in its plane.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-18 14:00  Delhi flicker: ground layers get real height steps, the city stands 30 cm off the terrain, a 1 m near plane in chase views
 Branch: claude/delhi-flicker  Commit: see the PR
 What changed: `tilemesh.js` (`LIFT`: ground 0, parks and water +1.5 cm, pavement +3 cm, road +5 cm, markings +7 cm; they were all at height 0 and told apart only by polygon offsets, which shimmer with distance), `cityworld.js` (`gy` = engine terrain + 0.3 m: the city's ground and the engine's own flat terrain were one plane), `src/main.js` (shared: `setNear()`, in a city the camera's near plane is 1 m unless the camera is on or in the car (0.3 m): depth precision at 300 m to 1 km is about three times better; the far plane stays 14 km). Measured in the browser by shifting the camera 2 to 5 cm and counting pixels in flat areas that change colour: chase view 1.04 to 0.89 percent, low view 0.97 to 0.57, high view 0.205 to 0.024; what is left is silhouette edges (painted red: only flyover parapets and piers). A still camera while game time advances: 0 percent, so no shadow-map or draw-order flicker with a still view. Not reproduced: the flicker the owner saw while driving (grass and road parts); if it persists it may be shadow edges moving with the car, distance cut-offs of the near-detail meshes (350 to 450 m), or the engine terrain, none tested while moving. To tell them apart: `&shadows=off`, `&noinfill`, `&life=off`.
