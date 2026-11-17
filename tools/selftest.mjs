@@ -1203,4 +1203,14 @@ test('city nav: A* routes on the Delhi graph from a point on a street to a point
   const ban = new Set(r.edges.slice(5, 6)); R.banned = ban; const r2 = R.plan(A.x, A.z, 0, B.x, B.z); assert.ok(r2 && !r2.edges.includes(r.edges[5]), 'a banned street is routed around'); R.banned = new Set();
 });
 
+test('city gates: each pack gate maps to the India road arm that leaves Delhi the same way; the entry gate follows the road you drive in on', async () => {
+  const { mapGates, pickGate } = await import('../src/world/city/gates.js'), { RoadNetwork } = await import('../src/world/network.js'), sk = JSON.parse(readFileSync(new URL('../assets/india/skeleton.json', import.meta.url), 'utf8')), net = new RoadNetwork(sk);
+  const M = JSON.parse(readFileSync(new URL('../assets/cities/delhi/manifest.json', import.meta.url), 'utf8')), gs = mapGates(net, 'delhi', M.gates), by = id => gs.find(g => g.id === id);
+  assert.ok(gs.every(g => g.road && g.toward), 'every gate has an India road'); assert.equal(by('nh48-south-16').toward, 'jaipur', 'the Delhi-Gurugram expressway leaves towards Jaipur'); assert.equal(by('nh44-north-14').toward, 'ambala', 'the Grand Trunk Road north leaves towards Ambala');
+  assert.equal(by('nh709b-north-17').road, 'nh-delhi-dehradun', 'the Dehradun expressway'); assert.equal(by('nh24-east-11').road, 'nh-delhi-lucknow', 'NH24 east is the Lucknow road');
+  const g = pickGate(gs, 'gq-delhi-mumbai', Math.atan2(-Math.cos(by('nh48-south-16').bearing), Math.sin(by('nh48-south-16').bearing)), 'NH48'); assert.ok(g && g.road === 'gq-delhi-mumbai', 'driving in from Jaipur on the GQ enters by a gate of the GQ');
+  const w = net.worldStart('delhi', { road: 'ns', toward: 'ambala' }), w2 = net.worldStart('delhi', { road: 'ns', toward: 'agra' }); assert.ok(w && w.road === 'ns' && w.gA.toward === 'ambala' && w2.gA.toward === 'agra', 'leaving by a gate starts the India world on that road, heading out'); assert.ok(net.worldStart('delhi').road, 'no options: the best road as before');
+  const { sanitiseSaved } = await import('../src/core/saved.js'); assert.equal(sanitiseSaved({ enclave: 'delhi' }).enclave, 'delhi', 'the save keeps the city you were in'); assert.equal(sanitiseSaved({ enclave: '../x' }).enclave, undefined, 'a bad enclave is dropped');
+});
+
 console.log(`\n${passed} checks passed`);
