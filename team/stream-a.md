@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 03:00  Delhi: landmark starts were inside the landmark models; tiles were fetched twice
+Branch: claude/delhi-spawn-and-tile-fixes  Commit: see the PR
+What changed: `src/world/city/pack.js` only. (1) `start(id)` for a landmark now picks the nearest street node OUTSIDE the landmark footprint (`nearestNode(x, z, avoid)`); before, 38 of 63 landmark starts (e.g. `?at=new-delhi-station`, red-fort, connaught-place) were inside the footprint, and with the D8 models the car started inside a wall. Checked in the browser: all 63 starts are outside, New Delhi station start seen from the street. (2) `tile()` shares the raw tile JSON between the near city and the far skyline (a 64-entry cache): 62 fetches of 48 tiles became 48 of 48 at start. Not fixed: `/api/settings` and `/settings.json` answer 404 on the local server (only the Cloudflare worker serves them); the frame cost at the Delhi start (about 430 draw calls, 570k triangles at `q=med`) is unchanged and over the phone budget.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-18 01:00  D6b: stairs with escalators, fare gates, real railway coaches at the Delhi stations, sea moved below the stations
 Branch: claude/delhi-d6b  Commit: see the PR
 What changed: `transit_geo.js` (`flight`, `gates`), `transit_station.js`, `transit_underground.js`, `transit_rail.js` (two real rakes from `train_art.js` and `train_consist.js`), small hook in `cityworld.js` (`cityConfig`: sea at -30 m so it does not cut through the underground stations), `tools/selftest.mjs` (103 checks). Docs: `docs/DELHI_TRANSIT.md` section 11 (cost, what is not done), WORK_REMAINING D6b.*.
