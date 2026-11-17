@@ -52,3 +52,11 @@ Built and seen in an emulated 740 x 340 phone: compact title menu, small station
 
 ## 17 Nov 2026, end of session
 PRs 83 (audit fixes, phone, sound, app icon, tuner, bundle, prefetch, NPCs) and 85 (roads out of Delhi) are merged into `main`; self-test 112. `vehicle/cars-and-gears` (Anshul) is not merged: 14 files and 42 hunks conflict and the two sides carry different driving models; the steps are in `docs/NEXT_PHASES.md`. The owner's session limit ended here; the next session starts from `docs/NEXT_PHASES.md`.
+
+## 18 Nov 2026: product split
+Web Lite plays Delhi only; the India map and more cities are in a downloadable PC and phone app (`docs/LITE_AND_FULL_PLAN.md`, accepted in principle; four details open). New tasks B14 to B16 in `docs/NEXT_PHASES.md`.
+
+## Anshul's side: done and left (18 Nov 2026, from git and the logs)
+**Done by Anshul's Claude:** Rapier driving and menus, radio, locations and landmarks (14 Nov); bridges and tunnels; five-vehicle work, gearbox, steering feel, rebuilt car models, ride height (on his branches, taken out of `main` on the owner's request, A-2026-11-18-15); cartoon NPCs (in `main`, loaded as small `_lod1` models); animated exit from the car with the cartoon player (in `main`); adaptive resolution (not merged: `main` already has the governor); the Lite/Full plan (accepted in principle 18 Nov, `docs/LITE_AND_FULL_PLAN.md`); atmosphere sound with moon, birds and crickets (not in `main`).
+**Left (all in `docs/NEXT_PHASES.md`, marks `[ ]`):** B1 car, engine-sound and atmosphere work as separate PRs for the owner's yes; B2 port the steering and grip feel as tuner settings; B3 retire `vehicle/cars-and-gears`; B4 NPC provenance; B5 review `runtime.js` and `onfoot.js`; B6 the four open Lite details; B7 no-reload switch (Full only); B8 Mumbai draw calls; B9 real-phone benchmark; B10 Delhi router off the main thread; B11 tile cache budget; B12 close old log entries; B13 deploy; B14 `BUILD` switch and Lite boots into Delhi; B15 Lite budgets; B16 Full app plan; Delhi P1 to P8 (P1, P2 street-driving test first), L1 to L6 (L3 started by Rajul's Claude), N17 to N20 (after P8). **Nothing in B1 to B16, P1 to P8, L1, L2, L4 to L6 or N17 to N20 has been started since the assignment** (no commit by Anshul's Claude on `main` or his `vehicle/*` branches after 20:52 on 17 Nov).
+

@@ -34,7 +34,8 @@ A browser driving game (three.js, Rapier physics, floating origin) set in India 
 5. Things to do in Delhi (Phase 6): city tours between landmarks, taxi and delivery missions on the real street graph, Metro ticket game, photo mode.
 **B. Railways (follow-ups)**
 Trains stopping at every red and following their real timetables, boarding a train as fast travel, signals and points everywhere (not only stations), junction track layouts, narrow-gauge hill railways (Kalka-Shimla, Darjeeling, Nilgiri), real train sound recordings (CC0), Mumbai local frequencies from a real timetable.
-**C. The next cities (Phase 7, one at a time; each repeats the Delhi packages D1 to D8)**
+**Product split (owner, 18 Nov 2026):** the browser game is Delhi only (Web Lite); the whole India map and the next cities below are in the downloadable PC and phone app (Full). See `docs/LITE_AND_FULL_PLAN.md` and `docs/DECISIONS.md`.
+**C. The next cities (Phase 7, one at a time; each repeats the Delhi packages D1 to D8; built for the Full app)**
 Gurgaon and Noida (NCR), then Mumbai, Kolkata, Chennai, Bengaluru, Hyderabad, then Agra, Jaipur, Pune, Ahmedabad, Lucknow, Varanasi, Amritsar, Kochi. The owner picks the order.
 **D. The wider world (the open-world plan, `docs/post-n6-open-world-plan.md`)**
 N16 expanded India regions (the nine region worlds become real, other states and terrain looks), N17 emergency services and world events, N18 deeper interiors and commerce (shops you can enter, buying), N19 vehicle depth (Indian vehicles: auto-rickshaws, buses, trucks with truck art, models, damage, customising), N20 long-term persistence and polish (saves, progress, options, accessibility, performance on low-end phones).
