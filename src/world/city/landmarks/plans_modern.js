@@ -56,14 +56,14 @@ const samvidhanSadan = {
   },
 };
 
-/* ---- Connaught Place: the inner circle as a ring of white colonnaded blocks round the central park with its great flag ---- */
+/* ---- Connaught Place (Rajiv Chowk): the landmark's footprint (OSM way 164675825, about 115 m radius) is the Central Park in the middle of the Inner Circle, NOT the colonnaded blocks: those are the ring of ordinary mapped buildings outside the Inner Circle road
+   (drawn white from the identity area `cp`). So this draws only the park: the lawn over the whole footprint, a crossing of paths, the round plaza over Rajiv Chowk station with its glass entrances, and the great flag. (An earlier version drew a white colonnade ring on the park's own outline, over the park.) ---- */
 const connaughtPlace = {
   boardY: () => 70,
   build(k, s) {
-    const P = s.poly, inner = P.map(p => [p[0] * 0.84, p[1] * 0.84]), H = 15; k.polyWall(P, 1.6);
-    k.prism(P, 0, H, WHITE, { hole: inner.slice().reverse(), mat: 'facade' }); k.prism(P.map(p => [p[0] * 1.005, p[1] * 1.005]), H, 1.0, 0xe4e0d2, { hole: inner.slice().reverse().map(p => [p[0] * 0.985, p[1] * 0.985]) });
-    for (let i = 0; i < inner.length; i++) { const a = inner[i], b = inner[(i + 1) % inner.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 4.2)); k.colonnade(a[0], a[1], b[0], b[1], 0, n, 0.5, 6.6, WHITE, { d: true, beamH: 0.7 }); }
-    const pk = inner.map(p => [p[0] * 0.93, p[1] * 0.93]); k.flat(pk, 0x6f9a44, { mat: 'lawn' }); k.disc(0, 0, 9, 0xd8cbb0, { mat: 'path', seg: 24 });
+    const P = s.poly; k.flat(P.map(p => [p[0] * 0.985, p[1] * 0.985]), 0x6f9a44, { mat: 'lawn' });
+    k.disc(0, 0, 14, 0xd8cbb0, { mat: 'path', seg: 28 }); k.disc(0, 0, 9, 0xc9bda2, { mat: 'path', seg: 24, y: 0.03 });
+    for (const a of [0, Math.PI / 2, Math.PI / 4, -Math.PI / 4]) k.box(0, 0.02, 0, Math.min(s.hx, s.hz) * 1.8, 0.04, 2.4, 0xd8cbb0, { ry: a });       // the crossing paths
     k.cyl(0, 0, 0, 0.9, 1.1, 1.6, 0xd8d0c0, { seg: 12 }); k.cyl(0, 1.6, 0, 0.18, 0.3, 60, 0xd8d8d0, { seg: 6, d: false }); k.box(0.1, 55, 0, 0.12, 4, 6.8, 0x138808, { ry: 0 }); k.box(0.1, 58, 0, 0.12, 4, 6.8, 0xf4f4f0, {}); k.box(0.1, 62, 0, 0.12, 4, 6.8, 0xff9933, {});
     k.circle(0, 0, 1.6);
   },
