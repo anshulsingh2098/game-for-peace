@@ -1231,4 +1231,23 @@ test('Delhi Metro plan (D6): every route has a height profile within 4 %, every 
   const e = N.stations.get('RC') || [...N.stations.values()].find(x => x.st.name.en === 'Rajiv Chowk'); assert.ok(e && e.st.per.length === 2, 'Rajiv Chowk serves two lines');
 });
 
+test('Delhi identity (D7): identity.json is valid, zones lie inside the pack, every shop kind has name boards, areas answer', async () => {
+  const I = await import('../src/world/city/identity.js'), J = JSON.parse(readFileSync(new URL('../assets/cities/delhi/identity.json', import.meta.url))), M = JSON.parse(readFileSync(new URL('../assets/cities/delhi/manifest.json', import.meta.url)));
+  const ID = new I.Identity(J, M.origin); assert.equal(J.format, 1);
+  for (const z of ID.zones) { assert.ok(J.areas[z.area], z.id + ' names a known area'); assert.ok(z.x > M.bbox[0] - 2000 && z.x < M.bbox[2] + 2000 && z.z > M.bbox[1] - 2000 && z.z < M.bbox[3] + 2000, z.id + ' is near the pack: ' + Math.round(z.x) + ', ' + Math.round(z.z)); }
+  assert.equal(ID.areaNameAt(ID.zones.find(z => z.id === 'cp').x, ID.zones.find(z => z.id === 'cp').z), 'cp', 'the small zone wins over the big Lutyens circle');
+  assert.equal(ID.areaNameAt(1e7, 1e7), 'default');
+  for (const [name, a] of Object.entries(J.areas)) {
+    const t = Object.entries(a.traffic).filter(([k]) => k !== 'guess').reduce((x, [, v]) => x + v, 0); assert.ok(Math.abs(t - 1) < 0.02, name + ' traffic shares sum to 1: ' + t);
+    for (const k of Object.keys(a.shopKinds || {})) assert.ok(J.signage.shopNames[k] && J.signage.shopNames[k].length, name + ' shop kind ' + k + ' has name boards');
+    for (const sp of a.trees.species) assert.ok(ID.species.has(sp), name + ' tree species ' + sp);
+    for (const k in a.traffic) if (k !== 'guess') assert.ok(['two', 'hatch', 'suv', 'auto', 'erick', 'taxi', 'tempo', 'truck', 'cyclerick', 'bus'].includes(k), 'vehicle kind ' + k);
+  }
+  assert.equal(J.sky.months.length, 12); assert.ok(ID.month(11).smog > ID.month(8).smog, 'November smog is worse than August');
+  assert.ok(J.signage.ads.length <= 16 && J.signage.notices.length <= 5, 'the art atlases hold these lists');
+  const n = J.signage.shopNames; assert.ok(Object.values(n).reduce((x, l) => x + l.length, 0) <= 64, 'the sign atlas has 64 cells');
+  assert.ok(ID.shopKind('oldDelhi', 0.5) && ID.vehicleKind('market', 0.99) && ID.clothing(11).length, 'pickers answer');
+  assert.ok(['neem', 'jamun'].includes('neem'));
+});
+
 console.log(`\n${passed} checks passed`);
