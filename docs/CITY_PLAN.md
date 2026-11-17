@@ -53,6 +53,8 @@ Done when: a Delhi pack builds from a stated extract, passes validation, and its
 3. Streaming: chunks around the player, level of detail, mobile budget.
 Done when: you can drive and walk a recognisable Delhi (Connaught Place ring, Kartavya Path, Ring Road, Mathura Road) without geometry errors and at the target frame rate.
 
+**Status (D5, branch `claude/keen-gauss-3b2756`): the first slice of item 1 is built and looked at in a desktop browser.** `?play&city=delhi` renders streets (pack widths, painted sidewalks, lane marks), flyovers through deck meshes (physics and visuals; a car drives up, along and off), blocks, parks, water, 244k extruded footprints (guessed heights), landmark buildings and the five stations at their footprints (claimed in the keep-out registry), streamed per 1 km tile, five draw calls a tile. Not done: items 2 and 3 of Phase 2 (traffic and people on the graph, level of detail and the phone budget: only desktop counts, 326 to 370 draw calls and 206k to 270k triangles at medium), underpasses, kerbs, the highway-gate transition, facade kits.
+
 ### Phase 3: identity of the city (look, weather, people, cars, plants)
 Per city an identity file, used by every system: colour palette and materials by area (Lutyens bungalow zone, old Delhi, glass towers, urban villages), sky and haze (Delhi winter smog, loo in May, monsoon), time-of-day light, vegetation species and density by area, street furniture and signage (Hindi/English/Urdu/Punjabi, metro signs), people (clothing by season, crowd density by place and time), vehicle mix (Maruti Suzuki, autos, e-rickshaws, DTC buses, delivery bikes), horn and ambient sound.
 Done when: a blind side-by-side of Delhi and Mumbai screenshots is easy to tell apart.

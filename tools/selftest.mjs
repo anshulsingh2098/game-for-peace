@@ -52,6 +52,8 @@ import { enc as packEnc, dec as packDec, encodeGraph, decodeGraph } from './lib/
 import { area as gArea, clipRing, splitLine, joinRings, PolyMask, selfIntersects, simplifyRing } from './lib/geom.mjs';
 import { Router } from './lib/graphroute.mjs';
 import { loadPack } from './check_city.mjs';
+import * as cityPack from '../src/world/city/pack.js';
+import { decodeTile as packDecodeTile, corridorHw, streetConflict, droppedForStreet, streetWidth, CONFLICT_CLASSES } from './lib/packio.mjs';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -1100,6 +1102,32 @@ test('city pack delhi: the street graph routes (one-ways respected) between Conn
   const leg = (a, b) => { const A = at(a), B = at(b); return R.route(R.nearest(A.x, A.z).node, R.nearest(B.x, B.z).node); };
   const ig = leg('centre', 'indiagate'), rf = leg('centre', 'redfort'), igi = leg('centre', 'igi'); assert.ok(ig && ig.metres > 2000 && ig.metres < 6000, 'CP to India Gate by road: ' + (ig && ig.metres)); assert.ok(rf && rf.metres > 4000 && rf.metres < 10000, 'CP to the Red Fort'); assert.ok(igi && igi.metres > 14000 && igi.metres < 30000, 'CP to the airport');
   const back = leg('indiagate', 'centre'); assert.ok(back && Math.abs(back.metres - ig.metres) / ig.metres < 0.6, 'the way back is of similar length');
+});
+
+/* ---- D5: the game's loader of the city pack (src/world/city/pack.js) agrees with the tool's, flyovers have ramps, stations stand clear of streets ---- */
+test('city loader: decode, graph columns and street widths agree with tools/lib/packio.mjs', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), rawG = JSON.parse(readFileSync(dir + 'graph.json', 'utf8')), ref = decodeGraph(rawG), G = cityPack.decodeGraphColumns(rawG);
+  assert.deepEqual(cityPack.dec([10, -5, 3, 4], 100, 200), packDec([10, -5, 3, 4], 100, 200)); assert.equal(G.n, ref.edges.length); assert.equal(G.nodes, ref.nodes.length);
+  for (const i of [0, 1, 1000, 123456, G.n - 1]) { const e = ref.edges[i]; assert.equal(G.a[i], e[1]); assert.equal(G.b[i], e[2]); assert.equal(G.classes[G.cls[i]], e[3]); assert.equal(G.lanes[i], e[4]); assert.equal(G.layer[i], e[8]); assert.ok(Math.abs(G.len[i] - e[7]) < 0.01); }
+  const t = M.tiles.find(x => x.tx === 0 && x.tz === -2), raw = JSON.parse(readFileSync(dir + 'tiles/0_-2.json', 'utf8')); assert.deepEqual(cityPack.decodeTile(raw, M.tileSize), packDecodeTile(raw, M.tileSize)); assert.ok(t);
+  const tile = cityPack.decodeTile(raw, M.tileSize); for (const s of tile.streets.slice(0, 200)) assert.equal(cityPack.pieceWidth(G, s), streetWidth(s, ref.edges[s.id]));
+  assert.ok(Math.abs(cityPack.yawFromBearing(0) - -Math.PI / 2) < 1e-9 && Math.abs(Math.cos(cityPack.yawFromBearing(Math.PI / 2)) - 1) < 1e-9, 'bearing north is -z, east is +x');
+});
+test('city loader: a flyover is on the ground at a ramp end, one level up in the middle, and a ground street is never lifted', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8'))); let n = 0, flat = 0;
+  for (let i = 0; i < G.n && n < 40; i++) if (G.layer[i] === 1 && G.len[i] > 200 && G.up[G.a[i]] < 2 && G.up[G.b[i]] < 2) {
+    const ax = G.xz[G.a[i] * 2], az = G.xz[G.a[i] * 2 + 1], bx = G.xz[G.b[i] * 2], bz = G.xz[G.b[i] * 2 + 1];
+    assert.ok(cityPack.deckHeight(G, i, ax, az) < 0.01 && cityPack.deckHeight(G, i, bx, bz) < 0.01, 'ramp ends on the ground'); assert.ok(Math.abs(cityPack.deckHeight(G, i, (ax + bx) / 2, (az + bz) / 2) - cityPack.LEVEL) < 0.01, 'one level up in the middle'); n++;
+  }
+  assert.ok(n >= 5, 'Delhi has flyovers: ' + n); for (let i = 0; i < G.n && flat < 100; i++) if (G.layer[i] === 0) { assert.equal(cityPack.deckHeight(G, i, G.xz[G.a[i] * 2], G.xz[G.a[i] * 2 + 1]), 0); flat++; }
+});
+test('city pack delhi: the five stations have footprints, stand clear of the streets of their tiles, and claim their ground in the registry', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M, G, L, tile } = loadPack(dir), stations = L.filter(l => ['old-delhi-station', 'new-delhi-station', 'nizamuddin-station', 'anand-vihar-terminal', 'sarai-rohilla-station'].includes(l.id)); assert.equal(stations.length, 5);
+  for (const l of stations) {
+    assert.ok(l.footprint && l.footprint.length >= 8, l.id + ' has a footprint'); const rect = cityPack.footprintRect(l.footprint, l.yaw || 0), ko = new KeepOut(), ko2 = new KeepOut(); ko2.add('city:lm:' + l.id, 'station', rect); assert.ok(ko2.point(rect.x, rect.z, 0, { as: 'scenery' }), 'the registry knows the station');
+    for (let i = Math.floor((rect.x - 150) / 1000); i <= Math.floor((rect.x + 150) / 1000); i++) for (let j = Math.floor((rect.z - 150) / 1000); j <= Math.floor((rect.z + 150) / 1000); j++) { const t = tile(i, j); if (!t) continue; for (const s of t.streets) { const e = G.edges[s.id]; if (e[8] !== 0 || !CONFLICT_CLASSES.has(e[3])) continue; ko.add('s', 'road', { t: 'line', pts: s.pts, hw: corridorHw(e[3], streetWidth(s, e)) }); } }
+    let cx = 0, cz = 0; for (let k = 0; k < l.footprint.length; k += 2) { cx += l.footprint[k]; cz += l.footprint[k + 1]; } const n = l.footprint.length / 2, r = streetConflict(l.footprint, [cx / n, cz / n], ko); assert.ok(!droppedForStreet(r), l.id + ' stands on a street: ' + (r.share * 100).toFixed(0) + ' % of its outline');
+  }
 });
 
 console.log(`\n${passed} checks passed`);
