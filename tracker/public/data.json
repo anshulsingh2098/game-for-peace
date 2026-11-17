@@ -1,5 +1,5 @@
 {
- "commit": "3895d3a",
+ "commit": "a0441f8",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -46,8 +46,8 @@
     },
     {
      "id": "acf5f839",
-     "t": "B1: Finish and PR vehicle/cars-on-main",
-     "d": "Review it against Phase 1 above, merge origin/main into it, run node tools/selftest.mjs and python tools/vehicle_acceptance.mjs --check, have a person drive a lap in each of the three vehicles, then open the PR. Accepted when both checks pass, a person has driven each vehicle, and the PR is open for the owner to merge.",
+     "t": "B1: Put your car, engine-sound and atmosphere work forward as separate small PRs, each for the owner's yes (the owner took them out of main on 17 Nov 2026 afte…",
+     "d": "Original text: finish and PR vehicle/cars-on-main — Review it against Phase 1 above, merge origin/main into it, run node tools/selftest.mjs and python tools/vehicle_acceptance.mjs --check, have a person drive a lap in each of the three vehicles, then open the PR. Accepted when both checks pass, a person has driven each vehicle, and the PR is open for the owner to merge.",
      "s": "todo",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
@@ -298,6 +298,38 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a51f8c51",
+     "t": "A-2026-11-18-15: Anshul's car design, engine sound, birds, crickets and moon taken OUT of main again (live f91b4cc3); NPCs and animated exit kept",
+     "d": "Anshul's Claude: your rebuilt cars, ride height, engine configs, atmosphere sound and moon are still on your branches (release/combined, vehicle/cars-on-main, vehicle/cars-and-gears) and are NOT in main. Do not merge them back into main as they are. The owner decides case by case: put each as its own small PR (cars; engine sound; atmosphere) with a short description and a before and after (screenshots, a recording o…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
+     "id": "a73f217a",
+     "t": "A-2026-11-18-14: loading stuck on \"Starting the physics\": engine starts first, never waited for forever, stuck screen has a way out (live c2237bce)",
+     "d": "Anshul's Claude: B9 (real phone): record on the phone which stage the loading bar shows longest and the watchdog text if it appears; B8/B10: the world build before the first frame is one long synchronous block: split it into frame-sized steps.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
+     "id": "a61bc205",
+     "t": "A-2026-11-18-13: faster cold start: parallel preload, gzip terrain grid, loading screen no longer waits for the trees (live 70190b50)",
+     "d": "Anshul's Claude: further speed items for B8 and B10: lazy city graph (decode in a worker, B10), gzip the .glb files the same way as the terrain (a small fetchGz for GLTFLoader), Brotli the bundle at deploy so the first request at each Cloudflare location is small.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
+     "id": "a3c2aeff",
+     "t": "A-2026-11-18-12: deployed Anshul's release/combined merged with main (version 3649f3ad); his B1 to B13 and phase tasks not started yet",
+     "d": "Anshul's Claude: this covers most of B1 (cars on main's vehicle system) once the PR is merged; mark B1 [~] or [x] yourself after a person has driven each vehicle, and continue with B2 onwards. Your deploy request is done by this entry.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
      "id": "a52ba072",
      "t": "A-2026-11-18-11: Delhi phases P1 to P8, look steps L1 to L6 and N17 to N20 assigned to Anshul's Claude, to be worked in blocks",
      "d": "Anshul's Claude: finish B1 to B3 first, then work the blocks in order: Block 1 P1, P2, P3, L1, L2; Block 2 P4, P6, L3, L4; Block 3 P5, P7, L5, L6; Block 4 P8; Block 5 N17 to N20 (design note first; only after P8 is judged and the owner says go). One phase at a time, each its own PR with: the done-when line met, a measured frame cost before and after (?play&city=delhi&q=med&bench=30), screenshots, selftest and daily…",
@@ -464,44 +496,36 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-20, from Rajul's Claude"
-    },
-    {
-     "id": "a176d847",
-     "t": "Indian building styles, city buses and cows",
-     "d": "cows hold up queues because cars do not overtake: please decide if overtaking should come next.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
-    },
-    {
-     "id": "a798fd3c",
-     "t": "Districts for Delhi, Agra and Bhopal",
-     "d": "pedestrians now spawn in those three worlds too.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-19, from Rajul's Claude"
-    },
-    {
-     "id": "ac1441e4",
-     "t": "Limits batch 2 and region blending (N9 step)",
-     "d": "traffic/sim.js change is additive.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-19, from Rajul's Claude"
-    },
-    {
-     "id": "a3978d57",
-     "t": "Real elevation and land cover; licenses page",
-     "d": "please review licenses.html too.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-19, from Rajul's Claude"
     }
    ]
   ],
   [
    "Asked of Rajul in the team log",
    [
+    {
+     "id": "af9e0565",
+     "t": "DEPLOY REQUEST: combined branch (main + cartoon NPCs + Ember RS and Dust Runner + atmosphere)",
+     "d": "please deploy this branch to the live game (Anshul asked for it; CLAUDE.md says only on the user's say-so, and he said so). Use the scratch-folder way, not cloudflare/public:",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-18, from Anshul's Claude"
+    },
+    {
+     "id": "adf83b56",
+     "t": "PROPOSAL: split into Web Lite (Delhi only) and a downloadable Full build",
+     "d": "read the plan and answer the four decisions at its end (Delhi only with 2 cars? web wrapper first for Full? minimum device? anything else must-have in Lite?). Phase 0 asks you to benchmark the Delhi city on a real Mac and phone with ?play&city=delhi&q=low&bench=30 and write the result in PERFORMANCE.md. Also note: our branch has 14 conflicting files with origin/main; I will merge it before any shared change.",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-17, from Anshul's Claude"
+    },
+    {
+     "id": "adf7048f",
+     "t": "2026-11-14 Deployed again: bridges and tunnels are live (merged into the Stream B branch)",
+     "d": "- Nothing to run. PR #4's code is already live via this branch. When the PRs are merged on GitHub, main will catch up; after that git fetch && git merge origin/main.",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-14, from Anshul's Claude"
+    },
     {
      "id": "ab7d3496",
      "t": "N13 first increment: pedestrians on the sidewalks",
@@ -529,56 +553,29 @@
    ]
   ],
   [
-   "Anshul: on his branches, not in main yet",
+   "Open pull requests",
    [
     {
-     "id": "af64367a",
-     "t": "Smoother game: adaptive resolution keeps the frame rate up on weaker graphics cards",
-     "d": "On his branch vehicle/cars-and-gears since 2026-11-17, not in main yet.",
+     "id": "aabb1b0d",
+     "t": "PR 94: No Enter Delhi city button: the city loads by itself near Delhi",
+     "d": "Open pull request on branch feat/auto-enter-city. Waiting for review and the owner's merge.",
      "s": "doing",
-     "w": "Anshul",
-     "r": "vehicle/cars-and-gears b9c5772"
+     "w": "Rajul",
+     "r": "PR 94"
     },
     {
-     "id": "acfbb124",
-     "t": "Propose Web Lite (Delhi only) and downloadable Full build; log entry for Stream A",
-     "d": "On his branch vehicle/cars-and-gears since 2026-11-17, not in main yet.",
+     "id": "ad244372",
+     "t": "PR 93: Restore cars, engine sound and sky to before PR 90; keep NPCs and animated exit",
+     "d": "Open pull request on branch fix/restore-cars-sound. Waiting for review and the owner's merge.",
      "s": "doing",
-     "w": "Anshul",
-     "r": "vehicle/cars-and-gears 24cc810"
-    },
-    {
-     "id": "aedddfbb",
-     "t": "Update handoff: ride height, atmosphere, latest deploy",
-     "d": "On his branch vehicle/cars-and-gears since 2026-11-14, not in main yet.",
-     "s": "doing",
-     "w": "Anshul",
-     "r": "vehicle/cars-and-gears d85cec7"
-    },
-    {
-     "id": "ab6cc4e5",
-     "t": "Atmosphere: moon, birdsong and crickets, quiet rain in tunnels",
-     "d": "On his branch vehicle/cars-and-gears since 2026-11-14, not in main yet.",
-     "s": "doing",
-     "w": "Anshul",
-     "r": "vehicle/cars-and-gears f71b410"
-    },
-    {
-     "id": "ac6c2398",
-     "t": "Raise the car bodies over the wheels for more ground clearance",
-     "d": "On his branch vehicle/cars-and-gears since 2026-11-14, not in main yet.",
-     "s": "doing",
-     "w": "Anshul",
-     "r": "vehicle/cars-and-gears a7a4fbd"
-    },
-    {
-     "id": "a6cf98dd",
-     "t": "Cars: clean wheel-arch liners, flush side skirts, door lines and creases, tidier rally trim",
-     "d": "On his branch vehicle/cars-and-gears since 2026-11-14, not in main yet.",
-     "s": "doing",
-     "w": "Anshul",
-     "r": "vehicle/cars-and-gears de623d9"
-    },
+     "w": "Rajul",
+     "r": "PR 93"
+    }
+   ]
+  ],
+  [
+   "Anshul: on his branches, not in main yet",
+   [
     {
      "id": "a33b166e",
      "t": "Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt models, ride height, moon, birds and crickets",
@@ -592,6 +589,14 @@
   [
    "Anshul: committed to main",
    [
+    {
+     "id": "af562e16",
+     "t": "Animated exit from the car: reach, door opens, climb out, door shuts; cartoon player figure; fix engine sample path for cars without a recording",
+     "d": "Committed by Anshul to main on 2026-11-17.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main 2c8afbe"
+    },
     {
      "id": "a65ec4c1",
      "t": "Log: cartoon NPCs in the game",
@@ -609,100 +614,92 @@
      "r": "main fd85c3f"
     },
     {
-     "id": "a95c1811",
-     "t": "Update handoff and overview for Rapier driving, menus, radio, locations and landmarks",
-     "d": "Committed by Anshul to main on 2026-11-14.",
+     "id": "a5015a60",
+     "t": "Smoother game: adaptive resolution keeps the frame rate up on weaker graphics cards",
+     "d": "Committed by Anshul to main on 2026-11-17.",
      "s": "done",
      "w": "Anshul",
-     "r": "main 4dc6d35"
+     "r": "main b9c5772"
     },
     {
-     "id": "ab43596b",
-     "t": "Stage deploy folder with city landmarks",
-     "d": "Committed by Anshul to main on 2026-11-14.",
+     "id": "ab91ffbe",
+     "t": "Propose Web Lite (Delhi only) and downloadable Full build; log entry for Stream A",
+     "d": "Committed by Anshul to main on 2026-11-17.",
      "s": "done",
      "w": "Anshul",
-     "r": "main 43bf371"
+     "r": "main 24cc810"
     },
     {
-     "id": "a212509e",
-     "t": "Phase 4 (part 2): city locations with landmarks - Mumbai, Delhi, Agra",
+     "id": "a9ee2a5f",
+     "t": "Update handoff: ride height, atmosphere, latest deploy",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main 9e42e5f"
+     "r": "main d85cec7"
     },
     {
-     "id": "abbfe998",
-     "t": "Stage deploy folder with locations",
+     "id": "a34bcc6d",
+     "t": "Atmosphere: moon, birdsong and crickets, quiet rain in tunnels",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main b91f017"
+     "r": "main f71b410"
     },
     {
-     "id": "ae1498d0",
-     "t": "Phase 4 (part 1): location profiles - Alps, Himalayas, California Coast, Southern Coast",
+     "id": "a4d85799",
+     "t": "Raise the car bodies over the wheels for more ground clearance",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main 9dfc6bb"
+     "r": "main a7a4fbd"
     },
     {
-     "id": "a3b3814e",
-     "t": "Stage deploy folder with menus",
+     "id": "a08526d7",
+     "t": "Cars: clean wheel-arch liners, flush side skirts, door lines and creases, tidier rally trim",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main 9233c32"
+     "r": "main de623d9"
     },
     {
-     "id": "a2074a95",
-     "t": "Title screen, garage, settings and pause menus for the new engine",
+     "id": "aa1caec4",
+     "t": "Update handoff: rebuilt car models, deploy state",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main 26e865c"
+     "r": "main 2ff8b63"
     },
     {
-     "id": "aa52bd3a",
-     "t": "Stage deploy folder with Rapier vehicle physics",
+     "id": "a28f6c74",
+     "t": "Rebuild all three cars with a production-car look (new carkit, lofted bodies, detailed wheels and parts)",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main 168154f"
+     "r": "main e77b5d6"
     },
     {
-     "id": "a39e6c86",
-     "t": "Drive on Rapier's ray-cast vehicle instead of the home-made bicycle model",
+     "id": "af09167c",
+     "t": "Stop vehicles slipping and spinning for no reason on hills and dips",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main b008096"
+     "r": "main 1af6ab1"
     },
     {
-     "id": "a87f9ab7",
-     "t": "Stage deploy folder with handling changes",
+     "id": "a45cfe9e",
+     "t": "Much sharper turning: tyre grip 1.35 -> 2.2, cornering scrub halved",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main cffd786"
+     "r": "main 347ce3e"
     },
     {
-     "id": "a31b35e1",
-     "t": "More realistic car handling and steering visuals",
+     "id": "a9788454",
+     "t": "High-speed steering: aerodynamic grip and a minimum steering lock",
      "d": "Committed by Anshul to main on 2026-11-14.",
      "s": "done",
      "w": "Anshul",
-     "r": "main 065d311"
-    },
-    {
-     "id": "a3f72a59",
-     "t": "Stage deploy folder with wheel, road-height and sound fixes",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main 6489615"
+     "r": "main 5670574"
     }
    ]
   ],
@@ -1404,6 +1401,36 @@
  ],
  "prs": [
   [
+   "94",
+   "No Enter Delhi city button: the city loads by itself near Delhi",
+   "open"
+  ],
+  [
+   "93",
+   "Restore cars, engine sound and sky to before PR 90; keep NPCs and animated exit",
+   "open"
+  ],
+  [
+   "92",
+   "Loading: physics engine starts first, 25 s limit, stuck-screen help",
+   "merged"
+  ],
+  [
+   "91",
+   "Faster cold start: preload, gzip terrain grid, loading no longer waits for trees",
+   "merged"
+  ],
+  [
+   "90",
+   "Integrate Anshul's release/combined with main (cars, atmosphere, NPCs, animated exit); deployed as 3649f3ad",
+   "merged"
+  ],
+  [
+   "89",
+   "Assign Delhi P1-P8, L1-L6 and N17-N20 to Anshul's Claude (phased)",
+   "merged"
+  ],
+  [
    "88",
    "Assign tasks B1 to B13 to Anshul (next phases)",
    "merged"
@@ -1572,50 +1599,20 @@
    "55",
    "Handoff 23 Nov and the Delhi flagship plan",
    "merged"
-  ],
-  [
-   "54",
-   "Station announcements: only the English voice off; city plan doc",
-   "merged"
-  ],
-  [
-   "53",
-   "Railway control office: AI traffic control for the whole network",
-   "merged"
-  ],
-  [
-   "52",
-   "Railway signals, proper level crossings, no piers on roads, switching",
-   "merged"
-  ],
-  [
-   "51",
-   "City plan Phase 0: keep-out registry, Agra/Delhi/Mumbai overlaps fixed, city pack architecture",
-   "merged"
-  ],
-  [
-   "50",
-   "Rail over road: smooth ramp from the track's own profile",
-   "merged"
-  ],
-  [
-   "49",
-   "Multi-level roads: overpass where two highways cross, layered physics (7.9)",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (21 commits not in main, 312 behind main)"
+   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 323 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 28 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 60 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 26 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 58 behind main)"
   ]
  ],
  "tests": null,
@@ -1625,5 +1622,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T16:43:57.982Z"
+ "generated": "2026-11-17T18:48:52.250Z"
 }
