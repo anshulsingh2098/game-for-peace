@@ -194,6 +194,19 @@ let terrain, road, roadMesh, scatter, backdrop, landmarks, traffic = null, roadS
 const farView = () => { const v = config.view, f = v.far, reach = v.rings[v.rings.length - 1].r * v.tile;      // far tiles leave out what the near grid is guaranteed to cover
   return { tile: f.tile, rings: [{ r: f.r, res: f.res }], budgetMs: 2, rebase: Infinity, inner: Math.floor(reach / f.tile) - 1, sink: f.sink }; };
 /* Travel (menu): the nearest city to where you are (in an India drive, to the player; in a region world, to the place it is an impression of) and a new drive from there to another city over the highway network */
+/* where the player is, for the menu's bottom line (and for reports): real latitude and longitude, the game's own x and z, heading, the place, the area, the street and the nearest landmark. In a city the lat and lon come from the pack's origin (the inverse of identity.js projectLL), in the India world from the game frame. */
+function where() {
+  if (!phys) return null; const K = Math.PI / 180, RE = 6371008.8, hdg = Math.round((Math.atan2(Math.cos(phys.yaw), -Math.sin(phys.yaw)) / K + 360) % 360), o = { x: +phys.x.toFixed(1), z: +phys.z.toFixed(1), hdg }; let place = 'game', extra = [];
+  try {
+    if (city) { const O = city.pack.M.origin; o.lat = O.lat - phys.z / (RE * K); o.lon = O.lon + phys.x / (RE * Math.cos(O.lat * K) * K); place = 'Delhi city';
+      const st = city.nearestStreet(phys.x, phys.z); if (st && st.d < 40) { const G = city.pack.G, nm = G.names && G.name ? G.names[G.name[st.id]] : null, nn = nm && (typeof nm === 'string' ? nm : (nm.en || nm.ref || nm.hi || '')); extra.push('street: ' + (nn || ('#' + st.id)) + ' (' + G.classes[G.cls[st.id]] + ')'); }
+      if (city.identity) extra.push('area: ' + city.identity.areaNameAt(phys.x, phys.z)); let bl = null, bd = 300; for (const l of city.pack.landmarks) { const d = Math.hypot(l.x - phys.x, l.z - phys.z); if (d < bd) { bd = d; bl = l; } } if (bl) extra.push('near: ' + (bl.name.en || bl.id) + ' ' + Math.round(bd) + ' m');
+    } else if (indiaRoute) { const gf = gameFrame(phys.x, phys.z), ll = fromGame(gf.x, gf.z); o.lat = ll.lat; o.lon = ll.lon; const c = nearestCity(ll.lat, ll.lon); place = 'India map' + (c ? ', near ' + c.city.name : ''); extra.push('road: ' + indiaRoute.name); }
+    else place = 'place ' + (config.location || 'default');
+  } catch (e) { /* position only */ }
+  o.text = (o.lat !== undefined ? o.lat.toFixed(5) + ' N, ' + o.lon.toFixed(5) + ' E  |  ' : '') + 'x ' + o.x + '  z ' + o.z + '  |  heading ' + hdg + '  |  ' + place + (extra.length ? '  |  ' + extra.join('  |  ') : ''); return o;
+}
+window.__where = where;
 function currentCityId() { try { if (indiaRoute && phys) { const gf = gameFrame(phys.x, phys.z), ll = fromGame(gf.x, gf.z), c = nearestCity(ll.lat, ll.lon); if (c) return c.city.id; } const ins = (locationById(config.location).region || {}).inspiration; if (ins) { const c = nearestCity(ins.lat, ins.lon); if (c) return c.city.id; } } catch (e) { /* fall through */ } return 'delhi'; }
 let roadSet = null; const branches = [];                                                                          // roads that cross or branch off the player's road at junctions (world/roadset.js)
 const gateSub = (net, cityId, roadId) => { try { return net.junctionChoices(cityId).filter(c => c.road !== roadId).slice(0, 2).map(c => (c.nh || c.name) + ' \u2192 ' + c.towardName).join('   '); } catch (e) { return ''; } };       // the roads that cross at a city, for the board over the road before it
@@ -384,7 +397,7 @@ menu = new Menu({
     else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (city) { city.traffic.setMode(v); city.peds.setMode(v); } if (peds) peds.setLevel(v); }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
-  currentCity: () => currentCityId(), travel: id => goWorld(id), navigate: id => setNav(id), indiaMap: () => cityMode && city && phys ? leaveCity() : goWorld(currentCityId(), true), inWorld: () => !!indiaRoute, navTarget: () => navDest,
+  where: () => where(), currentCity: () => currentCityId(), travel: id => goWorld(id), navigate: id => setNav(id), indiaMap: () => cityMode && city && phys ? leaveCity() : goWorld(currentCityId(), true), inWorld: () => !!indiaRoute, navTarget: () => navDest,
   locations: pickerLocations(), setLocation: id => setLocation(id), radio: () => wheel.toggle(), newWorld: () => regenerate(randomSeed()), toRoad: () => backToRoad(),
   onOpen: () => { document.body.dataset.menu = 'open'; controls.locked = true; sound.setEngineOn(false); },
   onClose: () => { delete document.body.dataset.menu; controls.locked = false; camera.fov = 58; if (offset) { camera.clearViewOffset(); offset = 0; lastShot = ''; } sound.setEngineOn(mode === 'drive'); unlockAudio(); if (view.camYaw !== null) view.camYaw = phys ? phys.yaw : null; }
@@ -445,7 +458,9 @@ function governor(now) {
   gov.level += down ? 1 : -1; gov.t = 0; renderer.setPixelRatio(Math.max(0.4, gov.base * gov.mul[gov.level])); resize(); if (shadowsOn) env.setShadows(gov.level >= 3 ? 0 : (quality === 'high' ? 4096 : 2048), quality === 'high' ? 90 : 70);
   if (down && !gov.told) { gov.told = true; toast('Resolution lowered to keep the game smooth (see Settings for a lower quality tier)'); }
 }
-function draw(now) { governor(now); if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
+/* in a city the near plane is 1 m unless the camera is inside or on the car (cockpit, hood, bumper: 0.3 m): depth precision at 300 m to 1 km is three times better, which stops the ground layers shimmering */
+function setNear() { if (!cityMode) return; const nn = phys && Math.hypot(camera.position.x + grid.origin.x - phys.x, camera.position.z + grid.origin.z - phys.z) < 3.4 ? 0.3 : 1.0; if (camera.near !== nn) { camera.near = nn; camera.updateProjectionMatrix(); } }
+function draw(now) { governor(now); setNear(); if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
 /* world sectors (src/world/sectors.js): 512 m squares with their own load state, above the terrain tiles. A sector loads the shared assets its region needs (today the vehicle pack) and releases them when it goes. */
 const focus = { x: 0, z: 0, dx: 1, dz: 0, speed: 0 };
 /* what a sector holds (N8): the region its centre belongs to (nearest of the regions by the real place each is an impression of, with a blend near borders) and the cities of the route inside it.

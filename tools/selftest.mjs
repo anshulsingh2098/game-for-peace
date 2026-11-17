@@ -1261,6 +1261,13 @@ test('Delhi landmark models (D8): every plan id is a landmark with a footprint, 
   const F = frame(3, 4, Math.PI / 2), p = F.loc(10, 2); assert.ok(Math.abs(p[0] - 1) < 1e-9 && Math.abs(p[1] - 14) < 1e-9, 'u runs along the frame angle, v to its left');
 });
 
+test('Delhi map rules and audit: the Connaught Place station block is left out, no landmark is, and no audit class is worse than its baseline', async () => {
+  const { buildingsToSkip } = await import('../src/world/city/rules.js'), { execFileSync } = await import('node:child_process'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
+  const tile = cityPack.decodeTile(JSON.parse(readFileSync(dir + 'tiles/2_-5.json', 'utf8')), M.tileSize), skip = buildingsToSkip(tile, G);
+  assert.ok([...skip].some(b => b.use === 'transit' && (b.height || 0) < 8), 'a transit block on a park is left out'); assert.ok(![...skip].some(b => b.landmark), 'no landmark is left out'); assert.ok(skip.size < tile.buildings.length * 0.2, 'the rules leave out a small share of a tile: ' + skip.size);
+  const now = JSON.parse(execFileSync(process.execPath, [new URL('./audit_city.mjs', import.meta.url).pathname, '--json'], { encoding: 'utf8' })), base = JSON.parse(readFileSync(new URL('./city_audit_baseline.json', import.meta.url), 'utf8')).counts;
+  for (const k of Object.keys(base)) assert.ok(now[k] <= base[k], 'audit class ' + k + ' got worse: ' + now[k] + ' against ' + base[k]);
+});
 test('Delhi identity (D7): identity.json is valid, zones lie inside the pack, every shop kind has name boards, areas answer', async () => {
   const I = await import('../src/world/city/identity.js'), J = JSON.parse(readFileSync(new URL('../assets/cities/delhi/identity.json', import.meta.url))), M = JSON.parse(readFileSync(new URL('../assets/cities/delhi/manifest.json', import.meta.url)));
   const ID = new I.Identity(J, M.origin); assert.equal(J.format, 1);
