@@ -51,6 +51,7 @@ import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
 import { Autodrive } from './input/autodrive.js';
 import { TouchUI } from './input/touchui.js';
+import { registerServiceWorker } from './ui/install.js';
 import { Backdrop } from './env/backdrop.js';
 import { Environment, TIMES, WX } from './env/environment.js';
 import { registerRoot, setOverrides, applyWorld, describe, overrides } from './core/tuning.js';
@@ -79,7 +80,7 @@ import { statsPanel } from './debug/stats.js';
 import { createFx, loadSkyLight } from './fx/pipeline.js';
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], q = new URLSearchParams(location.search);
-const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
+const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500; registerServiceWorker();
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let savedLoc = null, savedCity = null, savedEnclave = null; try { const o = JSON.parse(localStorage.getItem('gfp-next') || '{}'); savedLoc = o.location || null; savedCity = typeof o.city === 'string' ? o.city : null; savedEnclave = typeof o.enclave === 'string' ? o.enclave : null; } catch (e) { /* no saved choice */ }
 /* a real highway to drive (docs/INDIA_MAP_PLAN.md section 9): ?india=<road id>&from=<city>&toward=<city>. The road follows the path of that highway at 1:100 through procedural land; the signs name the next cities. Roads and cities: assets/india/skeleton.json */
@@ -246,7 +247,10 @@ const world = { height: (x, z, y) => { if (city && y !== -Infinity) { const dk =
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
 const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
-for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, unlockAudio, { passive: true });
+for (const ev of ['pointerdown', 'keydown', 'touchstart', 'touchend', 'click']) addEventListener(ev, unlockAudio, { passive: true });          // iPhone Safari only accepts touchend and click as the tap that allows sound
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older browsers */ }          // iPhone: play through the silent switch like a game
+addEventListener('keyup', e => { if (e.code === 'KeyK') sound.horn(false); }); addEventListener('blur', () => sound.horn(false));
+document.addEventListener('visibilitychange', () => { if (document.hidden) sound.horn(false); else if (sound.ctx) sound.resume(); });          // coming back to the tab or the home-screen app: wake the sound again
 document.addEventListener('visibilitychange', () => { if (!sound.ctx) return; if (document.hidden) sound.ctx.suspend(); else sound.resume(); });
 let mode = 'drive', vehicle = Math.max(0, Math.min(VEHICLES.length - 1, S.vehicle | 0)), phys = null, rideYaw = 0, auto = null, input = { steer: 0, throttle: 0, brake: 0 }, buffT = 0, buffCd = 0, boostEase = 0, tunnelAmt = 0;      // mode: 'drive', 'fly' (free camera) or 'ride' (camera glides along the road)
 let menu = null; const frozen = () => !!(menu && menu.open);
@@ -348,7 +352,7 @@ $('#viewBtn').addEventListener('click', cycleCam); $('#reset').addEventListener(
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
 controls.on('auto', cycleAuto); $('#autoBtn').addEventListener('click', cycleAuto); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('interact', useNearby); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
-let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
+let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); touchUI.onHorn = on => { if (on && mode !== 'drive') return; sound.horn(on); }; view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
 $('#time').value = S.time; $('#weather').value = S.weather;
 $('#time').addEventListener('change', e => { S.time = e.target.value; save(); env.setTime(S.time); e.target.blur(); });
 $('#weather').addEventListener('change', e => { S.weather = e.target.value; save(); env.setWeather(S.weather); e.target.blur(); });
@@ -407,6 +411,7 @@ menu = new Menu({
 controls.on('pause', () => menu.escape()); $('#pauseBtn').addEventListener('click', () => menu.show('pause'));
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || frozen()) return;
+  if (e.code === 'KeyK' && !e.repeat && (mode === 'drive' || mode === 'ride')) sound.horn(true);                 // K: the horn, held
   if (e.code === 'KeyR') regenerate(randomSeed());
   if (e.code === 'KeyT') setMode(mode === 'ride' ? 'drive' : 'ride');
   if (e.code === 'KeyG') ground.wireframe = !ground.wireframe;
@@ -513,7 +518,7 @@ function resultCard(def, r, rec) {
   resultBox.style.display = 'block'; clearTimeout(resultT); resultT = setTimeout(() => { resultBox.style.display = 'none'; }, 6000);
 }
 /* India route readout (only with ?india): the next city and the real distance left, and the OpenStreetMap credit the road data needs */
-const routeHud = document.createElement('div'); routeHud.style.cssText = 'position:fixed;left:50%;top:128px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.7);border-radius:999px;padding:5px 14px;font-size:13px;pointer-events:none'; document.body.appendChild(routeHud);
+const routeHud = document.createElement('div'); routeHud.id = 'routehud'; routeHud.style.cssText = 'position:fixed;left:50%;top:128px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.7);border-radius:999px;padding:5px 14px;font-size:13px;pointer-events:none'; document.body.appendChild(routeHud);
 if (indiaRoute) { const cr = document.createElement('div'); cr.textContent = 'Road shapes © OpenStreetMap contributors (ODbL)'; cr.style.cssText = 'position:fixed;right:8px;bottom:4px;font-size:10px;color:#9fb0c8;z-index:5;pointer-events:none'; document.body.appendChild(cr); }
 /* ---------- one India world: every highway is a road, all of them connected at the cities ----------
    A "road record" (rec) wraps one Road of the world: { id (the skeleton road id), road, mesh, te (its traffic), cityAlong (Map city id -> signed distance along its guide: positive ahead of where it was started, negative behind), hint }.
@@ -702,6 +707,7 @@ function update(dt, now) {
     if (tunnelAmt > 0.5) { env.rain.visible = false; env.snowfall.visible = false; } }        // inside a mountain (a tunnel): no rain or snow indoors
   applyLook(canvas, quality !== 'low', env.w.dark); landmarks.update(grid.origin, env.lightsOn); if (roadMesh.district) roadMesh.district.setNight(env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && S.rumble !== 'off' && !frozen()) { const r = rumbleFor({ ...(phys.telemetry ? phys.telemetry() : { speed: Math.abs(phys.u), surface: phys.surface, slip: phys.slip }), impact: phys.impact }, 1); if (r) controls.rumble(r.strong, r.weak, r.ms); }
+  if (sound.ctx) sound.cityBed(cityMode && (mode === 'drive' || mode === 'foot') ? 0.6 : 0, dt);          // the Delhi street bed: far traffic, now and then a horn
   if (mode === 'drive' && phys && sound.ctx) { const tel = phys.telemetry ? phys.telemetry() : { rpm01: null, gear: null }; sound.update({ tunnel: tunnelAmt, v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
     id: VEHICLES[vehicle].id, rpm01: tel.rpm01 === null ? undefined : tel.rpm01, gear: tel.gear === null ? undefined : tel.gear, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view }); }
   if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label; { const tag = $('#modeTag'), lim = phys.M && phys.M.cap > 0 && Math.abs(phys.u) > phys.M.cap * 0.97; if (tag.classList.contains('limit') !== lim) tag.classList.toggle('limit', lim); }

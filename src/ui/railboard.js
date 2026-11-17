@@ -7,8 +7,12 @@ export class StationBoard {
     this.el = document.createElement('div'); this.el.id = 'stationboard'; this.el.style.cssText = 'position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:19;display:none;min-width:260px;max-width:92vw;padding:8px 12px;border-radius:12px;background:rgba(10,14,22,.82);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.45 system-ui,sans-serif;pointer-events:none';
     parent.appendChild(this.el); this.key = '';
   }
+  /* on a phone (a short or narrow screen) the board is a small strip with two trains, out of the way of the controls; on a bigger screen it is as before */
+  small() { try { return matchMedia('(max-height: 460px), (max-width: 640px)').matches; } catch (e) { return false; } }
   show(name, hi, clock, rows) {
-    const key = name + clock + rows.map(r => r.n + r.time).join(); if (key === this.key) return; this.key = key; this.el.style.display = 'block';
+    const sm = this.small(); if (sm) rows = rows.slice(0, 2);
+    this.el.style.top = sm ? '6px' : '64px'; this.el.style.font = sm ? '10px/1.3 system-ui,sans-serif' : '13px/1.45 system-ui,sans-serif'; this.el.style.minWidth = sm ? '0' : '260px'; this.el.style.maxWidth = sm ? '38vw' : '92vw'; this.el.style.padding = sm ? '4px 8px' : '8px 12px'; this.el.style.opacity = sm ? '.9' : '1';
+    const key = (sm ? 's' : 'b') + name + clock + rows.map(r => r.n + r.time).join(); if (key === this.key) return; this.key = key; this.el.style.display = 'block';
     this.el.innerHTML = `<div style="display:flex;justify-content:space-between;gap:14px;font-weight:700"><span>${esc(name)}${hi ? ' · ' + esc(hi) : ''}</span><span style="color:#f2c230">${esc(clock)}</span></div>` + (rows.length ? rows.map(r => `<div style="display:flex;gap:8px"><span style="color:#9cc4ff;min-width:46px">${esc(r.time)}</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.n)} ${esc(r.name)}</span><span style="opacity:.8">${esc(r.to)}</span></div>`).join('') : '<div style="opacity:.7">No trains listed for this station</div>');
   }
   hide() { if (this.key !== '') { this.key = ''; this.el.style.display = 'none'; } }

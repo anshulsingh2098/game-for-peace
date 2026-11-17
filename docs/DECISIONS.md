@@ -2,6 +2,8 @@
 
 Newest first. A decision here is the owner's word; an agent follows it and does not ask again. To change one, the owner says so and the line is edited with a date.
 
+## 17 Nov 2026 (last): phone check and optimisation, sound, Add to Home Screen (full screen, landscape), tuner storage and password, handoff, plan and tracker updated. The owner reported the phone screenshot (board covering the controls); fixed. The tuner password was generated and given to the owner in chat; it is not in the repo.
+
 ## 17 Nov 2026 (later still): deploys go to Rajul's Cloudflare account (paid services); Anshul's account keeps the older original versions (`.workers.dev` and `/next`). First deploy done: https://game-for-peace.mailrajulsingh-in.workers.dev, version `17594f28`. Rule and method are in `CLAUDE.md`.
 
 ## 17 Nov 2026 (later): R14 yes, flyovers and underpasses carry ambient city traffic. Built as v4 in `src/world/city/citytraffic.js`.

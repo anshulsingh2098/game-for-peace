@@ -12,7 +12,7 @@ Ledger as of commit `774a667` on `main`, plus branch `claude/audit-fixes` (17 No
 | N3 world polish | yes | partly | partly | no | no | no |
 | N4 performance | yes | bench only | desktop | no | no | no |
 | N5 features | yes | partly | yes | no | no | no |
-| N6 switch-over | yes (`index.html` is the new engine) | yes | yes | no | no | yes, on Rajul's account since 17 Nov 2026 (Anshul's account still has the old build) |
+| N6 switch-over | yes (`index.html` is the new engine; installable app, `manifest.webmanifest`) | yes | yes (desktop and an emulated phone) | no | no | yes, on Rajul's account since 17 Nov 2026 (Anshul's account still has the old build) |
 | N7 runtime | yes | yes (audit R05 and R16 fixed: handle domains, dropped-time count) | n/a | n/a | no | no |
 | N8 streaming | yes | yes | yes | no | no | no |
 | N9 regions | yes | yes | yes | n/a | no | no |
@@ -46,3 +46,6 @@ Known gaps after the fixes: nothing has been tried on a rendered page this sessi
 
 ## Acceptance protocol (AP-04)
 For a build to be called accepted, a person records: the commit hash, the device or desktop and its visible-window frame rate (not a hidden tab), the quality tier, the route or location, the duration, and the result, in the team log. `CHECKLIST.md` sections 3 to 5 are the manual part. The city acceptance card is `docs/CITY_PLAN.md`.
+
+## Phone, sound, app, tuner (17 Nov 2026)
+Built and seen in an emulated 740 x 340 phone: compact title menu, small station board, map under the speed readout, Horn button, Add to Home Screen button. Built, not heard or tried on a real phone: sound unlock on iPhone, the horn, the Delhi street bed, the home-screen icon opening full screen. Tuner storage and password: set on the owner's account (live API answers 200 and rejects a wrong password with 401). Mumbai at the low tier: about 800 to 1000 draw calls (the California baseline in `PERFORMANCE.md` is 183): the next cost cut is merging or culling landmarks and rails.

@@ -6,7 +6,7 @@ longer part of the site are removed, so the folder always mirrors the project.""
 import os, sys, shutil, filecmp
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FILES = ['index.html', 'next.html', 'classic.html', 'tuner.html', 'licenses.html', 'india_map.html', 'game.js', 'audio.js']                      # single files, if present
+FILES = ['manifest.webmanifest', 'sw.js', 'index.html', 'next.html', 'classic.html', 'tuner.html', 'licenses.html', 'india_map.html', 'game.js', 'audio.js']                      # single files, if present
 TREES = {                                                                      # folder -> allowed extensions
     'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', '', '.wasm'}, 'assets': {'.glb', '.png', '.jpg', '.webp', '.hdr', '.mp3', '.wav', '.json', '.bin', '.txt'},   # .bin: assets/india/terrain.bin; .txt: data attribution files; .wasm: the vendored decoders (audit R01)
     'music': {'.json', '.mp3', '.m4a', '.ogg'},

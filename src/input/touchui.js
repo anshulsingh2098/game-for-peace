@@ -25,6 +25,7 @@ body:not([data-mode=drive]) #tui, body[data-menu] #tui { display: none !importan
 #tui #tHandle { position: absolute; width: 60px; height: 60px; left: calc(50% - 30px); bottom: 20px; transition: transform .12s ease-out; }
 #tui #tReset { right: max(14px, env(safe-area-inset-right)); bottom: 150px; width: 64px; height: 64px; }
 #tui #tCam { right: calc(max(14px, env(safe-area-inset-right)) + 76px); bottom: 150px; width: 52px; height: 52px; }
+#tui #tHorn { right: calc(max(14px, env(safe-area-inset-right)) + 204px); bottom: 150px; width: 52px; height: 52px; }
 #tui #tAuto { right: calc(max(14px, env(safe-area-inset-right)) + 140px); bottom: 150px; width: 52px; height: 52px; }
 body.touch #buff { display: none !important; }
 `;
@@ -67,6 +68,7 @@ export class TouchUI {
 
     /* buttons on the right */
     const tap = (id, label, action) => { const b = el('div', id, 't circle', label); b.addEventListener('pointerdown', e => { e.preventDefault(); controls.fire(action); }); return b; };
+    { const h = el('div', 'tHorn', 't circle', 'Horn'), off = e => { h.classList.remove('down'); if (this.onHorn) this.onHorn(false); }; h.addEventListener('pointerdown', e => { e.preventDefault(); h.classList.add('down'); if (this.onHorn) this.onHorn(true); }); for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) h.addEventListener(ev, off); }
     tap('tReset', 'Reset', 'reset'); tap('tCam', 'Cam', 'cam'); this.auto = tap('tAuto', 'Auto', 'auto');
   }
   setAuto(on) { this.auto.classList.toggle('on', on); }
