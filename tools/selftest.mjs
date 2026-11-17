@@ -46,6 +46,12 @@ import { KeepOut, RANK, railClaim, stationClaim, registerRail, roadProvider } fr
 import { crossingAt } from '../src/world/navgraph.js';
 import { PedSim, LEVELS, MAX_PEDS, SPAWN_MIN } from '../src/pedestrians/sim.js';
 import { OnFoot, FOOT, chooseExit, Interactions } from '../src/player/onfoot.js';
+import { validatePack, BUDGET as CITY_BUDGET } from './validate_city.mjs';
+import { BUILDER_VERSION, PACK_FORMAT } from './build_city.mjs';
+import { enc as packEnc, dec as packDec, encodeGraph, decodeGraph } from './lib/packio.mjs';
+import { area as gArea, clipRing, splitLine, joinRings, PolyMask, selfIntersects, simplifyRing } from './lib/geom.mjs';
+import { Router } from './lib/graphroute.mjs';
+import { loadPack } from './check_city.mjs';
 import { GameRuntime, FixedStepper, EventBus, Registry, Pool, EVENTS, handleSlot, handleType, handleGen } from '../src/core/runtime.js';
 
 let passed = 0;
@@ -1068,6 +1074,32 @@ test('keepout + district: no building stands on a railway, a station, a landmark
 });
 test('keepout: scatter respects claims (terrain.addZone registers a landmark; a plot claim removes the trees under it)', () => {
   const cfg = locationConfig('mumbai', 'peace'), t = createTerrain(cfg); t.addZone(100, 100, 30, 5, 10); assert.ok(t.keepout.point(110, 100, 0, { as: 'scenery' }) && !t.keepout.point(160, 100, 0, { as: 'scenery' }), 'a levelled landmark zone is a claim'); assert.ok(t.keepout.point(100, 100, 0, { as: 'landmark' }) && !t.keepout.point(100, 100, 0, { as: 'station' }));
+});
+
+/* ---- city pipeline (CITY_PLAN Phase 1, D1 and D4): tools/build_city.mjs, tools/validate_city.mjs, the shipped Delhi pack ---- */
+test('city pipeline: coordinate encoding round-trips, polygons clip and join, a mask answers point-in-polygon, graph columns round-trip', () => {
+  const p = [10.1, -20.2, 15.5, -20.2, 15.5, -9.9, 10.1, -9.9], d = packEnc(p, 0, 0); assert.deepEqual(packDec(d, 0, 0), p, 'delta decimetres are exact at 0.1 m'); assert.deepEqual(packDec(packEnc(p, 1000, -3000), 1000, -3000).map(v => Math.round(v * 10)), p.map(v => Math.round(v * 10)), 'tile origin offsets cancel');
+  const sq = [0, 0, 10, 0, 10, 10, 0, 10]; assert.equal(gArea(sq), 100, 'ccw square has positive area'); assert.equal(Math.abs(gArea(clipRing(sq, 5, 0, 20, 20))), 50, 'clip keeps the part inside'); assert.equal(clipRing(sq, 20, 20, 30, 30).length, 0, 'clip to a far rectangle is empty');
+  const pieces = splitLine([-5, 5, 25, 5], 10); assert.deepEqual(pieces.map(x => x.tx), [-1, 0, 1, 2], 'a line is cut at tile edges'); assert.ok(pieces[0].clipB && pieces[1].clipA && !pieces[0].clipA && !pieces[3].clipB, 'clip flags mark continuation');
+  const ring = joinRings([{ pts: [0, 0, 10, 0, 10, 10], a: 'a', b: 'c' }, { pts: [10, 10, 0, 10, 0, 0], a: 'c', b: 'a' }]); assert.equal(ring.length, 1, 'two open ways make one ring'); assert.equal(Math.abs(gArea(ring[0])), 100, 'joined ring');
+  const m = new PolyMask([sq], 3); assert.ok(m.has(5, 5) && !m.has(11, 5) && !m.has(-1, -1), 'mask'); assert.ok(selfIntersects([0, 0, 10, 10, 10, 0, 0, 10]) && !selfIntersects(sq), 'bow-tie crosses, square does not'); assert.ok(simplifyRing([0, 0, 5, 0.01, 10, 0, 10, 10, 0, 10], 0.1).length === 8, 'simplify drops a collinear vertex');
+  const g = { format: 1, nodes: [[0, 0, 0, 0], [1, 10.5, -3.2, 1], [2, 20, 0, 0]], edges: [[0, 0, 1, 'primary', 2, 0, 50, 11, 0, 0, 0], [1, 1, 2, 'residential', 1, 1, 20, 12.3, 1, 8, 0]], names: [{ en: '', hi: '', ref: '' }], restrictions: [] }; assert.deepEqual(decodeGraph(encodeGraph(g)), g, 'graph columns round-trip');
+});
+test('city pack delhi: the shipped pack is current and valid (builder version, file hashes, schema, geometry, budget); tiles load into a KeepOut', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname; const r = validatePack(dir, { quick: true });
+  assert.deepEqual(r.errors, [], 'validate_city reports no error (rebuild with node tools/build_city.mjs delhi --extract data/raw/delhi/<file>.osm.pbf if the tool or the data changed)');
+  const M = r.manifest; assert.equal(M.format, PACK_FORMAT); assert.equal(M.builder.version, BUILDER_VERSION, 'the pack was built by this version of the tool'); assert.equal(M.licence, 'ODbL 1.0'); assert.ok(M.counts.gzBytes <= CITY_BUDGET.maxGzBytes, 'pack within the 20 MB gzip budget (' + (M.counts.gzBytes / 1e6).toFixed(1) + ' MB)');
+  assert.ok(M.counts.buildings > 100000 && M.counts.edges > 100000 && M.counts.landmarks >= 40, 'Delhi has its streets, buildings and landmarks'); assert.ok(M.gates.some(g => g.india === 'NH44') && M.gates.some(g => g.india === 'NH48'), 'gates for the national highways');
+  const { G, L, tile } = loadPack(dir), c = M.spawns.find(s => s.id === 'centre'), ko = new KeepOut(); let nb = 0;
+  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) { const t = tile(Math.floor(c.x / M.tileSize) + dx, Math.floor(c.z / M.tileSize) + dz); assert.ok(t, 'the tiles around Connaught Place exist'); nb += t.buildings.length; for (const s of t.streets) ko.add('s' + s.id, 'road', { t: 'line', pts: s.pts, hw: 3 }, { layer: G.edges[s.id][8] }); for (const b of t.buildings.slice(0, 200)) { assert.ok(b.ring.length >= 6 && gArea(b.ring) > 0, 'footprints are ccw rings'); } }
+  assert.ok(nb > 500 && ko.size > 500, 'the centre is dense: ' + nb + ' buildings'); assert.ok(ko.point(c.x, c.z, 15, { as: 'building' }), 'the centre spawn is on a street');
+  const ids = new Set(L.map(l => l.id)); for (const need of ['india-gate', 'red-fort', 'qutub-minar', 'humayuns-tomb', 'lotus-temple', 'jama-masjid', 'rashtrapati-bhavan', 'akshardham']) assert.ok(ids.has(need), 'landmark ' + need); assert.ok(L.every(l => l.card && l.card.text && l.name.hi && l.look), 'every landmark has a card, a Hindi name and a look note');
+});
+test('city pack delhi: the street graph routes (one-ways respected) between Connaught Place, India Gate, the Red Fort and the airport', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M, G } = loadPack(dir), R = new Router(G), at = id => M.spawns.find(s => s.id === id);
+  const leg = (a, b) => { const A = at(a), B = at(b); return R.route(R.nearest(A.x, A.z).node, R.nearest(B.x, B.z).node); };
+  const ig = leg('centre', 'indiagate'), rf = leg('centre', 'redfort'), igi = leg('centre', 'igi'); assert.ok(ig && ig.metres > 2000 && ig.metres < 6000, 'CP to India Gate by road: ' + (ig && ig.metres)); assert.ok(rf && rf.metres > 4000 && rf.metres < 10000, 'CP to the Red Fort'); assert.ok(igi && igi.metres > 14000 && igi.metres < 30000, 'CP to the airport');
+  const back = leg('indiagate', 'centre'); assert.ok(back && Math.abs(back.metres - ig.metres) / ig.metres < 0.6, 'the way back is of similar length');
 });
 
 console.log(`\n${passed} checks passed`);

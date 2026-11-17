@@ -103,3 +103,9 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - At Mumbai or Jhansi station: does the departure board show real trains, do you hear the train (clatter, horn) and an announcement in English then Hindi (it needs a speech voice on the device; check Hindi), do rails cut through hills and ride embankments, is there overhead wire
 - With the 10 audio.com clips in assets/audio/trains/: station ambience at a station, a pass-by sound as a train passes close, squeal as one brakes nearby (these files are not in git: copy them by hand to test)
 - Look at a train standing at a station: yellow boards with its real name, number and Hindi route, barred sleeper windows, S/B coach plates, a loco with its number; goods trains with wagons and a brake van; busy lines with several tracks and wire over each
+
+## 9. City packs (Delhi, from the D1 session)
+- [ ] `node tools/validate_city.mjs` prints "pack is valid" and `node tools/check_city.mjs` prints "check passed" (the self-test does both in short form).
+- [ ] Plot a piece of the pack (`python tools/plot_city.py -1500 -6000 5000 1800 4 delhi_centre.png`, needs Pillow) and look at it and compare with a map you know: Connaught Place rings, the avenue from Rashtrapati Bhavan to India Gate, the Yamuna, the Red Fort, the Ring Road. Say what is missing: Old Delhi houses, a colony, a flyover that has no tag.
+- [ ] Read three landmark cards and look notes (`docs/DELHI_LANDMARKS.md`): is any fact or colour wrong? Fix them in `tools/city_data/delhi_landmarks_src.json` and rebuild.
+- [ ] After any rebuild: the pack stays under 20 MB gzip (the validator says so) and only one commit holds the tile files.
