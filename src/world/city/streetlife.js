@@ -27,15 +27,25 @@ function box(m, cx, y0, cz, sx, sy, sz, ux, uz, c, cTop) {
   quad(m, P(1, 1, y0), P(1, -1, y0), P(1, -1, y1), P(1, 1, y1), ux, 0, uz, c); quad(m, P(-1, -1, y0), P(-1, 1, y0), P(-1, 1, y1), P(-1, -1, y1), -ux, 0, -uz, c);
   quad(m, P(-1, -1, y1), P(1, -1, y1), P(1, 1, y1), P(-1, 1, y1), 0, 1, 0, cTop || c);
 }
-/* a tree: a trunk box and a lathed crown from a profile (sides of 6) */
-function tree(m, x, y0, z, sp, k, bloom) {
-  const h = sp.h * (0.8 + 0.4 * k), r = sp.r * (0.8 + 0.4 * ((k * 7) % 1)), th = h * 0.42, prof = PROFILE[sp.shape] || PROFILE.round, base = C(bloom && sp.bloom ? sp.bloom : sp.canopy), N = 6;
-  if (sp.id !== 'bougainvillea') box(m, x, y0, z, 0.3, th + 0.6, 0.3, 1, 0, C(PALE.wood));
-  const y1 = y0 + th * (sp.id === 'bougainvillea' ? 0 : 1), ch = h - th * (sp.id === 'bougainvillea' ? 0 : 1);
-  for (let i = 0; i + 1 < prof.length; i++) { const [h0, r0] = prof[i], [h1, r1] = prof[i + 1]; if (r0 === 0 && r1 === 0) continue; const dy = (h1 - h0) * ch, dr = (r1 - r0) * r, ln = Math.hypot(dy, dr) || 1, f0 = 0.72 + 0.28 * h0, f1 = 0.72 + 0.28 * h1;
-    for (let a = 0; a < N; a++) { const a0 = a / N * 6.2832, a1 = (a + 1) / N * 6.2832, am = (a0 + a1) / 2, nx = Math.cos(am) * dy / ln, nz = Math.sin(am) * dy / ln, ny = -dr / ln, c0 = base.clone().multiplyScalar(f0 * (0.9 + 0.2 * ((k * 13 + a) % 1))), c1 = base.clone().multiplyScalar(f1 * (0.9 + 0.2 * ((k * 13 + a) % 1)));
-      const v0 = m.v(x + Math.cos(a0) * r0 * r, y1 + h0 * ch, z + Math.sin(a0) * r0 * r, nx, ny, nz, c0), v1 = m.v(x + Math.cos(a1) * r0 * r, y1 + h0 * ch, z + Math.sin(a1) * r0 * r, nx, ny, nz, c0), v2 = m.v(x + Math.cos(a1) * r1 * r, y1 + h1 * ch, z + Math.sin(a1) * r1 * r, nx, ny, nz, c1), v3 = m.v(x + Math.cos(a0) * r1 * r, y1 + h1 * ch, z + Math.sin(a0) * r1 * r, nx, ny, nz, c1);
-      if (r0 > 0) m.tri(v0, v1, v2, nx, ny, nz); if (r1 > 0) m.tri(v0, v2, v3, nx, ny, nz); } }
+/* a tree: a trunk and a broad crown of one or two lathed blobs (neem, peepal and jamun in Delhi are 12 to 25 m with wide spreading crowns, so the sizes of identity.json are scaled up, and the crown has a second blob to the side so it is not one ball); `big` scales a whole tree (scrub and forest trees are smaller) */
+/* the crown shapes of the main Delhi trees as extra blobs: [dx in crown radii, dy in crown heights, dz, radius scale, height scale]: neem a wide dome of clumps, peepal very broad and low, jamun tall and dense, kikar a flat umbrella */
+const BLOBS = { neem: { main: 1, more: [[0.55, 0.12, 0.2, 0.62, 0.7], [-0.5, 0.1, -0.3, 0.6, 0.68], [0.1, 0.32, -0.5, 0.5, 0.6]] }, peepal: { main: 1.05, more: [[0.65, 0.05, 0.1, 0.7, 0.6], [-0.65, 0.05, 0.1, 0.7, 0.6], [0.0, 0.25, 0.55, 0.55, 0.5]] }, jamun: { main: 0.9, more: [[0.3, 0.3, 0.15, 0.55, 0.7], [-0.25, 0.45, -0.2, 0.45, 0.5]] }, gulmohar: { main: 1, more: [[0.6, 0.05, 0.1, 0.65, 0.5], [-0.6, 0.05, -0.1, 0.65, 0.5]] }, amaltas: { main: 0.9, more: [[0.5, 0.1, 0.2, 0.55, 0.6]] } };
+const WHITE_C = new THREE.Color(0xffffff);
+function tree(m, x, y0, z, sp, k, bloom, big = 1, cards = null) {
+  const S = 1.4 * big, bu = sp.id === 'bougainvillea', h = sp.h * S * (0.8 + 0.4 * k), r = sp.r * S * (0.8 + 0.4 * ((k * 7) % 1)), th = bu ? 0 : h * 0.4, prof = PROFILE[sp.shape] || PROFILE.round, base = C(bloom && sp.bloom ? sp.bloom : sp.canopy).clone().multiplyScalar(0.85);
+  if (cards && !bu) {          // leaf cards: a real-scan tree picture on three crossed planes (6 triangles, not 160), tinted by species; cone trees (ashoka) use the fir card
+    const cone = sp.shape === 'cone', t = base.clone().lerp(WHITE_C, 0.45), W = cone ? 2 * r * 0.95 * (1.405 / 0.861) : 2 * r * 1.05 * (4.544 / 4.208), H = cone ? h * (1.405 / 1.301) : h * (4.544 / 3.407), off = cone ? 0.04 * H : 0.13 * H;
+    (cone ? cards.b : cards.a).push(x, y0 - off, z, W, H, t.r, t.g, t.b, k * 6.2832); return;
+  }
+  if (!bu) { const tw = 0.32 + 0.012 * h; box(m, x, y0, z, tw, th + 0.8, tw, 1, 0, C(PALE.wood)); }
+  const y1 = y0 + th, ch = h - th;
+  const crown = (cx, cz, yb, chh, rr, kk, N, fc) => { const ra = i => 0.84 + 0.32 * ((kk * 13 + (i % N) * 0.618) % 1);
+    for (let i = 0; i + 1 < prof.length; i++) { const [h0, r0] = prof[i], [h1, r1] = prof[i + 1]; if (r0 === 0 && r1 === 0) continue; const dy = (h1 - h0) * chh, dr = (r1 - r0) * rr, ln = Math.hypot(dy, dr) || 1, f0 = (0.72 + 0.28 * h0) * fc, f1 = (0.72 + 0.28 * h1) * fc;
+      for (let a = 0; a < N; a++) { const ra0 = ra(a), ra1 = ra(a + 1), a0 = a / N * 6.2832, a1 = (a + 1) / N * 6.2832, am = (a0 + a1) / 2, nx = Math.cos(am) * dy / ln, nz = Math.sin(am) * dy / ln, ny = -dr / ln, vr = 0.9 + 0.2 * ((kk * 13 + a) % 1), c0 = base.clone().multiplyScalar(f0 * vr), c1 = base.clone().multiplyScalar(f1 * vr);
+        const v0 = m.v(cx + Math.cos(a0) * r0 * rr * ra0, yb + h0 * chh, cz + Math.sin(a0) * r0 * rr * ra0, Math.cos(a0) * dy / ln, ny, Math.sin(a0) * dy / ln, c0), v1 = m.v(cx + Math.cos(a1) * r0 * rr * ra1, yb + h0 * chh, cz + Math.sin(a1) * r0 * rr * ra1, Math.cos(a1) * dy / ln, ny, Math.sin(a1) * dy / ln, c0), v2 = m.v(cx + Math.cos(a1) * r1 * rr * ra1, yb + h1 * chh, cz + Math.sin(a1) * r1 * rr * ra1, Math.cos(a1) * dy / ln, ny, Math.sin(a1) * dy / ln, c1), v3 = m.v(cx + Math.cos(a0) * r1 * rr * ra0, yb + h1 * chh, cz + Math.sin(a0) * r1 * rr * ra0, Math.cos(a0) * dy / ln, ny, Math.sin(a0) * dy / ln, c1);
+        if (r0 > 0) m.tri(v0, v1, v2, nx, ny, nz); if (r1 > 0) m.tri(v0, v2, v3, nx, ny, nz); } } };
+  crown(x, z, y1, ch, r * (BLOBS[sp.id] ? BLOBS[sp.id].main : 1), k, 8, 1);
+  if (!bu && sp.shape !== 'cone') { const t = k * 6.2832, B = BLOBS[sp.id] ? BLOBS[sp.id].more : [[Math.cos(t) * 0.5, 0.1, Math.sin(t) * 0.5, 0.62, 0.72]]; B.forEach((b, q) => crown(x + b[0] * r * Math.cos(t) - b[2] * r * Math.sin(t), z + b[0] * r * Math.sin(t) + b[2] * r * Math.cos(t), y1 + ch * b[1], ch * b[4], r * b[3], k + 0.37 * (q + 1), 6, 0.86 + 0.26 * ((k * 5 + q * 0.3) % 1))); }
 }
 /* a wire from (x0, y0, z0) to (x1, y1, z1) sagging by `sag`, as a vertical and a flat ribbon of 4 pieces */
 function wire(m, x0, y0, z0, x1, y1, z1, sag, c) {
@@ -48,6 +58,7 @@ function inPoly(r, x, z) { let ins = false; const n = r.length / 2; for (let i =
 export function* buildStreetLife(tile, ctx, out) {
   const { G, gy, size, identity: ID, art, Mesher } = ctx, ox = tile.tx * size, oz = tile.tz * size, seed = tile.tx * 7919 + tile.tz * 104729, rnd = (i, k = 0) => hash(seed + i * 31 + k * 977);
   const M = { sign: new Mesher(), ad: new Mesher(), ban: new Mesher(), prop: new Mesher() }, st = { signs: 0, stacked: 0, awnings: 0, stalls: 0, kiosks: 0, hoardings: 0, shelters: 0, poles: 0, trees: 0, spans: 0 };
+  const CARDS = ctx.cards === false ? null : { a: [], b: [] }; out.cards = CARDS; const plant = (lx, y0, lz, spc, kk, bloom, big) => tree(M.prop, lx, y0, lz, spc, kk, bloom, big, CARDS);
   /* local frame in, circles absolute out */
   const L = (x, z) => [x - ox, z - oz], circle = (x, z, r) => out.circles.push(x, z, r), WHITE = C(0xffffff);
   /* the street pieces of the tile (ground level), with a grid of their segments for "where is the nearest street" */
@@ -111,7 +122,7 @@ export function* buildStreetLife(tile, ctx, out) {
       const sp = veg.spacing / dens, avenue = A.trees.avenue, one = A.trees.species[Math.floor(rnd(pc.id, 3) * A.trees.species.length)], bloomOn = sp0 => sp0.bloomMonths && sp0.bloomMonths.includes(ctx.month);
       for (const sideSign of [1, -1]) { if (!avenue && rnd(pc.id, 20 + sideSign) > 0.6) continue; for (let s = 4 + rnd(pc.id, 9 + sideSign) * sp; s < pc.len - 4 && st.trees < cap.trees; s += sp * (0.85 + 0.3 * rnd(pc.id, (s | 0) + 11))) {
         const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 2.0 : 1.2), px = o.x + -o.tz * off * sideSign, pz = o.z + o.tx * off * sideSign; if (insideBuilding(px, pz, 1.6) || inRoad(px, pz, 0.6)) continue;
-        const id = avenue ? one : A.trees.species[Math.floor(rnd(pc.id, (s | 0) + 13) * A.trees.species.length)], spc = ID.species.get(id); if (!spc || spc.id === 'bougainvillea') continue; const [lx, lz] = L(px, pz); tree(M.prop, lx, gy, lz, spc, rnd(pc.id, (s | 0) + 17), bloomOn(spc)); st.trees++; circle(px, pz, 0.4); } }
+        const id = avenue ? one : A.trees.species[Math.floor(rnd(pc.id, (s | 0) + 13) * A.trees.species.length)], spc = ID.species.get(id); if (!spc || spc.id === 'bougainvillea') continue; const [lx, lz] = L(px, pz); plant(lx, gy, lz, spc, rnd(pc.id, (s | 0) + 17), bloomOn(spc)); st.trees++; circle(px, pz, 0.4); } }
     }
     /* stalls and kiosks on the pavement of market streets */
     if (A.shop.stalls > 0.05 && pc.len > 24) { const sp = 20 / A.shop.stalls, side = rnd(pc.id, 31) < 0.5 ? 1 : -1;
@@ -125,7 +136,7 @@ export function* buildStreetLife(tile, ctx, out) {
   function deckLife(pc) {
     for (let s = 20 + rnd(pc.id, 41) * 20; s < pc.len - 20; s += 55 + 30 * rnd(pc.id, (s | 0) + 42)) { const o = at(pc, s), h = deckHeight(G, pc.id, o.x, o.z); if (h < 3) continue; const mid = ID.areaAt(o.x, o.z), side = rnd(pc.id, (s | 0) + 43) < 0.5 ? 1 : -1;
       if (rnd(pc.id, (s | 0) + 44) < Math.max(0.3, mid.ads)) { const c = art.adFor(rnd(pc.id, (s | 0) + 45)), off = pc.hw + 0.35; board(M.ad, o.x - ox + -o.tz * off * side, gy + h + 1.7, o.z - oz + o.tx * off * side, -o.tz * side, o.tx * side, 5, 2.5, WHITE, [c.u0, c.v0, c.u1, c.v1]); st.hoardings++; }
-      const sp = ID.species.get('bougainvillea'); if (sp && rnd(pc.id, (s | 0) + 46) < 0.8) { const [lx, lz] = L(o.x, o.z); tree(M.prop, lx, gy, lz, sp, rnd(pc.id, (s | 0) + 47), false); st.trees++; } }
+      const sp = ID.species.get('bougainvillea'); if (sp && rnd(pc.id, (s | 0) + 46) < 0.8) { const [lx, lz] = L(o.x, o.z); plant(lx, gy, lz, sp, rnd(pc.id, (s | 0) + 47), false); st.trees++; } }
   }
   /* ---- hoardings at signalled junctions: a unipole beside the street 12 m before the signal ---- */
   for (const f of tile.furniture || []) { if (f.kind !== 'signal') continue; const ns = nearest(f.x, f.z); if (!ns) continue; const A = ID.areaAt(f.x, f.z), k = Math.floor(f.x * 3 + f.z * 7); if (rnd(k, 50) > A.ads * 1.4) continue;
@@ -139,5 +150,32 @@ export function* buildStreetLife(tile, ctx, out) {
     box(M.prop, lx + nxo * 0.55, gy + 0.45, lz + nzo * 0.55, 2.2, 0.08, 0.4, ns.tx, ns.tz, C(PALE.steel), C(PALE.steel)); const c = art.bannerFor(rnd(Math.floor(sp[0]), Math.floor(sp[1])));
     board(M.ban, lx + nxo * 0.7, gy + 1.5, lz + nzo * 0.7, -nxo, -nzo, 1.2, 1.9, WHITE, [c.u0, c.v0, c.u1, c.v1]); box(M.prop, lx - ns.tx * 2.0 - nxo * 0.2, gy, lz - ns.tz * 2.0 - nzo * 0.2, 0.08, 3.2, 0.08, 1, 0, C(PALE.steel)); box(M.prop, lx - ns.tx * 2.0 - nxo * 0.2, gy + 2.7, lz - ns.tz * 2.0 - nzo * 0.2, 0.5, 0.4, 0.05, ns.tx, ns.tz, C(PALE.green));
     st.shelters++; circle(px + ns.tx * 0.9, pz + ns.tz * 0.9, 0.7); circle(px - ns.tx * 0.9, pz - ns.tz * 0.9, 0.7); }
+  /* ---- park trees: lawns, gardens, scrub and forest get trees by their class (the Ridge and other forests are dense, scrub is sparse and small, sports grounds and golf courses nearly bare), spaced by the area profile on a jittered grid, never in a building or a road ---- */
+  { let np = 0, nc = 0; const CAP_PARK = 900, CAP_COLONY = 260, bloomOnP = sp0 => sp0.bloomMonths && sp0.bloomMonths.includes(ctx.month), KIND = { forest: [6, 0.85, 0.9], scrub: [9, 0.35, 0.55], park: [10, 0.5, 1], garden: [9, 0.55, 0.9], grass: [16, 0.2, 1], sports: [18, 0.12, 1], golf: [14, 0.25, 1], colony: [16, 0.3, 0.85] };          // colony: the trees of residential plots (the forest survey counts about 147 km2 of tree cover outside the forests, about a tenth of Delhi, which the map does not show as parks)
+    for (const p of [...(tile.parks || []), ...(tile.blocks || []).filter(b => b.landuse === 'residential').map(b => ({ ring: b.ring, holes: b.holes, class: 'colony' }))]) { const R = p.ring; if (!R || R.length < 8) continue; if (p.class === 'colony' && nc >= CAP_COLONY) continue; if (ctx.yieldNow && ctx.yieldNow()) yield; const [STEP, base, big] = KIND[p.class] || [12, 0.4, 1]; let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (let i = 0; i < R.length; i += 2) { x0 = Math.min(x0, R[i]); x1 = Math.max(x1, R[i]); z0 = Math.min(z0, R[i + 1]); z1 = Math.max(z1, R[i + 1]); }
+      for (let gx = x0 + STEP / 2; gx < x1 && np < CAP_PARK; gx += STEP) for (let gz = z0 + STEP / 2; gz < z1 && np < CAP_PARK; gz += STEP) {
+        const key = Math.floor(gx * 3) * 7919 + Math.floor(gz * 5); const px = gx + (rnd(901, key) - 0.5) * STEP * 0.8, pz = gz + (rnd(902, key) - 0.5) * STEP * 0.8; if (!inPoly(R, px, pz)) continue; let hole = false; for (const h of p.holes || []) if (inPoly(h, px, pz)) { hole = true; break; } if (hole) continue;
+        const an = ID.areaNameAt(px, pz), A = ID.area(an), dens = Math.min(0.92, base * (0.6 + 0.8 * A.trees.density)); if (rnd(903, key) > dens) continue; if (insideBuilding(px, pz, 2.0) || inRoad(px, pz, 1.0)) continue;
+        const forest = p.class === 'forest' || p.class === 'scrub', list = forest ? ['neem', 'peepal', 'jamun'] : A.trees.species, id = list[Math.floor(rnd(904, key) * list.length)], spc = ID.species.get(id); if (!spc || spc.id === 'bougainvillea') continue; const [lx, lz] = L(px, pz); plant(lx, gy, lz, spc, rnd(905, key), bloomOnP(spc), big * (forest ? 0.8 + 0.4 * rnd(906, key) : 1)); np++; if (p.class === 'colony') nc++; st.trees++; circle(px, pz, 0.4); } }
+  }
+  /* ---- hedges: a low clipped hedge along the outer edge of the avenues of Lutyens' Delhi, DDA colonies and Connaught Place ---- */
+  { let nh = 0; for (const pc of pieces) { if (nh > 260 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 24) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if (an !== 'lutyens' && an !== 'dda' && an !== 'cp') continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
+      for (const side of [1, -1]) { if (rnd(pc.id, 70 + side) > 0.55) continue; for (let s = 6; s < pc.len - 6 && nh < 260; s += 6) { const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 3.4 : 2.4), px = o.x + -o.tz * off * side, pz = o.z + o.tx * off * side; if (insideBuilding(px, pz, 1.2) || inRoad(px, pz, 0.8)) continue; const [lx, lz] = L(px, pz); box(M.prop, lx, gy, lz, 5.6, 0.85, 0.9, o.tx, o.tz, C(0x3a6a2a), C(0x4f8236)); nh++; } } }
+    st.hedges = nh; }
+  /* ---- compound walls: a low plastered wall with a coping along the plot edge of the residential streets of Lutyens' Delhi and the DDA colonies, in gaps and not through anything ---- */
+  { let nw = 0; for (const pc of pieces) { if (nw > 220 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 20) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if ((an !== 'lutyens' && an !== 'dda') || (pc.cls !== 'residential' && pc.cls !== 'tertiary')) continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
+      for (const side of [1, -1]) { if (rnd(pc.id, 90 + side) > 0.6) continue; const wc = [0xe4d8bd, 0xd9caa6, 0xefe6d0, 0xcdb890][Math.floor(rnd(pc.id, 92) * 4)];
+        for (let s = 5; s < pc.len - 5 && nw < 220; s += 6) { const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 5.4 : 4.2), px = o.x + -o.tz * off * side, pz = o.z + o.tx * off * side; if (insideBuilding(px, pz, 1.4) || inRoad(px, pz, 1.2)) continue; const [lx, lz] = L(px, pz); box(M.prop, lx, gy, lz, 6.0, 1.7, 0.3, o.tx, o.tz, C(wc), C(0xf4efe2)); nw++; } } }
+    st.walls = nw; }
+  /* ---- medians: where two one-way carriageways of a main road run side by side with a gap, the gap is a kerbed median with a clipped shrub strip and now and then a tree (only the carriageway heading the positive way draws it, so it is drawn once) ---- */
+  { let nm = 0; for (const pc of pieces) { if (nm > 220 || pc.lay !== 0 || pc.len < 30 || !(pc.cls === 'primary' || pc.cls === 'secondary' || pc.cls === 'trunk')) continue; const ow = G.oneway[pc.id]; if (!ow) continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
+      for (let sm = 8; sm < pc.len - 8 && nm < 220; sm += 10) { const o = at(pc, sm), dx = o.tx * ow, dz = o.tz * ow; if (!(dx > 0.01 || (Math.abs(dx) <= 0.01 && dz > 0))) continue; const nx = -o.tz * ow, nz = o.tx * ow; let hit = 0;
+        for (let t = pc.hw + 1.0; t < pc.hw + 22; t += 1.5) { if (inRoad(o.x + nx * t, o.z + nz * t, 0.2)) { hit = t; break; } } const gap = hit - pc.hw; if (!hit || gap < 2.4 || gap > 20) continue;
+        const ns = nearest(o.x + nx * hit, o.z + nz * hit); if (!ns || Math.abs(ns.tx * o.tx + ns.tz * o.tz) < 0.92) continue;
+        const tm = pc.hw + gap / 2, mx = o.x + nx * tm, mz = o.z + nz * tm, [lx, lz] = L(mx, mz), wd = Math.max(1.0, gap - 0.9);
+        box(M.prop, lx, gy, lz, 10.4, 0.18, wd, o.tx, o.tz, C(0xb4b0a6)); if (wd > 1.6) box(M.prop, lx, gy + 0.18, lz, 10.0, 0.55, wd - 0.7, o.tx, o.tz, C(0x3d6b2b), C(0x5a8f3a));
+        if (gap > 3.6 && ((sm / 10) | 0) % 2 === 0) { const sp = ID.species.get('ashoka'); if (sp) plant(lx, gy, lz, sp, rnd(pc.id, (sm | 0) + 80), false, 0.55); }
+        nm++; } }
+    st.medians = nm; }
   return { M, stats: st };
 }

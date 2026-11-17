@@ -8,7 +8,7 @@ import { Soup, C, fbox, frame, pt, slab } from './transit_geo.js';
 import { TrainArt } from '../train_art.js';
 import { consist, lengthOf, hash, locoNumber, headcode } from '../train_consist.js';
 
-const RAD = 650, KEEP = 950, PLAT_H = 0.9, RAIL = C(0x8d9298), BALLAST = C(0x4f4b45), PLAT = C(0xc4bdae), PLAT_SIDE = C(0x86827a), TACT = C(0xe6b800), COL = C(0x6f7378), BRIDGE = C(0x8a8f96), RAILING = C(0x59606a);
+const RAD = 650, KEEP = 950, PLAT_H = 0.9, RAIL = C(0x6a6d72), BALLAST = C(0x8a7e69), PLAT = C(0xc4bdae), PLAT_SIDE = C(0x86827a), TACT = C(0xe6b800), COL = C(0x6f7378), BRIDGE = C(0x8a8f96), RAILING = C(0x59606a);
 const ROOFS = { NDLS: 0x8d98a3, DLI: 0xb5603f, NZM: 0x4f9a63, ANVT: 0xc9d1d6, DEE: 0x9aa3ab, DEC: 0xa7b4bd }, DEFAULT_ROOF = 0x9aa3ab;
 
 function boardTexture(st) {
@@ -41,11 +41,11 @@ class RailKit {
     const P = bodies.map(b => ({ ...b, w: b.type === 'island' ? Math.min(b.w, 12) : Math.min(b.w, 9), ...toF(b.x, b.z) })).sort((a, b) => a.v - b.v), uMin = Math.min(...P.map(b => b.u - b.len / 2)), uMax = Math.max(...P.map(b => b.u + b.len / 2)), UP = (u, v, y) => pt(F0, u, v, y), bq = (A, B, h) => { for (const [a, b] of [[A, B], [B, A]]) N.quad(a, b, [b[0], b[1] + h, b[2]], [a[0], a[1] + h, a[2]], [1, 1, 1], [0, 0, 1, 0, 1, 1, 0, 1]); };
     /* tracks in the gaps between platforms, and a pair of outer tracks beyond the first and last platform */
     const vs = []; for (let i = 0; i + 1 < P.length; i++) { const r = P[i].v + P[i].w / 2, l = P[i + 1].v - P[i + 1].w / 2, gap = l - r; if (gap > 2.5) { const n = Math.max(1, Math.round(gap / 5.2)); for (let k = 0; k < n; k++) vs.push(r + gap * (k + 0.5) / n); } }
-    const u0 = uMin - 220, u1 = uMax + 220, rail = (v, g) => S.quad(UP(u0, v + g - 0.07, 0.2), UP(u1, v + g - 0.07, 0.2), UP(u1, v + g + 0.07, 0.2), UP(u0, v + g + 0.07, 0.2), RAIL);
-    for (const v of vs) { S.quad(UP(u0, v - 1.7, 0.08), UP(u1, v - 1.7, 0.08), UP(u1, v + 1.7, 0.08), UP(u0, v + 1.7, 0.08), BALLAST); rail(v, -0.838); rail(v, 0.838); }
+    const TAIL = 45, u0 = uMin - TAIL, u1 = uMax + TAIL, rail = (v, g) => S.quad(UP(u0, v + g - 0.07, 0.2), UP(u1, v + g - 0.07, 0.2), UP(u1, v + g + 0.07, 0.2), UP(u0, v + g + 0.07, 0.2), RAIL);
+    for (const v of vs) { S.quad(UP(u0, v - 1.55, 0.08), UP(u1, v - 1.55, 0.08), UP(u1, v + 1.55, 0.08), UP(u0, v + 1.55, 0.08), BALLAST); rail(v, -0.838); rail(v, 0.838); }
     if (vs.length) claims.push({ kind: 'rail', layer: 0, shape: { t: 'rect', x: UP((u0 + u1) / 2, (vs[0] + vs[vs.length - 1]) / 2, 0)[0], z: UP((u0 + u1) / 2, (vs[0] + vs[vs.length - 1]) / 2, 0)[2], hx: (u1 - u0) / 2, hz: (vs[vs.length - 1] - vs[0]) / 2 + 2, yaw } });
     /* a rake (a locomotive and ten coaches) on every third track runs in, stands 100 s at the platforms and runs out again (cycle 300 s, every track shifted): instanced by RailStations. Not the real timetable (rail_timetable.js). */
-    this.rakeTracks = vs.filter((v, k) => k % 3 === 1).map((v, i) => ({ v, ph: i * 83, dir: i % 2 ? -1 : 1 })); this.rakeSpan = { F0, uc: (uMin + uMax) / 2, uA: uMin - 260, uB: uMax + 260 };
+    this.rakeTracks = vs.filter((v, k) => k % 3 === 1).map((v, i) => ({ v, ph: i * 83, dir: i % 2 ? -1 : 1 })); this.rakeSpan = { F0, uc: (uMin + uMax) / 2, uA: uMin - 120, uB: uMax + 120 };
     /* platforms, ramps, roofs, boards */
     const plab = []; let pn = 1;
     for (const b of P) {
