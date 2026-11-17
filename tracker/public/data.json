@@ -1,8 +1,8 @@
 {
- "commit": "fc21c45",
+ "commit": "e105014",
  "groups": [
   [
-   "Phases for Anshul's Claude (docs/NEXT_PHASES.md)",
+   "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
    [
     {
      "id": "a304d810",
@@ -43,12 +43,124 @@
      "s": "todo",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "acf5f839",
+     "t": "B1: Finish and PR vehicle/cars-on-main",
+     "d": "Review it against Phase 1 above, merge origin/main into it, run node tools/selftest.mjs and python tools/vehicle_acceptance.mjs --check, have a person drive a lap in each of the three vehicles, then open the PR. Accepted when both checks pass, a person has driven each vehicle, and the PR is open for the owner to merge.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a02874e6",
+     "t": "B2: Port the steering, grip and gearbox feel from vehicle/cars-and-gears onto main's driving model",
+     "d": "As tuner settings (src/core/tuning.js), not a replacement of main's telemetry and drive modes (Phase 1, step 3a). Accepted when vehicle_acceptance.mjs --check passes and a person says the steering feels right in all three vehicles.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a2139b10",
+     "t": "B3: Retire vehicle/cars-and-gears",
+     "d": "After B1 and B2 are merged and the owner says yes, delete the old branch and note it in the log.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a21f29f2",
+     "t": "B4: NPC provenance",
+     "d": "Commit dev/build_npc_stylised.py, record in assets/ASSETS.md where the NPC base mesh came from and its licence, and run node tools/build_licenses.mjs. Accepted when the daily check is green and the credit has no \"to confirm\".",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a7eca504",
+     "t": "B5: Review the shared-code changes in your files",
+     "d": "src/core/runtime.js (handle domains, droppedTime) and src/player/onfoot.js (swept capsule, obstacle y0/y1). Accepted when you have written \"reviewed\" or the problems you found in team/stream-b.md.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "aaf026cf",
+     "t": "B6: Get the owner's answers on the Lite/Full plan",
+     "d": "Ask the owner the four questions at the end of docs/LITE_AND_FULL_PLAN.md and write the answers in docs/DECISIONS.md. Needs the owner (a person). Accepted when all four are recorded.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ad639baa",
+     "t": "B7: No-reload switch between the India map and a city (v2)",
+     "d": "Phase 3. Reserve src/main.js first (log entry). Make the world set-up re-runnable, switch with the existing black fade, keep the old page-load hand-over behind ?reload=1. Accepted when going from the highway into Delhi and back needs no page load, in the browser and in the self-test where it can be tested.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a732d711",
+     "t": "B8: Cut the Mumbai draw calls",
+     "d": "Phase 4. Low tier at Mumbai is about 800 to 1000 draw calls and 350 k triangles; get it under 400 calls by merging or instancing landmarks (about 290 meshes) and rails (about 190), and by distance culling. Accepted when ?play&q=low&bench=30 before and after are in PERFORMANCE.md.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ac983b0b",
+     "t": "B9: Real-phone benchmark and checks",
+     "d": "Phase 4. Run ?play&q=low&bench=30 and ?play&city=delhi&q=low&bench=30 on a real phone and a Mac, and tick the four phone lines in CHECKLIST.md (sound after first tap, Horn, home-screen icon, layout). Needs a person with the devices. Accepted when the numbers (commit, device, tier, visible window, p95, p99) are in PERFORMANCE.md.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a5facc90",
+     "t": "B10: Move the Delhi router off the main thread (R09)",
+     "d": "A route across the city takes 80 to 140 ms (node tools/measure_city.mjs). Use a worker or cooperative slices. Accepted when no frame is blocked more than about 8 ms by routing and the route result is the same.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a803ac2f",
+     "t": "B11: City tile cache byte budget and cancelled fetches (R10)",
+     "d": "src/world/city/pack.js: bound the raw tile cache in bytes, pass an AbortSignal through the fetch. Accepted when a self-test shows the cache stays under budget and a cancelled tile fetch frees its slot.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ae40344c",
+     "t": "B12: Tidy your open log entries",
+     "d": "Close the entries in team/stream-b.md that are finished (the early N7 to N13 ones) by writing \"Re: <title>: done\", so the tracker shows only real work.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a12a7ffc",
+     "t": "B13: Deploy what is merged",
+     "d": "After B1 to B2 land, deploy to the OWNER's Cloudflare account (CLAUDE.md, \"Where deploys go\"; the owner has to run npx wrangler@4 login first) and check India and Delhi load. Accepted when the live version is recorded in HANDOFF.md.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
     }
    ]
   ],
   [
    "Asked of Anshul in the team log",
    [
+    {
+     "id": "a68f8d96",
+     "t": "A-2026-11-18-10: TASKS B1 to B13 assigned to Anshul (docs/NEXT_PHASES.md, \"Assigned to Anshul\")",
+     "d": "Anshul's Claude: work B1 to B13 in order (B1 finish and PR vehicle/cars-on-main; B2 port the steering and grip feel as tuner settings; B3 retire the old branch; B4 NPC provenance; B5 review runtime.js and onfoot.js; B6 ask the owner the Lite/Full questions; B7 no-reload city switch; B8 cut Mumbai draw calls; B9 real-phone benchmark (needs a person); B10 router off the main thread; B11 tile cache budget; B12 close yo…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
     {
      "id": "aed82e85",
      "t": "A-2026-11-18-09: PRs 83 and 85 merged; NEXT PHASES for Anshul's Claude (docs/NEXT_PHASES.md); your branch not merged",
@@ -237,14 +349,6 @@
      "id": "a2fc90ac",
      "t": "Owner approved merging PRs 27 to 36; known-limits reference file",
      "d": "after the merge, pull main, read docs/WORK_REMAINING.md (sections 0.2, 2.5, 4 and 9 are yours) and review the additive changes in the files named in 0.2.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-19, from Rajul's Claude"
-    },
-    {
-     "id": "aa251104",
-     "t": "Crossing behaviour: shared signals, stopping at red, turning, signal poles",
-     "d": "please review the changes in traffic/sim.js and traffic/traffic.js (additive); the junction rules are in traffic/junction.js.",
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-19, from Rajul's Claude"
@@ -1156,6 +1260,11 @@
  ],
  "prs": [
   [
+   "87",
+   "Tracker: Rajul and Anshul view, Assigned tasks, auto-built from the repo",
+   "merged"
+  ],
+  [
    "86",
    "Next phases for Anshul's Claude; status, handoff and tracker after PRs 83 and 85",
    "merged"
@@ -1349,25 +1458,20 @@
    "48",
    "Railway realism: ground, trains, real timetable, boards, announcements, sound",
    "merged"
-  ],
-  [
-   "47",
-   "Real railway network: stations, junctions, rail bridges, trains",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (21 commits not in main, 308 behind main)"
+   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (21 commits not in main, 310 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 24 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 26 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 22 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 24 behind main)"
   ]
  ],
  "tests": null,
@@ -1377,5 +1481,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T16:05:44.977Z"
+ "generated": "2026-11-17T16:27:28.707Z"
 }

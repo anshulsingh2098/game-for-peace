@@ -29,6 +29,8 @@ function phases() {
     if ((m = /^(Phase \d+):\s*(.+)$/.exec(head))) {
       const done = /\(done\)/i.test(head), doing = /\(doing\)/i.test(head), first = body.split('\n').filter(l => l.trim()).slice(0, 2).join(' ');
       out.push(I('phase:' + m[1], m[1] + ': ' + m[2].replace(/\s*\((done|doing)\)/i, ''), first, done ? 'done' : doing ? 'doing' : 'todo', 'Anshul', 'docs/NEXT_PHASES.md'));
+    } else if (/^Assigned to Anshul/i.test(head)) {
+      for (const l of body.split('\n')) { const t = /^- \[( |x|~)\]\s+(B\d+):\s+(.+?)\s+—\s+(.*)$/.exec(l); if (t) out.push(I('task:' + t[2], t[2] + ': ' + t[3], t[4], t[1] === 'x' ? 'done' : t[1] === '~' ? 'doing' : 'todo', 'Anshul', 'docs/NEXT_PHASES.md')); }
     } else if (/^Things a person must do/i.test(head)) {
       for (const part of body.replace(/\n/g, ' ').split(/;\s+/).map(x => x.trim().replace(/\.$/, '')).filter(x => x.length > 12 && !/^The tuner Publish password/.test(x)).map(x => x[0].toUpperCase() + x.slice(1))) people.push(I('person:' + part.slice(0, 60), part, 'From docs/NEXT_PHASES.md, "Things a person must do".', 'todo', 'You', 'docs/NEXT_PHASES.md'));
     }
@@ -88,7 +90,7 @@ const P = phases(), L = logAsks(), C = checks(), R = prs(), B = branches(), W = 
 let tests = null; if (!args.includes('--quick') && !args.includes('--check')) { const o = sh('node', ['tools/selftest.mjs'], { timeout: 400000 }); const m = o && /(\d+) checks passed/.exec(o); tests = m ? m[1] : null; }
 const old = (/\/\*AUTO-DATA-START\*\/const AUTO = (.*?);\/\*AUTO-DATA-END\*\//s.exec(rd('tracker/public/index.html')) || [])[1]; let prev = null; try { prev = JSON.parse(old); } catch (e) { /* none yet */ }
 const groups = [
-  ['Phases for Anshul\'s Claude (docs/NEXT_PHASES.md)', P.phases],
+  ['Tasks and phases for Anshul (docs/NEXT_PHASES.md)', P.phases],
   ['Asked of Anshul in the team log', L.Anshul],
   ['Asked of Rajul in the team log', L.Rajul],
   ['Open pull requests', R.items],
