@@ -80,7 +80,7 @@ export class CityWorld {
   deck(x, z) {
     const i = Math.floor(x / 6), j = Math.floor(z / 6); let best = NaN, bd = Infinity;
     for (const t of this.tiles.values()) { if (!t.decks.length) continue; for (let a = i - 1; a <= i + 1; a++) for (let b = j - 1; b <= j + 1; b++) { const l = t.deckCells.get(this.ck(a, b)); if (l) for (const q of l) { const d = Math.hypot(q.x - x, q.z - z); if (d < q.hw + 1.5 && d < bd) { bd = d; best = q.y; } } } }
-    return best;
+    const td = this.transit.ok ? this.transit.deckAt(x, z) : NaN; return td === td && !(best > td) ? td : best;
   }
   /* the nearest street point to (x, z) among the loaded tiles, and its heading: for "back to the road" */
   nearestStreet(x, z) {

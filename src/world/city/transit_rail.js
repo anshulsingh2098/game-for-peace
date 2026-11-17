@@ -1,0 +1,70 @@
+/* Indian Railways stations inside the Delhi enclave (package D6, part 4). From `transit.json` rail.stations: the platform bodies (island or side, centre, length, width: OSM), the track direction (`axis`), the foot
+   bridges and the entrances. Drawn when you come near: platforms 0.9 m high with a yellow edge and a walk-on ramp at each end, the tracks in the gaps between platforms (ballast, two rails, running 220 m past the
+   platforms), shed roofs over the platforms on columns, foot bridges (deck, railings, roof, stairs where the ground is free), name boards (yellow, Hindi and English), signal gantries.
+   The station BUILDINGS are not drawn here: the city pack already draws the main ones as landmarks (cityworld.js registers them) and the keep-out registry holds them. Colours per station are guesses
+   (docs/DELHI_TRANSIT.md 4.2: Old Delhi in red sandstone, Nizamuddin with green roofs); there are no trains on these tracks yet and the tracks are not joined to the India-world rail network. Browser only. */
+import * as THREE from 'three';
+import { Soup, C, fbox, frame, pt, slab } from './transit_geo.js';
+
+const RAD = 650, KEEP = 950, PLAT_H = 0.9, RAIL = C(0x8d9298), BALLAST = C(0x4f4b45), PLAT = C(0xc4bdae), PLAT_SIDE = C(0x86827a), TACT = C(0xe6b800), COL = C(0x6f7378), BRIDGE = C(0x8a8f96), RAILING = C(0x59606a);
+const ROOFS = { NDLS: 0x8d98a3, DLI: 0xb5603f, NZM: 0x4f9a63, ANVT: 0xc9d1d6, DEE: 0x9aa3ab, DEC: 0xa7b4bd }, DEFAULT_ROOF = 0x9aa3ab;
+
+function boardTexture(st) {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#f2c500'; g.fillRect(0, 0, 1024, 256); g.fillStyle = '#111'; g.fillRect(0, 0, 1024, 12); g.fillRect(0, 244, 1024, 12); g.textAlign = 'center'; g.textBaseline = 'middle';
+  const fit = (t, f, max, size) => { let s = size; do { g.font = f.replace('#', s); s -= 4; } while (g.measureText(t).width > max && s > 24); };
+  if (st.name.hi) { fit(st.name.hi, 'bold #px "Noto Sans Devanagari","Kohinoor Devanagari","Devanagari Sangam MN","Mangal",system-ui,sans-serif', 940, 84); g.fillText(st.name.hi, 512, 70); } fit(st.name.en.toUpperCase(), 'bold #px system-ui, "Helvetica Neue", sans-serif', 940, 78); g.fillText(st.name.en.toUpperCase(), 512, st.name.hi ? 156 : 128);
+  g.font = 'bold 34px system-ui, sans-serif'; g.fillText(st.id, 512, 218); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+
+class RailKit {
+  constructor(T, st) {
+    this.T = T; this.st = st; this.group = new THREE.Group(); this.walk = []; this.tris = 0; this.calls = 0; this.geos = []; this.tex = []; const ox = st.x, oz = st.z, S = new Soup(ox, oz), N = new Soup(ox, oz), claims = [];
+    const ax = st.axis, F0 = frame(st.x, st.z, Math.cos(ax), Math.sin(ax)), toF = (x, z) => ({ u: (x - F0.x) * F0.tx + (z - F0.z) * F0.tz, v: -(x - F0.x) * F0.tz + (z - F0.z) * F0.tx }), roof = C(ROOFS[st.id] || DEFAULT_ROOF), yaw = ax;
+    let bodies = (st.bodies || []).filter(b => b.faces && b.faces.length); if (!bodies.length) bodies = st.bodies || []; if (!bodies.length) return;
+    const P = bodies.map(b => ({ ...b, w: b.type === 'island' ? Math.min(b.w, 12) : Math.min(b.w, 9), ...toF(b.x, b.z) })).sort((a, b) => a.v - b.v), uMin = Math.min(...P.map(b => b.u - b.len / 2)), uMax = Math.max(...P.map(b => b.u + b.len / 2)), UP = (u, v, y) => pt(F0, u, v, y), bq = (A, B, h) => { for (const [a, b] of [[A, B], [B, A]]) N.quad(a, b, [b[0], b[1] + h, b[2]], [a[0], a[1] + h, a[2]], [1, 1, 1], [0, 0, 1, 0, 1, 1, 0, 1]); };
+    /* tracks in the gaps between platforms, and a pair of outer tracks beyond the first and last platform */
+    const vs = []; for (let i = 0; i + 1 < P.length; i++) { const r = P[i].v + P[i].w / 2, l = P[i + 1].v - P[i + 1].w / 2, gap = l - r; if (gap > 2.5) { const n = Math.max(1, Math.round(gap / 5.2)); for (let k = 0; k < n; k++) vs.push(r + gap * (k + 0.5) / n); } }
+    const u0 = uMin - 220, u1 = uMax + 220, rail = (v, g) => S.quad(UP(u0, v + g - 0.07, 0.2), UP(u1, v + g - 0.07, 0.2), UP(u1, v + g + 0.07, 0.2), UP(u0, v + g + 0.07, 0.2), RAIL);
+    for (const v of vs) { S.quad(UP(u0, v - 1.7, 0.08), UP(u1, v - 1.7, 0.08), UP(u1, v + 1.7, 0.08), UP(u0, v + 1.7, 0.08), BALLAST); rail(v, -0.838); rail(v, 0.838); }
+    if (vs.length) claims.push({ kind: 'rail', layer: 0, shape: { t: 'rect', x: UP((u0 + u1) / 2, (vs[0] + vs[vs.length - 1]) / 2, 0)[0], z: UP((u0 + u1) / 2, (vs[0] + vs[vs.length - 1]) / 2, 0)[2], hx: (u1 - u0) / 2, hz: (vs[vs.length - 1] - vs[0]) / 2 + 2, yaw } });
+    /* platforms, ramps, roofs, boards */
+    for (const b of P) {
+      const a0 = b.u - b.len / 2, a1 = b.u + b.len / 2, v0 = b.v - b.w / 2, v1 = b.v + b.w / 2; fbox(S, F0, a0, a1, v0, v1, 0, PLAT_H, PLAT_SIDE, PLAT);
+      for (const v of [v0, v1]) S.quad(UP(a0, v + (v === v0 ? 0.0 : -0.6), PLAT_H + 0.012), UP(a1, v + (v === v0 ? 0.0 : -0.6), PLAT_H + 0.012), UP(a1, v + (v === v0 ? 0.6 : 0), PLAT_H + 0.012), UP(a0, v + (v === v0 ? 0.6 : 0), PLAT_H + 0.012), TACT);
+      this.walk.push({ x: F0.x, z: F0.z, tx: F0.tx, tz: F0.tz, u0: a0, u1: a1, l0: v0, l1: v1, ya: PLAT_H, yb: PLAT_H });
+      for (const [ua, ub, ya, yb] of [[a1, a1 + 12, PLAT_H, 0], [a0, a0 - 12, PLAT_H, 0]]) { const m = ((v0 + v1) / 2), A = UP(ua, m, 0), B = UP(ub, m, 0); slab(S, A[0], A[2], ya, B[0], B[2], yb, Math.min(b.w, 6), 0.9, PLAT_SIDE, PLAT); const dx = B[0] - A[0], dz = B[2] - A[2], L = Math.hypot(dx, dz); this.walk.push({ x: A[0], z: A[2], tx: dx / L, tz: dz / L, u0: 0, u1: L, l0: -Math.min(b.w, 6) / 2, l1: Math.min(b.w, 6) / 2, ya, yb }); }
+      claims.push({ kind: 'station', layer: 0, shape: { t: 'rect', x: UP(b.u, b.v, 0)[0], z: UP(b.u, b.v, 0)[2], hx: b.len / 2, hz: b.w / 2, yaw } });
+      const r0 = a0 + b.len * 0.14, r1 = a1 - b.len * 0.14, w = Math.min(b.w + 1.2, 24); if (b.w >= 4) { fbox(S, F0, r0, r1, b.v - w / 2, b.v + w / 2, 5.0, 5.35, roof, roof); for (let u = r0 + 6; u < r1; u += 20) for (const vv of b.w > 12 ? [b.v - b.w / 2 + 0.6, b.v, b.v + b.w / 2 - 0.6] : [b.v]) fbox(S, F0, u - 0.18, u + 0.18, vv - 0.18, vv + 0.18, PLAT_H, 5.0, COL); }
+      for (const f of [-0.3, 0.3]) bq(UP(b.u + f * b.len - 3.5, b.v, PLAT_H + 3.4), UP(b.u + f * b.len + 3.5, b.v, PLAT_H + 3.4), 1.7);
+    }
+    /* signal gantries across all tracks, every 90 m past the platforms */
+    if (vs.length) for (const u of [uMin - 80, uMin - 170, uMax + 80, uMax + 170]) { const va = vs[0] - 3, vb = vs[vs.length - 1] + 3; fbox(S, F0, u - 0.3, u + 0.3, va - 0.25, va + 0.25, 0, 8, COL); fbox(S, F0, u - 0.3, u + 0.3, vb - 0.25, vb + 0.25, 0, 8, COL); fbox(S, F0, u - 0.25, u + 0.25, va, vb, 7.6, 8.0, COL); }
+    /* foot bridges */
+    const free = (x, z) => !T.blocked(x, z, 1.6);
+    for (const fb of st.footbridges || []) { const p = fb.path; if (!p || p.length < 4) continue;
+      for (let i = 0; i + 3 < p.length; i += 2) { const dx = p[i + 2] - p[i], dz = p[i + 3] - p[i + 1], L = Math.hypot(dx, dz); if (L < 0.5) continue; const F = frame(p[i], p[i + 1], dx / L, dz / L); fbox(S, F, 0, L, -1.3, 1.3, 5.6, 6.0, BRIDGE, BRIDGE); fbox(S, F, 0, L, -1.3, -1.2, 6.0, 7.1, RAILING); fbox(S, F, 0, L, 1.2, 1.3, 6.0, 7.1, RAILING); fbox(S, F, 0, L, -1.4, 1.4, 8.3, 8.5, roof, roof);
+        for (let u = 0; u <= L; u += Math.max(8, L / Math.ceil(L / 14))) { fbox(S, F, u - 0.2, u + 0.2, -0.2, 0.2, 0, 5.6, COL); fbox(S, F, u - 0.15, u + 0.15, -1.3, -1.15, 6, 8.3, COL); fbox(S, F, u - 0.15, u + 0.15, 1.15, 1.3, 6, 8.3, COL); }
+        this.walk.push({ x: p[i], z: p[i + 1], tx: dx / L, tz: dz / L, u0: 0, u1: L, l0: -1.2, l1: 1.2, ya: 6.0, yb: 6.0 }); }
+      for (const [ia, ib] of [[0, 2], [p.length - 2, p.length - 4]]) { const dx = p[ia] - p[ib], dz = p[ia + 1] - p[ib + 1], L = Math.hypot(dx, dz); if (L < 0.5 || p.length < 4) continue; const fx = p[ia] + dx / L * 14, fz = p[ia + 1] + dz / L * 14; if (!free(fx, fz)) continue;
+        slab(S, p[ia], p[ia + 1], 6.0, fx, fz, 0.1, 2.4, 0.4, BRIDGE, C(0x6d6a65)); this.walk.push({ x: p[ia], z: p[ia + 1], tx: dx / L, tz: dz / L, u0: 0, u1: 14, l0: -1.2, l1: 1.2, ya: 6.0, yb: 0.1 }); } }
+    T.claim('metro:rs:' + st.id, claims);
+    const add = (So, mat, shadow) => { if (So.empty) return; const g = So.geometry(); this.geos.push(g); const m = new THREE.Mesh(g, mat); m.castShadow = !!shadow; m.receiveShadow = true; this.group.add(m); this.tris += So.tris; this.calls++; };
+    this.mat = T.mat.clone(); this.mat.polygonOffset = true; this.mat.polygonOffsetFactor = -12; this.mat.polygonOffsetUnits = -24; add(S, this.mat, true);       // low things (platform tops, rails) must win the depth test against the city ground, which is pulled forward by polygon offset
+     const tex = boardTexture(st); this.tex.push(tex); this.boardMat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.FrontSide, toneMapped: false }); add(N, this.boardMat);
+    this.ox = ox; this.oz = oz; this.group.position.set(ox - T.origin.x, T.city.gy, oz - T.origin.z);
+  }
+  reposition() { this.group.position.set(this.ox - this.T.origin.x, this.T.city.gy, this.oz - this.T.origin.z); }
+  dispose() { if (this.mat) this.mat.dispose(); for (const g of this.geos) g.dispose(); for (const t of this.tex) t.dispose(); if (this.boardMat) this.boardMat.dispose(); }
+}
+
+export class RailStations {
+  constructor(T) { this.T = T; this.built = new Map(); this.list = (T.data.rail && T.data.rail.stations || []).filter(s => s.bodies && s.bodies.length); this.stats = { stations: 0, tris: 0, calls: 0 }; }
+  update(px, pz) {
+    const T = this.T, S = T.S; let want = null, wd = Infinity;
+    for (const st of this.list) { if (this.built.has(st.id)) continue; const d = Math.hypot(st.x - px, st.z - pz); if (d < RAD && d < wd && T.city.tiles.has(Math.floor(st.x / S) + '_' + Math.floor(st.z / S))) { wd = d; want = st; } }
+    if (want) { const k = new RailKit(T, want); this.built.set(want.id, k); T.group.add(k.group); this.refresh(); }
+    for (const [id, k] of [...this.built]) if (Math.hypot(k.st.x - px, k.st.z - pz) > KEEP) { T.group.remove(k.group); k.dispose(); T.unclaim('metro:rs:' + id); this.built.delete(id); this.refresh(); }
+  }
+  reposition() { for (const k of this.built.values()) k.reposition(); }
+  refresh() { let t = 0, c = 0; for (const k of this.built.values()) { t += k.tris; c += k.calls; } this.stats = { stations: this.built.size, tris: t, calls: c }; }
+}

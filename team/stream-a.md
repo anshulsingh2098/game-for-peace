@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 18:00  D6: Delhi Metro and railway stations drawn in the city enclave
+Branch: claude/delhi-d6-metro-2b04f7  Commit: see the PR
+What changed: new `src/world/city/transit_plan.js`, `transit_geo.js`, `transit.js`, `transit_station.js`, `transit_rail.js`, `transit_ui.js`; shared files touched with a few lines: `src/world/city/cityworld.js` (init, update, reposition, near, deck, summary), `src/main.js` (`city.transit.onTeleport`, `footY`, `__next.city`), `tools/selftest.mjs` (one new check, 100 now). Docs: `docs/DELHI_TRANSIT.md` section 10, CITY_PLAN, WORK_REMAINING D6.*, HANDOFF.
+For the other stream: nothing to run. Press J near a Metro entrance for fast travel. Not deployed.
+Status: open
+
 ## 2026-11-24 18:00  D5b: ambient traffic in the Delhi enclave; the stage script now includes the city pack
 Branch: d5b-traffic  Commit: see the PR
 What changed: `src/world/city/citytraffic.js` (cars on the pack streets, left-hand, one-ways, slow behind a car or the player, obstacle circles for the physics; Settings > Traffic 10/22/34); `tools/stage_cloudflare.py` no longer skips `assets/cities/` (2,251 files, 102.5 MB raw, 1,925 of them the Delhi pack; `.gitignore` keeps the staged copy out of git: `cloudflare/public/assets/cities/`).

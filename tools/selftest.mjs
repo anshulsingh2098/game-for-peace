@@ -1192,4 +1192,16 @@ test('city pack delhi: the five stations have footprints, stand clear of the str
   }
 });
 
+test('Delhi Metro plan (D6): every route has a height profile within 4 %, every station is on its routes, timetables stop at every station, trains fit the headway', async () => {
+  const P = await import('../src/world/city/transit_plan.js'), T = JSON.parse(readFileSync(new URL('../assets/cities/delhi/transit.json', import.meta.url))), N = P.buildNetwork(T);
+  assert.equal(N.routes.length, 28); assert.equal(N.stations.size, T.metro.stations.length, 'every station record is called at by a route');
+  for (const R of N.routes) {
+    for (let i = 1; i < R.n; i++) assert.ok(Math.abs(R.h[i] - R.h[i - 1]) <= (R.s[i] - R.s[i - 1]) * P.MAXGRADE + 1e-6, R.id + ' grade at sample ' + i);
+    const tt = P.buildTimetable(R, P.specOf(R.line).vmax); assert.ok(tt.headway >= 150 && tt.headway <= 300, R.id + ' headway ' + tt.headway);
+    for (let k = 0; k < R.stops.length; k++) { const a = k === 0 ? 0 : tt.arrive[k]; const st = tt.state(a + 5); assert.ok(st && st.stop === k && Math.abs(st.s - R.stops[k].s) < 0.5, R.id + ' stands at stop ' + k); }
+    let prev = -1; for (let tau = 0; tau < tt.T; tau += 7) { const st = tt.state(tau); assert.ok(st.s >= prev - 1e-6, R.id + ' never goes backwards'); prev = st.s; }
+  }
+  const e = N.stations.get('RC') || [...N.stations.values()].find(x => x.st.name.en === 'Rajiv Chowk'); assert.ok(e && e.st.per.length === 2, 'Rajiv Chowk serves two lines');
+});
+
 console.log(`\n${passed} checks passed`);

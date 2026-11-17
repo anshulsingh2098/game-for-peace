@@ -199,3 +199,14 @@ Done: `?play&city=delhi[&at=<spawn|landmark|gate id>]` (`src/world/city/`), stre
 | 12.10 | Metro and rail inside the enclave are not drawn; register viaducts and stations in the keep-out registry when D6 builds them (11.5). | P2 [build] |
 | 12.11 | The India highway you arrive on may not be the gate you leave on; Delhi to the other NCR cities (Gurgaon, Noida) has no pack. | P3 [build] |
 | 12.12 | Nobody who knows Delhi has looked at it: street layout, colours and heights need a person's list of what feels wrong (city card). | P1 [person] |
+
+## D6 leftovers (17 Nov 2026)
+
+| ID | What |
+|---|---|
+| D6.1 | Underground track and station interiors; open cuttings at portals |
+| D6.2 | A stair from the concourse to the platforms of elevated stations (walk on) |
+| D6.3 | Trains and a timetable on the railway tracks in the stations; link to the India-world rail network |
+| D6.4 | Check looks and figures (colours, boards, livery, cars per train, speeds, PSD) against photographs |
+| D6.5 | Ride animation instead of a fade; the full fast-travel ride was not run in the browser; no sound |
+| D6.6 | Buildings under viaducts (needs the tile renderer to take Metro claims) |

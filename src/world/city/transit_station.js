@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { Soup, C, fbox, frame, pt, slab, extrude } from './transit_geo.js';
 import { kitOf, platformLen, lineColour, nextArrival, DWELL, RAIL_H, GIRDER } from './transit_plan.js';
 
-const PLAT = C(0xb7b2a6), PLAT_SIDE = C(0x8f8b83), PLAT_DK = C(0x6f6c66), TACTILE = C(0xe6b800), ROOF = [C(0xc3cbd0), C(0xe3ebee)], COL = C(0x7d8084), STEEL = C(0x9aa0a6), GLASS = C(0xa8d4e6), GLAZE = C(0x7e9db0), WALL = C(0xd8d2c4), BAND = C(0x9a968e), DARK = C(0x0d0f12), STAIR = C(0x6d6a65), STAIR_T = C(0xcfd5d9);
+const PLAT = C(0xb7b2a6), PLAT_SIDE = C(0x8f8b83), PLAT_DK = C(0x6f6c66), TACTILE = C(0xe6b800), ROOF = [C(0xd2d9dd), C(0xeef4f6)], COL = C(0x7d8084), STEEL = C(0x9aa0a6), GLASS = C(0xa8d4e6), GLAZE = C(0x7e9db0), WALL = C(0xd8d2c4), BAND = C(0x9a968e), DARK = C(0x0d0f12), STAIR = C(0x6d6a65), STAIR_T = C(0xcfd5d9);
 const PW = 4.0, EDGE = 1.5, ISLAND_MIN = 8;
 
 const px = (F, u, l) => pt(F, u, l, 0);
@@ -25,14 +25,15 @@ function nameTexture(st, colours) {
 
 export class StationKit {
   constructor(T, e) {
-    this.T = T; this.e = e; this.group = new THREE.Group(); this.circles = []; this.access = []; this.tris = 0; this.calls = 0; this.lastDep = -9; this.tex = []; this.geos = [];
+    this.T = T; this.e = e; this.group = new THREE.Group(); this.circles = []; this.access = []; this.tris = 0; this.calls = 0; this.lastDep = -9; this.tex = []; this.geos = []; this.walk = [];
     const st = e.st, ox = st.x, oz = st.z, solid = new Soup(ox, oz), glass = new Soup(ox, oz), names = new Soup(ox, oz), dep = new Soup(ox, oz), claims = [];
     this.items = []; for (const per of st.per) { const calls = e.calls.filter(c => c.R.line === per.line); if (!calls.length) continue; const tr = []; for (const c of calls) { const p = c.R.at(c.s); if (!tr.some(q => Math.hypot(q.p.x - p.x, q.p.z - p.z) < 2.5)) tr.push({ R: c.R, s: c.s, p: { ...p } }); } this.items.push({ per, line: T.lineOf.get(per.line), kit: kitOf(per), tracks: tr, colour: lineColour(T.lineOf.get(per.line)) }); }
     if (!this.items.length) return;
     this.colours = [...new Set(this.items.map(i => i.colour))]; this.nameTex = nameTexture(st, this.colours); this.tex.push(this.nameTex);
     const lead = this.items.find(i => i.kit !== 'underground') || this.items[0], A = lead.tracks[0], Fa = frame(A.p.x, A.p.z, A.p.tx, A.p.tz), up = this.items.some(i => i.kit === 'underground');
     const toFrame = (x, z) => ({ u: (x - Fa.x) * Fa.tx + (z - Fa.z) * Fa.tz, l: -(x - Fa.x) * Fa.tz + (z - Fa.z) * Fa.tx });
-    const bq = (S, P0, P1, hgt) => S.quad(P0, P1, [P1[0], P1[1] + hgt, P1[2]], [P0[0], P0[1] + hgt, P0[2]], [1, 1, 1], [0, 0, 1, 0, 1, 1, 0, 1]);
+    const UVQ = [0, 0, 1, 0, 1, 1, 0, 1];
+    const bq = (S, P0, P1, hgt) => { S.quad(P0, P1, [P1[0], P1[1] + hgt, P1[2]], [P0[0], P0[1] + hgt, P0[2]], [1, 1, 1], UVQ); S.quad(P1, P0, [P0[0], P0[1] + hgt, P0[2]], [P1[0], P1[1] + hgt, P1[2]], [1, 1, 1], UVQ); };       // a board readable from both sides (two quads back to back, each reads left to right from its own side)
     const free = (x, z, hx, hz, yaw, m = 0.6) => { const r = Math.min(hx, hz) + m * 0.3, c = Math.cos(yaw), sn = Math.sin(yaw); for (const u of [0, hx * 0.6, -hx * 0.6]) if (T.blocked(x + c * u, z + sn * u, r)) return false; return true; };
     const box = { u0: Infinity, u1: -Infinity, l0: Infinity, l1: -Infinity }, depQuads = [];
 
@@ -61,7 +62,9 @@ export class StationKit {
     /* the concourse (elevated stations) in the frame of the lead line, over every platform of the interchange, and the stair towers */
     if (this.items.some(i => i.kit === 'elevated') && box.u0 < box.u1) {
       const u0 = box.u0 + 10, u1 = box.u1 - 10, l0 = Math.max(box.l0, -40), l1 = Math.min(box.l1, 40), top = RAIL_H - GIRDER - 0.2, uc = (u0 + u1) / 2, lc = (l0 + l1) / 2;
-      fbox(solid, Fa, u0, u1, l0, l1, 5.5, 6.1, BAND); fbox(solid, Fa, u0, u1, l0, l1, 6.1, 8.9, GLAZE, GLAZE); fbox(solid, Fa, u0 - 0.2, u1 + 0.2, l0 - 0.2, l1 + 0.2, 8.9, top, BAND);
+      const wall = (ua, la, ub, lb, y0, y1, col) => solid.quad(pt(Fa, ua, la, y0), pt(Fa, ub, lb, y0), pt(Fa, ub, lb, y1), pt(Fa, ua, la, y1), col);       // hollow: four walls, a floor you can walk on (5.5 m) and a ceiling
+      for (const [ya, yb, cw] of [[5.5, 6.1, BAND], [6.1, 8.9, GLAZE], [8.9, top, BAND]]) { wall(u0, l0, u1, l0, ya, yb, cw); wall(u0, l1, u1, l1, ya, yb, cw); wall(u0, l0, u0, l1, ya, yb, cw); wall(u1, l0, u1, l1, ya, yb, cw); }
+      fbox(solid, Fa, u0, u1, l0, l1, 5.2, 5.5, BAND, C(0xcfcac0)); fbox(solid, Fa, u0, u1, l0, l1, top - 0.3, top, BAND, BAND); this.walk.push({ x: Fa.x, z: Fa.z, tx: Fa.tx, tz: Fa.tz, u0, u1, l0, l1, ya: 5.5, yb: 5.5 }); const cp = pt(Fa, uc, lc, 0); this.access.push({ x: cp[0], z: cp[2] });
       for (const sg of [-1, 1]) { const l = sg > 0 ? l1 + 0.06 : l0 - 0.06, a = pt(Fa, uc - 5.4 * sg, l, 6.35), b = pt(Fa, uc + 5.4 * sg, l, 6.35); bq(names, sg > 0 ? a : b, sg > 0 ? b : a, 2.7); }
       claims.push({ kind: 'station', layer: 1, shape: { t: 'rect', x: Fa.x + Fa.tx * uc - Fa.tz * lc, z: Fa.z + Fa.tz * uc + Fa.tx * lc, hx: (u1 - u0) / 2, hz: (l1 - l0) / 2, yaw: Math.atan2(Fa.tz, Fa.tx) } });
       const yaw = Math.atan2(Fa.tz, Fa.tx); let placedT = 0;
@@ -72,6 +75,7 @@ export class StationKit {
         for (const run of [11, 14, 18, 22]) { for (const off of [0, 6, -6, 12, -12, 18, -18]) {
           const a = Math.max(sd.lo, Math.min(sd.hi, sd.c + off)), fp = sd.ax === 'l' ? pt(Fa, a, sd.w + sd.sg * run, 0) : pt(Fa, sd.w + sd.sg * run, a, 0), wp = sd.ax === 'l' ? pt(Fa, a, sd.w, 5.5) : pt(Fa, sd.w, a, 5.5);
           if (!free(fp[0], fp[2], 1.7, 1.7, yaw, 0.8)) continue;
+          { const dx = wp[0] - fp[0], dz = wp[2] - fp[2], L = Math.hypot(dx, dz); this.walk.push({ x: fp[0], z: fp[2], tx: dx / L, tz: dz / L, u0: 0, u1: L, l0: -1.5, l1: 1.5, ya: 0.25, yb: 5.5 }); }
           slab(solid, fp[0], fp[2], 0.25, wp[0], wp[2], 5.5, 3.0, 0.5, STAIR, STAIR_T); slab(solid, fp[0], fp[2], 2.9, wp[0], wp[2], 8.4, 3.4, 0.12, STAIR_T);
           const dl = sd.ax === 'l' ? [a - 1.7, a + 1.7, sd.sg > 0 ? sd.w + 0.05 : sd.w - 0.85, sd.sg > 0 ? sd.w + 0.85 : sd.w - 0.05] : [sd.sg > 0 ? sd.w + 0.05 : sd.w - 0.85, sd.sg > 0 ? sd.w + 0.85 : sd.w - 0.05, a - 1.7, a + 1.7];
           fbox(solid, Fa, dl[0], dl[1], dl[2], dl[3], 5.5, 8.4, DARK);
@@ -96,9 +100,9 @@ export class StationKit {
     /* meshes: solid, glass, name boards (one texture), departure board (a second texture, redrawn live) */
     const add = (S, mat, shadow) => { if (S.empty) return null; const g = S.geometry(); this.geos.push(g); const m = new THREE.Mesh(g, mat); m.matrixAutoUpdate = true; m.castShadow = !!shadow; m.receiveShadow = true; this.group.add(m); this.tris += S.tris; this.calls++; return m; };
     add(solid, T.mat, true); add(glass, T.glassMat);
-    this.boardMat = new THREE.MeshBasicMaterial({ map: this.nameTex, side: THREE.DoubleSide, toneMapped: false }); add(names, this.boardMat);
+    this.boardMat = new THREE.MeshBasicMaterial({ map: this.nameTex, side: THREE.FrontSide, toneMapped: false }); add(names, this.boardMat);
     if (depQuads.length) { this.depCanvas = document.createElement('canvas'); this.depCanvas.width = 512; this.depCanvas.height = 256; this.depTex = new THREE.CanvasTexture(this.depCanvas); this.depTex.colorSpace = THREE.SRGBColorSpace; this.tex.push(this.depTex);
-      for (const [a, b] of depQuads) { dep.quad(a, b, [b[0], b[1] + 1.5, b[2]], [a[0], a[1] + 1.5, a[2]], [1, 1, 1], [0, 0, 1, 0, 1, 1, 0, 1]); } this.depMat = new THREE.MeshBasicMaterial({ map: this.depTex, side: THREE.DoubleSide, toneMapped: false }); add(dep, this.depMat); this.drawDep(T.t); }
+      for (const [a, b] of depQuads) bq(dep, a, b, 1.5); this.depMat = new THREE.MeshBasicMaterial({ map: this.depTex, side: THREE.FrontSide, toneMapped: false }); add(dep, this.depMat); this.drawDep(T.t); }
     this.ox = ox; this.oz = oz; this.group.position.set(ox - T.origin.x, T.city.gy, oz - T.origin.z);
   }
   reposition() { this.group.position.set(this.ox - this.T.origin.x, this.T.city.gy, this.oz - this.T.origin.z); }

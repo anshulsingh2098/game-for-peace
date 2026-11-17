@@ -132,3 +132,6 @@ Open: the one-time Cloudflare setup (KV namespace and secret) is still pending, 
 - `node tools/selftest.mjs` (headless: terrain, road, bridges, tunnels, tuning, worker, vehicles).
 - `python tools/serve.py` (add `--lan` to reach it from a phone on the same wifi), then `http://localhost:8765/?play` (add `&loc=alps|himalayas|california|south|mumbai|delhi|agra`, `&road=`, `&q=low|med|high`, `&touch` for the phone controls on a computer, `&debug`).
 - `window.__next` exposes the engine for checks from the console: `step`, `placeOnRoad(s)`, `setMode`, `env.setWeather`, `env.setTime`, `road`, `terrain`, `scatter`, `roadMesh`, `phys`, `view`, `sound`, `controls`. The browser pauses its frame loop when the pane is hidden: drive frames by hand with `step`.
+
+## 17 Nov: D6 Delhi Metro
+Done on branch `claude/delhi-d6-metro-2b04f7`: Metro viaducts, trains, elevated station kit, railway platforms, fast travel on J (`src/world/city/transit*.js`; hooks in `cityworld.js` and `main.js`). What is left and unverified: `docs/DELHI_TRANSIT.md` section 10, `docs/WORK_REMAINING.md` D6.*.

@@ -7,6 +7,7 @@ import { Soup, C, extrude, fbox, frame, prism } from './transit_geo.js';
 import { buildNetwork, buildTimetable, specOf, hexRgb, lineColour, GIRDER, PIER_SPACE, CAR_L, CAR_GAP, platformLen, kitOf } from './transit_plan.js';
 import { StationKit } from './transit_station.js';
 import { TransitUI } from './transit_ui.js';
+import { RailStations } from './transit_rail.js';
 
 const CONC = C(0xa5a29b), CONC_D = C(0x8b8882), CONC_T = C(0xc0bdb5), BALLAST = C(0x4b4945), STEEL = C(0x9aa0a6), WIRE = C(0x2c2e31), PIER = C(0x9a978f);
 const GIRDER_RING = [[-1.8, -GIRDER], [1.8, -GIRDER], [2.5, -0.6], [2.5, 0.9], [2.05, 0.9], [2.05, -0.15], [-2.05, -0.15], [-2.05, 0.9], [-2.5, 0.9], [-2.5, -0.6]];
@@ -18,7 +19,7 @@ export class CityTransit {
     this.city = city; this.origin = city.origin; this.S = city.pack.size; this.group = new THREE.Group(); city.scene.add(this.group); this.ok = false; this.t = 600; this.px = 0; this.pz = 0;
     this.chunks = new Map(); this.runs = new Map(); this.stations = new Map(); this.circ = new Map(); this.onTeleport = null;
     this.stats = { chunks: 0, stations: 0, tris: 0, calls: 0, piers: 0, pierMoved: 0, pierBlocked: 0, trains: 0, ms: 0 };
-    this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.05, side: THREE.DoubleSide, envMapIntensity: 0.3 });
+    this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.05, side: THREE.DoubleSide, envMapIntensity: 0.3, emissive: 0x24262a });
     this.glassMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 0.6 });
   }
   async init(url = 'assets/cities/delhi/transit.json') {
@@ -26,7 +27,7 @@ export class CityTransit {
     this.net = buildNetwork(this.data); this.lineOf = this.net.lineOf; this.tt = new Map(); this.zones = new Map();
     for (const R of this.net.routes) { R.spec = specOf(R.line); this.tt.set(R.id, buildTimetable(R, R.spec.vmax)); this.zones.set(R.id, []); }
     for (const [, e] of this.net.stations) for (const c of e.calls) { const per = e.st.per.find(p => p.line === c.R.line); if (per && kitOf(per) === 'elevated') this.zones.get(c.R.id).push([c.s - platformLen(c.R.line) / 2 - 12, c.s + platformLen(c.R.line) / 2 + 12]); }
-    this.indexRoutes(); this.makeTrains(); this.ui = new TransitUI(this); this.ok = true; return this;
+    this.indexRoutes(); this.makeTrains(); this.ui = new TransitUI(this); this.rail = new RailStations(this); this.ok = true; return this;
   }
   /* which chunk each stretch of each route is in; a grid of the elevated samples for finding the neighbouring track (twin viaducts share piers) */
   indexRoutes() {
@@ -153,20 +154,29 @@ export class CityTransit {
     else { let ws = null, sd = Infinity; for (const [id, e] of this.net.stations) { if (this.stations.has(id) || !city.tiles.has(this.stationTile(e))) continue; const d = Math.hypot(e.st.x - px, e.st.z - pz); if (d < ST_RAD && d < sd) { sd = d; ws = id; } } if (ws) this.buildStation(ws); }
     for (const key of [...this.chunks.keys()]) { const [i, j] = key.split('_').map(Number), d = Math.hypot(Math.max(i * S - px, 0, px - (i + 1) * S), Math.max(j * S - pz, 0, pz - (j + 1) * S)); if (d > CHUNK_KEEP) this.dropChunk(key); }
     for (const [id, k] of [...this.stations]) { const d = Math.hypot(k.e.st.x - px, k.e.st.z - pz); if (d > ST_KEEP) this.dropStation(id); else k.update(this.t, d); }
-    this.updateTrains(); this.ui.update(px, pz);
+    this.rail.update(px, pz); this.updateTrains(); this.ui.update(px, pz);
   }
   reposition() {
     for (const [key, c] of this.chunks) if (c.mesh) { const [i, j] = key.split('_').map(Number); c.mesh.position.set(i * this.S - this.origin.x, this.city.gy, j * this.S - this.origin.z); c.mesh.updateMatrix(); }
-    for (const k of this.stations.values()) k.reposition();
+    for (const k of this.stations.values()) k.reposition(); if (this.rail) this.rail.reposition();
+  }
+  /* height of a walkable surface (a concourse floor, a stair, a railway platform, its ramps) over (x, z), in world y, or NaN. CityWorld.deck asks this for everybody, so only a surface within 0.7 m of
+     the walker's feet counts (`footY`, set by main.js each frame; the ground height when nobody is on foot): you walk under a concourse at street level and up its stair onto the floor. */
+  deckAt(x, z) {
+    let best = NaN, bd = 0.7; const gy = this.city.gy, fy = this.footY === undefined ? gy : this.footY;
+    for (const k of [...this.stations.values(), ...(this.rail ? this.rail.built.values() : [])]) for (const w of k.walk) {
+      const dx = x - w.x, dz = z - w.z, u = dx * w.tx + dz * w.tz, l = -dx * w.tz + dz * w.tx; if (u < w.u0 || u > w.u1 || l < w.l0 || l > w.l1) continue;
+      const y = gy + w.ya + (w.yb - w.ya) * (w.u1 > w.u0 ? (u - w.u0) / (w.u1 - w.u0) : 0), d = Math.abs(y - fy); if (d <= bd) { bd = d; best = y; }
+    } return best;
   }
   /* wall circles of the piers (and station kiosks) for the vehicle physics: flat [x, z, r, ...] near (x, z) */
   circles(x, z, r) {
     const out = []; for (const a of this.circ.values()) for (let i = 0; i < a.length; i += 3) if (Math.abs(a[i] - x) < r + a[i + 2] && Math.abs(a[i + 1] - z) < r + a[i + 2]) out.push({ x: a[i], z: a[i + 1], r: a[i + 2] });
     for (const k of this.stations.values()) for (const c of k.circles) if (Math.abs(c.x - x) < r + c.r && Math.abs(c.z - z) < r + c.r) out.push(c); return out;
   }
-  refresh() { let tris = 0, calls = 0; for (const c of this.chunks.values()) if (c.mesh) { tris += c.tris; calls++; } for (const k of this.stations.values()) { tris += k.tris; calls += k.calls; } const car = this.fleet ? [...this.fleet.values()].reduce((a, f) => a + (f.mesh.geometry.index ? f.mesh.geometry.index.count / 3 : f.mesh.geometry.attributes.position.count / 3) * f.n, 0) : 0; this.stats.chunks = this.chunks.size; this.stats.stations = this.stations.size; this.stats.tris = tris; this.stats.calls = calls; this.stats.trainTris = car; }
+  refresh() { let tris = 0, calls = 0; for (const c of this.chunks.values()) if (c.mesh) { tris += c.tris; calls++; } for (const k of this.stations.values()) { tris += k.tris; calls += k.calls; } if (this.rail) { this.rail.refresh(); tris += this.rail.stats.tris; calls += this.rail.stats.calls; this.stats.rail = this.rail.stats.stations; } const car = this.fleet ? [...this.fleet.values()].reduce((a, f) => a + (f.mesh.geometry.index ? f.mesh.geometry.index.count / 3 : f.mesh.geometry.attributes.position.count / 3) * f.n, 0) : 0; this.stats.chunks = this.chunks.size; this.stats.stations = this.stations.size; this.stats.tris = tris; this.stats.calls = calls; this.stats.trainTris = car; }
   summary() {
-    if (!this.ok) return 'metro       not loaded'; this.refresh(); const s = this.stats; return 'metro       chunks ' + s.chunks + ' stations ' + s.stations + '  ' + (s.tris / 1000).toFixed(0) + 'k tris, ' + s.calls + ' draws  trains ' + s.trains + ' cars  piers ' + s.piers + ' (moved ' + s.pierMoved + ', blocked ' + s.pierBlocked + ')';
+    if (!this.ok) return 'metro       not loaded'; this.refresh(); const s = this.stats; return 'metro       chunks ' + s.chunks + ' stations ' + s.stations + ' rail stations ' + (s.rail || 0) + '  ' + (s.tris / 1000).toFixed(0) + 'k tris, ' + s.calls + ' draws  trains ' + s.trains + ' cars  piers ' + s.piers + ' (moved ' + s.pierMoved + ', blocked ' + s.pierBlocked + ')';
   }
 }
 
