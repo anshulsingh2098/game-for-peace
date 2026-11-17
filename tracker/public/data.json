@@ -1,5 +1,5 @@
 {
- "commit": "a0441f8",
+ "commit": "8ba6b4b",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -46,8 +46,8 @@
     },
     {
      "id": "acf5f839",
-     "t": "B1: Finish and PR vehicle/cars-on-main",
-     "d": "Review it against Phase 1 above, merge origin/main into it, run node tools/selftest.mjs and python tools/vehicle_acceptance.mjs --check, have a person drive a lap in each of the three vehicles, then open the PR. Accepted when both checks pass, a person has driven each vehicle, and the PR is open for the owner to merge.",
+     "t": "B1: Put your engine-sound and atmosphere work forward as separate small PRs (the car models and definitions are back in main since 18 Nov: owner's yes), each f…",
+     "d": "Original text: finish and PR vehicle/cars-on-main — Review it against Phase 1 above, merge origin/main into it, run node tools/selftest.mjs and python tools/vehicle_acceptance.mjs --check, have a person drive a lap in each of the three vehicles, then open the PR. Accepted when both checks pass, a person has driven each vehicle, and the PR is open for the owner to merge.",
      "s": "todo",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
@@ -255,8 +255,8 @@
     {
      "id": "a89f005c",
      "t": "L3: Real trees and plants",
-     "d": "Replace the lollipop trees with the real-scan plants already in assets/nature, plus hedges, walls and median planting (pairs with P2 medians).",
-     "s": "todo",
+     "d": "Started 18 Nov 2026 by Rajul's Claude (owner complaint that Delhi's grass, trees and ground did not look like Delhi): lawns and gardens use the real grass texture, the land between streets is lawn in green areas and warm earth elsewhere, park trees on a grid by the area profile, smoother 8-sided crowns, greener open land with tufts and bushes (see team/stream-a.md A-2026-11-18-18). Also done the same day: broad two-…",
+     "s": "doing",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
     },
@@ -322,9 +322,41 @@
    "Asked of Anshul in the team log",
    [
     {
-     "id": "a9e85856",
-     "t": "A-2026-11-18-17: OWNER DECISION: Web Lite is Delhi only, Full (India, more cities) is a downloadable PC and phone app; your plan accepted in principle",
-     "d": "Anshul's Claude: read the plan, work B14 first after B1 to B3 (shared files src/main.js, tools/stage_cloudflare.py: reserve first), and ask the owner the four open details. Keep one codebase and one self-test for both builds.",
+     "id": "a20f9279",
+     "t": "A-2026-11-18-22: real-scan leaf-card trees, compound walls, cornices; speed (live c085cc44)",
+     "d": "Anshul's Claude: continue L2 and P3 from docs/NEXT_PHASES.md; put more tree pictures into assets/nature and treeMat names in cityworld.js; measure on a phone.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
+     "id": "a02c4051",
+     "t": "A-2026-11-18-20: Delhi look part 3 (species crowns, medians, haze, colony trees) and the green-data check (docs/DELHI_GREEN_DATA.md)",
+     "d": "Anshul's Claude: continue L2, L3 and P3 from docs/NEXT_PHASES.md; measure draw calls and triangles on a phone before adding more trees.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
+     "id": "a7b81c0f",
+     "t": "A-2026-11-18-19: Delhi greenery part 2 (broad two-blob trees, forest, scrub, farmland, hedges) and Anshul's done and left (docs/STATUS.md)",
+     "d": "Anshul's Claude: pull PR 96 before touching tilemesh.js or streetlife.js; L3 continues from the list in docs/NEXT_PHASES.md.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
+     "id": "adc24b96",
+     "t": "A-2026-11-18-18: Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started; live 5c778ecf)",
+     "d": "Anshul's Claude: this is a start of L3 (mark [~]); continue from the list in docs/NEXT_PHASES.md L3; before you change tilemesh.js or streetlife.js pull this PR.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
+     "id": "a51f8c51",
+     "t": "A-2026-11-18-15: Anshul's car design, engine sound, birds, crickets and moon taken OUT of main again (live f91b4cc3); NPCs and animated exit kept",
+     "d": "Anshul's Claude: your rebuilt cars, ride height, engine configs, atmosphere sound and moon are still on your branches (release/combined, vehicle/cars-on-main, vehicle/cars-and-gears) and are NOT in main. Do not merge them back into main as they are. The owner decides case by case: put each as its own small PR (cars; engine sound; atmosphere) with a short description and a before and after (screenshots, a recording o…",
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-18, from Rajul's Claude"
@@ -488,38 +520,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-21, from Rajul's Claude"
-    },
-    {
-     "id": "a8894086",
-     "t": "Autodrive planner: sport no longer crashes",
-     "d": "please read docs/DRIVE_MODES.md (planner section). Known: the traffic sim can spawn a car about 100 m ahead (minSpawnGap); sport therefore does not pass in the oncoming lane.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
-    },
-    {
-     "id": "a407a5e1",
-     "t": "Autodrive levels and drive-mode styles; PRs 42 and 43 merged",
-     "d": "pull main; drive Mumbai to Goa and try E in each drive mode; review input/autodrive.js. Autodrive does not stop at signals yet (WORK_REMAINING 9.5).",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
-    },
-    {
-     "id": "abde96cb",
-     "t": "One continuous India world, separate Explore cities",
-     "d": "pull and drive Mumbai to Goa, Delhi to Jaipur; tell me if roads pop in late or traffic misbehaves at junctions. Gates and signs for the far arm of a branch road are not built yet.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
-    },
-    {
-     "id": "a4e1683c",
-     "t": "Travel screen; Indian lane discipline in traffic",
-     "d": "please review the lane-change logic and the speed caps; the rules are written in docs/TRAFFIC.md.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
     }
    ]
   ],
@@ -580,20 +580,28 @@
    "Open pull requests",
    [
     {
-     "id": "aabb1b0d",
-     "t": "PR 94: No Enter Delhi city button: the city loads by itself near Delhi",
-     "d": "Open pull request on branch feat/auto-enter-city. Waiting for review and the owner's merge.",
+     "id": "ae409460",
+     "t": "PR 98: Plan: rail, road, building and height conflicts (C0-C6)",
+     "d": "Open pull request on branch docs/city-conflicts. Waiting for review and the owner's merge.",
      "s": "doing",
      "w": "Rajul",
-     "r": "PR 94"
+     "r": "PR 98"
     },
     {
-     "id": "ad244372",
-     "t": "PR 93: Restore cars, engine sound and sky to before PR 90; keep NPCs and animated exit",
-     "d": "Open pull request on branch fix/restore-cars-sound. Waiting for review and the owner's merge.",
+     "id": "a2365585",
+     "t": "PR 97: Fix Delhi stuck on loading screen (builder boost + progress)",
+     "d": "Open pull request on branch claude/delhi-loading-fix. Waiting for review and the owner's merge.",
      "s": "doing",
      "w": "Rajul",
-     "r": "PR 93"
+     "r": "PR 97"
+    },
+    {
+     "id": "a94ddabe",
+     "t": "PR 95: Product split: Web Lite (Delhi only) and Full (downloadable PC and phone app); tasks B14-B16",
+     "d": "Open pull request on branch docs/lite-and-full. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 95"
     }
    ]
   ],
@@ -1425,14 +1433,34 @@
  ],
  "prs": [
   [
+   "98",
+   "Plan: rail, road, building and height conflicts (C0-C6)",
+   "open"
+  ],
+  [
+   "97",
+   "Fix Delhi stuck on loading screen (builder boost + progress)",
+   "open"
+  ],
+  [
+   "96",
+   "Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
+   "merged"
+  ],
+  [
+   "95",
+   "Product split: Web Lite (Delhi only) and Full (downloadable PC and phone app); tasks B14-B16",
+   "open"
+  ],
+  [
    "94",
    "No Enter Delhi city button: the city loads by itself near Delhi",
-   "open"
+   "merged"
   ],
   [
    "93",
    "Restore cars, engine sound and sky to before PR 90; keep NPCs and animated exit",
-   "open"
+   "merged"
   ],
   [
    "92",
@@ -1603,40 +1631,20 @@
    "59",
    "Docs after merging D1 to D5: handoff, plan and remaining work",
    "merged"
-  ],
-  [
-   "58",
-   "D5: the game renders the Delhi city pack (?play&city=delhi)",
-   "merged"
-  ],
-  [
-   "57",
-   "Delhi transit data (D2 metro and railway stations, D3 buses)",
-   "merged"
-  ],
-  [
-   "56",
-   "Delhi city pipeline and pack (D1), Delhi landmarks (D4)",
-   "merged"
-  ],
-  [
-   "55",
-   "Handoff 23 Nov and the Delhi flagship plan",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 323 behind main)"
+   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 339 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 60 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 76 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 58 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 74 behind main)"
   ]
  ],
  "tests": null,
@@ -1646,5 +1654,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T18:56:54.552Z"
+ "generated": "2026-11-17T20:18:39.962Z"
 }
