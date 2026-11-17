@@ -49,5 +49,6 @@ After writing an entry, commit it and push it. Entries that need action stay `op
 
 - Only edit files your stream owns (`PARALLEL_PLAN.md`). For shared files make the smallest change and log it.
 - Never deploy, never touch `cloudflare/public`, never merge into the integration branch unless the user says so.
+- **Where deploys go (owner decision, 17 Nov 2026):** new versions deploy to **Rajul's Cloudflare account** (`mailrajulsingh.in@gmail.com`, paid plan), live at https://game-for-peace.mailrajulsingh-in.workers.dev. **Anshul's account keeps the older original versions** (`game-for-peace.anshul-rawat.workers.dev`, `/` and `/next`): do not deploy over them. Check `npx wrangler@4 whoami` names the account you mean before every deploy. How: copy `cloudflare/worker.js` and `cloudflare/wrangler.jsonc` to a scratch folder, run `python tools/stage_cloudflare.py --out <folder>/public`, then `npx wrangler@4 deploy` from the scratch folder (the repo's `cloudflare/public` stays untouched).
 - Run `node tools/selftest.mjs` before every push.
 - Keep line endings as they are (the repo mixes LF and CRLF).

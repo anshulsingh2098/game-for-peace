@@ -12,7 +12,7 @@ Ledger as of commit `774a667` on `main`, plus branch `claude/audit-fixes` (17 No
 | N3 world polish | yes | partly | partly | no | no | no |
 | N4 performance | yes | bench only | desktop | no | no | no |
 | N5 features | yes | partly | yes | no | no | no |
-| N6 switch-over | yes (`index.html` is the new engine) | yes | yes | no | no | not confirmed |
+| N6 switch-over | yes (`index.html` is the new engine) | yes | yes | no | no | yes, on Rajul's account since 17 Nov 2026 (Anshul's account still has the old build) |
 | N7 runtime | yes | yes (audit R05 and R16 fixed: handle domains, dropped-time count) | n/a | n/a | no | no |
 | N8 streaming | yes | yes | yes | no | no | no |
 | N9 regions | yes | yes | yes | n/a | no | no |
