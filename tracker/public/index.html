@@ -107,7 +107,7 @@ input[type=search] { flex: 1 1 200px; }
 <div class="wrap">
   <header class="top">
     <div class="titlebar">
-      <div><h1>Game for Peace Tracker</h1><div class="sub" id="sub">Delhi city programme, plans, limits and what you asked for. Updated 18 Nov 2026.</div></div>
+      <div><h1>Game for Peace Tracker</h1><div class="sub" id="sub">Delhi city programme, plans, limits and what you asked for. Updated 17 Nov 2026.</div></div>
       <div class="overall"><div class="bar"><i id="obar"></i></div><div class="pct" id="opct">0%</div></div>
     </div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
@@ -154,6 +154,7 @@ const ITEMS = {
       I('p2g', 'Street furniture: DTC bus shelters, auto and e-rickshaw stands, police booths, petrol pumps, signal heads, sodium lights, wires', 'Some wires, poles and bus shelters exist from D7.', 'todo', 'Claude'),
       I('p2h', 'Put the scripted street-driving test into tools/', 'The pure-pursuit script that drove 143 streets was typed into the browser console; it should live in tools/ and run on demand.', 'todo', 'Claude'),
       I('p2i', 'Kerbs are no longer invisible walls', 'The car could not leave the road above 9 km/h; buildings, poles and stalls still block.', 'done', 'Claude', 'PR 71'),
+      I('p2k', 'City map: labelled roads out of Delhi, Other cities list (97 cities), destination carried through the gate into the India map', 'Self-test checks every gate and every reachable city. Signs at the gates in the 3D world are still to do.', 'doing', 'Claude', 'PR 85'),
       I('p2j', 'Building walls flush with the drawn wall, flyover piers solid, gate start on the ground', '', 'done', 'Claude', 'PR 72'),
     ]],
     ['P3 Buildings, shops and real places', [
@@ -375,6 +376,7 @@ const ITEMS = {
       I('q15', 'Junction shaping', '', 'done', 'You'),
       I('q16', 'A system so a fix applies everywhere, and a coordinate readout in the menu', 'Audit, rules and coordinate line built (PR 82).', 'done', 'You'),
       I('q17', 'This tracker page with checkboxes, comments and remarks', '', 'done', 'You'),
+      I('q19', 'The city map does not show the connection to the highways: how do I leave Delhi and reach another city?', 'The gates were mapped but invisible. Gate pins are labelled with the city and highway, an Other cities list routes you to the right exit, and the destination continues in the India map (PR 85).', 'doing', 'You', 'PR 85'),
       I('q18', 'Also a Cloudflare page, and keep it updated through memory', 'Deployed on your Cloudflare account; memory notes written; PR 84 merged.', 'done', 'You', 'tracker/README.md'),
     ]],
   ],
@@ -384,7 +386,7 @@ const PRS = [
   ['67', 'Platform number boards', 'merged'], ['68', 'Landmark starts outside footprint; tiles fetched once', 'merged'], ['69', 'Frame cost cut', 'merged'], ['70', 'Shadow pass cut', 'merged'],
   ['71', 'Kerbs not walls', 'merged'], ['72', 'Walls, piers, gate start, props', 'merged'], ['73', 'Title screen India map and Explore cities', 'merged'], ['74', 'Delhi always the real city', 'merged'],
   ['75', 'Aerial look', 'merged'], ['78', 'Connaught Place park', 'merged'], ['79', 'Flicker and zebra', 'merged'], ['80', 'Textures', 'merged'], ['81', 'Junction shaping', 'merged'], ['82', 'Coordinate line, audit, rules', 'merged'],
-  ['84', 'Tracker page: source in the repo and the Cloudflare Worker (deployed)', 'merged'], ['83', 'Another session: audit fixes (staging, loader rollback, handles, capsule on-foot, city traffic on flyovers, deploy rule)', 'open'], ['77', 'Infill buildings; loading waits for the city', 'merged'], ['76', 'Scale check, plan, N0 to N20 (docs)', 'merged'],
+  ['85', 'City map: roads out of Delhi, Other cities list, destination carried into the India map', 'open'], ['84', 'Tracker page: source in the repo and the Cloudflare Worker (deployed)', 'merged'], ['83', 'Another session: audit fixes (staging, loader rollback, handles, capsule on-foot, city traffic on flyovers, deploy rule)', 'open'], ['77', 'Infill buildings; loading waits for the city', 'merged'], ['76', 'Scale check, plan, N0 to N20 (docs)', 'merged'],
 ];
 const FACTS = [
   ['Self-test on main', '107 checks passing'], ['Delhi frame, default start (q=med)', 'about 358 calls, 300 k triangles with infill (was 408, 610 k before the cost work; 270, 256 k before infill)'],
