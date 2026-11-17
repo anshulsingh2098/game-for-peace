@@ -78,7 +78,7 @@ export class Scatter {
         if (jitter && vt) col.setRGB(col.r * vt[0], col.g * vt[1], col.b * vt[2]);                                    // this variant's own colour (a yellower birch, an autumn oak)
         im.setColorAt(n, col);
       });
-      im.castShadow = true; const sm = shadowMat(mat); if (sm) im.customDepthMaterial = sm; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
+      im.castShadow = c.shadows !== false; const sm = shadowMat(mat); if (sm) im.customDepthMaterial = sm; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); g.add(im); count += arr.length;
     };
     const nat = this.nature, defs = k => nat && nat[k] && nat[k].length ? nat[k] : [pr[k]];                   // real-scan variants when loaded, else the drawn model
     /* variants are not scattered at random: slow patches across the land favour one kind (a stand of birch, a clump of dark fir), mixed with some chance, as in real woods. Each variant has a weight w (rare ones are small) */

@@ -18,11 +18,11 @@ import { WX } from '../../env/environment.js';
 /* the world config of a city: the region's palette and plants, on flat land (no hills, no sea) with the engine's own placeholder road parked far away (the engine always has one road; here it only gives the vehicle code something to ask) */
 export function cityConfig(base, seed) {
   const T = base.terrain, flatT = { ...T, seaLevel: -30, seabed: -60, lowland: 8, continent: { ...T.continent, rise: 0 }, coast: { lo: -9, hi: -8 }, hills: { ...T.hills, amp: 0 }, mountains: { ...T.mountains, amp: 0 }, detail: { ...T.detail, amp: 0 } };
-  return { ...base, location: 'default', seed, terrain: flatT, palette: { ...base.palette, grass: [0.6, 0.55, 0.42], grass2: [0.5, 0.48, 0.36], dry: [0.62, 0.56, 0.42] }, scatter: { ...base.scatter, trees: 0.0006, rocks: 0, bushes: 0.0004, tufts: 0.002, clearRoad: 6 },
+  return { ...base, location: 'default', seed, terrain: flatT, palette: { ...base.palette, grass: [0.6, 0.55, 0.42], grass2: [0.5, 0.48, 0.36], dry: [0.62, 0.56, 0.42] }, scatter: { ...base.scatter, trees: 0.0006, rocks: 0, bushes: 0.0004, tufts: 0.002, clearRoad: 6, shadows: false },
     road: { ...base.road, style: 'two-lane', start: { x: -200000, z: 0, y: 8 }, guide: [0, 0, 300, 0, 600, 0, 900, 0] } };
 }
 
-const CELLED = { walk: 250, prop: 250, mark: 500, sign: 500, ban: 500, ad: 500 }, LOD_OF = { walk: 450, prop: 350, mark: 400, sign: 280, ban: 280, ad: 350 }, RADIUS = 1300, KEEP = 1900, CELL = 16, SLICE_MS = 3, FAR = 3800, LOD_NEAR = 450;                 // the detailed ring, when it is dropped, a tile's size, the budget of a frame for meshing, the far skyline radius, the radius of lane marks and kerbs
+const SHADOW_D = 200, CELLED = { walk: 250, prop: 250, mark: 500, sign: 500, ban: 500, ad: 500 }, LOD_OF = { walk: 450, prop: 350, mark: 400, sign: 280, ban: 280, ad: 350 }, RADIUS = 1300, KEEP = 1900, CELL = 16, SLICE_MS = 3, FAR = 3800, LOD_NEAR = 450;                 // the detailed ring, when it is dropped, a tile's size, the budget of a frame for meshing, the far skyline radius, the radius of lane marks and kerbs
 export class CityWorld {
   constructor(scene, origin, terrain, { base = 'assets/cities/delhi' } = {}) {
     this.base = base; this.scene = scene; this.origin = origin; this.terrain = terrain; this.ko = terrain.keepout; this.gy = terrain.base(0, 0); this.pack = new CityPack(base); this.group = new THREE.Group(); scene.add(this.group);
@@ -51,7 +51,7 @@ export class CityWorld {
     want.sort((a, b) => a[0] - b[0]); for (const [, i, j] of want) { if (this.loading.size >= 3) break; this.fetchTile(i, j); }
     if (this.job) this.stepJob(px, pz); else if (this.ready.length) { this.ready.sort((a, b) => Math.hypot((a.tx + 0.5) * S - px, (a.tz + 0.5) * S - pz) - Math.hypot((b.tx + 0.5) * S - px, (b.tz + 0.5) * S - pz)); const t = this.ready.shift(), k = this.tileKey(t.tx, t.tz); this.loading.delete(k); if (!this.tiles.has(k)) this.startJob(t); }
     this.updateFar(px, pz);
-    for (const [k, t] of this.tiles) { const d = Math.hypot(Math.max(t.tx * S - px, 0, px - (t.tx + 1) * S), Math.max(t.tz * S - pz, 0, pz - (t.tz + 1) * S)); if (d > KEEP) this.drop(k); else for (const m of t.meshes) { const c = m.userData.cell, dm = c ? Math.hypot(Math.max(t.tx * S + c.x0 - px, 0, px - (t.tx * S + c.x1)), Math.max(t.tz * S + c.z0 - pz, 0, pz - (t.tz * S + c.z1))) : d; if (m.userData.near) m.visible = dm < (m.userData.lod || LOD_NEAR); if (m.userData.bld) m.castShadow = dm < 450; } }
+    for (const [k, t] of this.tiles) { const d = Math.hypot(Math.max(t.tx * S - px, 0, px - (t.tx + 1) * S), Math.max(t.tz * S - pz, 0, pz - (t.tz + 1) * S)); if (d > KEEP) this.drop(k); else for (const m of t.meshes) { const c = m.userData.cell, dm = c ? Math.hypot(Math.max(t.tx * S + c.x0 - px, 0, px - (t.tx * S + c.x1)), Math.max(t.tz * S + c.z0 - pz, 0, pz - (t.tz * S + c.z1))) : d; if (m.userData.near) m.visible = dm < (m.userData.lod || LOD_NEAR); if (m.userData.bld) m.castShadow = dm < SHADOW_D; } }
   }
   /* the far skyline: tiles beyond the detailed ring, as boxes of their tall and big buildings (skyline.js), one fetched at a time while nothing else is loading */
   updateFar(px, pz) {
