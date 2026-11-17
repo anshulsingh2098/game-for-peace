@@ -7,10 +7,12 @@ import { Fleet, DIM } from './vehicles.js';
 const PARK_MAX = 300, AUTO = [0xe3b21a, 0x2e8b57, 0x2e8b57, 0xe3b21a];
 const MODES = { off: 0, low: 10, mid: 22, high: 34 }, CELL = 8, PAINT = [0xf2f2f2, 0xf2f2f2, 0xd9d9d9, 0x1b1b1d, 0x9a9da3, 0xb11f1f, 0x2a4f8a, 0xe8c547, 0x3a3a3c, 0xcfd2d6];
 const DRIVABLE = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential']);
-const rnd = (() => { let s = 12345; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
+/* each simulation owns its random stream, seeded when it is made, so a replay does not depend on what another simulation drew (audit R15) */
+const makeRnd = seed => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
 
 export class CityTraffic {
   constructor(scene, origin, G, identity = null) {
+    this.rnd = makeRnd(12345);
     this.identity = identity; this.buses = []; this.origin = origin; this.G = G; this.max = 34 + PARK_MAX; this.parked = new Map(); this.px = 0; this.pz = 0; this.scA = new THREE.Vector3(0.78, 0.95, 0.62); this.want = 0; this.cars = []; this.pieces = new Map(); this.ends = new Map(); this.tile = new Map();
     this.fleet = new Fleet(scene);
     this.sig = new Map(); this.xing = new Map(); this.peds = null; this.time = 0; { const xz = G.xz, f = G.nodeFlags; for (let i = 0; i < G.nodes; i++) { const k = Math.floor(xz[i * 2] / 12) + ',' + Math.floor(xz[i * 2 + 1] / 12); if (f[i] & 1) { let l = this.sig.get(k); if (!l) this.sig.set(k, l = []); l.push(i); } else if (f[i] & 2) { let l = this.xing.get(k); if (!l) this.xing.set(k, l = []); l.push(i); } } }       // the signalised nodes (flag 1) by 12 m cell
@@ -18,7 +20,7 @@ export class CityTraffic {
   }
   /* a vehicle kind for the area at (x, z) from identity.json (buses are CityBuses'; a parked vehicle is never a cycle rickshaw, a truck or an auto stand-in) */
   pickKind(x, z, r, parked = false) { const ID = this.identity; if (!ID) return 'hatch'; let k = ID.vehicleKind(ID.areaNameAt(x, z), r); if (k === 'bus') k = 'hatch'; if (parked && (k === 'cyclerick' || k === 'truck')) k = 'two'; return k; }
-  paintOf(kind) { const ID = this.identity, l = ID && ID.j.vehicles.paints[kind]; if (!l) return PAINT[Math.floor(rnd() * PAINT.length)]; return parseInt(l[Math.floor(rnd() * l.length)].slice(1), 16); }
+  paintOf(kind) { const ID = this.identity, l = ID && ID.j.vehicles.paints[kind]; if (!l) return PAINT[Math.floor(this.rnd() * PAINT.length)]; return parseInt(l[Math.floor(this.rnd() * l.length)].slice(1), 16); }
   setMode(m) { this.want = MODES[m] === undefined ? 10 : MODES[m]; if (this.onMode) this.onMode(m); }
   key(x, z) { return Math.floor(x / CELL) + ',' + Math.floor(z / CELL); }
   addTile(k, streets, gy) {
@@ -26,7 +28,7 @@ export class CityTraffic {
     for (const s of streets) { const id = s.id; if (G.layer[id] !== 0 || !DRIVABLE.has(G.classes[G.cls[id]]) || s.pts.length < 4) continue; const p = s.pts, cum = [0]; for (let i = 2; i < p.length; i += 2) cum.push(cum[cum.length - 1] + Math.hypot(p[i] - p[i - 2], p[i + 1] - p[i - 1])); const len = cum[cum.length - 1]; if (len < 6) continue;
       const w = s.width !== undefined ? s.width : Math.max(1, G.lanes[id] * 3), pc = { s, id, cum, len, w, one: G.oneway[id], cls: G.classes[G.cls[id]], speed: Math.min(15, Math.max(5, (G.speed[id] || 30) / 3.6 * 0.6)), alive: true, tile: k };
       ids.push(pc); this.pieces.set(pc, true); for (const e of [0, 1]) { const x = e ? p[p.length - 2] : p[0], z = e ? p[p.length - 1] : p[1], key = this.key(x, z); let l = this.ends.get(key); if (!l) this.ends.set(key, l = []); l.push({ pc, end: e, x, z }); } }
-    const pk = []; for (const pc of ids) { if (pc.cls !== 'residential' && pc.cls !== 'tertiary') continue; const side = rnd() < 0.5 ? 1 : -1; for (let s = 12; s < pc.len - 12; s += 8 + rnd() * 6) { if (rnd() > 0.4) continue; const o = this.at(pc, s, {}); if (this.crossingAt(o.x, o.z)) continue; const off = (pc.w / 2 + 0.3) * side, nx = -o.tz, nz = o.tx; const kind = this.pickKind(o.x, o.z, rnd(), true); pk.push({ x: o.x + nx * off, z: o.z + nz * off, yaw: Math.atan2(o.tz, o.tx), kind, paint: this.paintOf(kind) }); } }
+    const pk = []; for (const pc of ids) { if (pc.cls !== 'residential' && pc.cls !== 'tertiary') continue; const side = this.rnd() < 0.5 ? 1 : -1; for (let s = 12; s < pc.len - 12; s += 8 + this.rnd() * 6) { if (this.rnd() > 0.4) continue; const o = this.at(pc, s, {}); if (this.crossingAt(o.x, o.z)) continue; const off = (pc.w / 2 + 0.3) * side, nx = -o.tz, nz = o.tx; const kind = this.pickKind(o.x, o.z, this.rnd(), true); pk.push({ x: o.x + nx * off, z: o.z + nz * off, yaw: Math.atan2(o.tz, o.tx), kind, paint: this.paintOf(kind) }); } }
     this.parked.set(k, pk); this.tile.set(k, ids);
   }
   removeTile(k) { this.parked.delete(k); const l = this.tile.get(k); if (!l) return; for (const pc of l) { pc.alive = false; this.pieces.delete(pc); } for (const [key, arr] of this.ends) { const n = arr.filter(e => e.pc.alive); if (n.length) this.ends.set(key, n); else this.ends.delete(key); } this.tile.delete(k); }
@@ -42,8 +44,8 @@ export class CityTraffic {
   place(car, pc, dir, s) { car.pc = pc; car.dir = dir; car.s = s; car.v = Math.min(car.v || 0, pc.speed); }
   spawn(px, pz) {
     const list = [...this.pieces.keys()]; if (!list.length) return null;
-    for (let t = 0; t < 30; t++) { const pc = list[Math.floor(rnd() * list.length)], s = rnd() * pc.len, o = this.at(pc, s, {}), d = Math.hypot(o.x - px, o.z - pz); if (d < 90 || d > 520) continue; const dir = pc.one !== 0 ? pc.one : rnd() < 0.5 ? 1 : -1; if (!this.canGo(pc, dir)) continue;
-      const kind = this.pickKind(o.x, o.z, rnd()); return { pc, dir, s, v: pc.speed * (0.6 + 0.4 * rnd()), kind, k: DIM[kind].speed, paint: this.paintOf(kind), x: o.x, z: o.z, yaw: 0, lat: 0, wait: 0 }; }
+    for (let t = 0; t < 30; t++) { const pc = list[Math.floor(this.rnd() * list.length)], s = this.rnd() * pc.len, o = this.at(pc, s, {}), d = Math.hypot(o.x - px, o.z - pz); if (d < 90 || d > 520) continue; const dir = pc.one !== 0 ? pc.one : this.rnd() < 0.5 ? 1 : -1; if (!this.canGo(pc, dir)) continue;
+      const kind = this.pickKind(o.x, o.z, this.rnd()); return { pc, dir, s, v: pc.speed * (0.6 + 0.4 * this.rnd()), kind, k: DIM[kind].speed, paint: this.paintOf(kind), x: o.x, z: o.z, yaw: 0, lat: 0, wait: 0 }; }
     return null;
   }
   update(dt, px, pz, pyaw) {
@@ -61,7 +63,7 @@ export class CityTraffic {
       if (c.s > c.pc.len || c.s < 0) {                                    // the end of the piece: continue on another that starts here, else turn this car round at a dead end (or retire it)
         const end = c.dir > 0 ? c.pc.len : 0, p = c.pc.s.pts, ex = c.dir > 0 ? p[p.length - 2] : p[0], ez = c.dir > 0 ? p[p.length - 1] : p[1], opts = [];
         for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = this.ends.get(this.key(ex + a * CELL, ez + b * CELL)); if (l) for (const e of l) if (e.pc !== c.pc && e.pc.alive && Math.hypot(e.x - ex, e.z - ez) < 4 && this.canGo(e.pc, e.end === 0 ? 1 : -1)) opts.push(e); }
-        if (opts.length) { const e = opts[Math.floor(rnd() * opts.length)]; this.place(c, e.pc, e.end === 0 ? 1 : -1, e.end === 0 ? 0.1 : e.pc.len - 0.1); } else { const r = this.spawn(px, pz); if (r) cars[n] = r; else cars.splice(n--, 1); continue; }
+        if (opts.length) { const e = opts[Math.floor(this.rnd() * opts.length)]; this.place(c, e.pc, e.end === 0 ? 1 : -1, e.end === 0 ? 0.1 : e.pc.len - 0.1); } else { const r = this.spawn(px, pz); if (r) cars[n] = r; else cars.splice(n--, 1); continue; }
         void end; }
       this.at(c.pc, c.s, o); const dx = o.tx * c.dir, dz = o.tz * c.dir, lat = c.pc.one !== 0 ? 0 : -Math.min(c.pc.w / 4, 2.2); c.lat += (lat - c.lat) * Math.min(1, dt * 2);
       const nx = -dz, nz = dx; c.x = o.x + nx * c.lat; c.z = o.z + nz * c.lat; c.yaw = Math.atan2(dz, dx); }
