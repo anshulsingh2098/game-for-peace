@@ -28,7 +28,7 @@ export class Pedestrians {
       const at = (side, up) => [X + sx * side, y + up + bob, Z + sz * side];
       let a = at(0, 1.12); put(this.torso, a[0], a[1], a[2], 0); a = at(0, 1.58); put(this.head, a[0], a[1], a[2], 0);
       a = at(-0.1, 0.8); put(this.legL, a[0], a[1], a[2], sw); a = at(0.1, 0.8); put(this.legR, a[0], a[1], a[2], -sw);
-      this.torso.setColorAt(n, this.c.setHex(CLOTHES[p.colour % CLOTHES.length])); this.head.setColorAt(n, this.c.setHex(SKIN[p.skin % SKIN.length])); n++;
+      this.torso.setColorAt(n, this.c.setHex(p.cloth !== undefined ? p.cloth : CLOTHES[p.colour % CLOTHES.length])); this.head.setColorAt(n, this.c.setHex(SKIN[p.skin % SKIN.length])); n++;
     }
     for (const im of [this.torso, this.head, this.legL, this.legR]) { im.count = n; im.visible = n > 0; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
   }

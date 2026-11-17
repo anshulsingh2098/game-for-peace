@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 23:30  D7: street life and identity of Delhi (identity.json, shops, ads, vehicles, buses, people)
+Branch: claude/delhi-d7-streetlife-29f2c5  Commit: see the PR
+What changed: new `assets/cities/delhi/identity.json`, `src/world/city/{identity,streetart,streetlife,vehicles,citybus}.js`, `docs/DELHI_LOOK.md`; shared files touched with a few lines each: `tilemesh.js` (exports `Mesher`, one `yield*` call to `buildStreetLife`), `cityworld.js` (identity, art, buses, new mesh names, month haze, a crash guard in `updateFar` for empty far tiles), `citytraffic.js` (vehicle kinds replace the two boxes), `citypeds.js` (clothes, extra standing people), `src/pedestrians/pedestrians.js` (one line: `p.cloth` overrides the clothes colour), `tools/selftest.mjs` (104 checks).
+For the other stream: nothing. `?month=N` and `?life=off` are new URL flags. Not deployed.
+Status: open
+
 ## 2026-11-17 23:00  D6 merged with the D5b renderer (PR 62); Metro minimap uses the loaded transit data
 Branch: claude/delhi-d6-metro-2b04f7  Commit: see the PR
 What changed: merged origin/main into the D6 branch; conflicts in cityworld.js, main.js, selftest.mjs, this log resolved (both sides kept, 103 checks). `main.js` now gives `cityMap.setTransit(city.transit.data)` instead of a second fetch. Also since the first D6 entry: underground station interiors (`transit_underground.js`), platform stairs, round signs, railway rakes, walkable surfaces; see `docs/DELHI_TRANSIT.md` section 10.
