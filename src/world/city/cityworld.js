@@ -25,7 +25,7 @@ export function cityConfig(base, seed) {
 const KERB_WALL = false, SHADOW_D = 200, CELLED = { walk: 250, prop: 250, mark: 500, sign: 500, ban: 500, ad: 500 }, LOD_OF = { walk: 450, prop: 350, mark: 400, sign: 280, ban: 280, ad: 350 }, RADIUS = 1300, KEEP = 1900, CELL = 16, SLICE_MS = 3, FAR = 3800, LOD_NEAR = 450;                 // the detailed ring, when it is dropped, a tile's size, the budget of a frame for meshing, the far skyline radius, the radius of lane marks and kerbs
 export class CityWorld {
   constructor(scene, origin, terrain, { base = 'assets/cities/delhi' } = {}) {
-    this.base = base; this.scene = scene; this.origin = origin; this.terrain = terrain; this.ko = terrain.keepout; this.gy = terrain.base(0, 0); this.pack = new CityPack(base); this.group = new THREE.Group(); scene.add(this.group);
+    this.base = base; this.scene = scene; this.origin = origin; this.terrain = terrain; this.ko = terrain.keepout; this.gy = terrain.base(0, 0) + 0.3;       /* the city stands 30 cm above the engine's own flat terrain: two ground planes at one height flicker */ this.pack = new CityPack(base); this.group = new THREE.Group(); scene.add(this.group);
     this.mats = makeMaterials(); this.far = new Map(); this.farLoading = new Set(); this.cutCells = new Map(); this.openCuts = []; this.cuts = installCutHoles([this.mats.ground, this.mats.park, this.mats.walk]); this.tiles = new Map(); this.loading = new Map(); this.ready = []; this.circ = new Map(); this.geomMap = new Map(); this.onStreets = null; this.deckCells = new Map(); this.stats = { tiles: 0, buildings: 0, streets: 0, ms: 0, loaded: 0, failed: 0 }; this.labels = new Map();
   }
   async init() {

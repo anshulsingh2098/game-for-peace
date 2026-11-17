@@ -445,7 +445,9 @@ function governor(now) {
   gov.level += down ? 1 : -1; gov.t = 0; renderer.setPixelRatio(Math.max(0.4, gov.base * gov.mul[gov.level])); resize(); if (shadowsOn) env.setShadows(gov.level >= 3 ? 0 : (quality === 'high' ? 4096 : 2048), quality === 'high' ? 90 : 70);
   if (down && !gov.told) { gov.told = true; toast('Resolution lowered to keep the game smooth (see Settings for a lower quality tier)'); }
 }
-function draw(now) { governor(now); if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
+/* in a city the near plane is 1 m unless the camera is inside or on the car (cockpit, hood, bumper: 0.3 m): depth precision at 300 m to 1 km is three times better, which stops the ground layers shimmering */
+function setNear() { if (!cityMode) return; const nn = phys && Math.hypot(camera.position.x + grid.origin.x - phys.x, camera.position.z + grid.origin.z - phys.z) < 3.4 ? 0.3 : 1.0; if (camera.near !== nn) { camera.near = nn; camera.updateProjectionMatrix(); } }
+function draw(now) { governor(now); setNear(); if (fx) fx.render(); else renderer.render(scene, camera); stats(now); }
 /* world sectors (src/world/sectors.js): 512 m squares with their own load state, above the terrain tiles. A sector loads the shared assets its region needs (today the vehicle pack) and releases them when it goes. */
 const focus = { x: 0, z: 0, dx: 1, dz: 0, speed: 0 };
 /* what a sector holds (N8): the region its centre belongs to (nearest of the regions by the real place each is an impression of, with a blend near borders) and the cities of the route inside it.

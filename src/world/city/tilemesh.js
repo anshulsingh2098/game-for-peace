@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { buildStreetLife } from './streetlife.js';
 
+/* layers that lie in the ground plane are given real height steps (metres over the ground: it was 0 for all of them and only depth offsets told them apart, which shimmers with distance): ground 0, parks and water, pavement, road, markings */
+const LIFT = { park: 0.015, walk: 0.03, road: 0.05, mark: 0.07 };
 const WALL_R = 1.1;                   // a wall circle's radius, and how far its centre sits inside the footprint edge: the circle ends exactly at the drawn wall (it was 1.25 m wide, 0.7 m inside: an invisible 0.55 m of wall in the street)
 export class Mesher {
   constructor() { this.p = []; this.n = []; this.c = []; this.u = []; this.i = []; }
@@ -84,8 +86,8 @@ export function* buildTileSteps(tile, ctx) {
   /* ---- ground: land use first, then blocks, parks and water ---- */
   for (const l of tile.landuse) { const c = BLOCK[l.class]; if (c && !['residential', 'commercial', 'retail', 'industrial'].includes(l.class)) flat(M.ground, l.ring, l.holes, c, 0); }
   for (const b of tile.blocks) flat(M.ground, b.ring, b.holes, BLOCK[b.landuse] || BLOCK.urban, 0);
-  for (const p of tile.parks) flat(M.park, p.ring, p.holes, PARK, 0);
-  for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, 0);
+  for (const p of tile.parks) flat(M.park, p.ring, p.holes, PARK, LIFT.park);
+  for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, LIFT.park);
   /* ---- streets ---- */
   const groundSeg = new Map(), CELLQ = 24;                                           // ground carriageways of this tile, to keep flyover piers out of them
   const hashSeg = (x0, z0, x1, z1, hw, id) => { const a = Math.floor(Math.min(x0, x1) / CELLQ), b = Math.floor(Math.max(x0, x1) / CELLQ), c = Math.floor(Math.min(z0, z1) / CELLQ), d = Math.floor(Math.max(z0, z1) / CELLQ); for (let i = a; i <= b; i++) for (let j = c; j <= d; j++) { const k = i + ',' + j; let l = groundSeg.get(k); if (!l) groundSeg.set(k, l = []); l.push([x0, z0, x1, z1, hw, id]); } };
@@ -127,14 +129,25 @@ export function* buildTileSteps(tile, ctx) {
     const w = pieceWidth(G, s), walk = pieceSidewalk(G, s), clip = s.clip || 0, deck = lay > 0, rank = RANKOF[cls] || 0, rc = ROAD[cls] || ROAD.residential, two = G.oneway[id] === 0, lanes = G.lanes[id];
     const sunk = lay < 0; let pts = s.pts; if (deck) pts = densify(pts, 5); else if (sunk) pts = densify(pts, 4); const F = frames(pts), hAt = (x, z) => (deck ? deckHeight(G, id, x, z) : sunk ? -underDepth(G, id, x, z) : 0), H = new Float32Array(F.n);
     for (let i = 0; i < F.n; i++) H[i] = hAt(pts[i * 2], pts[i * 2 + 1]);
+    const m0 = (m, x, y, z, c) => m.v(x, y, z, 0, 1, 0, c);
     const strip = (m, a, b, c, dy, hExtra = 0) => {                                                 // a strip between lateral offsets a and b along the whole piece
       let prev = -1; for (let i = 0; i < F.n; i++) {
-        const x = pts[i * 2], z = pts[i * 2 + 1], y = gy + H[i] + dy + hExtra, k = F.sc[i]; const va = m.v(X(x + F.nx[i] * a * k), y, Z(z + F.nz[i] * a * k), 0, 1, 0, c), vb = m.v(X(x + F.nx[i] * b * k), y, Z(z + F.nz[i] * b * k), 0, 1, 0, c);
+        const x = pts[i * 2], z = pts[i * 2 + 1], y = gy + H[i] + dy + hExtra + (m === M.road ? LIFT.road : m === M.walk ? LIFT.walk : m === M.mark ? LIFT.mark : 0), k = F.sc[i]; const va = m.v(X(x + F.nx[i] * a * k), y, Z(z + F.nz[i] * a * k), 0, 1, 0, c), vb = m.v(X(x + F.nx[i] * b * k), y, Z(z + F.nz[i] * b * k), 0, 1, 0, c);
         if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va;
       }
     };
     const hw = w / 2;
-    if (cls === 'footway' || cls === 'cycleway') { strip(M.walk, -hw, hw, rc, 0); out.nStreets++; continue; }
+    if (cls === 'footway' || cls === 'cycleway') {                                         // a footway: grey where it runs beside the streets; where it crosses a carriageway it is a zebra crossing (white bars across the road), not a grey slab lying in the road's plane (which flickered)
+      const mk = M.mark, WH = col(0xf1eee4); let arc = 0, nextBar = 0.5, prevA = -1, prevB = -1;
+      for (let i = 0; i + 1 < F.n; i++) {
+        const x0 = pts[i * 2], z0 = pts[i * 2 + 1], x1 = pts[i * 2 + 2], z1 = pts[i * 2 + 3], dx = x1 - x0, dz = z1 - z0, L = Math.hypot(dx, dz); if (L < 1e-6) continue; const ux = dx / L, uz = dz / L, nxs = -uz, nzs = ux;
+        const inRoad = !mouthFree((x0 + x1) / 2, (z0 + z1) / 2, id) && cls === 'footway';
+        if (!inRoad) { const ya = gy + H[i] + LIFT.walk + 0.025, yb = gy + H[i + 1] + LIFT.walk + 0.025, k0 = F.sc[i], k1 = F.sc[i + 1]; const a0 = m0(M.walk, X(x0 + F.nx[i] * -hw * k0), ya, Z(z0 + F.nz[i] * -hw * k0), rc), a1 = m0(M.walk, X(x0 + F.nx[i] * hw * k0), ya, Z(z0 + F.nz[i] * hw * k0), rc), b0 = m0(M.walk, X(x1 + F.nx[i + 1] * -hw * k1), yb, Z(z1 + F.nz[i + 1] * -hw * k1), rc), b1 = m0(M.walk, X(x1 + F.nx[i + 1] * hw * k1), yb, Z(z1 + F.nz[i + 1] * hw * k1), rc); M.walk.tri(a0, a1, b0, 0, 1, 0); M.walk.tri(a1, b1, b0, 0, 1, 0); }
+        else { while (nextBar < arc + L) { const t = (nextBar - arc) / L, cx = x0 + dx * t, cz = z0 + dz * t, y = gy + H[i] + LIFT.mark + 0.0, hl = Math.max(hw, 1.1), bw = 0.25; const q0 = mk.v(X(cx - ux * bw + nxs * hl), y, Z(cz - uz * bw + nzs * hl), 0, 1, 0, WH), q1 = mk.v(X(cx + ux * bw + nxs * hl), y, Z(cz + uz * bw + nzs * hl), 0, 1, 0, WH), q2 = mk.v(X(cx + ux * bw - nxs * hl), y, Z(cz + uz * bw - nzs * hl), 0, 1, 0, WH), q3 = mk.v(X(cx - ux * bw - nxs * hl), y, Z(cz - uz * bw - nzs * hl), 0, 1, 0, WH); mk.tri(q0, q1, q2, 0, 1, 0); mk.tri(q0, q2, q3, 0, 1, 0); nextBar += 0.9; } }
+        arc += L; void prevA; void prevB;
+      }
+      out.nStreets++; continue;
+    }
     strip(M.road, -hw, hw, rc, 0);
     if (sunk) { underpass(pts, F, H, hw, id, lay); if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) { /* lane marks below */ } } else
     if (walk > 0) { const wl = 1.8; strip(M.walk, hw, hw + wl, WALK, 0); if (walk > 1 || two) strip(M.walk, -hw - wl, -hw, WALK, 0); if (!deck) { kerb(pts, F, hw, 1, id); if (walk > 1 || two) kerb(pts, F, hw, -1, id); } }
