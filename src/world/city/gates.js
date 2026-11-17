@@ -12,3 +12,13 @@ export function pickGate(gates, roadId, yaw, nh) {
   for (const g of gates) { const sc = Math.cos(yaw - yawOf(g.bearing)) + (roadId && g.road === roadId ? 1 : 0) + (nh && g.india && g.india.replace(/\s+/g, '') === nh ? 0.3 : 0) + (g.india ? 0.05 : 0); if (sc > bs) { bs = sc; best = g; } }
   return best;
 }
+
+/* the gate to leave a city by for a destination city: the gate on the first road of the shortest route (best when it also leads toward that road's next city); when no gate joins that road (the Delhi-Kolkata road shares the southern exits with the Agra road) the gate that points most nearly toward the next city. Returns { gate, km } or null. net is a RoadNetwork. */
+export function gateForCity(net, cityId, gates, destId) {
+  const rt = net.route(cityId, destId); if (!rt || !rt.legs || !rt.legs.length) return null; const l0 = rt.legs[0], km = Math.round(rt.length * 100 / 1000); let best = null, bs = 0;
+  for (const g of gates) { if (!g.road) continue; const sc = (g.road === l0.road ? 1 : 0) + (g.toward === l0.to ? 1 : 0); if (sc > bs) { bs = sc; best = g; } }
+  if (best) return { gate: best, km };
+  const c0 = net.cities.get(cityId), t = net.cities.get(l0.to); if (!c0 || !t) return null; const ux = t.x - c0.x, uz = t.z - c0.z, ul = Math.hypot(ux, uz) || 1; let bc = -2;
+  for (const g of gates) { if (!g.road) continue; const gl = Math.hypot(g.x, g.z) || 1, cs = (g.x * ux + g.z * uz) / (gl * ul); if (cs > bc) { bc = cs; best = g; } }
+  return best ? { gate: best, km } : null;
+}

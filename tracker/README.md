@@ -23,3 +23,6 @@ The content is the arrays at the top of the script in `public/index.html` (`ITEM
 1. republish the Artifact from this file (same URL), and
 2. `cd tracker && npx wrangler deploy` for the Cloudflare copy.
 A person's ticks, remarks and comments live in the store and survive both. An item's `s` in the file is only its starting status; the stored status wins. A new item needs a new unique id.
+
+## The live part (built from the repo)
+`node tools/build_tracker.mjs` (from the repo root) regenerates the **Rajul and Anshul** view and the **Assigned tasks** tab from `docs/NEXT_PHASES.md`, the open asks in `team/stream-a.md` and `team/stream-b.md`, the unticked lines of `CHECKLIST.md`, GitHub pull requests (needs `gh`) and Anshul's `vehicle/*` branches. It writes the data into `public/index.html` between the AUTO-DATA markers (so the claude.ai Artifact copy gets it too) and to `public/data.json`. `--quick` skips the self-test count, `--check` only tests whether it is stale (used by `tools/daily_check.py`), `--deploy` builds and runs `wrangler deploy` for the owner's account. Generated item ids are hashes of their titles, so ticks and remarks survive a rebuild. Items you want on a person's list: put them in `docs/NEXT_PHASES.md`, or in a team-log entry under "For the other stream" with `Status: open`.

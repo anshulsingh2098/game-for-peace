@@ -26,7 +26,7 @@ const NO_INFILL = typeof location !== 'undefined' && new URLSearchParams(locatio
 export class CityWorld {
   constructor(scene, origin, terrain, { base = 'assets/cities/delhi' } = {}) {
     this.base = base; this.scene = scene; this.origin = origin; this.terrain = terrain; this.ko = terrain.keepout; this.gy = terrain.base(0, 0) + 0.3;       /* the city stands 30 cm above the engine's own flat terrain: two ground planes at one height flicker */ this.pack = new CityPack(base); this.group = new THREE.Group(); scene.add(this.group);
-    this.mats = makeMaterials(); this.mats.infill = this.mats.bldg; this.mats.infillShop = this.mats.shop; this.far = new Map(); this.farLoading = new Set(); this.cutCells = new Map(); this.openCuts = []; this.cuts = installCutHoles([this.mats.ground, this.mats.park, this.mats.walk]); this.tiles = new Map(); this.loading = new Map(); this.ready = []; this.circ = new Map(); this.geomMap = new Map(); this.onStreets = null; this.deckCells = new Map(); this.stats = { tiles: 0, buildings: 0, streets: 0, ms: 0, loaded: 0, failed: 0 }; this.labels = new Map();
+    this.mats = makeMaterials(); this.mats.infill = this.mats.bldg; this.mats.infillShop = this.mats.shop; this.far = new Map(); this.farLoading = new Set(); this.retry = new Map(); this.cutCells = new Map(); this.openCuts = []; this.cuts = installCutHoles([this.mats.ground, this.mats.park, this.mats.walk]); this.tiles = new Map(); this.loading = new Map(); this.ready = []; this.circ = new Map(); this.geomMap = new Map(); this.onStreets = null; this.deckCells = new Map(); this.stats = { tiles: 0, buildings: 0, streets: 0, ms: 0, loaded: 0, failed: 0 }; this.labels = new Map();
   }
   async init() {
     await this.pack.init(); const { landmarks } = this.pack;
@@ -44,10 +44,11 @@ export class CityWorld {
   }
   tileKey(tx, tz) { return tx + '_' + tz; }
   /* call every frame: wanted tiles are fetched, one is built per frame, far ones are dropped */
-  update(px, pz, dt = 0.016) {
-    this.traffic.update(dt, px, pz); if (this.buses) this.buses.update(dt, px, pz, this.gy); this.transit.update(px, pz, dt); this.peds.update(dt, px, pz, this.gy); this.cuts.set(this.openCuts, this.origin, px, pz); this.lmx.update(px, pz);
+  update(px, pz, dt = 0.016, py) {
+    this.traffic.update(dt, px, pz, undefined, py); if (this.buses) this.buses.update(dt, px, pz, this.gy); this.transit.update(px, pz, dt); this.peds.update(dt, px, pz, this.gy); this.cuts.set(this.openCuts, this.origin, px, pz); this.lmx.update(px, pz);
     const S = this.pack.size, tx0 = Math.floor((px - RADIUS) / S), tx1 = Math.floor((px + RADIUS) / S), tz0 = Math.floor((pz - RADIUS) / S), tz1 = Math.floor((pz + RADIUS) / S), want = [];
-    for (let i = tx0; i <= tx1; i++) for (let j = tz0; j <= tz1; j++) { const k = this.tileKey(i, j); if (this.tiles.has(k) || this.loading.has(k) || !this.pack.hasTile(i, j)) continue; const d = Math.hypot(Math.max(i * S - px, 0, px - (i + 1) * S), Math.max(j * S - pz, 0, pz - (j + 1) * S)); if (d < RADIUS) want.push([d, i, j]); }
+    for (let i = tx0; i <= tx1; i++) for (let j = tz0; j <= tz1; j++) { const k = this.tileKey(i, j); if (this.tiles.has(k) || this.loading.has(k) || !this.pack.hasTile(i, j)) continue; { const r = this.retry.get(k); if (r && performance.now() < r.at) continue; }      // a tile that failed waits 1 s, 2 s, 4 s ... (at most 30 s) before it is asked for again (audit R10)
+    const d = Math.hypot(Math.max(i * S - px, 0, px - (i + 1) * S), Math.max(j * S - pz, 0, pz - (j + 1) * S)); if (d < RADIUS) want.push([d, i, j]); }
     want.sort((a, b) => a[0] - b[0]); for (const [, i, j] of want) { if (this.loading.size >= 3) break; this.fetchTile(i, j); }
     if (this.job) this.stepJob(px, pz); else if (this.ready.length) { this.ready.sort((a, b) => Math.hypot((a.tx + 0.5) * S - px, (a.tz + 0.5) * S - pz) - Math.hypot((b.tx + 0.5) * S - px, (b.tz + 0.5) * S - pz)); const t = this.ready.shift(), k = this.tileKey(t.tx, t.tz); this.loading.delete(k); if (!this.tiles.has(k)) this.startJob(t); }
     this.updateFar(px, pz);
@@ -61,7 +62,7 @@ export class CityWorld {
     if (!best) return; const [i, j, k] = best; this.farLoading.add(k);
     this.pack.tile(i, j).then(t => { this.farLoading.delete(k); if (!t || this.tiles.has(k)) return; const g = buildSkyline(t, { gy: this.gy, size: S, dense: bd < 2800 }); if (!g) { this.far.set(k, { tx: i, tz: j, mesh: new THREE.Object3D(), empty: true }); return; } const m = new THREE.Mesh(g, this.mats.sky); m.matrixAutoUpdate = false; m.position.set(i * S - this.origin.x, 0, j * S - this.origin.z); m.updateMatrix(); this.group.add(m); this.far.set(k, { tx: i, tz: j, mesh: m }); }).catch(() => { this.farLoading.delete(k); });
   }
-  fetchTile(tx, tz) { const k = this.tileKey(tx, tz); this.loading.set(k, true); this.pack.tile(tx, tz).then(t => { if (t && this.loading.has(k)) this.ready.push(t); else this.loading.delete(k); }).catch(e => { this.stats.failed++; console.warn('city tile', k, e); this.loading.delete(k); }); }
+  fetchTile(tx, tz) { const k = this.tileKey(tx, tz); this.loading.set(k, true); this.pack.tile(tx, tz).then(t => { if (t && this.loading.has(k)) { this.ready.push(t); this.retry.delete(k); } else this.loading.delete(k); }).catch(e => { this.stats.failed++; console.warn('city tile', k, e); this.loading.delete(k); const n = (this.retry.get(k) || { n: 0 }).n + 1; this.retry.set(k, { n, at: performance.now() + Math.min(30000, 1000 * 2 ** (n - 1)) }); }); }
   /* a tile is meshed in slices of about SLICE_MS a frame (tilemesh.js buildTileSteps), then added to the scene in one go */
   startJob(tile) { this.job = { tile, t0: performance.now(), cpu: 0, gen: buildTileSteps(tile, { infill: !NO_INFILL, G: this.pack.G, lm: this.pack.lm, gy: this.gy, size: this.pack.size, skip: this.lmx.skip, life: this.life && { identity: this.identity, art: this.art, month: this.month, stops: this.stops.get(tile.tx + '_' + tile.tz) || [] }, yieldNow: () => performance.now() > this.deadline }) }; this.stepJob(); }
   stepJob() {

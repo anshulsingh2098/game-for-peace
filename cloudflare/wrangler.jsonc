@@ -3,7 +3,9 @@
   "compatibility_date": "2025-01-01",
   "main": "worker.js",
   // the worker only runs for /api/*; every other request is served straight from the static files
-  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"] }
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  // the tuner's settings store on the owner's Cloudflare account (created 17 Nov 2026 with: npx wrangler kv namespace create SETTINGS). Another account needs its own id.
+  "kv_namespaces": [{ "binding": "SETTINGS", "id": "caceff0fc2cc4ca8b44b83ed90400b9c" }]
   // Publishing from the tuner needs these two, set up once (the API answers 503 until then, and the site is unaffected):
   //   1. cd cloudflare && npx wrangler kv namespace create SETTINGS      then add the id it prints:
   //        "kv_namespaces": [{ "binding": "SETTINGS", "id": "<that id>" }]

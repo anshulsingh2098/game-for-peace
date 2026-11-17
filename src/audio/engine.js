@@ -118,6 +118,20 @@ export class Sound {
     s.connect(f); f.connect(g); g.connect(this.fxIn); s.start(t); s.stop(t + 1.6);
     const o = c.createOscillator(), og = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.6); og.gain.setValueAtTime(0.5, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.7); o.connect(og); og.connect(this.fxIn); o.start(t); o.stop(t + 0.8);
   }
+  /* the horn (hold): an Indian two-tone horn, a little rough. horn(true) starts it, horn(false) lets it go */
+  horn(on) {
+    if (!this.ctx) return; const c = this.ctx, t = c.currentTime;
+    if (on) { if (this.hornV) return; const g = c.createGain(), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.03); g.connect(lp); lp.connect(this.fxIn);
+      const os = [[404, 'sawtooth'], [508, 'sawtooth'], [808, 'square']].map(([f, ty], i) => { const o = c.createOscillator(), og = c.createGain(); o.type = ty; o.frequency.value = f * (1 + (Math.random() - 0.5) * 0.004); og.gain.value = i === 2 ? 0.05 : 0.22; o.connect(og); og.connect(g); o.start(t); return o; }); this.hornV = { g, os }; }
+    else if (this.hornV) { const { g, os } = this.hornV; this.hornV = null; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12); for (const o of os) o.stop(t + 0.15); }
+  }
+  /* a street bed for a busy city: a low rumble and a hiss of distant traffic, and now and then a far-off horn. level 0..1 (0 fades it out); call every frame, it is cheap */
+  cityBed(level, dt = 0.016) {
+    if (!this.ctx) return; const c = this.ctx, t = c.currentTime;
+    if (!this.bed) { if (level <= 0) return; const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; const g = c.createGain(); g.gain.value = 0; src.connect(lp); lp.connect(g); g.connect(this.fxIn); src.start(); this.bed = { g, next: 3 + Math.random() * 6 }; }
+    const b = this.bed; b.g.gain.setTargetAtTime(Math.max(0, level) * 0.16, t, 0.6); b.next -= dt;
+    if (b.next <= 0 && level > 0.2) { b.next = 4 + Math.random() * 9; const o = c.createOscillator(), og = c.createGain(), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; o.type = 'sawtooth'; o.frequency.value = 380 + Math.random() * 160; og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.03 * level, t + 0.04); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.25 + Math.random() * 0.4); o.connect(og); og.connect(lp); lp.connect(this.fxIn); o.start(t); o.stop(t + 0.8); }
+  }
   airBrake() { this.burst(0, 4200, 0.9, 0.5, 'highpass', 0.6); this.burst(0.05, 7000, 0.5, 0.25, 'bandpass', 0.8); }
   blowOff() { this.burst(0, 3200, 0.55, 0.32, 'highpass', 0.7); const c = this.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(1900, t); o.frequency.exponentialRampToValueAtTime(700, t + 0.5);
     g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5); o.connect(g); g.connect(this.fxIn); o.start(t); o.stop(t + 0.6); }

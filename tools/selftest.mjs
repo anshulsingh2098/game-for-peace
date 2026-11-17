@@ -794,6 +794,26 @@ test('on foot: climbs a kerb, is stopped by a wall, a steep slope and deep water
   const pushed = new OnFoot(footWorld({ near: () => [[{ x: 0.2, z: 0, r: 1.5 }]] })); pushed.place(0, 0, 0); pushed.step(1 / 60, {}); assert.ok(Math.hypot(pushed.x - 0.2, pushed.z) >= 1.5 + FOOT.radius - 0.2 - 1e-6, 'a car that drives up pushes the character out');
   const ledge = new OnFoot(footWorld({ height: x => x > 4 ? -5 : 0 })); ledge.place(0, 0, 0); let fell = false; walk(ledge, 6, { throttle: 1, run: 1 }, f => { if (!f.grounded) fell = true; }); assert.ok(fell && ledge.grounded && ledge.y === -5, 'walks off a ledge, falls and lands');
 });
+test('audit R05: a handle only resolves in the registry or pool that made it; a long stall is counted as dropped time (R16)', () => {
+  const A = new Registry({ car: 4 }), B = new Registry({ car: 4 }), ha = A.create('car', { n: 'a' }), hb = B.create('car', { n: 'b' });
+  assert.notEqual(ha, hb, 'two registries never hand out the same number'); assert.equal(B.get(ha), null, 'a foreign handle does not resolve'); assert.equal(B.destroy(ha), null); assert.equal(A.get(ha).n, 'a'); assert.equal(B.get(hb).n, 'b');
+  A.clear(); assert.equal(A.get(ha), null); const ha2 = A.create('car', {}); assert.notEqual(ha2, ha, 'a reused slot gets a new generation');
+  const mk = () => new Pool({ cap: 2, make: () => ({}), reset: () => {} }), P = mk(), Q = mk(), a = P.acquire(), b = Q.acquire(); assert.notEqual(a.handle, b.handle); assert.equal(Q.get(a.handle), null); assert.equal(Q.release(a.handle), false); assert.equal(P.get(a.handle), a.obj);
+  const rt = new GameRuntime(); rt.frame(0); rt.frame(10000); assert.equal(rt.lastDt, 0.05); assert.ok(Math.abs(rt.droppedTime - 9.95) < 1e-9, 'the discarded wall time is counted: ' + rt.droppedTime);
+});
+test('audit R06: a car standing at every exit spot means no exit', () => {
+  const car = { x: 0, z: 0, yaw: 0, halfWidth: 1, halfLength: 2.2 }, cars = [{ x: 0, z: 1.9, r: 1.2, traffic: 1 }, { x: 0, z: -1.9, r: 1.2, traffic: 1 }, { x: -3.4, z: 0, r: 1.2, traffic: 1 }];
+  assert.equal(chooseExit(car, footWorld({ near: () => [cars] })), null, 'traffic blocks the exit like anything else'); assert.ok(chooseExit(car, footWorld({ near: () => [[cars[0]]] })).z < 0, 'the free side is used');
+});
+test('audit R07: the capsule is swept (no tunnelling through a thin wall), slides, steps over low things, walks under high things and is stopped by tall ones', () => {
+  const walkTo = (circles, input = { throttle: 1, run: 1 }, secs = 2, dt = 1 / 20) => { const f = new OnFoot(footWorld({ near: () => [circles] })); f.place(0, 0, 0); for (let t = 0; t < secs; t += dt) f.step(dt, input); return f; };
+  const thin = walkTo([{ x: 3, z: 0, r: 0.12 }]); assert.ok(thin.x < 3, 'a thin post at a slow frame rate is not skipped: x=' + thin.x);
+  const wall = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 3 }]); assert.ok(wall.x < 3, 'a tall wall stops the character');
+  const kerb = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 0.3 }]); assert.ok(kerb.x > 4, 'a kerb is stepped over: x=' + kerb.x);
+  const deck = walkTo([{ x: 3, z: 0, r: 0.6, y0: 4.5, y1: 6 }]); assert.ok(deck.x > 4, 'a bridge deck above the head is walked under: x=' + deck.x);
+  const low = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 1.6 }, { x: 3.5, z: 0.4, r: 0.6, y0: 0, y1: 1.6 }]); assert.ok(low.x < 4, 'two overlapping walls still stop it, with no jitter into them');
+  const slideF = walkTo([{ x: 3, z: 0.3, r: 1, y0: 0, y1: 3 }], { throttle: 1, steer: 0 }, 3); assert.ok(Math.abs(slideF.z) > 0.3 || slideF.x < 3, 'it slides along the face instead of sticking');
+});
 test('enter and exit: a safe exit beside the door, none when boxed in; the interaction contract picks the nearest enabled item in range', () => {
   const car = { x: 0, z: 0, yaw: 0, halfWidth: 1, halfLength: 2.2 }; const free = chooseExit(car, footWorld()); assert.ok(free && Math.abs(free.z - 1.9) < 1e-9 && free.x === 0 && free.yaw === 0, 'the left side first: ' + JSON.stringify(free));
   const leftBlocked = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }]] })); assert.ok(leftBlocked && leftBlocked.z < 0, 'the right side when the left is blocked'); const behind = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }, { x: 0, z: -1.9, r: 1 }]] })); assert.ok(behind && behind.x < -3, 'behind when both sides are blocked');
@@ -1265,6 +1285,12 @@ test('Delhi map rules and audit: the Connaught Place station block is left out, 
   const now = JSON.parse(execFileSync(process.execPath, [new URL('./audit_city.mjs', import.meta.url).pathname, '--json'], { encoding: 'utf8' })), base = JSON.parse(readFileSync(new URL('./city_audit_baseline.json', import.meta.url), 'utf8')).counts;
   for (const k of Object.keys(base)) assert.ok(now[k] <= base[k], 'audit class ' + k + ' got worse: ' + now[k] + ' against ' + base[k]);
 });
+test('Delhi roads out: every gate joins an India highway toward a city, and every city reachable from Delhi has a gate to leave by', async () => {
+  const { RoadNetwork } = await import('../src/world/network.js'), { mapGates, gateForCity } = await import('../src/world/city/gates.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, net = new RoadNetwork(JSON.parse(readFileSync(new URL('../assets/india/skeleton.json', import.meta.url), 'utf8'))), { M } = loadPack(dir);
+  const g = mapGates(net, 'delhi', M.gates); assert.equal(g.length, M.gates.length); for (const x of g) { assert.ok(x.road && x.toward, 'gate ' + x.id + ' joins no highway'); assert.ok(net.cities.get(x.toward), 'gate ' + x.id + ' leads toward an unknown city'); }
+  let n = 0, miss = [], byGate = {}; for (const c of net.cities.values()) { if (c.id === 'delhi') continue; const rt = net.route('delhi', c.id); if (!rt || !rt.legs || !rt.legs.length) continue; n++; const r = gateForCity(net, 'delhi', g, c.id); if (!r) miss.push(c.id); else byGate[r.gate.toward] = (byGate[r.gate.toward] || 0) + 1; }
+  assert.ok(n >= 10, 'cities reachable from Delhi: ' + n); assert.deepEqual(miss, [], 'cities with no gate to leave by: ' + miss.join(', ')); assert.ok(Object.keys(byGate).length >= 4, 'the cities spread over several exits: ' + JSON.stringify(byGate)); console.log('     roads out of Delhi: ' + g.length + ' gates, ' + n + ' cities reachable, by exit ' + JSON.stringify(byGate));
+});
 test('Delhi identity (D7): identity.json is valid, zones lie inside the pack, every shop kind has name boards, areas answer', async () => {
   const I = await import('../src/world/city/identity.js'), J = JSON.parse(readFileSync(new URL('../assets/cities/delhi/identity.json', import.meta.url))), M = JSON.parse(readFileSync(new URL('../assets/cities/delhi/manifest.json', import.meta.url)));
   const ID = new I.Identity(J, M.origin); assert.equal(J.format, 1);
@@ -1284,4 +1310,13 @@ test('Delhi identity (D7): identity.json is valid, zones lie inside the pack, ev
   assert.ok(['neem', 'jamun'].includes('neem'));
 });
 
+test('prefetch: each file once, one at a time in order, a failure is tried again later, nothing on a save-data connection', async () => {
+  const P = await import('../src/world/prefetch.js'), got = [], realFetch = globalThis.fetch; let fail = new Set(['assets/india/rails.json']);
+  globalThis.fetch = async u => { got.push(u); if (fail.has(u)) throw new Error('offline'); return { ok: true, arrayBuffer: async () => new ArrayBuffer(1) }; };
+  try {
+    assert.equal(P.prefetch(P.INDIA_FILES), P.INDIA_FILES.length); assert.equal(P.prefetch(P.INDIA_FILES), 0, 'asked twice: nothing new'); await new Promise(r => setTimeout(r, 30));
+    assert.deepEqual(got, P.INDIA_FILES, 'in order, once each'); fail = new Set(); assert.equal(P.prefetch(P.INDIA_FILES), 1, 'only the one that failed is asked again'); await new Promise(r => setTimeout(r, 30)); assert.equal(got.length, P.INDIA_FILES.length + 1);
+    Object.defineProperty(globalThis, 'navigator', { value: { connection: { saveData: true } }, configurable: true }); assert.equal(P.prefetch(P.CITY_FILES), 0, 'save-data: nothing');
+  } finally { globalThis.fetch = realFetch; delete globalThis.navigator; }
+});
 console.log(`\n${passed} checks passed`);
