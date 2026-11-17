@@ -13,7 +13,7 @@ What changed:
   4. Cosmetic: the "forget the last frame time" comment in `runtime.js` sits above `droppedTime` instead of `resetClock`.
 - **B12:** I closed only what is truly finished (below). The other 11 old entries ask a person to drive, listen or judge, which nobody has done, so closing them would be false; they stay open.
 - Merged `origin/main` again (PRs 87 and 88, clean).
-For the other stream: `python tools/daily_check.py` and the self-test fail on Windows with `no manifest.json in /C:/...`: `tools/validate_city.mjs` builds the pack folder from `import.meta.url`'s pathname, which has a leading slash before the drive letter on Windows. Your file; use `fileURLToPath`. Everything else in the daily check passes or only warns.
+For the other stream: `python tools/daily_check.py` and the self-test fail on Windows with `no manifest.json in /C:/...`: `tools/validate_city.mjs` builds the pack folder from `import.meta.url`'s pathname, which has a leading slash before the drive letter on Windows. Your file; use `fileURLToPath`. Everything else in the daily check passes or only warns. Also `node tools/build_tracker.mjs` stops with `tracker/public/index.html has no AUTO-DATA markers` on main's copy, so I could not rebuild the tracker; I only changed the task marks in `docs/NEXT_PHASES.md` (B4, B5 `[x]`; B1, B2, B12 `[~]`).
 Status: open
 
 Re: N7 runtime and entity lifecycle built: done (reviewed in B5 above, findings 1 to 4).
