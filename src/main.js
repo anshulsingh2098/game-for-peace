@@ -83,6 +83,8 @@ import { statsPanel } from './debug/stats.js';
 import { createFx, loadSkyLight } from './fx/pipeline.js';
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], q = new URLSearchParams(location.search);
+const rapierStart = q.get('phys') === 'old' ? null : initRapier();          // start the physics engine (a 2 MB wasm module) right away, so it loads and compiles while the map and the world are built, not after them
+if (rapierStart) rapierStart.catch(() => {});
 const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500; registerServiceWorker();
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let savedLoc = null, savedCity = null, savedEnclave = null; try { const o = JSON.parse(localStorage.getItem('gfp-next') || '{}'); savedLoc = o.location || null; savedCity = typeof o.city === 'string' ? o.city : null; savedEnclave = typeof o.enclave === 'string' ? o.enclave : null; } catch (e) { /* no saved choice */ }
@@ -259,7 +261,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) sound
 document.addEventListener('visibilitychange', () => { if (!sound.ctx) return; if (document.hidden) sound.ctx.suspend(); else sound.resume(); });
 let mode = 'drive', vehicle = Math.max(0, Math.min(VEHICLES.length - 1, S.vehicle | 0)), phys = null, rideYaw = 0, auto = null, input = { steer: 0, throttle: 0, brake: 0 }, buffT = 0, buffCd = 0, boostEase = 0, tunnelAmt = 0;      // mode: 'drive', 'fly' (free camera) or 'ride' (camera glides along the road)
 let menu = null; const frozen = () => !!(menu && menu.open);
-let rapier = false; const rapierReady = q.get('phys') === 'old' ? Promise.resolve() : initRapier().then(() => { rapier = true; loadState.physics = true; loadUpdate(); }).catch(e => console.warn('Rapier did not load; using the simple physics', e));
+let rapier = false; const rapierReady = !rapierStart ? Promise.resolve() : Promise.race([rapierStart, new Promise((_, no) => setTimeout(() => no(new Error('the physics engine did not start within 25 s')), 25000))]).then(() => { rapier = true; loadState.physics = true; loadUpdate(); }).catch(e => { console.warn('Rapier did not load; using the simple physics', e); loadState.physics = true; loadUpdate(); });          // never wait for it forever: after 25 s or an error the simple physics is used and the loading bar moves on
 /* put the vehicle in the left lane at road distance s, facing along the road */
 /* the player starts in the first lane of the direction of travel, on the side traffic keeps to (left in India); wide divided roads have their own lane centres */
 function placeOnRoad(s) { placeOnRoad0(s); applyCarry(); }
