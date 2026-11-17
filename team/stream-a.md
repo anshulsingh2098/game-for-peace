@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-23 18:00  Railway control office merged with main's signals, gates and station loops (PR 53)
+Branch: claude/clever-dhawan-907ed4
+What changed: my signal constants file is now `world/rail_control_signals.js` (main's `rail_signals.js` planner is untouched). `rail_view.js` keeps main's drawing (signals with lit lamps, boom gates, loops and crossovers) and gets the control office on top: `spansFor(li)` and `closedAt(line, s)` feed the drawn signals, lamps, barriers and the road-traffic gates from the control office's real train positions and gate state (a gate is down before the train needs it, and a train stops short of it otherwise). No second set of signal posts is drawn. Drawn aspects come from main's planner and occupancy, the control office brakes at its own block signals (700 m), so the two agree on occupancy, not on lamp positions.
+For the other stream: nothing needed.
+Status: open
+
 ## 2026-11-22 19:00  Owner answers recorded (CITY_PLAN, CITY_PACK)
 Branch: claude/goofy-liskov-0a8557
 What changed: docs only: enclave entry like a bypass, downloads approved (log each file), all well-known places, invented look-alike brands.
