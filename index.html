@@ -178,6 +178,17 @@
 <div id="toast" role="status"></div>
 
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
-<script type="module" src="src/main.js"></script>
+<script>
+/* if the game cannot start, say why on the loading screen (a phone has no console): the first error, or a "still loading" line with a reload button after 25 s */
+(function () {
+  var shown = false, msg = function () { return document.getElementById('loadMsg'); };
+  function fail(t) { var m = msg(); if (!m || shown || !document.getElementById('loading')) return; shown = true; m.innerHTML = ''; m.appendChild(document.createTextNode(t + ' ')); var b = document.createElement('button'); b.textContent = 'Reload'; b.style.cssText = 'margin-top:8px;padding:6px 14px'; b.onclick = function () { try { navigator.serviceWorker.getRegistrations().then(function (r) { r.forEach(function (x) { x.unregister(); }); }); caches.keys().then(function (k) { k.forEach(function (x) { caches.delete(x); }); }); } catch (e) {} setTimeout(function () { location.reload(); }, 300); }; m.appendChild(b); }
+  window.addEventListener('error', function (e) { fail('Could not start: ' + (e.message || 'error') + (e.filename ? ' (' + String(e.filename).split('/').slice(-2).join('/') + ':' + e.lineno + ')' : '')); });
+  window.addEventListener('unhandledrejection', function (e) { fail('Could not start: ' + String(e.reason && (e.reason.message || e.reason)).slice(0, 140)); });
+  window.__gfpBootFail = function () { fail('Could not load the game files.'); };
+  setTimeout(function () { var m = msg(); if (m && document.getElementById('loading') && /Building the world/.test(m.textContent)) fail('Still loading after 25 s (slow network?).'); }, 25000);
+})();
+</script>
+<script type="module" src="src/main.js" onerror="window.__gfpBootFail()"></script>
 </body>
 </html>

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 01:00  A-2026-11-18-04: "stuck on Building the world" and slow start: error screen, no service worker on iPhone, bundle tool (not run)
+Branch: claude/audit-fixes (PR 83)  Commit: see the PR (live: version 37d2a99f)
+What changed: the owner reported the live game stuck on "Building the world" on a phone and not opening on a desktop; I could not reproduce it (it opens in about 5 s in the built-in browser). That text is the page's own placeholder, so the game script never started on their device. `index.html`: a boot watchdog shows the first error (or "Still loading after 25 s" and a Reload button that also clears the service worker and caches) on the loading screen, so the cause can be read off a phone. `src/ui/install.js`: iPhone gets no service worker and any earlier one is removed. New `tools/bundle.mjs`: deploy-time esbuild bundle (142 script files, about 1.7 MB gzipped, to one file; `?src=1` keeps the unbundled game), **written but never run**: the sandbox refused the esbuild download, so it is not wired into any deploy and is untested.
+Not verified: the cause on the owner's devices; the bundle. For the other stream: nothing.
+Status: info
+
 ## 2026-11-17 23:50  A-2026-11-17-04: phone layout, sound, Add to Home Screen, tuner set up, handoff and tracker updated
 Branch: claude/audit-fixes (PR 83)  Commit: see the PR (live on the owner's Cloudflare account)
 What changed: **phone** (the owner sent a screenshot): `src/ui/railboard.js` (small strip with two trains on a short screen), `index.html` (nothing from the road shows through a menu; compact title menu on a short screen; round map under the speed readout), seen in an emulated 740 x 340 phone. **Sound:** `src/audio/engine.js` (`horn`, `cityBed`), `src/input/touchui.js` (Horn button), `src/main.js` (key K, Delhi street bed, iPhone unlock on touchend and click, `navigator.audioSession`, resume on return). **App icon:** `manifest.webmanifest`, `sw.js`, `assets/icons/`, `src/ui/install.js`, a button in `src/ui/menu.js`; `tools/stage_cloudflare.py` stages them. **Tuner:** KV `SETTINGS` created on the owner's account and its id is in `cloudflare/wrangler.jsonc`; the Publish password is set as a secret (not in the repo). **Docs:** `HANDOFF.md`, `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/WORK_REMAINING.md`, `CHECKLIST.md` (4 new manual checks), and the tracker (`tracker/public/index.html`, redeployed; the other session's four edits for PR 85 were folded in). Line endings kept (`index.html` and `engine.js` are CRLF).

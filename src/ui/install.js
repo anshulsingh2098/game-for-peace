@@ -16,4 +16,11 @@ export async function install() {
   if (deferred) { const d = deferred; deferred = null; try { d.prompt(); const r = await d.userChoice; tell(); return r && r.outcome === 'accepted' ? 'Added: look for the Game for Peace icon on your home screen.' : 'Not added.'; } catch (e) { return 'Could not open the install box: use the browser menu, then Add to Home screen.'; } }
   return isIOS() ? 'On iPhone: tap the Share button (the square with an arrow), then Add to Home Screen. Use Safari.' : 'Open the browser menu (the three dots), then Install app or Add to Home screen.';
 }
-export function registerServiceWorker() { try { if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* no service worker here */ } }
+/* Android and desktop Chrome use the service worker for the install box and offline start. iPhone does not need one to Add to Home Screen, and a script that never starts is worse than no offline start, so iPhone gets none (and any earlier one is removed). */
+export function registerServiceWorker() {
+  try {
+    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    if (isIOS()) { navigator.serviceWorker.getRegistrations().then(r => r.forEach(x => x.unregister())).catch(() => {}); return; }
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  } catch (e) { /* no service worker here */ }
+}
