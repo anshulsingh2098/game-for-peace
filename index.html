@@ -179,6 +179,17 @@
 
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 <script>
+/* start the downloads the game needs first at once, in parallel with its script, instead of one after another when the script asks (the city files for a Delhi start, the India map files otherwise) */
+(function () {
+  try {
+    var q = new URLSearchParams(location.search), saved = {}; try { saved = JSON.parse(localStorage.getItem('gfp-next') || '{}'); } catch (e) {}
+    var city = q.get('city') === 'delhi' || (!q.get('city') && !q.get('india') && !q.get('loc') && !q.get('c') && q.has('play') && saved.enclave === 'delhi');
+    var C = 'assets/cities/delhi/', I = 'assets/india/', files = city ? [I + 'skeleton.json', C + 'manifest.json', C + 'identity.json', C + 'landmarks.json', C + 'transit.json', C + 'graph.json'] : [I + 'skeleton.json', I + 'rails.json', I + 'trains.json', I + 'terrain.json', I + 'terrain.bin.gz'];
+    files.forEach(function (u) { var l = document.createElement('link'); l.rel = 'preload'; l.as = 'fetch'; l.href = u; l.crossOrigin = 'anonymous'; document.head.appendChild(l); });
+  } catch (e) { /* no preload, the game still loads */ }
+})();
+</script>
+<script>
 /* if the game cannot start, say why on the loading screen (a phone has no console): the first error, or a "still loading" line with a reload button after 25 s */
 (function () {
   var shown = false, msg = function () { return document.getElementById('loadMsg'); };
