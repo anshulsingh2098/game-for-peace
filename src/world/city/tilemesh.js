@@ -4,8 +4,9 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
+import { buildStreetLife } from './streetlife.js';
 
-class Mesher {
+export class Mesher {
   constructor() { this.p = []; this.n = []; this.c = []; this.u = []; this.i = []; }
   v(x, y, z, nx, ny, nz, col, u = 0, v = 0) { this.p.push(x, y, z); this.n.push(nx, ny, nz); this.c.push(col.r, col.g, col.b); this.u.push(u, v); return this.p.length / 3 - 1; }
   /* a triangle that faces the way `n` says whatever order its corners come in */
@@ -160,6 +161,7 @@ export function* buildTileSteps(tile, ctx) {
   for (const b of tile.buildings) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     const r = b.ring, n = r.length / 2; if (n < 3) continue; const L = b.landmark ? lm.get(b.landmark) : null, kit = L && L.type ? 'gov' : { office: 'off', hotel: 'off', civic: 'gov', religious: 'gov', transit: 'gov' }[b.use] || 'res', B = kit === 'off' ? M.bldgO : kit === 'gov' ? M.bldgG : M.bldg, shopB = !L && (b.use === 'commercial' || b.use === 'retail') && (b.height || 9) >= 5, hgt = Math.max(3, (L && L.height) || guessHeight(b, hash)), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
+    if (L && ctx.skip && ctx.skip.has(L.id)) continue;                                    // a landmark with its own model (landmarks/, D8) is not drawn as a plain block
     let wall; if (L && L.type) wall = LM_WALL[L.type] || (L.type.includes('station') ? LM_WALL.station : 0); else wall = 0;
     if (!wall) { const pal = WALLS[b.use] || WALLS.other, k = hash(b.id); wall = pal[Math.floor(k * pal.length) % pal.length]; }
     const wc = shade(wall, 0.9 + 0.2 * hash(b.id * 7 + 1)), rc = L && L.type ? shade(wall, 0.8) : shade(0x77726a, 0.85 + 0.3 * hash(b.id * 3)); let area = 0, cx = 0, cz = 0, x0 = Infinity, x1b = -Infinity, z0 = Infinity, z1b = -Infinity;
@@ -186,6 +188,8 @@ export function* buildTileSteps(tile, ctx) {
     if (L && (L.importance >= 3 || (L.type || '').includes('station'))) out.labels.push({ id: L.id, text: L.name.en, x: cx / n, z: cz / n, y: y1 + 10 });
   }
   void SAND;
+  /* ---- street life (D7, streetlife.js): shop boards, ads, poles and wires, stalls, shelters, trees ---- */
+  if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow }, out); Object.assign(M, r.M); out.life = r.stats; }
   /* ---- the meshes ---- */
   return { M, out };
 }
