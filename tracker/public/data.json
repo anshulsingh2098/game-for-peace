@@ -1,5 +1,5 @@
 {
- "commit": "b34dfba",
+ "commit": "6c2de81",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -287,8 +287,8 @@
     {
      "id": "aba1e053",
      "t": "T1: Trees that look like Delhi",
-     "d": "The owner (18 Nov 2026) says the trees look wrong. Diagnosis (Rajul's Claude): one picture (island_tree_02, an olive-like tree) is used for every broadleaf tree, so all trees have the same twisted thick grey-blue trunk and thin pale foliage; the tint plus the haze washes the colour out; trees stand on a jittered grid so lawns look planted in rows; no shadows. Fix: 5 to 8 pictures made or sourced for neem, peepal, ja…",
-     "s": "todo",
+     "d": "Part 1 done 18 Nov 2026 (Rajul's Claude): six drawn pictures (tools/make_tree_cards.py: neem, peepal, jamun, gulmohar, amaltas, kikar; dark green, brown trunks, no blue tint), species chosen per tree, trees in clumps by a smooth field instead of a grid, soft blob shadows. Still to do: real photographic or modelled pictures, more variants per species, the five-place photo comparison, the owner's yes. Original text: T…",
+     "s": "doing",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
     },
@@ -385,6 +385,14 @@
   [
    "Asked of Anshul in the team log",
    [
+    {
+     "id": "ad7ec071",
+     "t": "A-2026-11-18-26: trees redone, Metro-through-buildings fix, asset cache, engine sound start",
+     "d": "Anshul's Claude: T1 continues from part 1; C0 first for the remaining conflicts; do not re-add a synthesised engine start.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
     {
      "id": "ad590fda",
      "t": "A-2026-11-18-25: ALL PRs merged (93 to 98); trees and conflicts are the open complaints; docs updated",
@@ -576,14 +584,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-22, from Rajul's Claude"
-    },
-    {
-     "id": "a6182e72",
-     "t": "Real railway network, stations, rail bridges",
-     "d": "please read WORK_REMAINING 7.9: road interchanges need the physics to support two ground heights at one point (world.height), which is in your files. That is the next engine step if you want flyovers.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-21, from Rajul's Claude"
     }
    ]
   ],
@@ -1468,6 +1468,11 @@
  ],
  "prs": [
   [
+   "99",
+   "Docs: handoff, status, decisions, task T1 (trees), log after merging PRs 93-98",
+   "merged"
+  ],
+  [
    "98",
    "Plan: rail, road, building and height conflicts (C0-C6)",
    "merged"
@@ -1661,25 +1666,20 @@
    "60",
    "D5b: traffic in the Delhi enclave; stage script includes the city pack",
    "merged"
-  ],
-  [
-   "59",
-   "Docs after merging D1 to D5: handoff, plan and remaining work",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 349 behind main)"
+   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 351 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 86 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 88 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 84 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 86 behind main)"
   ]
  ],
  "tests": null,
@@ -1689,5 +1689,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T20:23:06.232Z"
+ "generated": "2026-11-17T20:41:06.830Z"
 }
