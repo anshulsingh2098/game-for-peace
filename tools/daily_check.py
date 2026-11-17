@@ -39,6 +39,10 @@ try:
 except Exception as e:
     note('WARN', 'stage script check', str(e)[:80])
 
+# 1c. the tracker page's live part must follow the plans, the team logs, the checklist and the pull requests (tools/build_tracker.mjs)
+code, out = run('node', 'tools/build_tracker.mjs', '--check', timeout=120)
+note('PASS' if code == 0 else 'WARN', 'tracker page is up to date with its sources', 'run node tools/build_tracker.mjs, then (owner account) node tools/build_tracker.mjs --deploy' if code != 0 else '')
+
 # 2. self-test
 code, out = run('node', 'tools/selftest.mjs')
 m = re.search(r'(\d+) checks passed', out)

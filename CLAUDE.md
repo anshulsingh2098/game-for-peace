@@ -21,6 +21,8 @@ Each stream **writes only its own** log file, so the two never conflict. Both **
 - find a problem in the other stream's area (describe it; do not edit their files);
 - need the other person to run a command, pull, or decide something.
 
+**Keep the tracker current.** The tracker page (`tracker/`, a separate Worker) builds its Rajul and Anshul views and its Assigned tasks from the repo: `docs/NEXT_PHASES.md`, the open asks in the two team logs, `CHECKLIST.md`, pull requests and Anshul's `vehicle/*` branches. After you change a plan, a log entry, the checklist or open or merge a pull request, run `node tools/build_tracker.mjs` and commit `tracker/public/`; the owner's account deploy is `node tools/build_tracker.mjs --deploy`. `python tools/daily_check.py` warns when it is stale. Items you want shown on someone's list go in `docs/NEXT_PHASES.md` or under "For the other stream" with `Status: open`.
+
 **Reserve before you edit a shared file.** The log entry after an edit is not enough. Before touching a shared file, read the other stream's log and `git log origin/main -3 -- <file>`; if the other stream or another session has it open, wait or ask the user. Where practical, make the shared-file change in its own small commit.
 
 **Status words.** `Status: open` means the other stream must act. `Status: info` means a notification only, nobody has to reply. `Status: done` means finished or answered. Give each entry that needs action an ID in its title (`A-2026-11-17-01`) so a reply can say "Re: A-2026-11-17-01: done". Close your own old `open` entries when nothing is left to do.

@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 07:00  A-2026-11-18-10: TASKS B1 to B13 assigned to Anshul (docs/NEXT_PHASES.md, "Assigned to Anshul")
+Branch: docs/assign-anshul  Commit: see the PR
+What changed: at the owner's request the next phases are now a numbered task list for Anshul and his Claude, with an acceptance line each, in `docs/NEXT_PHASES.md` under "Assigned to Anshul". `tools/build_tracker.mjs` reads that section, so every task shows on the tracker's Rajul and Anshul tab and the Assigned tasks tab, and the marks `[ ]`, `[~]`, `[x]` set their status.
+For the other stream: Anshul's Claude: work B1 to B13 in order (B1 finish and PR `vehicle/cars-on-main`; B2 port the steering and grip feel as tuner settings; B3 retire the old branch; B4 NPC provenance; B5 review `runtime.js` and `onfoot.js`; B6 ask the owner the Lite/Full questions; B7 no-reload city switch; B8 cut Mumbai draw calls; B9 real-phone benchmark (needs a person); B10 router off the main thread; B11 tile cache budget; B12 close your old log entries; B13 deploy to the owner's account). When a task changes, change its mark in `docs/NEXT_PHASES.md`, run `node tools/build_tracker.mjs`, log it in `team/stream-b.md`. Shared files (`src/main.js`, `tools/selftest.mjs`, `tools/stage_cloudflare.py`): reserve first. Never merge or deploy without the owner's word.
+Status: open
+
 ## 2026-11-18 06:00  A-2026-11-18-09: PRs 83 and 85 merged; NEXT PHASES for Anshul's Claude (docs/NEXT_PHASES.md); your branch not merged
 Branch: docs/next-phases  Commit: see the PR
 What changed: at the owner's request PR 85 was merged into the audit-fixes branch (conflicts in `main.js` and the log resolved; the prefetch kept in `updateGateExit`) and PR 83 was merged into `main` (self-test 112, daily check green). I tried `vehicle/cars-and-gears` into `main`: 14 files and 42 hunks conflict, and main and your branch carry different driving models, so I stopped and aborted; nothing of yours was changed. New `docs/NEXT_PHASES.md` lists the order of work. Tracker: PR rows 83 and 85 set to merged, three clashing item ids made unique, a next-phases item added.
