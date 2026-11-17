@@ -25,6 +25,7 @@ import { regionAt } from './world/regionmap.js';
 import { REGIONS } from './world/regions.js';
 import { RoadNav } from './world/navgraph.js';
 import { NavDebug } from './debug/navdebug.js';
+import { ExitSequence, PlayerFigure, loadPlayerModel } from './player/exitseq.js';
 import { Pedestrians } from './pedestrians/pedestrians.js';
 import { WALL, ARCH } from './world/tunnels.js';
 import { loadNature } from './world/nature.js';
@@ -285,15 +286,23 @@ function useBuff() {
 }
 function backToRoad() { if (!phys) return; if (cityMode) { const e = city.nearestStreet(phys.x, phys.z); if (e) { const fwd = Math.cos(phys.yaw - e.yaw) >= 0; phys.reset(e.x, e.z, fwd ? e.yaw : e.yaw + Math.PI, city.gy); view.camYaw = null; setMode('drive'); toast('Back on the street'); } return; } roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 /* on foot (N14, src/player/onfoot.js): G beside a stopped vehicle gets you out; G beside the parked vehicle gets you back in. The vehicle waits on its handbrake. */
+let playerGltf = null, exitSeq = null; loadPlayerModel().then(g => { playerGltf = g; }).catch(() => {});          // the cartoon character; until it loads (or if it fails) getting out is the old instant step
 let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0, footPitch = 0.28, lookDrag = null;
 const footWorld = { height: (x, z, y) => world.height(x, z, y), surface: (x, z) => world.surface(x, z), get seaLevel() { return world.seaLevel; },
   near: (x, z, r) => { const l = world.near(x, z, r).slice(); if (phys && mode === 'foot') { const c = Math.cos(phys.yaw), s = Math.sin(phys.yaw), a = (phys.p.front + phys.p.rear) / 4; l.push([{ x: phys.x + c * a, z: phys.z + s * a, r: 1.15 }, { x: phys.x - c * a, z: phys.z - s * a, r: 1.15 }]); } return l; } };
 function makeFigure() { const g = new THREE.Group(), m = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }), box = (w, h, d, c, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m(c)); b.position.y = y; b.castShadow = true; g.add(b); return b; };
   box(0.5, 0.65, 0.28, 0x2f6fb5, 1.15); box(0.22, 0.8, 0.24, 0x2b2b3a, 0.4).position.x = -0.12; const l2 = box(0.22, 0.8, 0.24, 0x2b2b3a, 0.4); l2.position.x = 0.12; box(0.22, 0.24, 0.22, 0xd9a577, 1.65); g.userData.legs = g.children.slice(1, 3); return g; }
 function exitVehicle() {
+  if (exitSeq) return;
   if (mode !== 'drive' || !phys || frozen() || Math.abs(phys.u) > 2.5) { if (mode === 'drive' && phys && Math.abs(phys.u) > 2.5) toast('Stop first to get out'); return; } setAuto(false);
-  const spot = chooseExit({ x: phys.x, z: phys.z, yaw: phys.yaw, halfWidth: 0.95, halfLength: (phys.p.front + phys.p.rear) / 2 }, footWorld); if (!spot) { toast('No room to get out here'); return; }
-  foot = new OnFoot(footWorld); foot.place(spot.x, spot.z, spot.yaw); if (!figure) { figure = makeFigure(); scene.add(figure); } figure.visible = true; parkedYaw = phys.yaw;
+  const sd = view.def && view.def.eye && view.def.eye[0] > 0 ? 1 : -1, m0 = view.model.localToWorld(new THREE.Vector3(0, 0, 0)), m1 = view.model.localToWorld(new THREE.Vector3(sd, 0, 0)), driverLeft = (m1.x - m0.x) * -Math.sin(phys.yaw) + (m1.z - m0.z) * Math.cos(phys.yaw) > 0;          // step out on the driver's side
+  const spot = chooseExit({ x: phys.x, z: phys.z, yaw: phys.yaw, halfWidth: 0.95, halfLength: (phys.p.front + phys.p.rear) / 2 }, footWorld, driverLeft ? [1, -1] : [-1, 1]); if (!spot) { toast('No room to get out here'); return; }
+  if (playerGltf) { exitSeq = new ExitSequence({ view, gltf: playerGltf, spot: { x: spot.x, z: spot.z, y: terrain.height(spot.x, spot.z) }, origin: grid.origin, onDone: fig => { exitSeq = null; completeExit(spot, fig); } }); return; }          // the animated way out: reach, door opens, climb out, door shuts
+  completeExit(spot, null);
+}
+function completeExit(spot, fig) {
+  if (mode !== 'drive' || !phys) return;
+  foot = new OnFoot(footWorld); foot.place(spot.x, spot.z, spot.yaw); if (fig) { if (figure) scene.remove(figure); figure = fig.obj; figure.userData.pf = fig; scene.add(figure); } else if (!figure) { figure = makeFigure(); scene.add(figure); } figure.visible = true; parkedYaw = phys.yaw;
   cam.yaw = -Math.PI / 2 - foot.yaw; vehicleHandle = (entities = entities || new Registry({ vehicle: 4, player: 1 }, bus)).create('vehicle', { index: vehicle }); setMode('foot'); bus.emit('vehicle:exited', { handle: vehicleHandle });
   interactions.add({ id: 'vehicle', x: phys.x, z: phys.z, r: 3.4, prompt: 'Get in (G)', onUse: enterVehicle }); toast('On foot: W A S D walk, Shift run, Space jump, G to get back in');
 }
@@ -652,7 +661,7 @@ function update(dt, now) {
         if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null; let adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (cityMode) { adRoad = cityNav.path; adSim = null; autodrive.lookMin = 6; autodrive.forward = true; autodrive.lane = () => -1.5; autodrive.lanes = () => 1; if (!cityNav.active || cityNav.arrived) { setAuto(false); if (cityNav.arrived) arriveT = 2.5; else toast('Autodrive off: no route'); } } if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = cityMode ? 0 : rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); if (cityMode) { adStuck = Math.abs(phys.u) < 0.4 && input.throttle > 0.5 ? adStuck + dt : 0; if (adStuck > 3) { adStuck = 0; if (cityNav.blockHere(phys.x, phys.z, phys.yaw)) backToRoad(); } } }
       }
       if (cityMode && arriveT > 0) { arriveT -= dt; input = { ...input, throttle: 0, brake: 1 }; }                    // stop at the destination
-      if (auto) input = auto; phys.step(dt, input);
+      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; phys.step(dt, input);
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
     }
@@ -681,7 +690,8 @@ function update(dt, now) {
   if (city) { city.transit.footY = mode === 'foot' && foot ? foot.y : city.gy; city.update(px, pz, dt); city.setNight(!!env.lightsOn); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
-  if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
+  if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; if (figure.userData.pf) figure.userData.pf.update(dt, foot.speed > 0.3 || foot.moving, foot.phase); else { const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; } }
+  if (exitSeq) exitSeq.update(dt);
   updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } if (city) updateCityMap(now, dt); updateToll(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }

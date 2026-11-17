@@ -128,7 +128,7 @@ export class Sound {
     const c = this.ctx, t = c.currentTime, now = performance.now(), dt = Math.min(0.1, (now - (this.lastT || now)) / 1000) || 0.016; this.lastT = now;
     const cfg = CFG[s.id] || CFG.car, v = this.voice, r = clamp(s.v / s.top, 0, 1), th = s.throttle, fp = s.view === 'first';
     const P = this.prev; this.cabin.frequency.setTargetAtTime(fp ? 2300 : 18000, t, 0.15); this.wet.gain.setTargetAtTime((fp ? 0.04 : 0.16) + 0.22 * (s.tunnel || 0), t, 0.2);
-    const loud = (fp ? 1.25 : 1) * (s.buff ? 1.25 : 1), sampled = !!this.samples && cfg.kind === 'v8';
+    const loud = (fp ? 1.25 : 1) * (s.buff ? 1.25 : 1), sampled = !!this.samples && cfg.kind === 'v8' && cfg.sample !== undefined;          // only cars with a recording (the Dusk GT); the others keep their synthesised engine
     if (this.samples && !sampled) this.samples.out.gain.setTargetAtTime(0, t, 0.1);
     if (cfg.kind === 'ev') {                                                                // ---- electric motor
       const fm = 160 + r * 2900 + th * 120; this.rpmSm += (fm - this.rpmSm) * Math.min(1, dt * 5); const f = this.rpmSm, tc = 0.07;
