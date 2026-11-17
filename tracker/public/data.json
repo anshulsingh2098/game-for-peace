@@ -1,5 +1,5 @@
 {
- "commit": "e105014",
+ "commit": "3895d3a",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -147,12 +147,164 @@
      "s": "todo",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "aa91e9e5",
+     "t": "P1: Fill the voids",
+     "d": "Remaining: interiors, forecourts, parking and plazas inside large blocks (paving, trees, parked cars, a few stalls), area styles tuned from identity.json (Old Delhi dense and tall, Lutyens low). Done when no 100 m by 100 m grey void is left inside an urban block in the 5 sample areas, coverage numbers are in the PR, and the frame is within budget (infill instanced or merged, windows by shader).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a186b362",
+     "t": "P2: Roads and infrastructure",
+     "d": "Do first: put the scripted street-driving test into tools/ (the console script used on 18 Nov is not in the repo). Then medians on dual carriageways, stop lines, lane arrows, speed breakers, road wear, pavement variety, street furniture (DTC bus shelters, auto and e-rickshaw stands, police booths, petrol pumps, signal heads, sodium lights, wires), flyover and underpass finishing (parapets, pier art, lights, signs).…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ace87759",
+     "t": "P3: Buildings, shops and the look of a street",
+     "d": "Facade kits per area (windows, balconies, AC units, tanks, shutters, awnings, paint and grime by age), roof clutter, setbacks and arcades (Connaught Place's colonnade), real shop and place names from OpenStreetMap POIs with generic signage and no brand logos (ODbL credited), a few hand-made famous places. Done when five named streets (Chandni Chowk, Karol Bagh, Connaught Place, Khan Market, Lajpat Nagar) are checked…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "aa039c21",
+     "t": "P4: Banners, posters, ads and hoardings",
+     "d": "Wall posters, rooftop hoardings, Metro pillar wraps, flyover ads, bus body ads, shop-shutter paintings, digital screens at CP and stations; generic content, no real trademarks. Done when ad density per area follows identity.json, no readable real trademark appears, and the cost is under 20 draw calls.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a10ae7cb",
+     "t": "P5: Landmarks",
+     "d": "The remaining 41 landmark models in priority order (Sansad Bhavan details, Safdarjung Tomb, Humayun's Tomb gardens, Bangla Sahib, Birla Mandir, Akshardham, markets as places, IGI T3, Bharat Mandapam, stadiums), each compared with photographs, interiors for 3. Done when every landmark in docs/DELHI_LANDMARKS.md has a model or a marker with a card and the 22 existing ones are photo-checked (needs a person).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a5e163b7",
+     "t": "P6: Metro and railway stations",
+     "d": "Stairs and escalators at interchange stations, tunnels between underground stations and portals, platform screen doors, signage in Hindi and English with line colours, concourse lighting, fare gates, entrance kiosks in the DMRC look, livery and cars per rake for each line, platform announcements, railway trains through the real control layer and timetable. Done when the 11 lines have a photo-checked livery and one s…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "ad55fb23",
+     "t": "P7: People, vehicles and life",
+     "d": "Auto-rickshaws, e-rickshaws, cycle-rickshaws, scooters and bikes with riders, DTC and cluster bus liveries, vendors, cows and dogs, crowds by hour, festival days, sound (horns, azaan, temple bells, vendors) from licensed sources only. Build on the cartoon NPCs. Done when the traffic mix follows identity.json by area and hour and the frame is within budget.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a3132cb2",
+     "t": "P8: Measure and judge",
+     "d": "?bench=30&city=delhi on two real phones and a visible desktop window, a low level for phones (fewer props, nearer far buildings), then a Delhi person's list of what feels wrong and a fixing pass. Done when the city card in docs/CITY_PLAN.md is all ticked (needs devices and a person). This phase is the gate for N17 onward.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a9869838",
+     "t": "L1: Junction shaping, road surface and wear",
+     "d": "Look step 1 to 2 are merged (asphalt and paving textures, junction shaping); finish wear (patches, oil, edge dirt) and check 8 junctions. In progress by Rajul's Claude at hand-over.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a751a826",
+     "t": "L2: Facade relief",
+     "d": "Window depth, cornices, balconies and roof edges on the facade kits (pairs with P3).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a89f005c",
+     "t": "L3: Real trees and plants",
+     "d": "Replace the lollipop trees with the real-scan plants already in assets/nature, plus hedges, walls and median planting (pairs with P2 medians).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a3b7a957",
+     "t": "L4: Street props",
+     "d": "Lamp posts, signal heads, bins, bus shelters, wires and hoardings with proper geometry and a shared-material budget (pairs with P2 and P4).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "abb3040a",
+     "t": "L5: Cars and traffic models",
+     "d": "Move the city traffic from boxes to the traffic-pack models and your rebuilt cars, with the Indian mix from P7 (needs B1 merged).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "acd7f45d",
+     "t": "L6: Lighting and colour grade",
+     "d": "Dusk, night and monsoon look, and a cheaper version of the ambient-shadow filter so phones can keep it.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a7f2fb81",
+     "t": "N17: Services and events",
+     "d": "Design note first (docs/SERVICES.md): fire, ambulance and (only if the owner confirms) police, as institutions with dispatch, response AI and consequences, on the existing traffic and navigation. Build one small slice. Starts only after P8 and the owner's go-ahead.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "aa7251bd",
+     "t": "N18: Interiors and commerce",
+     "d": "Design note first, then one streamed interior (a shop you can enter) with buying, with the save boundaries decided in advance. Starts after N17's design note is accepted.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a571502b",
+     "t": "N19: Vehicle depth",
+     "d": "Damage and repair, ownership and garage, customisation beyond paint, Indian vehicle types, on top of B1 and B2.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
+    },
+    {
+     "id": "a59d96e0",
+     "t": "N20: Persistence and polish",
+     "d": "Versioned save of player position, vehicle and world state (the save today keeps settings and scores only), save slots, accessibility (text size, colour, controls), and the final quality gates for a release.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "docs/NEXT_PHASES.md"
     }
    ]
   ],
   [
    "Asked of Anshul in the team log",
    [
+    {
+     "id": "a52ba072",
+     "t": "A-2026-11-18-11: Delhi phases P1 to P8, look steps L1 to L6 and N17 to N20 assigned to Anshul's Claude, to be worked in blocks",
+     "d": "Anshul's Claude: finish B1 to B3 first, then work the blocks in order: Block 1 P1, P2, P3, L1, L2; Block 2 P4, P6, L3, L4; Block 3 P5, P7, L5, L6; Block 4 P8; Block 5 N17 to N20 (design note first; only after P8 is judged and the owner says go). One phase at a time, each its own PR with: the done-when line met, a measured frame cost before and after (?play&city=delhi&q=med&bench=30), screenshots, selftest and daily…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
     {
      "id": "a68f8d96",
      "t": "A-2026-11-18-10: TASKS B1 to B13 assigned to Anshul (docs/NEXT_PHASES.md, \"Assigned to Anshul\")",
@@ -341,14 +493,6 @@
      "id": "a3978d57",
      "t": "Real elevation and land cover; licenses page",
      "d": "please review licenses.html too.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-19, from Rajul's Claude"
-    },
-    {
-     "id": "a2fc90ac",
-     "t": "Owner approved merging PRs 27 to 36; known-limits reference file",
-     "d": "after the merge, pull main, read docs/WORK_REMAINING.md (sections 0.2, 2.5, 4 and 9 are yours) and review the additive changes in the files named in 0.2.",
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-19, from Rajul's Claude"
@@ -1260,6 +1404,11 @@
  ],
  "prs": [
   [
+   "88",
+   "Assign tasks B1 to B13 to Anshul (next phases)",
+   "merged"
+  ],
+  [
    "87",
    "Tracker: Rajul and Anshul view, Assigned tasks, auto-built from the repo",
    "merged"
@@ -1453,25 +1602,20 @@
    "49",
    "Multi-level roads: overpass where two highways cross, layered physics (7.9)",
    "merged"
-  ],
-  [
-   "48",
-   "Railway realism: ground, trains, real timetable, boards, announcements, sound",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (21 commits not in main, 310 behind main)"
+   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (21 commits not in main, 312 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 26 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 28 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 24 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 26 behind main)"
   ]
  ],
  "tests": null,
@@ -1481,5 +1625,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T16:27:28.707Z"
+ "generated": "2026-11-17T16:43:57.982Z"
 }
