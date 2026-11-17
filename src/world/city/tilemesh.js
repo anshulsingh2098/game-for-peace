@@ -4,8 +4,9 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
+import { buildStreetLife } from './streetlife.js';
 
-class Mesher {
+export class Mesher {
   constructor() { this.p = []; this.n = []; this.c = []; this.u = []; this.i = []; }
   v(x, y, z, nx, ny, nz, col, u = 0, v = 0) { this.p.push(x, y, z); this.n.push(nx, ny, nz); this.c.push(col.r, col.g, col.b); this.u.push(u, v); return this.p.length / 3 - 1; }
   /* a triangle that faces the way `n` says whatever order its corners come in */
@@ -186,6 +187,8 @@ export function* buildTileSteps(tile, ctx) {
     if (L && (L.importance >= 3 || (L.type || '').includes('station'))) out.labels.push({ id: L.id, text: L.name.en, x: cx / n, z: cz / n, y: y1 + 10 });
   }
   void SAND;
+  /* ---- street life (D7, streetlife.js): shop boards, ads, poles and wires, stalls, shelters, trees ---- */
+  if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow }, out); Object.assign(M, r.M); out.life = r.stats; }
   /* ---- the meshes ---- */
   return { M, out };
 }
