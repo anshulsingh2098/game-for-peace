@@ -1,3 +1,9 @@
+## 2026-11-18 10:00  Delhi stuck on loading screen: builder boost while loading
+Branch: claude/delhi-loading-fix  Commit: see PR
+What changed: src/main.js whenCityReady() sets city.boost (22 ms/frame builder budget instead of 3 ms) while waiting, wait up to 45 s, shows 'Building Delhi... N of 5 tiles'; cityworld.js stepJob honours boost (?noboost turns it off). Cause: on slow frames the 3 ms budget built 0 tiles in 20 s, so the game started on bare plains / looked stuck.
+For the other stream: nothing. The deployed site needs a redeploy by whoever deploys to get this.
+Status: open
+
 # Stream A log (World: Rajul's Claude writes here, Anshul's Claude only reads)
 
 Newest entries first. Format is in `CLAUDE.md`.
