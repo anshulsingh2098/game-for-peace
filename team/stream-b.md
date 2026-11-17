@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 23:30  Cartoon NPCs in the game (skinned people for the nearest walkers)
+Branch: vehicle/npc-models  Commit: fd85c3f
+What changed: `src/pedestrians/pedestrians.js` only (plus new `assets/npc/*.glb`, generator `dev/build_npc_stylised.py` on the other branch). The 18 walkers nearest the player within 60 m are drawn as skinned cartoon characters (commuter, vendor, tourist; walk and idle animations, about 5k faces each); all other walkers stay the box figures, and if the models fail to load everybody stays boxes. It covers both the district peds and Delhi's `CityPeds` (they share `Pedestrians.draw`). Checked in the Delhi city in the browser. `node tools/selftest.mjs` fails one check, `validate_city reports no error`, with and without this change (Delhi city data on main), so it is not from this branch.
+For the other stream: nothing required. If you want more or fewer detailed people, `ACTORS` and `NEAR` at the top of `pedestrians.js`. `validate_city` failing on main is yours to look at.
+Status: open
+
 ## 2026-11-17 22:00  N13 first increment: pedestrians on the sidewalks
 Branch: feat/n13-pedestrians
 What changed: new `src/pedestrians/sim.js` (bounded pool of 48, sidewalk-only spawn, walk and cross edges of the navigation graph, kerb waiting for the signal or a gap, `occupied` crossings that stop vehicles, archetypes commuter, vendor and tourist, gap keeping, despawn), new `src/pedestrians/pedestrians.js` (instanced figures with swinging legs), `src/world/navgraph.js` `nodesNear`, `src/traffic/sim.js` (`occupied` crossings stop cars; signal cycle now 44 s with 20 s of red so a pedestrian can cross a boulevard), `main.js` wiring for regions with a district and a population (follows the traffic level). Two new self-tests (57 checks): sidewalk-only, cap, signal discipline, cars stop for people, deterministic, levels, unload, pool. Checked in Mumbai: 22 walkers, 4 crossings in 90 s, figures visible on both sidewalks, no errors. `docs/PEDESTRIANS.md`: boxes not rigged models, no reactions, not solid to the car, no phone numbers.
