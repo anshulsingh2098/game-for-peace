@@ -676,6 +676,7 @@ function update(dt, now) {
 setVehicle(vehicle).then(() => { setupActivities(); setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); loadDone(); if (+q.get('bench')) setTimeout(() => startBench(+q.get('bench')), 4000); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); loadDone(); });
 /* ?bench=30: drive on autodrive for 30 s and report what a frame costs on this device (also logged as BENCH in the console and kept in window.__bench) */
 function startBench(secs) {
+  if (cityMode && cityNav && phys) { const l = city.pack.lm.get('india-gate'); cityNav.setDest(phys.x, phys.z, { x: l.x, z: l.z, name: 'bench' }, phys.yaw); }       // a city drive needs a route
   setAuto(true); const ts = []; let prev = performance.now(); const t0 = prev;
   const loop = now => { ts.push(now - prev); prev = now; if (now - t0 < secs * 1000) requestAnimationFrame(loop); else done(); };
   requestAnimationFrame(loop);

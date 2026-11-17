@@ -47,7 +47,10 @@ function frames(pts) {
   return { n, nx, nz, sc, arc };
 }
 
-export function buildTile(tile, ctx) {
+/* the tile in slices: a generator that yields whenever `ctx.yieldNow()` says the frame's time is used up (checked between streets and between buildings) and returns { M, out } when done, so a tile of 3 to 41 ms
+   is spread over several frames (CityWorld drives it with a budget of about 3 ms a frame); buildTile runs it to the end at once (tests, tools) */
+export function buildTile(tile, ctx) { const g = buildTileSteps(tile, { ...ctx, yieldNow: null }); let r; while (!(r = g.next()).done); return r.value; }
+export function* buildTileSteps(tile, ctx) {
   const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y) => {                                           // a polygon (ring and holes in metres) lying at height y
@@ -98,6 +101,7 @@ export function buildTile(tile, ctx) {
   };
   /* the list of streets sorted so that small roads are drawn first (their order only matters for z fighting at junctions, which the offsets below settle) */
   for (const s of tile.streets) {
+    if (ctx.yieldNow && ctx.yieldNow()) yield;
     const id = s.id, cls = G.classes[G.cls[id]], lay = G.layer[id]; if (s.pts.length < 4 || (lay < 0 && !['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential'].includes(cls))) continue;                 // sunken footways and service lanes are not drawn
     const w = pieceWidth(G, s), walk = pieceSidewalk(G, s), clip = s.clip || 0, deck = lay > 0, rank = RANKOF[cls] || 0, rc = ROAD[cls] || ROAD.residential, two = G.oneway[id] === 0, lanes = G.lanes[id];
     const sunk = lay < 0; let pts = s.pts; if (deck) pts = densify(pts, 5); else if (sunk) pts = densify(pts, 4); const F = frames(pts), hAt = (x, z) => (deck ? deckHeight(G, id, x, z) : sunk ? -underDepth(G, id, x, z) : 0), H = new Float32Array(F.n);
@@ -142,6 +146,7 @@ export function buildTile(tile, ctx) {
   /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */
   const B = M.bldg;
   for (const b of tile.buildings) {
+    if (ctx.yieldNow && ctx.yieldNow()) yield;
     const r = b.ring, n = r.length / 2; if (n < 3) continue; const L = b.landmark ? lm.get(b.landmark) : null, hgt = Math.max(3, (L && L.height) || b.height || 9), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
     let wall; if (L && L.type) wall = LM_WALL[L.type] || (L.type.includes('station') ? LM_WALL.station : 0); else wall = 0;
     if (!wall) { const pal = WALLS[b.use] || WALLS.other, k = hash(b.id); wall = pal[Math.floor(k * pal.length) % pal.length]; }
@@ -171,5 +176,5 @@ export function makeMaterials() {
   const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#e6e6e6'; g.fillRect(0, 56, 64, 8); g.fillStyle = '#5d7184'; g.fillRect(14, 12, 36, 32); g.fillStyle = '#c9d4dc'; g.fillRect(14, 12, 36, 5); g.fillStyle = '#d8d8d8'; g.fillRect(31, 12, 2, 32);
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  return { ground: flat(-1, -1), park: flat(-2, -3), walk: flat(-2, -4), road: flat(-3, -5), mark: flat(-5, -9), bldg: new THREE.MeshStandardMaterial({ vertexColors: true, map: tex, roughness: 0.92, metalness: 0, envMapIntensity: 0.3 }), tex };
+  return { ground: flat(-1, -1), park: flat(-2, -3), walk: flat(-2, -4), road: flat(-3, -5), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25 }), bldg: new THREE.MeshStandardMaterial({ vertexColors: true, map: tex, roughness: 0.92, metalness: 0, envMapIntensity: 0.3 }), tex };
 }
