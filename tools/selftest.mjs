@@ -1241,6 +1241,23 @@ test('Delhi landmark models (D8): every plan id is a landmark with a footprint, 
   const F = frame(3, 4, Math.PI / 2), p = F.loc(10, 2); assert.ok(Math.abs(p[0] - 1) < 1e-9 && Math.abs(p[1] - 14) < 1e-9, 'u runs along the frame angle, v to its left');
 });
 
+test('Delhi infill (P1): lots are inside blocks, clear of streets, mapped buildings, parks and each other; deterministic; adds coverage; stays under the cap', async () => {
+  const { infillBuildings, STYLE } = await import('../src/world/city/infill.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
+  const area = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return Math.abs(a) / 2; }, pip = (r, x, z) => { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { if ((r[i + 1] > z) !== (r[j + 1] > z) && x < (r[j] - r[i]) * (z - r[i + 1]) / (r[j + 1] - r[i + 1]) + r[i]) c = !c; } return c; };
+  for (const [tx, tz] of [[0, -2], [0, -4]]) {
+    const tile = cityPack.decodeTile(JSON.parse(readFileSync(dir + `tiles/${tx}_${tz}.json`, 'utf8')), M.tileSize), o = { size: M.tileSize, G, widthOf: s => cityPack.pieceWidth(G, s), styleAt: () => 'default' };
+    const a = infillBuildings(tile, o), b = infillBuildings(tile, o); assert.deepEqual(a.map(x => x.ring), b.map(x => x.ring), 'deterministic'); assert.ok(a.length > 50 && a.length <= 2200, 'infill count ' + a.length);
+    const before = tile.buildings.reduce((q, x) => q + area(x.ring), 0), add = a.reduce((q, x) => q + area(x.ring), 0); assert.ok(add > before * 0.15, 'adds at least 15 percent to the mapped building area: ' + (add / before).toFixed(2));
+    const ids = new Set(a.map(x => x.id)); assert.equal(ids.size, a.length, 'unique ids');
+    for (const x of a.slice(0, 400)) {
+      const r = x.ring, cx = (r[0] + r[4]) / 2, cz = (r[1] + r[5]) / 2; assert.ok(x.infill && x.height >= 3.2 && x.hsrc === 'tag');
+      assert.ok(tile.blocks.some(bl => pip(bl.ring, cx, cz)), 'lot centre inside a block');
+      assert.ok(!tile.buildings.some(bl => pip(bl.ring, cx, cz)), 'not on a mapped building');
+      for (const st of tile.streets) { const cls = G.classes[G.cls[st.id]]; if (['footway', 'cycleway', 'path', 'steps', 'pedestrian'].includes(cls)) continue; const hw = cityPack.pieceWidth(G, st) / 2, p = st.pts; for (let i = 0; i + 3 < p.length; i += 2) { const dx = p[i + 2] - p[i], dz = p[i + 3] - p[i + 1], L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((cx - p[i]) * dx + (cz - p[i + 1]) * dz) / L2)) : 0; assert.ok(Math.hypot(cx - (p[i] + dx * t), cz - (p[i + 1] + dz * t)) > hw + 0.5, 'lot centre on a carriageway'); } }
+    }
+    assert.ok(STYLE.oldDelhi.fill > STYLE.lutyens.fill, 'Old Delhi is denser than Lutyens');
+  }
+});
 test('Delhi map rules and audit: the Connaught Place station block is left out, no landmark is, and no audit class is worse than its baseline', async () => {
   const { buildingsToSkip } = await import('../src/world/city/rules.js'), { execFileSync } = await import('node:child_process'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
   const tile = cityPack.decodeTile(JSON.parse(readFileSync(dir + 'tiles/2_-5.json', 'utf8')), M.tileSize), skip = buildingsToSkip(tile, G);
