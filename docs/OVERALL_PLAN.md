@@ -51,5 +51,8 @@ Roads: slip roads, cloverleafs, service roads, medians. People and animals. Weat
 ## 6. How to work
 Read `HANDOFF.md` (newest state at the top), then this file, then `docs/WORK_REMAINING.md` for the exact list. One writer per set of files. Run `node tools/selftest.mjs` before every push. Log shared changes in `team/stream-a.md`. Merge only when the owner says so. Never deploy.
 
+## 6a. Delhi polish
+Scale check, the voids (OpenStreetMap building gaps: 6 to 19 % coverage), the phased plan P1 to P8 (fill voids, roads, buildings and shops, posters and ads, landmarks, Metro, people, measure) and the N0 to N20 status table are in `docs/DELHI_POLISH_PLAN.md`.
+
 ## 7. Where things are
 `HANDOFF.md` state and next steps; `docs/WORK_REMAINING.md` every known limit with priority; `docs/CITY_PLAN.md` and `docs/CITY_PACK.md` the city programme; `docs/DELHI_TRANSIT.md`, `docs/DELHI_LANDMARKS.md`, `docs/DELHI_LOOK.md` Delhi data and look; `docs/INDIA_MAP_PLAN.md` the India world; `docs/OPEN_DATA.md` every download and licence; `docs/post-n6-open-world-plan.md` the N7 to N20 programme; `CHECKLIST.md` the manual checks; `licenses.html` credits.

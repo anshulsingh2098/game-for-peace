@@ -156,9 +156,11 @@ env.setTime(S.time); env.setWeather(S.weather);
 
 const natureLevel = q.get('nature') || (quality === 'low' ? 'low' : 'full'), groundLevel = q.get('ground') || (quality === 'low' ? 'flat' : quality === 'med' ? 'lite' : 'full');      // quality tiers: low keeps the cheap ground and fewer scenery variants, med a lighter photographic ground, high everything
 /* the loading screen (next.html #loading): what is still loading, shown until the first frame is drawn */
-const loadState = { world: true, physics: q.get('phys') === 'old', scenery: natureLevel === 'flat', car: false }, loadEl = $('#loading'), loadMsg = $('#loadMsg'), loadBar = $('#loadBar');
-const LOAD_TEXT = { physics: 'Starting the physics…', scenery: 'Growing the trees…', car: 'Getting the car ready…' };
+const loadState = { world: true, physics: q.get('phys') === 'old', scenery: natureLevel === 'flat', city: !cityMode, car: false }, loadEl = $('#loading'), loadMsg = $('#loadMsg'), loadBar = $('#loadBar');
+const LOAD_TEXT = { city: 'Building Delhi…', physics: 'Starting the physics…', scenery: 'Growing the trees…', car: 'Getting the car ready…' };
 function loadUpdate() { const keys = Object.keys(loadState), done = keys.filter(k => loadState[k]).length, next = keys.find(k => !loadState[k]); if (loadBar) loadBar.style.width = Math.max(5, done / keys.length * 100) + '%'; if (loadMsg && next) loadMsg.textContent = LOAD_TEXT[next] || 'Building the world…'; }
+/* in a city the loading screen waits for the first ring of tiles (5, or all that are near), so the game does not start on bare plains (20 s at most) */
+function whenCityReady() { return new Promise(res => { const t0 = performance.now(), ok = () => !cityMode || !city || city.tiles.size >= 5 || (city.tiles.size >= 1 && !city.loading.size && !city.job && !city.ready.length), tick = () => { if (ok() || performance.now() - t0 > 20000) { loadState.city = true; loadUpdate(); res(); } else setTimeout(tick, 150); }; tick(); }); }
 function loadDone() { loadState.car = true; loadUpdate(); if (loadEl) { loadEl.classList.add('done'); setTimeout(() => loadEl.remove(), 600); } }
 loadUpdate();
 /* shared assets go through one cache (core/assets.js): loaded once, held while something uses them, freed when nothing does. Traffic holds the vehicle pack for the whole session; world sectors (below) hold what their region needs. */
@@ -701,7 +703,7 @@ function update(dt, now) {
   if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label; { const tag = $('#modeTag'), lim = phys.M && phys.M.cap > 0 && Math.abs(phys.u) > phys.M.cap * 0.97; if (tag.classList.contains('limit') !== lim) tag.classList.toggle('limit', lim); }
     hud.buff.classList.toggle('active', buffT > 0); hud.buff.classList.toggle('cooling', buffT <= 0 && buffCd > 0); hud.cd.textContent = buffT > 0 ? '' : buffCd > 0 ? Math.ceil(buffCd) + 's' : ''; }
 }
-setVehicle(vehicle).then(() => { setupActivities(); setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); loadDone(); if (+q.get('bench')) setTimeout(() => startBench(+q.get('bench')), 4000); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); loadDone(); });
+setVehicle(vehicle).then(() => { setupActivities(); setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); whenCityReady().then(loadDone); if (+q.get('bench')) setTimeout(() => startBench(+q.get('bench')), 4000); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); loadDone(); });
 /* ?bench=30: drive on autodrive for 30 s and report what a frame costs on this device (also logged as BENCH in the console and kept in window.__bench) */
 function startBench(secs) {
   if (cityMode && cityNav && phys) { const l = city.pack.lm.get('india-gate'); cityNav.setDest(phys.x, phys.z, { x: l.x, z: l.z, name: 'bench' }, phys.yaw); }       // a city drive needs a route
