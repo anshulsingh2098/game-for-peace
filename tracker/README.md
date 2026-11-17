@@ -3,9 +3,9 @@
 `public/index.html` is the whole page (checkboxes, status, remarks, comments on every item of the plan: status, phases, N0 to N20, backlog, done, limits, technicals, docs, the owner's requests).
 `worker.js` serves it and keeps the shared state in KV behind one password. The same `index.html` is also published as a claude.ai Artifact, where the state is kept by the Artifact's own store; on Cloudflare it uses the Worker.
 
-**Status: not deployed.** Deploying is Anshul's job (CLAUDE.md, HANDOFF.md): the Cloudflare account is `rawatanshul525@gmail.com`; `npx wrangler whoami` must say that (or the account the owner names for this page). This is a separate Worker, `game-for-peace-tracker`; it does not touch the game's site or `cloudflare/public`.
+**Status: deployed** on the owner's own Cloudflare account (`mailrajulsingh.in@gmail.com`, 17 Nov 2026) at https://game-for-peace-tracker.mailrajulsingh-in.workers.dev, as the separate Worker `game-for-peace-tracker` (KV `TRACKER`, secret `TRACKER_PASSWORD`). It does not touch the game's site or `cloudflare/public`. Anshul's Cloudflare account is left alone. The password is not in the repo; to change it: `npx wrangler secret put TRACKER_PASSWORD`. The page's own text (the plan) is public to anyone with the address; only the saved ticks, remarks and comments need the password. For full privacy put the Worker behind Cloudflare Access in the dashboard.
 
-## Deploy (once)
+## Deploy (once; already done for the owner's account)
 
 ```bash
 cd tracker

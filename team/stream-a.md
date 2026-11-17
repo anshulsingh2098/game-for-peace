@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17 18:30  Tracker deployed to the owner's Cloudflare account; PRs 76 and 77 merged
+Branch: claude/tracker-cloudflare  Commit: see the PR
+What changed: the tracker Worker is deployed at https://game-for-peace-tracker.mailrajulsingh-in.workers.dev on the owner's own account (mailrajulsingh.in@gmail.com; wrangler there is logged in as the owner; Anshul's account was not used or touched; the game's own site and `cloudflare/public` were not touched). KV namespace `TRACKER` created, secret `TRACKER_PASSWORD` set (the owner has it; not in the repo), `run_worker_first` so every response carries `x-robots-tag: noindex`. Live checks: page 200, API 401 without or with a wrong key, 200 with it, a write and read and delete round trip through the real KV. Also: PR 76 (docs) and PR 77 (infill, loading screen) merged after resolving conflicts in tilemesh.js, cityworld.js, selftest.mjs and this log (self-test 107); looked at in the game: default start 358 calls and 300k triangles (infill adds about 88 calls), Karol Bagh 494k. The page text of the tracker is public; only the saved ticks and remarks are behind the password (Cloudflare Access would protect the text too).
+For the other stream: nothing to do; to update the tracker run `cd tracker && npx wrangler deploy` while wrangler is logged in as the owner.
+Status: open
+
 ## 2026-11-18 18:00  Tracker page: source in the repo, a Cloudflare Worker copy prepared (NOT deployed)
 Branch: claude/tracker-cloudflare  Commit: see the PR
 What changed: new folder `tracker/` (nothing else touched, not `cloudflare/public`): `public/index.html` (the owner's checklist: checkboxes, status, remarks and comments on every item of the plan, N0 to N20, backlog, limits, technicals, docs; the same file is a claude.ai Artifact where state is kept by the Artifact's db, and on Cloudflare uses `/api/tracker`), `worker.js` (serves the page, keeps state in KV, every call needs the shared password in `x-tracker-key`, the Worker secret `TRACKER_PASSWORD`; merge by newer `at`; 256 KB body cap; noindex), `wrangler.jsonc` (a separate Worker `game-for-peace-tracker` with a KV binding `TRACKER`), `README.md`. Checked: the Worker logic with a mock store (auth, 503 when unset, merge, delete, caps) and the page in Cloudflare mode against it in the browser (unlock, tick, remark saved on the server, kept after reload).

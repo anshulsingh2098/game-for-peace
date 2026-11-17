@@ -139,8 +139,8 @@ const TABS = [
 const ITEMS = {
   phases: [
     ['P1 Fill the voids', [
-      I('p1a', 'Infill buildings along the street frontage of built-up blocks', 'Adds buildings where OpenStreetMap is silent (buildings cover only 6 to 19 % of a 1 km tile). Rows of lots, set back by the street width, never on a street, park, water or another building. ?noinfill turns it off.', 'doing', 'Claude', 'PR 77, src/world/city/infill.js (being merged by another session)'),
-      I('p1b', 'Loading screen waits for the first ring of city tiles', 'It used to disappear while the city streamed in, so the game started on bare plains for a few seconds.', 'doing', 'Claude', 'PR 77, src/main.js whenCityReady'),
+      I('p1a', 'Infill buildings along the street frontage of built-up blocks', 'Adds buildings where OpenStreetMap is silent (buildings cover only 6 to 19 % of a 1 km tile). Rows of lots, set back by the street width, never on a street, park, water or another building. ?noinfill turns it off. Costs about 88 more draw calls at the default start.', 'done', 'Claude', 'PR 77 (merged), src/world/city/infill.js'),
+      I('p1b', 'Loading screen waits for the first ring of city tiles', 'It used to disappear while the city streamed in, so the game started on bare plains for a few seconds.', 'done', 'Claude', 'PR 77 (merged), src/main.js whenCityReady'),
       I('p1c', 'Interiors and forecourts of large blocks, plazas with paving, trees, parked cars', 'The map data lets lots go only along streets, so the middle of big blocks stays open.', 'todo', 'Claude'),
       I('p1d', 'Area styles tuned from identity.json (Old Delhi dense and tall, Lutyens low)', 'A table in infill.js exists; real densities per area still to set and check.', 'todo', 'Claude'),
     ]],
@@ -239,7 +239,9 @@ const ITEMS = {
       I('b5', 'Native speakers for the regional announcement translations and Hindi signage', '', 'blocked', 'You'),
     ]],
     ['Bugs and loose ends found', [
-      I('b6', 'Merge PRs 77 and 76 and check main afterwards', 'Another session was merging them; PR 77 had conflicts in tilemesh.js, cityworld.js, selftest.mjs and the team log.', 'doing', 'Claude'),
+      I('b6', 'Merge PRs 77 and 76 and check main afterwards', 'Conflicts in tilemesh.js, cityworld.js, selftest.mjs and the team log resolved; both merged; self-test 107 on the merged branch; looked at in the game.', 'done', 'Claude'),
+      I('b16', 'Draw calls: infill added about 88 (358 at the default start, was about 270; the phone budget is 300)', 'Merge the infill cells or use a lower level for phones.', 'todo', 'Claude'),
+      I('b17', 'The tracker page text is public (only saved ticks and remarks need the password); put the Worker behind Cloudflare Access if the plan text itself must be private', 'One setting in your Cloudflare dashboard.', 'todo', 'You', 'Cloudflare Zero Trust'),
       I('b7', 'Pink balls on the ground are bougainvillea shrubs under flyovers (round magenta crowns without a trunk)', 'Make them a low green shrub with pink flowers or place them only at pier bases.', 'todo', 'Claude'),
       I('b8', 'Two narrow lanes with a street stall in them (near x 707 z -1872 and x 435 z -1995)', 'Visible stall, but the lane cannot be passed.', 'todo', 'Claude'),
       I('b9', 'Five streets still stop a scripted driver at sharp bends in 5.6 m lanes', 'Probably partly the steering script; not tried by hand.', 'todo', 'Claude'),
@@ -247,7 +249,7 @@ const ITEMS = {
       I('b11', 'The flicker you saw while driving: confirm it is gone', 'If not, try &shadows=off, &noinfill, &life=off and tell which one stops it.', 'blocked', 'You'),
       I('b12', 'Remaining map-audit classes: 30 buildings on parks, 119 roads through buildings (rule hides them), 94 footways inside carriageways (not drawn), 4,684 void blocks (mostly outside Delhi)', 'docs/CITY_AUDIT.md lists them with latitude and longitude.', 'doing', 'Claude'),
       I('b13', 'The India map\'s own Delhi is just a point at 1:100; Mumbai, Agra, Bhopal still use the stylised street edge', '', 'todo', 'Claude'),
-      I('b15', 'Deploy the Cloudflare copy of this tracker (once): wrangler whoami, kv namespace create TRACKER, secret put TRACKER_PASSWORD, wrangler deploy', 'Separate Worker game-for-peace-tracker; does not touch the game site. Steps in tracker/README.md (PR 84).', 'blocked', 'Anshul', 'PR 84'),
+      I('b15', 'Deploy the Cloudflare copy of this tracker', 'Deployed 17 Nov 2026 on your own Cloudflare account (mailrajulsingh.in@gmail.com) as the separate Worker game-for-peace-tracker, with a KV store and a password secret; the game site was not touched.', 'done', 'Claude', 'https://game-for-peace-tracker.mailrajulsingh-in.workers.dev'),
       I('b14', 'Claude in Chrome is not connected; all visual checks used the built-in browser (black at night)', 'Connect the extension for a real-GPU check.', 'blocked', 'You'),
     ]],
   ],
@@ -308,13 +310,14 @@ const ITEMS = {
     ]],
     ['Performance budgets', [
       I('m11', 'Desktop budget 900 draw calls and 1.5 M triangles; phone budget 300 calls and 350 k triangles', 'docs/CITY_PACK.md section 4', 'note', 'Claude'),
-      I('m12', 'Delhi frame now: about 270 draw calls and 256 k triangles at q=med at the default start (was 408 and 610 k); dense Karol Bagh about 357 k with infill', 'Browser renderer counters including the shadow pass.', 'note', 'Claude'),
+      I('m12', 'Delhi frame now: about 358 draw calls and 300 k triangles at q=med at the default start with infill (270 and 256 k without; 408 and 610 k originally); dense Karol Bagh about 494 k', 'Browser renderer counters including the shadow pass.', 'note', 'Claude'),
       I('m13', 'Depth range: camera near 0.3 m (1 m in a city chase view), far 14 km; shadow map 2048 over 140 m', '', 'note', 'Claude'),
     ]],
   ],
   tech: [
     ['Stack', [
       I('t1', 'three.js r187 (local copy in vendor/three) and Rapier 0.19.3 (vendor/rapier); plain ES modules, no bundler', '', 'note', 'Claude'),
+      I('t14', 'This tracker is deployed as a Cloudflare Worker + KV on the owner\'s own account (mailrajulsingh.in@gmail.com): https://game-for-peace-tracker.mailrajulsingh-in.workers.dev; the game itself has a deploy from the audit session (game-for-peace.mailrajulsingh-in.workers.dev); Anshul\'s account is left alone', 'Update the tracker with: cd tracker && npx wrangler deploy (wrangler is logged in as the owner)', 'note', 'Claude', 'tracker/README.md'),
       I('t2', 'Static site on Cloudflare (cloudflare/public is generated by tools/stage_cloudflare.py); a Worker serves the tuner settings API', '', 'note', 'Anshul'),
       I('t3', 'Self-test: node tools/selftest.mjs (106 checks on main); daily check: python tools/daily_check.py', '', 'note', 'Claude'),
     ]],
@@ -347,7 +350,7 @@ const ITEMS = {
       I('o10', 'docs/post-n6-open-world-plan.md: N7 to N20 programme', '', 'note', 'Claude'),
     ]],
     ['Written this session', [
-      I('o11', 'docs/DELHI_POLISH_PLAN.md: scale check, phases P1 to P8, N0 to N20 status', 'PR 76, being merged', 'doing', 'Claude', 'PR 76'),
+      I('o11', 'docs/DELHI_POLISH_PLAN.md: scale check, phases P1 to P8, N0 to N20 status', 'PR 76, merged', 'done', 'Claude', 'PR 76'),
       I('o12', 'docs/CITY_AUDIT.md and tools/city_audit_baseline.json: map audit report with coordinates', 'generated by tools/audit_city.mjs --write', 'done', 'Claude', 'PR 82'),
       I('o13', 'team/stream-a.md entries for every PR (what changed, measured numbers, what is not done)', '', 'done', 'Claude'),
       I('o14', 'This tracker page: tracker/public/index.html (+ worker.js, wrangler.jsonc, README.md) and the Artifact copy', 'Kept current through the project memory notes', 'done', 'Claude', 'PR 84'),
@@ -372,7 +375,7 @@ const ITEMS = {
       I('q15', 'Junction shaping', '', 'done', 'You'),
       I('q16', 'A system so a fix applies everywhere, and a coordinate readout in the menu', 'Audit, rules and coordinate line built (PR 82).', 'done', 'You'),
       I('q17', 'This tracker page with checkboxes, comments and remarks', '', 'done', 'You'),
-      I('q18', 'Also a Cloudflare page, and keep it updated through memory', 'Worker copy and memory notes written (PR 84); deploying needs Anshul or your explicit go-ahead and the right Cloudflare account.', 'doing', 'You', 'tracker/README.md'),
+      I('q18', 'Also a Cloudflare page, and keep it updated through memory', 'Deployed on your Cloudflare account; memory notes written; PR 84 merged.', 'done', 'You', 'tracker/README.md'),
     ]],
   ],
 };
@@ -381,10 +384,10 @@ const PRS = [
   ['67', 'Platform number boards', 'merged'], ['68', 'Landmark starts outside footprint; tiles fetched once', 'merged'], ['69', 'Frame cost cut', 'merged'], ['70', 'Shadow pass cut', 'merged'],
   ['71', 'Kerbs not walls', 'merged'], ['72', 'Walls, piers, gate start, props', 'merged'], ['73', 'Title screen India map and Explore cities', 'merged'], ['74', 'Delhi always the real city', 'merged'],
   ['75', 'Aerial look', 'merged'], ['78', 'Connaught Place park', 'merged'], ['79', 'Flicker and zebra', 'merged'], ['80', 'Textures', 'merged'], ['81', 'Junction shaping', 'merged'], ['82', 'Coordinate line, audit, rules', 'merged'],
-  ['84', 'Tracker page: source in the repo and a Cloudflare Worker copy (not deployed)', 'open'], ['83', 'Another session: audit fixes (staging, loader rollback, handles, capsule on-foot, city traffic on flyovers)', 'open'], ['77', 'Infill buildings; loading waits for the city', 'being merged'], ['76', 'Scale check, plan, N0 to N20 (docs)', 'being merged'],
+  ['84', 'Tracker page: source in the repo and the Cloudflare Worker (deployed)', 'merged'], ['83', 'Another session: audit fixes (staging, loader rollback, handles, capsule on-foot, city traffic on flyovers, deploy rule)', 'open'], ['77', 'Infill buildings; loading waits for the city', 'merged'], ['76', 'Scale check, plan, N0 to N20 (docs)', 'merged'],
 ];
 const FACTS = [
-  ['Self-test on main', '106 checks passing (one more with infill)'], ['Delhi frame, default start (q=med)', 'about 270 calls, 256 k triangles (was 408, 610 k)'],
+  ['Self-test on main', '107 checks passing'], ['Delhi frame, default start (q=med)', 'about 358 calls, 300 k triangles with infill (was 408, 610 k before the cost work; 270, 256 k before infill)'],
   ['Building coverage, 1 km tile', '6 to 19 % in the data; infill adds roughly 5 to 15 points'], ['Map audit', '30 on parks, 119 roads through buildings, 94 footways in roads, 3 landmark offsets, 4,684 voids'],
   ['Landmarks', '63 listed, 22 with models'], ['Not deployed', 'live site is the old build; only Anshul deploys'],
 ];
@@ -416,7 +419,7 @@ function unlockPanel() {
   const inp = el('input', { type: 'password', id: 'tk', placeholder: 'Tracker password', 'aria-label': 'Tracker password', autocomplete: 'current-password' });
   const go = async () => { const k = inp.value; if (!k) return; if (await apiLoad(k)) { try { localStorage.setItem('gfp-tracker-key', k); } catch (e) { /* no storage */ } startPoll(); } render(); };
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
-  return el('div', { class: 'panel' }, el('h2', { text: 'Unlock the tracker' }), el('div', { class: 'det', text: 'This copy is private. Enter the shared password to read and change it.' }), apiMsg ? el('div', { class: 'banner', style: 'margin-top:8px', text: apiMsg }) : null, el('div', { class: 'add', style: 'margin-top:10px' }, inp, el('button', { class: 'btn', onclick: go }, 'Unlock')));
+  return el('div', { class: 'panel' }, el('h2', { text: 'Unlock the tracker' }), el('div', { class: 'det', text: 'The saved ticks, remarks and comments are protected: enter the shared password to read and change them.' }), apiMsg ? el('div', { class: 'banner', style: 'margin-top:8px', text: apiMsg }) : null, el('div', { class: 'add', style: 'margin-top:10px' }, inp, el('button', { class: 'btn', onclick: go }, 'Unlock')));
 }
 const flat = [];                                                   /* every item: { ...item, tab, group } */
 for (const tab of Object.keys(ITEMS)) for (const [group, list] of ITEMS[tab]) for (const it of list) flat.push({ ...it, tab, group });
