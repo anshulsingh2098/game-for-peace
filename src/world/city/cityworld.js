@@ -17,7 +17,7 @@ const RADIUS = 1300, KEEP = 1900, CELL = 16;
 export class CityWorld {
   constructor(scene, origin, terrain, { base = 'assets/cities/delhi' } = {}) {
     this.scene = scene; this.origin = origin; this.terrain = terrain; this.ko = terrain.keepout; this.gy = terrain.base(0, 0); this.pack = new CityPack(base); this.group = new THREE.Group(); scene.add(this.group);
-    this.mats = makeMaterials(); this.tiles = new Map(); this.loading = new Map(); this.ready = []; this.circ = new Map(); this.deckCells = new Map(); this.stats = { tiles: 0, buildings: 0, streets: 0, ms: 0, loaded: 0, failed: 0 }; this.labels = new Map();
+    this.mats = makeMaterials(); this.tiles = new Map(); this.loading = new Map(); this.ready = []; this.circ = new Map(); this.geomMap = new Map(); this.onStreets = null; this.deckCells = new Map(); this.stats = { tiles: 0, buildings: 0, streets: 0, ms: 0, loaded: 0, failed: 0 }; this.labels = new Map();
   }
   async init() {
     await this.pack.init(); const { landmarks } = this.pack; this.traffic = new CityTraffic(this.scene, this.origin, this.pack.G);
@@ -48,6 +48,7 @@ export class CityWorld {
     const dk = []; for (const d of out.decks) for (let i = 0; i < d.pos.length; i += 6) dk.push({ x: (d.pos[i] + d.pos[i + 3]) / 2, z: (d.pos[i + 2] + d.pos[i + 5]) / 2, y: d.pos[i + 1], hw: d.hw });
     const deckCells = new Map(); for (const q of dk) { const key = this.ck(Math.floor(q.x / 6), Math.floor(q.z / 6)); let l = deckCells.get(key); if (!l) deckCells.set(key, l = []); l.push(q); }
     const labels = out.labels.map(l => this.label(grp, l, tile)); this.tiles.set(k, { tx: tile.tx, tz: tile.tz, streets: tile.streets, grp, meshes, owner, circ: { arr: c, cells }, decks: out.decks, deckCells, labels });
+    for (const s of tile.streets) { if (s.pts.length < 4) continue; let l = this.geomMap.get(s.id); if (!l) this.geomMap.set(s.id, l = []); l.push({ k, pts: s.pts }); } if (this.onStreets) this.onStreets();
     this.traffic.addTile(k, tile.streets, this.gy); this.stats.loaded++; this.stats.ms = performance.now() - t0; this.refreshStats();
   }
   ck(i, j) { return (i + 8192) * 16384 + (j + 8192); }
@@ -58,10 +59,17 @@ export class CityWorld {
   }
   drop(k) {
     const t = this.tiles.get(k); if (!t) return; this.group.remove(t.grp); for (const m of t.meshes) m.geometry.dispose(); for (const l of t.labels) if (l) { this.labels.delete([...this.labels].find(([, v]) => v === l)?.[0]); l.material.map.dispose(); l.material.dispose(); }
-    const L = this.ko.listeners.slice(); this.ko.listeners.length = 0; this.ko.removeOwner(t.owner); for (const f of L) this.ko.listeners.push(f); this.traffic.removeTile(k); this.tiles.delete(k); this.refreshStats();
+    const L = this.ko.listeners.slice(); this.ko.listeners.length = 0; this.ko.removeOwner(t.owner); for (const f of L) this.ko.listeners.push(f); this.traffic.removeTile(k); for (const s of t.streets) { const l = this.geomMap.get(s.id); if (l) { const n = l.filter(q => q.k !== k); if (n.length) this.geomMap.set(s.id, n); else this.geomMap.delete(s.id); } } this.tiles.delete(k); this.refreshStats();
   }
   refreshStats() { let b = 0, s = 0; for (const t of this.tiles.values()) { for (const m of t.meshes) if (m.material === this.mats.bldg) b += m.geometry.index.count / 3; s += t.decks.length; } this.stats.tiles = this.tiles.size; this.stats.tris = b; this.stats.decks = s; }
   reposition() { for (const t of this.tiles.values()) t.grp.position.set(t.tx * this.pack.size - this.origin.x, 0, t.tz * this.pack.size - this.origin.z); }
+  /* the loaded geometry of street edge `id` as flat points running a -> b (pieces from several tiles are chained), or null when no tile with it is loaded: for the GPS route line and autodrive */
+  edgeGeom(id) {
+    const l = this.geomMap.get(id); if (!l) return null; const G = this.pack.G, A = G.a[id], ax = G.xz[A * 2], az = G.xz[A * 2 + 1]; if (l.length === 1) { const p = l[0].pts; return Math.hypot(p[0] - ax, p[1] - az) <= Math.hypot(p[p.length - 2] - ax, p[p.length - 1] - az) ? p : this.rev(p); }
+    const left = l.map(q => q.pts), out = []; let cx = ax, cz = az; while (left.length) { let bi = 0, bf = true, bd = Infinity; left.forEach((p, i) => { const d0 = Math.hypot(p[0] - cx, p[1] - cz), d1 = Math.hypot(p[p.length - 2] - cx, p[p.length - 1] - cz); if (d0 < bd) { bd = d0; bi = i; bf = true; } if (d1 < bd) { bd = d1; bi = i; bf = false; } }); const p = left.splice(bi, 1)[0], q = bf ? p : this.rev(p); for (let i = 0; i < q.length; i++) out.push(q[i]); cx = q[q.length - 2]; cz = q[q.length - 1]; }
+    return out;
+  }
+  rev(p) { const o = []; for (let i = p.length - 2; i >= 0; i -= 2) o.push(p[i], p[i + 1]); return o; }
   /* the vehicle physics asks: wall circles of the buildings near (x, z) */
   near(x, z, r) {
     const i0 = Math.floor((x - r) / CELL), i1 = Math.floor((x + r) / CELL), j0 = Math.floor((z - r) / CELL), j1 = Math.floor((z + r) / CELL), S = this.pack.size, out = [];

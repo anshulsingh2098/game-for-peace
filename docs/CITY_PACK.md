@@ -178,6 +178,21 @@ The proposal said "start with JSON, change `format` if the size budget fails". T
 - **Validate and check:** `node tools/validate_city.mjs assets/cities/delhi` (add `--quick` to sample tiles), `node tools/check_city.mjs` (loads the pack, routes between spawns), `node tools/selftest.mjs` (pack is current and valid, graph routes).
 - **Rebuild:** `node tools/build_city.mjs delhi --extract data/raw/delhi/northern-zone-261116.osm.pbf --date 2026-11-16`, then `node tools/build_landmarks_doc.mjs`. Same inputs give the same `packHash`.
 
+## 5b. How maps work: the India world versus a city (built 17 Nov 2026, WORK_REMAINING 12.6)
+
+| | India world (`ui/gps.js`) | A city (`ui/citymap.js`, `world/city/citynav.js`) |
+|---|---|---|
+| Scale | 1 game metre = 100 real metres | 1:1, the pack's metres (x east, z south) |
+| Data | the skeleton: highways between cities, rails | the pack graph (`graph.json`, 406,000 edges in Delhi), loaded once, plus `landmarks.json`; the Metro lines from `transit.json` when it loads |
+| Mini-map | round, heading up, 2.2 km radius, roads by kind, your route, city dots | round, heading up, 650 m radius, streets by class (motorway to residential), the route line from the car on, landmark pins (gold for importance 4 and 5), Metro lines in their own colours |
+| Full map (P) | all of India, tap a city | the city, pan by drag, zoom by wheel or pinch, search a landmark or gate by name, tap a pin or any street to navigate; Metro lines and stations when zoomed in |
+| Route | city to city over the highway skeleton (`RoadNetwork.route`) | A* on the pack graph (`CityRouter`, drive mode: one-ways, no footways, cycleways, busways or service lanes; residential streets cost 1.7 times, a U-turn at a node 150 s, a signal 8 s); a route starts and ends on the street where you are and where the pin is (`plan()`), not at the nearest crossing |
+| In the HUD | next city and the exit to take | a banner under the top bar: "In 120 m: Turn left onto Janpath", then street, km and minutes left |
+| Autodrive | follows `road.at(s)` of the India road | follows a `PathRoad` (the route as a polyline with rounded corners, so it quacks like a road), forward only, keeps 1.5 m to the left, caps at 50 km/h (sport 80), stops at the destination; a car stuck for 3 s bans that street and plans anew |
+| Hand-over | entering a city: the page reloads into `?city=delhi`; the India `Gps` is never built there, so there is one map at a time. Leaving through a gate reloads the India world, where the India `Gps` is built again and the city's map is gone | |
+
+The street names come from the graph's name table (`names[edge.name]`); unnamed streets are "the next road". The router walks the graph, the polyline walks the loaded tiles' street geometry (`CityWorld.edgeGeom`), so a route is drawn on the real curves as soon as the tiles are in (the route is rebuilt when a tile loads).
+
 ## 6. identity.json (what makes the city this city; used by every system, Phase 3)
 ```json
 { "format": 1, "palette": { "areas": [ { "landuse": "residential", "zone": "lutyens", "walls": ["#e3d3b0", ...], "roofs": [...] } ], "default": [...] },

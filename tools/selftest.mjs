@@ -1192,4 +1192,15 @@ test('city pack delhi: the five stations have footprints, stand clear of the str
   }
 });
 
+/* ---- D5b follow-up: the city's navigation (src/world/city/citynav.js): A* on the pack graph, turn steps, the path an autodrive follows ---- */
+test('city nav: A* routes on the Delhi graph from a point on a street to a point on a street, steps and a PathRoad follow it', async () => {
+  const nav = await import('../src/world/city/citynav.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8'))), R = new nav.CityRouter(G);
+  const at = id => M.spawns.find(s => s.id === id), A = at('centre'), B = at('indiagate'), r = R.plan(A.x, A.z, 0, B.x, B.z); assert.ok(r, 'a route'); assert.ok(r.metres > 2000 && r.metres < 8000, 'CP to India Gate: ' + r.metres);
+  assert.ok(r.steps.length >= 4 && r.steps[0].text.startsWith('Head along') && r.steps[r.steps.length - 1].text === 'You have arrived', 'turn steps'); const p = new nav.PathRoad(r.poly); assert.ok(p.length > r.metres * 0.9 && p.length < r.metres * 1.3, 'the polyline is as long as the route: ' + p.length + ' vs ' + r.metres);
+  assert.ok(p.closestS(A.x, A.z, 0) < 30, 'the start is at the start'); const o = p.at(p.length / 2, {}); assert.ok(Math.abs(Math.hypot(o.tx, o.tz) - 1) < 1e-9, 'unit tangent'); assert.ok(Math.abs(p.closestS(o.x, o.z, p.length / 2 - 40) - p.length / 2) < 2, 'closestS finds the point it was given, searching near the hint');
+  const back = R.plan(B.x, B.z, 0, A.x, A.z); assert.ok(back && Math.abs(back.metres - r.metres) / r.metres < 0.6, 'the way back is of similar length');
+  const bn = nav.roundCorners([0, 0, 50, 0, 50, 50], 9); assert.ok(bn.length > 6 && Math.min(...bn.filter((_, i) => i % 2 === 0).map((x, i) => Math.hypot(x - 50, bn[i * 2 + 1] - 0))) < 10, 'a right angle is rounded off but the path still passes near the corner'); assert.equal(nav.roundCorners([0, 0, 50, 0, 100, 1], 9).length, 6, 'a gentle bend is left alone');
+  const ban = new Set(r.edges.slice(5, 6)); R.banned = ban; const r2 = R.plan(A.x, A.z, 0, B.x, B.z); assert.ok(r2 && !r2.edges.includes(r.edges[5]), 'a banned street is routed around'); R.banned = new Set();
+});
+
 console.log(`\n${passed} checks passed`);

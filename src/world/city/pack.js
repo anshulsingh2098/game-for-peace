@@ -21,7 +21,7 @@ export function decodeGraphColumns(j) {
   const xz = dec(j.nodes.xz), c = j.edges, n = c.a.length, a = new Int32Array(n), b = new Int32Array(n), len = new Float32Array(n), nn = j.nodes.flags.length;
   let pa = 0; for (let i = 0; i < n; i++) { pa += c.a[i]; a[i] = pa; b[i] = pa + c.d[i]; len[i] = c.len[i] / 10; }
   const layer = Int8Array.from(c.layer), up = new Uint8Array(nn); for (let i = 0; i < n; i++) if (layer[i] > 0) { if (up[a[i]] < 255) up[a[i]]++; if (up[b[i]] < 255) up[b[i]]++; }
-  return { n, nodes: nn, classes: j.classes, cls: Uint8Array.from(c.cls), lanes: Uint8Array.from(c.lanes), oneway: Int8Array.from(c.oneway), speed: Uint16Array.from(c.speed), layer, flags: Uint8Array.from(c.flags), a, b, len, xz: Float32Array.from(xz), nodeFlags: Uint8Array.from(j.nodes.flags), up, names: j.names };
+  return { n, nodes: nn, classes: j.classes, cls: Uint8Array.from(c.cls), lanes: Uint8Array.from(c.lanes), oneway: Int8Array.from(c.oneway), speed: Uint16Array.from(c.speed), layer, flags: Uint8Array.from(c.flags), name: Uint32Array.from(c.name || new Array(n).fill(0)), a, b, len, xz: Float32Array.from(xz), nodeFlags: Uint8Array.from(j.nodes.flags), up, names: j.names };
 }
 
 export const LEVEL = 5.6, RAMP = 70;                                       // a flyover deck is 5.6 m per layer above the ground; ramps are up to 70 m long (a grade of 8 %)

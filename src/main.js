@@ -59,6 +59,7 @@ import { Radio } from './audio/radio.js';
 import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
 import { Gps } from './ui/gps.js';
+import { CityNav, CityMap } from './ui/citymap.js';
 import { RailLine, RailNetwork, classifyCrossings } from './world/rail.js';
 import { RailGrade } from './world/rail_grade.js';
 import { TrainBook, clockMinutes, fmtTime, announcement } from './world/rail_timetable.js';
@@ -187,7 +188,11 @@ function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.leng
     const net = indiaRoute.net, n0 = net.cities.get(indiaRoute.from), g0 = config.road.guide; railNet = new RailNetwork(net.rails); railBook = net.trainsJson ? new TrainBook(net.trainsJson, railNet) : null; railTracks = railNet.edges.map(e => railBook ? railBook.tracks(e.edgeId) : 1); railCross = classifyCrossings(railNet.edges, [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), [...net.cities.values()], railNet.stations); railGrade = new RailGrade({ crossings: railCross, tracks: railTracks, edges: railNet.edges, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), natural: (x, z) => terrain.base(x, z) }); terrain.attachRail(railGrade); } }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
-let city = null, cityStart = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); city.traffic.setMode(S.traffic); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
+let arriveT = 0, adStuck = 0, city = null, cityStart = null, cityNav = null, cityMap = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); city.traffic.setMode(S.traffic); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
+function updateCityMap(now, dt) {                                                                       // the city's GPS (src/ui/citymap.js): hidden India map, city map in its place
+  if (!cityMap) { cityNav = new CityNav(city.pack, { geom: e => city.edgeGeom(e), toast }); city.onStreets = () => cityNav.refine(); cityMap = new CityMap({ nav: cityNav, player: () => { const o = phys && mode !== 'fly' && mode !== 'foot' ? phys : mode === 'foot' && foot ? foot : cam; return { x: o.x, z: o.z, yaw: o.yaw || 0 }; }, size: touchUI ? 150 : 184 }); fetch('assets/cities/delhi/transit.json').then(r => r.ok ? r.json() : null).then(t => { if (t) cityMap.setTransit(t); }).catch(() => {}); window.__cityNav = cityNav; }
+  cityMap.setVisible(mode === 'drive' || mode === 'foot'); cityMap.update(now, dt);
+}
 function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
@@ -295,11 +300,11 @@ $('#newSeed').addEventListener('click', () => regenerate(randomSeed()));
 $$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { setVehicle(i); b.blur(); }));
 let adSim = null;                                                                                              // the traffic of the road the autodrive is on (a branch road has its own)
 autodrive.lane = (dir, k = 0) => !adSim ? 0 : k === 1 && adSim.lanes.length < 2 ? adSim.lateral(-dir, 0) : adSim.lateral(dir, adSim.lanes[k] === undefined ? 0 : k); autodrive.lanes = () => adSim ? adSim.lanes.length : 1;
-autodrive.leader = (ph, s, range, lat) => adSim && adSim.cap ? adSim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, range, lat) : null; autodrive.lanesAt = (ph, s, lat, a, b) => adSim && adSim.cap ? adSim.laneGap({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, lat, a, b) : { ahead: null, behind: null };
+autodrive.leader = (ph, s, range, lat) => adSim && adSim.cap ? adSim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, range, lat) : cityMode && city ? city.traffic.leaderAhead(ph, range) : null; autodrive.lanesAt = (ph, s, lat, a, b) => adSim && adSim.cap ? adSim.laneGap({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, lat, a, b) : { ahead: null, behind: null };
 autodrive.tolls = s => adSim && adSim.road.style.id === 'nh6' ? adSim.tollsNear(s) : [];                      // toll plazas: slow down and keep the lane
 /* autodrive has two levels (E or the button cycles Off, Auto, Cruise): 'full' steers and drives, 'cruise' holds the speed and the gap while you steer. It drives in the style of the current drive mode (sport drives like a sports car). */
-function setAuto(on, level) { if (on && (mode !== 'drive' || !phys)) return; if (on) { autodrive.level = level || 'full'; autodriveStyle(); } autodrive.s = roadS; autodrive.toggle(on); const b = $('#autoBtn'); b.classList.toggle('on', on); b.textContent = on && autodrive.level === 'cruise' ? 'Cruise' : 'Auto'; if (touchUI) touchUI.setAuto(on); toast(on ? (autodrive.level === 'cruise' ? 'Cruise on: you steer, the car holds speed and distance. Brake to stop it' : 'Autodrive on: steer or brake to take over') + ' · ' + (DRIVE_MODES[S.driveMode || 'normal'].name) + ' style' : 'Autodrive off'); }
-function autodriveStyle() { autodrive.setStyle(S.driveMode || 'normal', phys && phys.p ? phys.p.top * (phys.M ? phys.M.top : 1) : 40); }
+function setAuto(on, level) { if (on && (mode !== 'drive' || !phys)) return; if (on && cityMode && !(cityNav && cityNav.active)) { toast('Pick a destination on the map first (P)'); return; } if (on) { autodrive.level = level || 'full'; autodriveStyle(); } autodrive.s = roadS; autodrive.toggle(on); const b = $('#autoBtn'); b.classList.toggle('on', on); b.textContent = on && autodrive.level === 'cruise' ? 'Cruise' : 'Auto'; if (touchUI) touchUI.setAuto(on); toast(on ? (autodrive.level === 'cruise' ? 'Cruise on: you steer, the car holds speed and distance. Brake to stop it' : 'Autodrive on: steer or brake to take over') + ' · ' + (DRIVE_MODES[S.driveMode || 'normal'].name) + ' style' : 'Autodrive off'); }
+function autodriveStyle() { autodrive.setStyle(S.driveMode || 'normal', phys && phys.p ? phys.p.top * (phys.M ? phys.M.top : 1) : 40); if (cityMode) autodrive.cruise = Math.min(autodrive.cruise, (S.driveMode === 'sport' ? 80 : 50) / 3.6); }       // a city street is not a highway
 function cycleAuto() { if (!autodrive.enabled) setAuto(true, 'full'); else if (autodrive.level === 'full') setAuto(true, 'cruise'); else setAuto(false); }
 /* camera views, cycled with V like the old GTA games; C jumps to the driver's seat and back */
 const CAMS = ['middle', 'far', 'close', 'hood', 'bumper', 'cockpit', 'cinematic'], CAM_NAMES = { middle: 'Chase', far: 'Far chase', close: 'Close chase', hood: 'Hood', bumper: 'Bumper', cockpit: 'Driver seat', cinematic: 'Cinematic' };
@@ -604,8 +609,9 @@ function update(dt, now) {
     if (!frozen()) {
       input = controls.read();
       if (autodrive.enabled) {                                                                       // the car drives itself; steering or braking by hand takes over
-        if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null, adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); }
+        if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null; let adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (cityMode) { adRoad = cityNav.path; adSim = null; autodrive.lookMin = 6; autodrive.forward = true; autodrive.lane = () => -1.5; autodrive.lanes = () => 1; if (!cityNav.active || cityNav.arrived) { setAuto(false); if (cityNav.arrived) arriveT = 2.5; else toast('Autodrive off: no route'); } } if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = cityMode ? 0 : rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); if (cityMode) { adStuck = Math.abs(phys.u) < 0.4 && input.throttle > 0.5 ? adStuck + dt : 0; if (adStuck > 3) { adStuck = 0; if (cityNav.blockHere(phys.x, phys.z, phys.yaw)) backToRoad(); } } }
       }
+      if (cityMode && arriveT > 0) { arriveT -= dt; input = { ...input, throttle: 0, brake: 1 }; }                    // stop at the destination
       if (auto) input = auto; phys.step(dt, input);
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
@@ -636,7 +642,7 @@ function update(dt, now) {
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
-  updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } updateToll(); updatePrompt();
+  updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } if (city) updateCityMap(now, dt); updateToll(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
