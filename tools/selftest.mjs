@@ -1304,4 +1304,13 @@ test('Delhi identity (D7): identity.json is valid, zones lie inside the pack, ev
   assert.ok(['neem', 'jamun'].includes('neem'));
 });
 
+test('prefetch: each file once, one at a time in order, a failure is tried again later, nothing on a save-data connection', async () => {
+  const P = await import('../src/world/prefetch.js'), got = [], realFetch = globalThis.fetch; let fail = new Set(['assets/india/rails.json']);
+  globalThis.fetch = async u => { got.push(u); if (fail.has(u)) throw new Error('offline'); return { ok: true, arrayBuffer: async () => new ArrayBuffer(1) }; };
+  try {
+    assert.equal(P.prefetch(P.INDIA_FILES), P.INDIA_FILES.length); assert.equal(P.prefetch(P.INDIA_FILES), 0, 'asked twice: nothing new'); await new Promise(r => setTimeout(r, 30));
+    assert.deepEqual(got, P.INDIA_FILES, 'in order, once each'); fail = new Set(); assert.equal(P.prefetch(P.INDIA_FILES), 1, 'only the one that failed is asked again'); await new Promise(r => setTimeout(r, 30)); assert.equal(got.length, P.INDIA_FILES.length + 1);
+    Object.defineProperty(globalThis, 'navigator', { value: { connection: { saveData: true } }, configurable: true }); assert.equal(P.prefetch(P.CITY_FILES), 0, 'save-data: nothing');
+  } finally { globalThis.fetch = realFetch; delete globalThis.navigator; }
+});
 console.log(`\n${passed} checks passed`);

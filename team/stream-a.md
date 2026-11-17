@@ -2,6 +2,14 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 03:00  A-2026-11-18-06: city and highway flow v1: the other world's files are prefetched, so the switch is quick
+Branch: claude/audit-fixes (PR 83)  Commit: see the PR
+What changed: new `src/world/prefetch.js` (each file once, one at a time, low priority, nothing on a save-data connection, a failed file is retried later; self-test added, 111 checks). `src/main.js` (shared, 3 small lines, plus the import): on the India map within about 300 km of Delhi the Delhi pack files (`graph.json` 14.6 MB and the small ones) are fetched into the browser cache; inside Delhi within 800 m of a gate the India files (skeleton, rails, trains, terrain) are. The switch is still a page load behind the black fade (the two worlds are different scales and `main.js` builds one world at boot), but it now finds its files on the device; with the bundle the scripts are one cached file. A true in-place switch with no reload needs the world set-up in `main.js` made re-runnable (the `cityMode` constant is used in about 30 places): that is v2, best done after PR 85 lands, as a separate step.
+Overlap with PR 85 (`claude/city-exits`): it also edits `src/main.js` (gates, `startNav`) and `src/ui/citymap.js`; my edit is in `updateGateExit` and the `enterBtn` line, so expect a small conflict: keep both sides.
+Not verified: the prefetch trigger on a real drive (the map is 1:100 and the built-in browser cannot drive 300 km); the live copy has the first version of the trigger (8000 map metres, about 800 km): the corrected 3000 is in the repo but not deployed, because the Cloudflare sign-in on this machine expired (`npx wrangler login` needed).
+For the other stream: nothing.
+Status: info
+
 ## 2026-11-18 02:00  A-2026-11-18-05: deploy now bundles the scripts (cold start: 142 script requests down to 1)
 Branch: claude/audit-fixes (PR 83)  Commit: see the PR (live: version f9d20b6c)
 What changed: `tools/bundle.mjs` ran with the owner's go-ahead (esbuild 0.24.2 fetched by npx). Live page: 44 requests instead of about 200, one `dist/game.js` (3.7 MB, 1.3 MB gzipped); India title ready in 5.5 s and Delhi in 3.2 s in the built-in browser (warm asset cache; the earlier Delhi start there took about 40 s). `?src=1` loads the unbundled source game (checked, 149 script requests). `CLAUDE.md` "Where deploys go" now includes the bundle step. The source files are unchanged; only the staged copy is bundled. Not verified: a real phone or a cold cache on a slow network.
