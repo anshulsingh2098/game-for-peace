@@ -208,5 +208,5 @@ Done: `?play&city=delhi[&at=<spawn|landmark|gate id>]` (`src/world/city/`), stre
 | D6.2 | A stair from the concourse to the platforms of elevated stations (walk on) |
 | D6.3 | Trains and a timetable on the railway tracks in the stations; link to the India-world rail network |
 | D6.4 | Check looks and figures (colours, boards, livery, cars per train, speeds, PSD) against photographs |
-| D6.5 | Ride animation instead of a fade; the full fast-travel ride was not run in the browser; no sound |
+| D6.5 | Ride animation instead of a fade; no sound |
 | D6.6 | Buildings under viaducts (needs the tile renderer to take Metro claims) |

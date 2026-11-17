@@ -29,7 +29,8 @@ export class TransitUI {
     const T = this.T, e = T.net.stations.get(stId), out = [];
     for (const per of e.st.per) {
       const line = T.lineOf.get(per.line), here = e.calls.find(c => c.R.line === per.line); if (!here) continue; const R = here.R, list = [];
-      for (let k = 0; k < R.stops.length; k++) { if (k === here.k) continue; const o = T.net.byKey.get(R.stops[k].id); if (!o) continue; const mins = Math.max(1, Math.round((Math.abs(R.stops[k].s - here.s) / 13 + Math.abs(k - here.k) * DWELL) / 60)); list.push({ id: o.id, name: o.name, mins }); }
+      for (let k = 0; k < R.stops.length; k++) { if (k === here.k) continue; const o = T.net.byKey.get(R.stops[k].id); if (!o || !T.city.pack.hasTile(Math.floor(o.x / T.S), Math.floor(o.z / T.S))) continue;       // only stations inside the pack: the rest of the line is not drawn
+      const mins = Math.max(1, Math.round((Math.abs(R.stops[k].s - here.s) / 13 + Math.abs(k - here.k) * DWELL) / 60)); list.push({ id: o.id, name: o.name, mins }); }
       out.push({ line, colour: lineColour(line), to: R.to, list });
     } return out;
   }
