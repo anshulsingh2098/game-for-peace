@@ -59,3 +59,14 @@ Brand names are short invented words ("Shree Ganga Sweets" is a generic type nam
 
 ## 10. What is not done
 Stray cows and dogs, street name signs, string lights and night glow of props (boards glow at night), time-of-day crowd and traffic density (`identity.json` carries the hour tables, nothing reads them yet), posters on flyover pillars, passengers boarding buses, buses at junctions do not give way to each other, DTC AC livery (sources differ), taxi colours, truck-art detail, Hindi on everything but the boards and ads, the Gurgaon towers, a phone measurement, a look at how it renders under the real lights.
+
+## Photo check, 18 Nov 2026 (first pass, Rajul's Claude)
+Method: looked at photographs on Wikimedia Commons in the browser (Rajpath and India Gate; Karol Bagh streets), compared with screenshots of the game at the same kind of place. Nothing was copied. These are observations, not measurements; a Delhi person and more photographs per street are still needed (P3 "done when").
+| Place | Photo shows | Game before | Game now (live 9c57b868) | Still wrong |
+|---|---|---|---|---|
+| Rajpath / India Gate lawns | bright to mid green mown lawns, long avenues of tall dark-green trees forming walls, hazy pale sky | grey blotchy ground, tiny lollipop trees | real grass texture lawns, park trees by class, broad two-blob crowns, clipped hedges, beige haze | trees are generated shapes; avenue rows are not continuous walls; water channels of Rajpath not modelled |
+| Lutyens avenues | wide roads, dense tall jamun and neem, grass verges | trees only sparse | avenue trees plus hedges, 1.4 x tree size | canopy still lower and thinner than a real avenue |
+| Karol Bagh and dense markets | 4 to 6 floor ochre, cream and dusty buildings, heavy signage banners and wires, old spreading peepal and neem, muted haze | facades fine, no haze | haze added (month smog) | facade relief, signage density and wire clutter not checked against photos |
+| Yamuna floodplain | flat fields, greens and ochres | bare ground | farmland polygons drawn as fields | crop rows, ponds, sandbanks not modelled |
+| Central Ridge | dense dry-deciduous scrub woodland | bare | forest and scrub classes get dense and small trees | kikar umbrella shape, rock outcrops not modelled |
+| Medians | planted kerbed medians between carriageways | none | median strip with shrubs and a few ashoka trees where one-way carriageways run side by side | **not yet seen on screen**: check on a real dual carriageway |

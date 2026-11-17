@@ -28,6 +28,8 @@ function box(m, cx, y0, cz, sx, sy, sz, ux, uz, c, cTop) {
   quad(m, P(-1, -1, y1), P(1, -1, y1), P(1, 1, y1), P(-1, 1, y1), 0, 1, 0, cTop || c);
 }
 /* a tree: a trunk and a broad crown of one or two lathed blobs (neem, peepal and jamun in Delhi are 12 to 25 m with wide spreading crowns, so the sizes of identity.json are scaled up, and the crown has a second blob to the side so it is not one ball); `big` scales a whole tree (scrub and forest trees are smaller) */
+/* the crown shapes of the main Delhi trees as extra blobs: [dx in crown radii, dy in crown heights, dz, radius scale, height scale]: neem a wide dome of clumps, peepal very broad and low, jamun tall and dense, kikar a flat umbrella */
+const BLOBS = { neem: { main: 1, more: [[0.55, 0.12, 0.2, 0.62, 0.7], [-0.5, 0.1, -0.3, 0.6, 0.68], [0.1, 0.32, -0.5, 0.5, 0.6]] }, peepal: { main: 1.05, more: [[0.65, 0.05, 0.1, 0.7, 0.6], [-0.65, 0.05, 0.1, 0.7, 0.6], [0.0, 0.25, 0.55, 0.55, 0.5]] }, jamun: { main: 0.9, more: [[0.3, 0.3, 0.15, 0.55, 0.7], [-0.25, 0.45, -0.2, 0.45, 0.5]] }, gulmohar: { main: 1, more: [[0.6, 0.05, 0.1, 0.65, 0.5], [-0.6, 0.05, -0.1, 0.65, 0.5]] }, amaltas: { main: 0.9, more: [[0.5, 0.1, 0.2, 0.55, 0.6]] } };
 function tree(m, x, y0, z, sp, k, bloom, big = 1) {
   const S = 1.4 * big, bu = sp.id === 'bougainvillea', h = sp.h * S * (0.8 + 0.4 * k), r = sp.r * S * (0.8 + 0.4 * ((k * 7) % 1)), th = bu ? 0 : h * 0.4, prof = PROFILE[sp.shape] || PROFILE.round, base = C(bloom && sp.bloom ? sp.bloom : sp.canopy).clone().multiplyScalar(0.85);
   if (!bu) { const tw = 0.32 + 0.012 * h; box(m, x, y0, z, tw, th + 0.8, tw, 1, 0, C(PALE.wood)); }
@@ -37,8 +39,8 @@ function tree(m, x, y0, z, sp, k, bloom, big = 1) {
       for (let a = 0; a < N; a++) { const ra0 = ra(a), ra1 = ra(a + 1), a0 = a / N * 6.2832, a1 = (a + 1) / N * 6.2832, am = (a0 + a1) / 2, nx = Math.cos(am) * dy / ln, nz = Math.sin(am) * dy / ln, ny = -dr / ln, vr = 0.9 + 0.2 * ((kk * 13 + a) % 1), c0 = base.clone().multiplyScalar(f0 * vr), c1 = base.clone().multiplyScalar(f1 * vr);
         const v0 = m.v(cx + Math.cos(a0) * r0 * rr * ra0, yb + h0 * chh, cz + Math.sin(a0) * r0 * rr * ra0, Math.cos(a0) * dy / ln, ny, Math.sin(a0) * dy / ln, c0), v1 = m.v(cx + Math.cos(a1) * r0 * rr * ra1, yb + h0 * chh, cz + Math.sin(a1) * r0 * rr * ra1, Math.cos(a1) * dy / ln, ny, Math.sin(a1) * dy / ln, c0), v2 = m.v(cx + Math.cos(a1) * r1 * rr * ra1, yb + h1 * chh, cz + Math.sin(a1) * r1 * rr * ra1, Math.cos(a1) * dy / ln, ny, Math.sin(a1) * dy / ln, c1), v3 = m.v(cx + Math.cos(a0) * r1 * rr * ra0, yb + h1 * chh, cz + Math.sin(a0) * r1 * rr * ra0, Math.cos(a0) * dy / ln, ny, Math.sin(a0) * dy / ln, c1);
         if (r0 > 0) m.tri(v0, v1, v2, nx, ny, nz); if (r1 > 0) m.tri(v0, v2, v3, nx, ny, nz); } } };
-  crown(x, z, y1, ch, r, k, 8, 1);
-  if (!bu && sp.shape !== 'cone') { const t = k * 6.2832, d = r * 0.5; crown(x + Math.cos(t) * d, z + Math.sin(t) * d, y1 + ch * 0.1, ch * 0.72, r * 0.62, k + 0.37, 6, 0.88 + 0.24 * ((k * 5) % 1)); }
+  crown(x, z, y1, ch, r * (BLOBS[sp.id] ? BLOBS[sp.id].main : 1), k, 8, 1);
+  if (!bu && sp.shape !== 'cone') { const t = k * 6.2832, B = BLOBS[sp.id] ? BLOBS[sp.id].more : [[Math.cos(t) * 0.5, 0.1, Math.sin(t) * 0.5, 0.62, 0.72]]; B.forEach((b, q) => crown(x + b[0] * r * Math.cos(t) - b[2] * r * Math.sin(t), z + b[0] * r * Math.sin(t) + b[2] * r * Math.cos(t), y1 + ch * b[1], ch * b[4], r * b[3], k + 0.37 * (q + 1), 6, 0.86 + 0.26 * ((k * 5 + q * 0.3) % 1))); }
 }
 /* a wire from (x0, y0, z0) to (x1, y1, z1) sagging by `sag`, as a vertical and a flat ribbon of 4 pieces */
 function wire(m, x0, y0, z0, x1, y1, z1, sag, c) {
@@ -154,5 +156,15 @@ export function* buildStreetLife(tile, ctx, out) {
   { let nh = 0; for (const pc of pieces) { if (nh > 260 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 24) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if (an !== 'lutyens' && an !== 'dda' && an !== 'cp') continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
       for (const side of [1, -1]) { if (rnd(pc.id, 70 + side) > 0.55) continue; for (let s = 6; s < pc.len - 6 && nh < 260; s += 6) { const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 3.4 : 2.4), px = o.x + -o.tz * off * side, pz = o.z + o.tx * off * side; if (insideBuilding(px, pz, 1.2) || inRoad(px, pz, 0.8)) continue; const [lx, lz] = L(px, pz); box(M.prop, lx, gy, lz, 5.6, 0.85, 0.9, o.tx, o.tz, C(0x3a6a2a), C(0x4f8236)); nh++; } } }
     st.hedges = nh; }
+  /* ---- medians: where two one-way carriageways of a main road run side by side with a gap, the gap is a kerbed median with a clipped shrub strip and now and then a tree (only the carriageway heading the positive way draws it, so it is drawn once) ---- */
+  { let nm = 0; for (const pc of pieces) { if (nm > 220 || pc.lay !== 0 || pc.len < 30 || !(pc.cls === 'primary' || pc.cls === 'secondary' || pc.cls === 'trunk')) continue; const ow = G.oneway[pc.id]; if (!ow) continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
+      for (let sm = 8; sm < pc.len - 8 && nm < 220; sm += 10) { const o = at(pc, sm), dx = o.tx * ow, dz = o.tz * ow; if (!(dx > 0.01 || (Math.abs(dx) <= 0.01 && dz > 0))) continue; const nx = -o.tz * ow, nz = o.tx * ow; let hit = 0;
+        for (let t = pc.hw + 1.0; t < pc.hw + 22; t += 1.5) { if (inRoad(o.x + nx * t, o.z + nz * t, 0.2)) { hit = t; break; } } const gap = hit - pc.hw; if (!hit || gap < 2.4 || gap > 20) continue;
+        const ns = nearest(o.x + nx * hit, o.z + nz * hit); if (!ns || Math.abs(ns.tx * o.tx + ns.tz * o.tz) < 0.92) continue;
+        const tm = pc.hw + gap / 2, mx = o.x + nx * tm, mz = o.z + nz * tm, [lx, lz] = L(mx, mz), wd = Math.max(1.0, gap - 0.9);
+        box(M.prop, lx, gy, lz, 10.4, 0.18, wd, o.tx, o.tz, C(0xb4b0a6)); if (wd > 1.6) box(M.prop, lx, gy + 0.18, lz, 10.0, 0.55, wd - 0.7, o.tx, o.tz, C(0x3d6b2b), C(0x5a8f3a));
+        if (gap > 3.6 && ((sm / 10) | 0) % 2 === 0) { const sp = ID.species.get('ashoka'); if (sp) tree(M.prop, lx, gy, lz, sp, rnd(pc.id, (sm | 0) + 80), false, 0.55); }
+        nm++; } }
+    st.medians = nm; }
   return { M, stats: st };
 }

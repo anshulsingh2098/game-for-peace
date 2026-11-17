@@ -142,13 +142,15 @@ export class Environment {
     u.time.value = t; u.sunDir.value.set(...T.sun); u.sunCol.value.setRGB(...T.sunCol); this.sunDir.set(...T.sun).normalize();
     this.sun.color.set(T.light); this.fill.color.set(T.hs); this.hemi.color.set(T.hs); this.hemi.groundColor.set(T.hg); this.lightsOn = T.li < 1.8 || dk > 0.7;
     const eff = (hex, out) => { out.set(hex); const L = out.r * 0.3 + out.g * 0.55 + out.b * 0.15; gr.setRGB(L * 0.95, L * 0.98, L * 1.04); return out.lerp(gr, dk * 0.85); };     // bad weather greys the sky
-    eff(T.top, u.top.value); eff(T.mid, u.mid.value); eff(T.bot, u.bot.value); this.fogCol.copy(u.bot.value);
+    eff(T.top, u.top.value); eff(T.mid, u.mid.value); eff(T.bot, u.bot.value);
+    { const hz = (this.haze || 0) * Math.min(1, T.li / 1.2); if (hz > 0.01) { gr.set(0xcdc3ad); u.top.value.lerp(gr, hz * 0.45); u.mid.value.lerp(gr, hz * 0.7); u.bot.value.lerp(gr, hz * 0.9); } this._hz = hz; }          // city haze: a warm beige-grey pale sky (Delhi smog and dust), set by the city from its month
+    this.fogCol.copy(u.bot.value);
     u.cloudCol.value.setRGB(...T.cc); { const L = (T.cc[0] + T.cc[1] + T.cc[2]) / 3 * 0.8; gr.setRGB(L, L, L * 1.05); u.cloudCol.value.lerp(gr, dk * 0.6); }
     u.cloudAmt.value = Math.min(1, T.ca * (0.4 + W.cloud));
     this.stars.material.opacity = T.stars * Math.max(0, 1 - dk * 1.3); this.stars.visible = this.stars.material.opacity > 0.05;
     if (dk > 0.9) { this.flashT -= dt; if (this.flashT <= 0) { this.flash = 1; this.flashT = 3 + Math.random() * 7; } } this.flash = Math.max(0, this.flash - dt * 3.5);      // lightning in storms
     this.sun.intensity = T.li * W.light + this.flash * 2; this.hemi.intensity = T.hi * (0.4 + 0.6 * W.light) + this.flash * 2.5; this.scene.environmentIntensity = 1 - 0.55 * dk;          // bad weather: less sky light from above and less reflected sky ambient this.fill.intensity = (T.li < 1.8 ? 0.25 : 0.7) * (0.5 + 0.5 * W.light);
-    const f = this.scene.fog; f.far = reach * 0.96 * Math.pow(W.fogMul, 2.2); f.near = f.far * 0.1;
+    const f = this.scene.fog; f.far = reach * 0.96 * Math.pow(W.fogMul, 2.2) * (1 - 0.5 * (this._hz || 0)); f.near = f.far * 0.1;
     const m = this.mats;
     if (m.road) { m.road.roughness = lerp(0.95, 0.3, W.wet); m.road.envMapIntensity = 0.2 + W.wet; m.road.color.setScalar(lerp(1, 0.62, W.wet)); }
     if (m.ground) m.ground.color.setScalar(lerp(1, 0.66, W.wet)); this.uSnow.value = W.snow;
