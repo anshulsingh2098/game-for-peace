@@ -44,7 +44,7 @@ export class Menu {
     mk('div', 'm-kicker', p, 'A drive through an endless, generated world');
     mk('h1', '', p, 'Game for Peace');
     const col = mk('div', 'm-col', p);
-    btn(col, 'Play', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Explore cities', () => this.open2('locations', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title')); btn(col, 'Travel', () => this.open2('travel', 'title'));
+    btn(col, 'Play: India map', () => { if (this.api.inWorld && !this.api.inWorld()) this.api.indiaMap(); else this.hide(); }, 'primary'); btn(col, 'Explore cities', () => this.open2('locations', 'title')); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title')); btn(col, 'Travel', () => this.open2('travel', 'title'));
     mk('div', 'm-hint', p, 'Pick a car, truck or bike, then roam. Hold Q at any time to tune a live radio station from around the world, including India.');
     const lic = mk('a', '', p, 'Licenses and credits'); lic.href = 'licenses.html'; lic.target = '_blank'; lic.rel = 'noopener'; lic.style.cssText = 'display:block;margin-top:14px;font-size:12px;color:#9fb0c8;text-align:center';          // every credit and licence in one page, linked from the title screen
   }
