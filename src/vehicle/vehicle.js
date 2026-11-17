@@ -39,23 +39,20 @@ export class VehicleView {
       if (/^Rider/.test(o.name)) this.riders.push(o);
       if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = m.userData.env ?? 0.7; }); }
     });
-    const lift = { car: 0.08, sport: 0.07, rally: 0.05 }[def.id] || 0;                                    // ride height: the body sits higher over the wheels, so the tyres no longer look half buried in the arches
-    if (lift) { let top = this.model; while (top.children.length === 1 && !top.children.some(c => /^Wheel_/.test(c.name))) top = top.children[0]; if (!top.children.some(c => /^Wheel_/.test(c.name))) top = this.model.children[0]; for (const c of top.children) if (!/^Wheel_/.test(c.name)) c.position.y += lift; }
-    this.buildCockpit(def.id, def); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
+    this.buildCockpit(def.id); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
   }
   /* dashboard and steering wheel for the driver view (the models have no interior) */
-  buildCockpit(id, def) {
-    if (id === 'bike' || (def || this.def).interior) return;                 // models with their own interior need no stand-in dashboard
+  buildCockpit(id) {
+    if (id === 'bike' || this.def.interior) return;                 // models with their own interior need no stand-in dashboard
     const g = new THREE.Group(), dark = new THREE.MeshLambertMaterial({ color: 0x15151b }), mid = new THREE.MeshLambertMaterial({ color: 0x30303a }), glow = new THREE.MeshBasicMaterial({ color: 0x6fd0ff });
     const box = (w, h, d, x, y, z, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || dark); m.position.set(x, y, z); g.add(m); return m; };
     let pos, R, tilt;
-    if (id !== 'truck') { box(1.5, 0.07, 0.42, 0, 0.955, 0.66); box(0.46, 0.08, 0.2, -0.32, 1.0, 0.64, mid); box(0.28, 0.01, 0.05, -0.32, 1.045, 0.58, glow); box(0.3, 0.05, 0.1, 0.2, 0.99, 0.60, mid); box(0.08, 0.22, 0.08, -0.32, 0.86, 0.54, mid); pos = [-0.32, 0.98, 0.50]; R = 0.13; tilt = 0.6; }
+    if (id === 'car') { box(1.5, 0.07, 0.42, 0, 0.955, 0.66); box(0.46, 0.08, 0.2, -0.32, 1.0, 0.64, mid); box(0.28, 0.01, 0.05, -0.32, 1.045, 0.58, glow); box(0.3, 0.05, 0.1, 0.2, 0.99, 0.60, mid); box(0.08, 0.22, 0.08, -0.32, 0.86, 0.54, mid); pos = [-0.32, 0.98, 0.50]; R = 0.13; tilt = 0.6; }
     else { box(2.0, 0.24, 0.8, 0, 2.30, 3.95); box(0.8, 0.12, 0.26, -0.5, 2.43, 3.85, mid); box(0.5, 0.012, 0.05, -0.5, 2.5, 3.75, glow); box(0.2, 0.5, 0.15, -0.5, 2.1, 3.65, mid); pos = [-0.5, 2.36, 3.62]; R = 0.24; tilt = 0.3; }
     const sw = new THREE.Group(); sw.position.set(...pos); sw.rotation.x = tilt; const inner = new THREE.Group(); sw.add(inner);
     inner.add(new THREE.Mesh(new THREE.TorusGeometry(R, R * 0.14, 8, 28), mid));
     for (const [w, h] of [[R * 1.9, R * 0.16], [R * 0.16, R * 0.95]]) { const sp = new THREE.Mesh(new THREE.BoxGeometry(w, h, R * 0.1), mid); if (h > w) sp.position.y = -R * 0.47; inner.add(sp); }
     inner.add(new THREE.Mesh(new THREE.CylinderGeometry(R * 0.3, R * 0.3, R * 0.2, 12).rotateX(Math.PI / 2), dark));
-    if (id !== 'truck' && def) g.position.set(0, def.eye[1] - 1.22, def.eye[2] - 0.14);                              // the car-style dash is drawn for the first car's eye height; other cars shift it
     g.add(sw); this.model.add(g); this.cockpit = g; this.wheel = inner;
   }
   /* glow sprites at the lamps, the lamp materials, and a headlight beam */
@@ -80,7 +77,7 @@ export class VehicleView {
   setView(v) {
     this.view = v; const fp = v === 'first'; if (!this.model) return;
     this.model.traverse(o => {                                  // the models' glass is opaque, so from inside the cabin and glass are hidden
-      if (o.name === 'Cab' || o.name === 'Cabin' || o.name === 'Interior') o.visible = !fp;
+      if (o.name === 'Cab' || o.name === 'Cabin') o.visible = !fp;
       if (o.isMesh) [].concat(o.material).forEach(m => { if (m.name === 'Glass') { m.colorWrite = !fp; m.depthWrite = !fp; } });
     });
     if (this.cockpit) this.cockpit.visible = fp; for (const o of this.riders) o.visible = !fp;

@@ -41,9 +41,9 @@ export class Environment {
     scene.add(this.hemi, this.sun, this.sun.target, this.fill, this.fill.target);
     this.skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: { top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, bot: { value: new THREE.Color() }, sunDir: { value: new THREE.Vector3() }, sunCol: { value: new THREE.Color() },
-        cloudCol: { value: new THREE.Color() }, cloudAmt: { value: 0.7 }, time: { value: 0 }, night: { value: 0 } },
+        cloudCol: { value: new THREE.Color() }, cloudAmt: { value: 0.7 }, time: { value: 0 } },
       vertexShader: 'varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-      fragmentShader: `uniform vec3 top; uniform vec3 mid; uniform vec3 bot; uniform vec3 sunDir; uniform vec3 sunCol; uniform vec3 cloudCol; uniform float cloudAmt; uniform float time; uniform float night; varying vec3 vDir;
+      fragmentShader: `uniform vec3 top; uniform vec3 mid; uniform vec3 bot; uniform vec3 sunDir; uniform vec3 sunCol; uniform vec3 cloudCol; uniform float cloudAmt; uniform float time; varying vec3 vDir;
         float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
           return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y); }
@@ -57,11 +57,6 @@ export class Environment {
           vec3 cc = mix(cloudCol * 0.62, cloudCol, shade) + sunCol * pow(sd, 5.0) * 0.55;
           c = mix(c, cc, cl);
           c += sunCol * (pow(sd, 900.0) * 3.5 + pow(sd, 14.0) * 0.30 + pow(sd, 3.0) * 0.10) * (1.0 - cl * 0.85);
-          vec3 md = normalize(sunDir); float mc = dot(d, md);                                              // the moon: a pale disc with a soft halo and a few darker maria
-          float moon = smoothstep(0.99955, 0.99975, mc), halo = pow(max(mc, 0.0), 220.0) * 0.35;
-          vec2 mp = vec2(dot(d, normalize(cross(md, vec3(0.0, 1.0, 0.0)))), dot(d, normalize(cross(cross(md, vec3(0.0, 1.0, 0.0)), md)))) * 900.0;
-          float maria = smoothstep(0.35, 0.65, fbm(mp * 2.2 + 5.0));
-          c += (vec3(0.86, 0.90, 1.0) * moon * (0.78 + 0.22 * maria) + vec3(0.45, 0.55, 0.85) * halo) * night * (1.0 - cl * 0.9) * smoothstep(0.0, 0.08, h);
           gl_FragColor = vec4(c, 1.0);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
@@ -144,7 +139,7 @@ export class Environment {
     if (!this.fixedWx) { this.wxTimer -= dt; if (this.wxTimer <= 0) { let tot = 0, pick = 'clear'; for (const k in WX_AUTO) tot += WX_AUTO[k]; let r = Math.random() * tot; for (const k in WX_AUTO) { r -= WX_AUTO[k]; if (r <= 0) { pick = k; break; } } this.wxTarget = pick; this.wxTimer = 80 + Math.random() * 90; } }
     const tgt = WX[this.fixedWx || this.wxTarget], k = Math.min(1, dt * 0.35), W = this.w; for (const key in tgt) W[key] = lerp(W[key], tgt[key], k);
     const T = this.curT(), u = this.skyMat.uniforms, dk = W.dark, gr = this._gr, t = now / 1000, cam = camera.position;
-    u.time.value = t; u.night.value = smooth(0.6, 1.0, T.stars) * (1 - 0.8 * this.w.dark); u.sunDir.value.set(...T.sun); u.sunCol.value.setRGB(...T.sunCol); this.sunDir.set(...T.sun).normalize();
+    u.time.value = t; u.sunDir.value.set(...T.sun); u.sunCol.value.setRGB(...T.sunCol); this.sunDir.set(...T.sun).normalize();
     this.sun.color.set(T.light); this.fill.color.set(T.hs); this.hemi.color.set(T.hs); this.hemi.groundColor.set(T.hg); this.lightsOn = T.li < 1.8 || dk > 0.7;
     const eff = (hex, out) => { out.set(hex); const L = out.r * 0.3 + out.g * 0.55 + out.b * 0.15; gr.setRGB(L * 0.95, L * 0.98, L * 1.04); return out.lerp(gr, dk * 0.85); };     // bad weather greys the sky
     eff(T.top, u.top.value); eff(T.mid, u.mid.value); eff(T.bot, u.bot.value); this.fogCol.copy(u.bot.value);

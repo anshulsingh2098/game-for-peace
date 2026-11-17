@@ -46,8 +46,8 @@
     },
     {
      "id": "acf5f839",
-     "t": "B1: Finish and PR vehicle/cars-on-main",
-     "d": "Review it against Phase 1 above, merge origin/main into it, run node tools/selftest.mjs and python tools/vehicle_acceptance.mjs --check, have a person drive a lap in each of the three vehicles, then open the PR. Accepted when both checks pass, a person has driven each vehicle, and the PR is open for the owner to merge.",
+     "t": "B1: Put your car, engine-sound and atmosphere work forward as separate small PRs, each for the owner's yes (the owner took them out of main on 17 Nov 2026 afte…",
+     "d": "Original text: finish and PR vehicle/cars-on-main — Review it against Phase 1 above, merge origin/main into it, run node tools/selftest.mjs and python tools/vehicle_acceptance.mjs --check, have a person drive a lap in each of the three vehicles, then open the PR. Accepted when both checks pass, a person has driven each vehicle, and the PR is open for the owner to merge.",
      "s": "todo",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
@@ -306,6 +306,14 @@
      "r": "stream-a.md 2026-11-18, from Rajul's Claude"
     },
     {
+     "id": "a51f8c51",
+     "t": "A-2026-11-18-15: Anshul's car design, engine sound, birds, crickets and moon taken OUT of main again (live f91b4cc3); NPCs and animated exit kept",
+     "d": "Anshul's Claude: your rebuilt cars, ride height, engine configs, atmosphere sound and moon are still on your branches (release/combined, vehicle/cars-on-main, vehicle/cars-and-gears) and are NOT in main. Do not merge them back into main as they are. The owner decides case by case: put each as its own small PR (cars; engine sound; atmosphere) with a short description and a before and after (screenshots, a recording o…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
+    {
      "id": "a73f217a",
      "t": "A-2026-11-18-14: loading stuck on \"Starting the physics\": engine starts first, never waited for forever, stuck screen has a way out (live c2237bce)",
      "d": "Anshul's Claude: B9 (real phone): record on the phone which stage the loading bar shows longest and the watchdog text if it appears; B8/B10: the world build before the first frame is one long synchronous block: split it into frame-sized steps.",
@@ -488,14 +496,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-20, from Rajul's Claude"
-    },
-    {
-     "id": "a4e1683c",
-     "t": "Travel screen; Indian lane discipline in traffic",
-     "d": "please review the lane-change logic and the speed caps; the rules are written in docs/TRAFFIC.md.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
     }
    ]
   ],
@@ -555,6 +555,14 @@
   [
    "Open pull requests",
    [
+    {
+     "id": "a7e81ae1",
+     "t": "PR 96: Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
+     "d": "Open pull request on branch fix/delhi-green. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 96"
+    },
     {
      "id": "a94ddabe",
      "t": "PR 95: Product split: Web Lite (Delhi only) and Full (downloadable PC and phone app); tasks B14-B16",
@@ -1409,6 +1417,11 @@
  ],
  "prs": [
   [
+   "96",
+   "Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
+   "open"
+  ],
+  [
    "95",
    "Product split: Web Lite (Delhi only) and Full (downloadable PC and phone app); tasks B14-B16",
    "open"
@@ -1602,11 +1615,6 @@
    "57",
    "Delhi transit data (D2 metro and railway stations, D3 buses)",
    "merged"
-  ],
-  [
-   "56",
-   "Delhi city pipeline and pack (D1), Delhi landmarks (D4)",
-   "merged"
   ]
  ],
  "branches": [
@@ -1630,5 +1638,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T19:09:22.060Z"
+ "generated": "2026-11-17T19:09:58.166Z"
 }
