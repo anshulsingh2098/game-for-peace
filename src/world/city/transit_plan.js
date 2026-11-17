@@ -37,8 +37,8 @@ export function planRoute(line, route, pins = []) {
   xs.push(P[nv * 2 - 2]); zs.push(P[nv * 2 - 1]); ss.push(vc[nv - 1]); cl.push(vcls[nv - 1]);
   const n = xs.length, T = new Float64Array(n), h = new Float64Array(n); for (let i = 0; i < n; i++) T[i] = targetH(cl[i]);
   for (const p of pins) for (let i = 0; i < n; i++) if (Math.abs(ss[i] - p.s) <= p.half) { T[i] = p.h; cl[i] = p.h > 6 ? 'e' : p.h < -3 ? 'u' : 'g'; }
-  h[0] = T[0]; for (let i = 1; i < n; i++) { const d = (ss[i] - ss[i - 1]) * MAXGRADE; h[i] = Math.max(h[i - 1] - d, Math.min(h[i - 1] + d, T[i])); }
-  for (let i = n - 2; i >= 0; i--) { const d = (ss[i + 1] - ss[i]) * MAXGRADE; h[i] = Math.max(h[i + 1] - d, Math.min(h[i + 1] + d, h[i])); }
+  h[0] = T[0]; for (let i = 1; i < n; i++) h[i] = Math.min(T[i], h[i - 1] + (ss[i] - ss[i - 1]) * MAXGRADE);          // the lower envelope of the targets with a slope limit: the track comes down BEFORE a lower stretch (a tunnel, a ground section, a lower station) so it is there when the data says, and climbs only after it
+  for (let i = n - 2; i >= 0; i--) h[i] = Math.min(h[i], h[i + 1] + (ss[i + 1] - ss[i]) * MAXGRADE);
   const R = { id: route.id, line: line.id, from: route.from, to: route.to, n, x: Float64Array.from(xs), z: Float64Array.from(zs), s: Float64Array.from(ss), h, cls: cl, len: vc[nv - 1], stops: [] };
   R.tx = new Float32Array(n); R.tz = new Float32Array(n); for (let i = 0; i < n; i++) { const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1), dx = R.x[b] - R.x[a], dz = R.z[b] - R.z[a], L = Math.hypot(dx, dz) || 1; R.tx[i] = dx / L; R.tz[i] = dz / L; }       // tangent at every sample
   Object.assign(R, Rproto); R.stops = route.stops.map(([id, s]) => ({ id, s, i: R.indexAt(s) })); return R;

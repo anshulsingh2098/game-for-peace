@@ -43,3 +43,8 @@ export function extrude(S, R, i0, i1, ring, cols, closed = true, dyExtra = 0) {
   const m = ring.length, edges = closed ? m : m - 1, P = i => { const nx = -R.tz[i], nz = R.tx[i], h = R.h[i] + dyExtra, o = new Array(m); for (let k = 0; k < m; k++) o[k] = [R.x[i] + nx * ring[k][0], h + ring[k][1], R.z[i] + nz * ring[k][0]]; return o; };
   let a = P(i0); for (let i = i0 + 1; i <= i1; i++) { const b = P(i); for (let k = 0; k < edges; k++) { const k2 = (k + 1) % m; S.quad(a[k], a[k2], b[k2], b[k], cols[k % cols.length]); } a = b; }
 }
+
+/* walkable surface pieces along route R from s0 to s1, across own-lateral L0..L1, at height y over the ground: a piece every 12 m, each in the frame of the track there, so a curved platform is followed (push into `list`) */
+export function walkAlong(list, R, s0, s1, L0, L1, y) {
+  for (let a = s0; a < s1; a += 12) { const q = R.at(a + 6); list.push({ x: q.x, z: q.z, tx: q.tx, tz: q.tz, u0: -7, u1: 7, l0: L0, l1: L1, ya: y, yb: y }); }
+}
