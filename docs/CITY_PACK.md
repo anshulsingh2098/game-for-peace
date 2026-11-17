@@ -84,6 +84,8 @@ Basis: `PERFORMANCE.md` (medium tier today: 520 draw calls, 428k triangles, 5.6 
 | Pack size on disk (gzip) | at most 30 MB per city pack, 20 MB each for Delhi NCR's three | same pack, streamed: at most 4 MB resident |
 | Time from the gate to driving | under 4 s on a 20 Mbit line (manifest, identity, first 9 tiles prefetched) | under 8 s on 10 Mbit |
 
+**Measured 17 Nov 2026 (Delhi, desktop, medium; the browser pane was hidden, so CPU only, no GPU or frame rate):** 299 draw calls and 285k triangles in the city view (14 near tiles and 35 skyline tiles), 171 MB JS heap; CPU of one frame (update plus draw submit) median 0.9 ms, 95 % under 2.4 ms, 99 % under 6.8 ms; a tile is meshed in slices of 3 ms (worst slice 5 ms) and then added to the scene in 5 to 6 ms (before: 3 to 41 ms in one frame). Detailed ring 1.3 km (the table's 600 m is not met: buildings are plain extrusions, cheap), lane marks and kerbs within 450 m, skyline to 3.8 km. No phone measured.
+
 How: geometry merged per 128 m cell (one draw call per material per cell, as `district.js` does per 200 m piece), instancing for repeated furniture, facade textures from a small atlas by building use, tiles of 1 km streamed by the existing sector scheme (hysteresis, abort, pins, LRU), far cells baked at pack build time. Measure with `?bench=30` on a desktop and on a phone before Phase 2 is called done; update these numbers from the measurement, not the other way round.
 
 ## 5. The versioned city pack format
@@ -177,6 +179,21 @@ The proposal said "start with JSON, change `format` if the size budget fails". T
 - **Sizes (Delhi):** 77.5 MB raw, 19.8 MB gzip (tiles 16.5, graph 3.2, landmarks 0.03); the biggest tile 361 KB, the most buildings in a tile 3,060. Validator budgets: pack 20 MB gzip, tile 4 MB, graph 3.5 MB (the proposal's "a few hundred KB" for the graph is not reachable: Delhi's OSM has 406k edges, mostly residential lanes).
 - **Validate and check:** `node tools/validate_city.mjs assets/cities/delhi` (add `--quick` to sample tiles), `node tools/check_city.mjs` (loads the pack, routes between spawns), `node tools/selftest.mjs` (pack is current and valid, graph routes).
 - **Rebuild:** `node tools/build_city.mjs delhi --extract data/raw/delhi/northern-zone-261116.osm.pbf --date 2026-11-16`, then `node tools/build_landmarks_doc.mjs`. Same inputs give the same `packHash`.
+
+## 5b. How maps work: the India world versus a city (built 17 Nov 2026, WORK_REMAINING 12.6)
+
+| | India world (`ui/gps.js`) | A city (`ui/citymap.js`, `world/city/citynav.js`) |
+|---|---|---|
+| Scale | 1 game metre = 100 real metres | 1:1, the pack's metres (x east, z south) |
+| Data | the skeleton: highways between cities, rails | the pack graph (`graph.json`, 406,000 edges in Delhi), loaded once, plus `landmarks.json`; the Metro lines from `transit.json` when it loads |
+| Mini-map | round, heading up, 2.2 km radius, roads by kind, your route, city dots | round, heading up, 650 m radius, streets by class (motorway to residential), the route line from the car on, landmark pins (gold for importance 4 and 5), Metro lines in their own colours |
+| Full map (P) | all of India, tap a city | the city, pan by drag, zoom by wheel or pinch, search a landmark or gate by name, tap a pin or any street to navigate; Metro lines and stations when zoomed in |
+| Route | city to city over the highway skeleton (`RoadNetwork.route`) | A* on the pack graph (`CityRouter`, drive mode: one-ways, no footways, cycleways, busways or service lanes; residential streets cost 1.7 times, a U-turn at a node 150 s, a signal 8 s); a route starts and ends on the street where you are and where the pin is (`plan()`), not at the nearest crossing |
+| In the HUD | next city and the exit to take | a banner under the top bar: "In 120 m: Turn left onto Janpath", then street, km and minutes left |
+| Autodrive | follows `road.at(s)` of the India road | follows a `PathRoad` (the route as a polyline with rounded corners, so it quacks like a road), forward only, keeps 1.5 m to the left, caps at 50 km/h (sport 80), stops at the destination; a car stuck for 3 s bans that street and plans anew |
+| Hand-over | entering a city: the page reloads into `?city=delhi`; the India `Gps` is never built there, so there is one map at a time. Leaving through a gate reloads the India world, where the India `Gps` is built again and the city's map is gone | |
+
+The street names come from the graph's name table (`names[edge.name]`); unnamed streets are "the next road". The router walks the graph, the polyline walks the loaded tiles' street geometry (`CityWorld.edgeGeom`), so a route is drawn on the real curves as soon as the tiles are in (the route is rebuilt when a tile loads).
 
 ## 6. identity.json (what makes the city this city; used by every system, Phase 3)
 ```json

@@ -59,6 +59,9 @@ import { Radio } from './audio/radio.js';
 import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
 import { Gps } from './ui/gps.js';
+import { CityNav, CityMap } from './ui/citymap.js';
+import { mapGates, pickGate } from './world/city/gates.js';
+import { installCutHoles } from './world/city/cuts.js';
 import { RailLine, RailNetwork, classifyCrossings } from './world/rail.js';
 import { RailGrade } from './world/rail_grade.js';
 import { TrainBook, clockMinutes, fmtTime, announcement } from './world/rail_timetable.js';
@@ -78,17 +81,21 @@ import { createFx, loadSkyLight } from './fx/pipeline.js';
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], q = new URLSearchParams(location.search);
 const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
-let savedLoc = null, savedCity = null; try { const o = JSON.parse(localStorage.getItem('gfp-next') || '{}'); savedLoc = o.location || null; savedCity = typeof o.city === 'string' ? o.city : null; } catch (e) { /* no saved choice */ }
+let savedLoc = null, savedCity = null, savedEnclave = null; try { const o = JSON.parse(localStorage.getItem('gfp-next') || '{}'); savedLoc = o.location || null; savedCity = typeof o.city === 'string' ? o.city : null; savedEnclave = typeof o.enclave === 'string' ? o.enclave : null; } catch (e) { /* no saved choice */ }
 /* a real highway to drive (docs/INDIA_MAP_PLAN.md section 9): ?india=<road id>&from=<city>&toward=<city>. The road follows the path of that highway at 1:100 through procedural land; the signs name the next cities. Roads and cities: assets/india/skeleton.json */
 /* One continuous India world is the game (docs/INDIA_MAP_PLAN.md): ?india=world&at=<city> (the default when no region is asked for). A region or city world to explore is ?loc=<id> (the "Explore cities" section). ?india=route and ?india=<road id> are single-road drives for testing. */
-const cityMode = q.get('city') === 'delhi';                                                                           // ?city=delhi: the 1:1 city enclave drawn from the city pack (src/world/city, docs/CITY_PACK.md); &at=<spawn, landmark or gate id>
+const cityMode = q.get('city') === 'delhi' || (savedEnclave === 'delhi' && ![...q.keys()].some(k => !['play', 'q', 'seed', 'at', 'fromcity'].includes(k)) && !q.has('at') && !q.has('fromcity'));       // the save remembers that you were last inside Delhi: a plain ?play starts there                                                                           // ?city=delhi: the 1:1 city enclave drawn from the city pack (src/world/city, docs/CITY_PACK.md); &at=<spawn, landmark or gate id>
+/* the gate fade (12.7): a black cover that fades in (0.5 s) before a page reload through a gate and out again on arrival, with the car's speed carried across in sessionStorage */
+const gateFade = (() => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;background:#000;z-index:200;pointer-events:none;opacity:0;transition:opacity .5s ease'; document.body.appendChild(d); let carry = null; try { carry = JSON.parse(sessionStorage.getItem('gfp-gate') || 'null'); sessionStorage.removeItem('gfp-gate'); } catch (e) { /* no storage */ }
+  if (carry && Date.now() - carry.t < 30000) { d.style.transition = 'none'; d.style.opacity = '1'; } else carry = null; return { d, carry, frames: 0 }; })();
+function gateJump(search, speed) { try { sessionStorage.setItem('gfp-gate', JSON.stringify({ u: Math.max(0, speed || 0), t: Date.now() })); } catch (e) { /* no storage */ } gateFade.d.style.transition = 'opacity .5s ease'; gateFade.d.style.opacity = '1'; setTimeout(() => { location.search = search; }, 520); }
 const wantWorld = !cityMode && (q.get('india') === 'world' || (!q.get('india') && !q.get('loc') && !q.get('c')));
 let indiaRoute = null;
 if (q.get('india') || wantWorld) {
   try {
     const sk = await (await fetch('assets/india/skeleton.json')).json(), net = new RoadNetwork(sk); try { net.rails = await (await fetch('assets/india/rails.json')).json(); } catch (e) { net.rails = null; } try { net.trainsJson = await (await fetch('assets/india/trains.json')).json(); } catch (e) { net.trainsJson = null; }
     if (wantWorld) {                                                                                                      // the free world: start in a city on the best highway through it, with a way ahead and a way behind
-      const at = q.get('at') || savedCity || 'mumbai', ws = net.worldStart(at) || net.worldStart('mumbai'); if (ws) { const from = ws.gA.from; indiaRoute = { ...ws.gA, net, world: true, roadId: ws.road, name: ws.name, kind: ws.kind, nh: ws.nh, ptsBack: ws.gB ? ws.gB.pts : null, citiesBack: ws.gB ? ws.gB.cities.map(c => ({ ...c, along: -c.along })) : [], legs: [], from }; }
+      const at = q.get('at') || savedCity || 'mumbai', ws = net.worldStart(at, { road: q.get('via'), toward: q.get('toward') }) || net.worldStart('mumbai'); if (ws) { const from = ws.gA.from; indiaRoute = { ...ws.gA, net, world: true, roadId: ws.road, name: ws.name, kind: ws.kind, nh: ws.nh, ptsBack: ws.gB ? ws.gB.pts : null, citiesBack: ws.gB ? ws.gB.cities.map(c => ({ ...c, along: -c.along })) : [], legs: [], from }; }
     } else if (q.get('india') === 'route') {                                                                                     // ?india=route&from=<city>&to=<city>: the shortest way over several roads, as one drive
       const g = net.routeGuide(q.get('from') || 'delhi', q.get('to') || 'mumbai'); if (g) { const kinds = g.legs.map(l => net.roads.get(l.road).kind); indiaRoute = { ...g, net, roadId: null, name: net.cities.get(g.from).name + ' to ' + net.cities.get(g.to).name, kind: kinds.some(k => k !== 'nh') ? 'gq' : 'nh' }; }
     } else {
@@ -136,6 +143,7 @@ renderer.shadowMap.enabled = shadowsOn; renderer.shadowMap.type = quality === 'h
 /* saved choices for this preview */
 const loaded = loadSave((() => { try { return localStorage; } catch (e) { return { getItem: () => null, setItem() { throw e; }, removeItem() {} }; } })(), { vehicles: VEHICLES.length, vehicleIds: VEHICLES.map(v => v.id), locations: LOCATIONS.map(l => l.id) });      // versioned, checked, recovers from damage (core/save.js)
 const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, traffic: quality === 'low' ? 'off' : quality === 'med' ? 'low' : 'mid', ...loaded.data }, save = () => writeSave((() => { try { return localStorage; } catch (e) { return { setItem() { throw e; } }; } })(), S, loaded);
+if (cityMode) S.enclave = 'delhi'; else if (S.enclave) { delete S.enclave; save(); }                          // the save remembers that you were last inside a city (saved.js `enclave`)
 env.setTime(S.time); env.setWeather(S.weather);
 
 const natureLevel = q.get('nature') || (quality === 'low' ? 'low' : 'full'), groundLevel = q.get('ground') || (quality === 'low' ? 'flat' : quality === 'med' ? 'lite' : 'full');      // quality tiers: low keeps the cheap ground and fewer scenery variants, med a lighter photographic ground, high everything
@@ -187,7 +195,11 @@ function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.leng
     const net = indiaRoute.net, n0 = net.cities.get(indiaRoute.from), g0 = config.road.guide; railNet = new RailNetwork(net.rails); railBook = net.trainsJson ? new TrainBook(net.trainsJson, railNet) : null; railTracks = railNet.edges.map(e => railBook ? railBook.tracks(e.edgeId) : 1); railCross = classifyCrossings(railNet.edges, [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), [...net.cities.values()], railNet.stations); railGrade = new RailGrade({ crossings: railCross, tracks: railTracks, edges: railNet.edges, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), natural: (x, z) => terrain.base(x, z) }); terrain.attachRail(railGrade); } }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
-let city = null, cityStart = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); city.traffic.setMode(S.traffic); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
+let arriveT = 0, adStuck = 0, city = null, cityStart = null, cityNav = null, cityMap = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); city.traffic.setMode(S.traffic); city.peds.setMode(S.traffic); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
+function updateCityMap(now, dt) {                                                                       // the city's GPS (src/ui/citymap.js): hidden India map, city map in its place
+  if (!cityMap) { cityNav = new CityNav(city.pack, { geom: e => city.edgeGeom(e), toast }); city.onStreets = () => cityNav.refine(); cityMap = new CityMap({ nav: cityNav, player: () => { const o = phys && mode !== 'fly' && mode !== 'foot' ? phys : mode === 'foot' && foot ? foot : cam; return { x: o.x, z: o.z, yaw: o.yaw || 0 }; }, size: touchUI ? 150 : 184 }); fetch('assets/cities/delhi/transit.json').then(r => r.ok ? r.json() : null).then(t => { if (t) cityMap.setTransit(t); }).catch(() => {}); window.__cityNav = cityNav; }
+  cityMap.setVisible(mode === 'drive' || mode === 'foot'); cityMap.update(now, dt);
+}
 function makeScenery() {
   if (roadMesh) roadMesh.dispose(); if (scatter) scatter.dispose(); if (backdrop) { scene.remove(backdrop.group); backdrop.group.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); }); }
   backdrop = new Backdrop(scene, terrain, config);
@@ -197,7 +209,7 @@ function makeScenery() {
   if (peds) { peds.dispose(); peds = null; }
   if (traffic) traffic.dispose(); traffic = new Traffic(scene, road, config.seed, grid.origin, { mode: cityMode ? 'off' : S.traffic, drive: locationById(config.location).drive || 'right', scale: (locationById(config.location).region || { traffic: { scale: 1 } }).traffic.scale, mix: (locationById(config.location).region || { traffic: {} }).traffic.mix || null, pack: trafficPack });          // cars on the road (src/traffic), on the right or the left as the place drives
   { const reg = locationById(config.location).region; if (reg && reg.district && reg.population && reg.population.density > 0) peds = new Pedestrians(scene, nav, config.seed + ':' + config.location, grid.origin, { density: reg.population.density, archetypes: reg.population.archetypes, level: S.traffic, traffic: traffic.sim }); }          // people on the sidewalks of a built-up region (src/pedestrians); their number follows the traffic setting
-  env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); groundMat.uniforms.uArid.value = (config.palette && config.palette.arid) || 0; } if (!holes) holes = installTunnelHoles(ground, WALL, ARCH); waterMat.color.set(config.water.color);
+  env.attach({ ground, road: roadMesh.surface }); if (groundMat) { groundMat.install(); groundMat.setSea(terrain.seaLevel); groundMat.uniforms.uArid.value = (config.palette && config.palette.arid) || 0; } if (!holes) holes = installTunnelHoles(ground, WALL, ARCH); if (city && !ground.userData.cutHoles) { ground.userData.cutHoles = true; installCutHoles([ground], city.cuts); } waterMat.color.set(config.water.color);
 }
 makeScenery();
 function applyView() {
@@ -207,7 +219,7 @@ function applyView() {
 
 /* ---------- the vehicle ---------- */
 const cam = new FlyCam(canvas), controls = new Controls(), autodrive = new Autodrive(), view = new VehicleView(scene);
-const world = { height: (x, z, y) => { if (city && y !== -Infinity) { const dk = city.deck(x, z); if (dk === dk && (y === undefined || Math.abs(dk - y) <= Math.abs(city.gy - y))) return dk; return city.gy; } return terrain.drive(x, z, y); }, ground: (x, z) => terrain.drive(x, z, -Infinity), deck: (x, z) => city ? city.deck(x, z) : terrain.deck(x, z), deckMesh: (x, z, h) => city ? city.deckMesh(x, z, h) : roadSet ? roadSet.deckMesh(x, z, h) : null, surface: (x, z) => city ? 'asphalt' : terrain.surface(x, z), near: (x, z, r) => { if (city) return city.near(x, z, r); const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), ...branches.map(b => b.mesh.bridges.near(x, z, r)).flat(), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : [], rail ? rail.near(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
+const world = { height: (x, z, y) => { if (city && y !== -Infinity) { const dk = city.deck(x, z), g = city.groundAt(x, z); if (dk === dk && (y === undefined ? dk > city.gy : Math.abs(dk - y) <= Math.abs(g - y))) return dk; return g; } return terrain.drive(x, z, y); }, ground: (x, z) => city ? city.groundAt(x, z) : terrain.drive(x, z, -Infinity), deck: (x, z) => city ? city.deck(x, z) : terrain.deck(x, z), deckMesh: (x, z, h) => city ? city.deckMesh(x, z, h) : roadSet ? roadSet.deckMesh(x, z, h) : null, surface: (x, z) => city ? 'asphalt' : terrain.surface(x, z), near: (x, z, r) => { if (city) return city.near(x, z, r); const l = landmarks ? scatter.near(x, z, r).concat(landmarks.near(x, z, r)) : scatter.near(x, z, r); return roadMesh ? l.concat(roadMesh.bridges.near(x, z, r), roadMesh.highway.near(x, z, r), ...branches.map(b => b.mesh.bridges.near(x, z, r)).flat(), roadMesh.district ? roadMesh.district.near(x, z, r) : [], traffic ? traffic.circles(x, z, r) : [], rail ? rail.near(x, z, r) : []) : l; }, get seaLevel() { return terrain.seaLevel; },
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
 const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
@@ -218,7 +230,9 @@ let menu = null; const frozen = () => !!(menu && menu.open);
 let rapier = false; const rapierReady = q.get('phys') === 'old' ? Promise.resolve() : initRapier().then(() => { rapier = true; loadState.physics = true; loadUpdate(); }).catch(e => console.warn('Rapier did not load; using the simple physics', e));
 /* put the vehicle in the left lane at road distance s, facing along the road */
 /* the player starts in the first lane of the direction of travel, on the side traffic keeps to (left in India); wide divided roads have their own lane centres */
-function placeOnRoad(s) { if (cityMode && cityStart) { phys.reset(cityStart.x, cityStart.z, cityStart.yaw, city.gy); view.camYaw = null; return; } const p = road.at(s, {}), off = laneOffsets(road.style)[0], lat = (locationById(config.location).drive || 'right') === 'right' ? -off : off; phys.reset(p.x - p.tz * lat, p.z + p.tx * lat, p.th, p.y); view.camYaw = null; }
+function placeOnRoad(s) { placeOnRoad0(s); applyCarry(); }
+function applyCarry() { const c = gateFade.carry; if (!c || c.done || !phys) return; c.done = true; const u = Math.max(0, Math.min(c.u || 0, 45)); phys.u = u; try { if (phys.body) phys.body.setLinvel({ x: Math.cos(phys.yaw) * u, y: 0, z: Math.sin(phys.yaw) * u }, true); } catch (e) { /* the simple physics has no body */ } }
+function placeOnRoad0(s) { if (cityMode && cityStart) { phys.reset(cityStart.x, cityStart.z, cityStart.yaw, city.gy); view.camYaw = null; return; } const p = road.at(s, {}), off = laneOffsets(road.style)[0], lat = (locationById(config.location).drive || 'right') === 'right' ? -off : off; phys.reset(p.x - p.tz * lat, p.z + p.tx * lat, p.th, p.y); view.camYaw = null; }
 async function setVehicle(i) {
   const def = VEHICLES[i], model = await loadModel(def), old = phys; vehicle = i; await rapierReady; bus.emit('vehicle:changed', { id: def.id });
   const par = vehicleParams(def.body, def.stats);
@@ -295,11 +309,11 @@ $('#newSeed').addEventListener('click', () => regenerate(randomSeed()));
 $$('#vehicles button').forEach((b, i) => b.addEventListener('click', () => { setVehicle(i); b.blur(); }));
 let adSim = null;                                                                                              // the traffic of the road the autodrive is on (a branch road has its own)
 autodrive.lane = (dir, k = 0) => !adSim ? 0 : k === 1 && adSim.lanes.length < 2 ? adSim.lateral(-dir, 0) : adSim.lateral(dir, adSim.lanes[k] === undefined ? 0 : k); autodrive.lanes = () => adSim ? adSim.lanes.length : 1;
-autodrive.leader = (ph, s, range, lat) => adSim && adSim.cap ? adSim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, range, lat) : null; autodrive.lanesAt = (ph, s, lat, a, b) => adSim && adSim.cap ? adSim.laneGap({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, lat, a, b) : { ahead: null, behind: null };
+autodrive.leader = (ph, s, range, lat) => adSim && adSim.cap ? adSim.leaderAhead({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, range, lat) : cityMode && city ? city.traffic.leaderAhead(ph, range) : null; autodrive.lanesAt = (ph, s, lat, a, b) => adSim && adSim.cap ? adSim.laneGap({ x: ph.x, z: ph.z, s, yaw: ph.yaw, u: ph.u }, lat, a, b) : { ahead: null, behind: null };
 autodrive.tolls = s => adSim && adSim.road.style.id === 'nh6' ? adSim.tollsNear(s) : [];                      // toll plazas: slow down and keep the lane
 /* autodrive has two levels (E or the button cycles Off, Auto, Cruise): 'full' steers and drives, 'cruise' holds the speed and the gap while you steer. It drives in the style of the current drive mode (sport drives like a sports car). */
-function setAuto(on, level) { if (on && (mode !== 'drive' || !phys)) return; if (on) { autodrive.level = level || 'full'; autodriveStyle(); } autodrive.s = roadS; autodrive.toggle(on); const b = $('#autoBtn'); b.classList.toggle('on', on); b.textContent = on && autodrive.level === 'cruise' ? 'Cruise' : 'Auto'; if (touchUI) touchUI.setAuto(on); toast(on ? (autodrive.level === 'cruise' ? 'Cruise on: you steer, the car holds speed and distance. Brake to stop it' : 'Autodrive on: steer or brake to take over') + ' · ' + (DRIVE_MODES[S.driveMode || 'normal'].name) + ' style' : 'Autodrive off'); }
-function autodriveStyle() { autodrive.setStyle(S.driveMode || 'normal', phys && phys.p ? phys.p.top * (phys.M ? phys.M.top : 1) : 40); }
+function setAuto(on, level) { if (on && (mode !== 'drive' || !phys)) return; if (on && cityMode && !(cityNav && cityNav.active)) { toast('Pick a destination on the map first (P)'); return; } if (on) { autodrive.level = level || 'full'; autodriveStyle(); } autodrive.s = roadS; autodrive.toggle(on); const b = $('#autoBtn'); b.classList.toggle('on', on); b.textContent = on && autodrive.level === 'cruise' ? 'Cruise' : 'Auto'; if (touchUI) touchUI.setAuto(on); toast(on ? (autodrive.level === 'cruise' ? 'Cruise on: you steer, the car holds speed and distance. Brake to stop it' : 'Autodrive on: steer or brake to take over') + ' · ' + (DRIVE_MODES[S.driveMode || 'normal'].name) + ' style' : 'Autodrive off'); }
+function autodriveStyle() { autodrive.setStyle(S.driveMode || 'normal', phys && phys.p ? phys.p.top * (phys.M ? phys.M.top : 1) : 40); if (cityMode) autodrive.cruise = Math.min(autodrive.cruise, (S.driveMode === 'sport' ? 80 : 50) / 3.6); }       // a city street is not a highway
 function cycleAuto() { if (!autodrive.enabled) setAuto(true, 'full'); else if (autodrive.level === 'full') setAuto(true, 'cruise'); else setAuto(false); }
 /* camera views, cycled with V like the old GTA games; C jumps to the driver's seat and back */
 const CAMS = ['middle', 'far', 'close', 'hood', 'bumper', 'cockpit', 'cinematic'], CAM_NAMES = { middle: 'Chase', far: 'Far chase', close: 'Close chase', hood: 'Hood', bumper: 'Bumper', cockpit: 'Driver seat', cinematic: 'Cinematic' };
@@ -332,10 +346,11 @@ const toggleMute = () => { S.muted = !S.muted; save(); radio.setMuted(S.muted); 
 /* between the one India world and a city world to explore: a clean reload (a loading screen); the choice is kept in the address */
 function exploreCity(id) { location.search = '?play&loc=' + encodeURIComponent(id) + '&seed=' + encodeURIComponent(config.seed) + '&q=' + quality; }
 /* the highway gate of a city enclave (docs/CITY_PACK.md section 3): driving into Delhi on a national highway reloads into the city at that highway's gate; driving out through a gate returns to the India world at Delhi, heading out */
-let entering = false; function enterCity(nh) { if (entering || city || q.has('fromcity') || !phys || mode !== 'drive') return; const gs = CITY_GATES; if (!gs) return; let g = null, bs = -9; for (const x of gs) { const sc = Math.cos((phys.yaw || 0) - yawOfBearing(x.bearing)) + (nh && x.india === nh ? 0.5 : 0) + (x.india ? 0.05 : 0); if (sc > bs) { bs = sc; g = x; } } if (!g) return; entering = true; toast('Entering Delhi…'); location.search = '?play&city=delhi&at=' + encodeURIComponent(g.id) + '&seed=' + encodeURIComponent(config.seed) + '&q=' + quality; }
-let leaving = false; function updateGateExit() { if (!city || leaving || !phys || mode !== 'drive' || phys.u < 3) return; for (const g of city.pack.M.gates) { if (Math.hypot(phys.x - g.x, phys.z - g.z) > 40) continue; const b = yawOfBearing(g.bearing); if (Math.cos(phys.yaw - b) < -0.5) { leaving = true; toast('Leaving Delhi…'); const u = new URLSearchParams(); u.set('play', ''); u.set('india', 'world'); u.set('at', 'delhi'); u.set('fromcity', '1'); u.set('seed', config.seed); u.set('q', quality); location.search = '?' + u.toString(); return; } } }
+let entering = false; function enterCity(nh, roadId) { if (entering || city || q.has('fromcity') || !phys || mode !== 'drive') return; const gs = CITY_GATES; if (!gs) return; const g = pickGate(gs, roadId, phys.yaw || 0, nh); if (!g) return; entering = true; toast('Entering Delhi…'); S.enclave = 'delhi'; save(); gateJump('?play&city=delhi&at=' + encodeURIComponent(g.id) + '&seed=' + encodeURIComponent(config.seed) + '&q=' + quality, phys.u); }
+let leaving = false, cityGates = null; function updateGateExit() { if (!city || leaving || !phys || mode !== 'drive' || phys.u < 3) return; for (const g of city.pack.M.gates) { if (Math.hypot(phys.x - g.x, phys.z - g.z) > 40) continue; const b = yawOfBearing(g.bearing); if (Math.cos(phys.yaw - b) < -0.5) { leaving = true; toast('Leaving Delhi…'); const m = (cityGates || []).find(x => x.id === g.id), u = new URLSearchParams(); u.set('play', ''); u.set('india', 'world'); u.set('at', 'delhi'); if (m && m.road) { u.set('via', m.road); u.set('toward', m.toward); } u.set('fromcity', '1'); u.set('seed', config.seed); u.set('q', quality); S.enclave = null; save(); gateJump('?' + u.toString(), phys.u); return; } } }
 const yawOfBearing = b => Math.atan2(-Math.cos(b), Math.sin(b));
-let CITY_GATES = null; if (indiaRoute && indiaRoute.world && !cityMode) fetch('assets/cities/delhi/manifest.json').then(r => r.json()).then(m => { CITY_GATES = m.gates; }).catch(() => {});
+let CITY_GATES = null; if (indiaRoute && indiaRoute.world && !cityMode) fetch('assets/cities/delhi/manifest.json').then(r => r.json()).then(m => { CITY_GATES = mapGates(indiaRoute.net, 'delhi', m.gates); }).catch(() => {});
+if (cityMode) Promise.all([fetch('assets/india/skeleton.json').then(r => r.json()), fetch('assets/cities/delhi/manifest.json').then(r => r.json())]).then(([sk, m]) => { cityGates = mapGates(new RoadNetwork(sk), 'delhi', m.gates); }).catch(() => {});
 function goWorld(cityId) { const u = new URLSearchParams(); u.set('play', ''); u.set('india', 'world'); u.set('at', cityId || currentCityId()); u.set('seed', config.seed); u.set('q', quality); location.search = '?' + u.toString(); }
 function setLocation(id) {
   if (id === 'delhi' && !cityMode) { location.search = '?play&city=delhi&seed=' + encodeURIComponent(config.seed) + '&q=' + quality; return; }                  // Delhi is the city pack
@@ -354,7 +369,7 @@ menu = new Menu({
     if (k === 'time') { S.time = v; save(); env.setTime(v); } else if (k === 'weather') { S.weather = v; save(); env.setWeather(v); } else if (k === 'lights') { S.lights = v; save(); }
     else if (k === 'sfx') { S.muted = v === 'off'; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } }
     else if (k === 'rumble') { S.rumble = v; save(); }
-    else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (city) city.traffic.setMode(v); if (peds) peds.setLevel(v); }
+    else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (city) { city.traffic.setMode(v); city.peds.setMode(v); } if (peds) peds.setLevel(v); }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
   currentCity: () => currentCityId(), travel: id => goWorld(id), navigate: id => setNav(id), indiaMap: () => goWorld(currentCityId()), inWorld: () => !!indiaRoute, navTarget: () => navDest,
@@ -408,7 +423,7 @@ function orbitCam(dt) {
 const rp = {};
 const bus = new EventBus(), runtime = new GameRuntime({ maxFrame: 0.05, bus });
 function frame(now) { requestAnimationFrame(frame); runtime.frame(now); }
-function step(dt, now) { update(dt, now); draw(now); }                                    // one whole frame (also used by the headless checks through __next.step)
+function step(dt, now) { update(dt, now); draw(now); if (gateFade.carry && gateFade.frames < 9 && ++gateFade.frames === 4) { gateFade.d.style.transition = 'opacity .5s ease'; gateFade.d.style.opacity = '0'; } }                                    // one whole frame (also used by the headless checks through __next.step)
 /* adaptive resolution: when frames take too long the game lowers its render resolution step by step (and the shadows at the last steps), and raises it again when there is room; ?gov=off turns it off */
 const gov = { ema: 16.7, last: 0, level: 0, t: 0, on: q.get('gov') !== 'off', base: Math.min(devicePixelRatio, phone ? 1 : 1.5), mul: [1, 0.8, 0.65, 0.52, 0.42], told: false };
 function governor(now) {
@@ -586,7 +601,7 @@ function updateRoute() {
   const net = indiaRoute.net; if (!gps) gps = new Gps({ net, player: () => { const o = phys && mode !== 'fly' ? phys : cam, g = gameFrame(o.x, o.z); return { x: g.x, z: g.z, yaw: o.yaw || 0 }; }, nav: () => ({ dest: navDest, next: gpsNext }), pick: id => setNav(id), names: Object.fromEntries([...net.cities.values()].map(c => [c.id, c.name])), size: touchUI ? 150 : 184 });
   const p = rec.road.at(rec.hint, tmpP), dirS = phys && mode !== 'fly' ? (Math.cos((phys.yaw || 0) - p.th) >= 0 ? 1 : -1) : 1; let nc = null, nd = Infinity, here = null;
   for (const [id, a] of rec.cityAlong) { const d = (a - arc) * dirS; if (d > 40 && d < nd) { nd = d; nc = id; } if (Math.abs(a - arc) < 120) here = id; }
-  if (here === 'delhi') { const r1 = net.roads.get(rec.id); enterCity(r1 && r1.nh ? r1.nh.replace(/\s+/g, '') : ''); }
+  if (here === 'delhi') { const r1 = net.roads.get(rec.id); enterCity(r1 && r1.nh ? r1.nh.replace(/\s+/g, '') : '', rec.id); }
   if (here && here !== lastCityToast) { lastCityToast = here; S.city = here; save(); const ch = net.junctionChoices(here).filter(c => c.road !== rec.id).slice(0, 3).map(c => (c.nh || c.name) + ' to ' + c.towardName); toast(CITY[here].name + (HINDI[here] ? ' · ' + HINDI[here] : '') + (ch.length ? '  — also: ' + ch.join(', ') : '')); if (navDest === here) { navDest = null; setTimeout(() => toast('You have arrived in ' + CITY[here].name), 2200); } }
   else if (!here && lastCityToast) lastCityToast = '';
   gpsNext = nc || here;
@@ -604,8 +619,9 @@ function update(dt, now) {
     if (!frozen()) {
       input = controls.read();
       if (autodrive.enabled) {                                                                       // the car drives itself; steering or braking by hand takes over
-        if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null, adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); }
+        if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null; let adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (cityMode) { adRoad = cityNav.path; adSim = null; autodrive.lookMin = 6; autodrive.forward = true; autodrive.lane = () => -1.5; autodrive.lanes = () => 1; if (!cityNav.active || cityNav.arrived) { setAuto(false); if (cityNav.arrived) arriveT = 2.5; else toast('Autodrive off: no route'); } } if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = cityMode ? 0 : rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); if (cityMode) { adStuck = Math.abs(phys.u) < 0.4 && input.throttle > 0.5 ? adStuck + dt : 0; if (adStuck > 3) { adStuck = 0; if (cityNav.blockHere(phys.x, phys.z, phys.yaw)) backToRoad(); } } }
       }
+      if (cityMode && arriveT > 0) { arriveT -= dt; input = { ...input, throttle: 0, brake: 1 }; }                    // stop at the destination
       if (auto) input = auto; phys.step(dt, input);
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
@@ -632,16 +648,16 @@ function update(dt, now) {
     try { rail = new RailView({ crossings: railCross, tracks: railTracks, scene, terrain, origin: grid.origin, network: railNet, grade: railGrade, book: railBook, roads: [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), cities: cityList, names: Object.fromEntries(cityList.map(c => [c.id, { en: c.name, hi: HINDI[c.id] || '' }])), toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }), control: q.get('control') !== 'off' }); } catch (e) { console.error('RAILVIEW', e && e.stack || e); rail = null; railNet = null; } }
   if (rail) { rail.update(dt, px, pz); updateRailLife(dt, px, pz); }
   if (grid.rebase(px, pz)) { if (city) city.reposition(); if (rail) rail.reposition(); far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
-  if (city) { city.update(px, pz, dt); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
+  if (city) { city.update(px, pz, dt); city.setNight(!!env.lightsOn); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
-  updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } updateToll(); updatePrompt();
+  updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } if (city) updateCityMap(now, dt); updateToll(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
   if (mode === 'drive' && phys && orbiting()) orbitCam(dt);
-  else if (mode === 'drive' && phys) { if (offset) { camera.clearViewOffset(); offset = 0; } view.aim(camera, phys, grid.origin, dt, (x, z) => Math.max(terrain.seaLevel, terrain.drive(x, z)), boostEase); }
+  else if (mode === 'drive' && phys) { if (offset) { camera.clearViewOffset(); offset = 0; } view.aim(camera, phys, grid.origin, dt, (x, z) => city ? city.groundAt(x, z) : Math.max(terrain.seaLevel, terrain.drive(x, z)), boostEase); }
   else { cam.apply(camera, grid.origin); camera.fov = 58; camera.updateProjectionMatrix(); }
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   waterT.value = now / 1000; if (groundMat) groundMat.uniforms.uTime.value = now / 1000; ripples.offset.set(((camera.position.x + grid.origin.x) * RIP) % 1, (-(camera.position.z + grid.origin.z) * RIP) % 1);     // ripples stay fixed to the world while the sheet follows the camera
@@ -660,6 +676,7 @@ function update(dt, now) {
 setVehicle(vehicle).then(() => { setupActivities(); setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); loadDone(); if (+q.get('bench')) setTimeout(() => startBench(+q.get('bench')), 4000); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); loadDone(); });
 /* ?bench=30: drive on autodrive for 30 s and report what a frame costs on this device (also logged as BENCH in the console and kept in window.__bench) */
 function startBench(secs) {
+  if (cityMode && cityNav && phys) { const l = city.pack.lm.get('india-gate'); cityNav.setDest(phys.x, phys.z, { x: l.x, z: l.z, name: 'bench' }, phys.yaw); }       // a city drive needs a route
   setAuto(true); const ts = []; let prev = performance.now(); const t0 = prev;
   const loop = now => { ts.push(now - prev); prev = now; if (now - t0 < secs * 1000) requestAnimationFrame(loop); else done(); };
   requestAnimationFrame(loop);

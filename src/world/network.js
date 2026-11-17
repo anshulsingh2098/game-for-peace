@@ -86,9 +86,9 @@ export class RoadNetwork {
   }
   /* the road to start a free drive on at a city (docs/INDIA_MAP_PLAN.md: one continuous world): the best highway through the city (Golden Quadrilateral, North-South, East-West, then others),
      with the guide ahead (towards the next city) and behind (towards the previous one). null if no road passes through the city. */
-  worldStart(cityId) {
+  worldStart(cityId, opt = {}) {
     const rank = { gq: 0, ns: 1, ew: 2, nh: 3 }, list = (this.junctions.get(cityId) || []).map(j => this.roads.get(j.road)).sort((a, b) => rank[a.kind] - rank[b.kind] || b.length - a.length); if (!list.length) return null;
-    const r = list[0], i = r.stops.findIndex(s => s.id === cityId), nxt = r.stops[i + 1], prv = r.stops[i - 1]; let gA = nxt ? this.guideFor(r.id, cityId, nxt.id) : null, gB = prv ? this.guideFor(r.id, cityId, prv.id) : null; if (!gA) { gA = gB; gB = null; } if (!gA) return null;
+    const r = list.find(x => x.id === opt.road) || list[0], i = r.stops.findIndex(s => s.id === cityId); let nxt = r.stops[i + 1], prv = r.stops[i - 1]; if (opt.toward && prv && prv.id === opt.toward) [nxt, prv] = [prv, nxt]; let gA = nxt ? this.guideFor(r.id, cityId, nxt.id) : null, gB = prv ? this.guideFor(r.id, cityId, prv.id) : null; if (!gA) { gA = gB; gB = null; } if (!gA) return null;
     return { road: r.id, name: r.name, kind: r.kind, nh: r.nh, gA, gB };
   }
   /* the path a drivable road follows from city `from` towards city `toward` along road `roadId`: points relative to the start city ([0, 0, x, z, ...], game metres), the road's cities with their

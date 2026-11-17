@@ -21,7 +21,7 @@ export function styleFor(id, topMs) { const S = STYLES[id] || STYLES.normal; ret
 
 export class Autodrive {
   /* lane: optional function dir -> lateral offset (m, along the road's left normal) of the lane to drive in; leader: optional function (phys, s) -> { gap, speed } of a car in front (traffic) */
-  constructor() { this.lane = null; this.leader = null; this.enabled = false; this.cruise = 70 / 3.6; this.level = 'full'; this.style = STYLES.normal; this.passing = 0; this.laneK = 0; this.laneT = 0; this.lanesAt = null; this.damp = 0; this.abort = false; this.passOncoming = false; this.dropBack = false; this.latCmd = null; this.lanes = null; this.tolls = null; this.road = null; this.oncoming = false; this.s = 0; this.input = { steer: 0, throttle: 0, brake: 0 }; this.p = {}; this.q = {}; }
+  constructor() { this.lane = null; this.lookMin = 12; this.forward = false; this.leader = null; this.enabled = false; this.cruise = 70 / 3.6; this.level = 'full'; this.style = STYLES.normal; this.passing = 0; this.laneK = 0; this.laneT = 0; this.lanesAt = null; this.damp = 0; this.abort = false; this.passOncoming = false; this.dropBack = false; this.latCmd = null; this.lanes = null; this.tolls = null; this.road = null; this.oncoming = false; this.s = 0; this.input = { steer: 0, throttle: 0, brake: 0 }; this.p = {}; this.q = {}; }
   toggle(on = !this.enabled) { this.enabled = on; this.passing = 0; this.latCmd = null; this.laneK = 0; return on; }
   setStyle(id, topMs) { this.style = styleFor(id, topMs); this.cruise = this.style.cruise; }
   /* The planner. It looks as far ahead as the car needs to stop (the horizon), so it knows what to do long before a bend or a slow car:
@@ -32,7 +32,7 @@ export class Autodrive {
     const i = this.input, p = this.p, q = this.q, u = Math.max(phys.u, 0), St = this.style, aB = St.decel, full = this.level === 'full';
     this.s = road.closestS(phys.x, phys.z, this.s);
     road.at(this.s, p);
-    const fx = Math.cos(phys.yaw), fz = Math.sin(phys.yaw), dir = fx * p.tx + fz * p.tz >= 0 ? 1 : -1;          // drive the way the car already faces
+    const fx = Math.cos(phys.yaw), fz = Math.sin(phys.yaw), dir = this.forward || fx * p.tx + fz * p.tz >= 0 ? 1 : -1;          // drive the way the car already faces (a route path only has one way)
     const H = clamp(u * u / (2 * aB) + 50 + u * 1.2, 70, 420);                                                       // horizon: stopping distance plus a margin
     const lat0 = this.lane ? this.lane(dir, 0) : 0, lat1 = this.lane ? this.lane(dir, 1) : 0, two = lat1 !== lat0; this.oncoming = !!this.lanes && this.lanes(dir) < 2;       // one lane each way: passing in the oncoming lane needs the sim's cars to be seen far ahead, which it cannot promise (cars can appear 100 m ahead), so it is off unless this.passOncoming
     let tollNear = false; if (this.tolls) for (const ts of this.tolls(this.s)) { const e = dir > 0 ? ts : ts + TOLL_LEN, d = (e - this.s) * dir; if (d > -TOLL_LEN - 25 && d < 60 + u * 2) tollNear = true; }
@@ -48,7 +48,7 @@ export class Autodrive {
       if (this.oncoming && this.lanesAt) { const o = this.lanesAt(phys, this.s, lat1, 400, 0).ahead; if (o && o.gap < (u - o.speed) * 10) { this.dropBack = true; if (this.laneFree(phys, lat0, u)) { this.laneK = 0; this.abort = true; } } else this.dropBack = false; }      // an oncoming car turns up: back in at once, or drop back behind the car being passed
     }
     this.passing = this.laneK === 1 ? 1 : 0;
-    const look = clamp(9 + u * 0.9, 12, 55), want = this.laneK === 1 ? lat1 : lat0;
+    const look = clamp(9 + u * 0.9, this.lookMin, 55), want = this.laneK === 1 ? lat1 : lat0;
     if (this.latCmd === null || Math.abs(want - this.latCmd) > 9) this.latCmd = want; else this.latCmd += clamp(want - this.latCmd, -(this.abort ? 3 : 1.3) / 60, (this.abort ? 3 : 1.3) / 60); if (this.laneK === 1) this.abort = false;   // a lane change is a smooth slide over a few seconds, not a step
     const laneLat = this.latCmd;
     road.at(this.s + dir * look, q); if (this.lane && laneLat) { q.x -= q.tz * laneLat; q.z += q.tx * laneLat; }       // aim at the lane, not the centre line
