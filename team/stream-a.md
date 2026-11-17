@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 06:00  Delhi: kerbs are no longer invisible walls (stacked on PR 70)
+Branch: claude/delhi-invisible-blockers (on claude/delhi-shadow-cut)  Commit: see the PR
+What changed: `src/world/city/cityworld.js` only: `KERB_WALL = false`, `near()` no longer hands the kerb circles (negative radius, 1.6 m, along every street edge) to the vehicle physics. They held the car to about 9 km/h at every kerb (13 of 14 streets tried: the car stopped at the kerb and crept), and the visible kerb is 15 cm. Pavements, plazas and open ground behind a kerb can now be driven onto; buildings, poles, stalls, piers, cars and people still block. Found by driving the real vehicle physics (`phys.step`) at a kerb on 24 streets: before, it stopped; after, 18 of 24 crossed (the rest are stopped by buildings or props); seen at 34 km/h onto the Jantar Mantar plaza. Also scanned: 148 streets driven end to end by a pure-pursuit script: 4 stuck (2 are other cars, 2 are narrow residential lanes where a street stall stands in the lane, ids 292416 and 292421 near (707,-1872) and (435,-1995)); ground height and deck collision on 12,945 street points: no invisible decks; wall circles on carriageways: 224 of 19,692 points, all small poles and props (0.3 to 1.3 m). Set `KERB_WALL = true` to bring the kerb walls back. Not fixed: the pier in front of the Ghazipur gate start; stalls in lanes too narrow to pass.
+For the other stream: the two physics lines that skip kerb circles below 2.5 m/s (D5b) are now never reached in a city.
+Status: open
+
 ## 2026-11-18 05:00  Delhi shadow cost: buildings cast only within 200 m, scenery casts none in a city (stacked on PR 69)
 Branch: claude/delhi-shadow-cut (on claude/delhi-perf-cut)  Commit: see the PR
 What changed: `cityworld.js` (`SHADOW_D` 200 m: a tile's buildings cast a shadow only when the tile is within 200 m of you; before 450 m, and the sun's shadow box is 140 m wide; scatter config `shadows: false` in `cityConfig`), `src/world/scatter.js` (one line: `castShadow = c.shadows !== false`; the default is unchanged, so the India world still has tree shadows). The shadow pass was 51 calls and 50k triangles of a 337 / 250k frame (measured by switching the shadow map off); now the frame is 328 calls / 241k triangles at `?play&q=med`, Connaught Place. Not seen: a building shadow at dusk (the browser pane did not redraw after a time change); tree and tuft shadows are gone in Delhi.
