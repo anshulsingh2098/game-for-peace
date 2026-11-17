@@ -35,8 +35,8 @@ class RailKit {
     const u0 = uMin - 220, u1 = uMax + 220, rail = (v, g) => S.quad(UP(u0, v + g - 0.07, 0.2), UP(u1, v + g - 0.07, 0.2), UP(u1, v + g + 0.07, 0.2), UP(u0, v + g + 0.07, 0.2), RAIL);
     for (const v of vs) { S.quad(UP(u0, v - 1.7, 0.08), UP(u1, v - 1.7, 0.08), UP(u1, v + 1.7, 0.08), UP(u0, v + 1.7, 0.08), BALLAST); rail(v, -0.838); rail(v, 0.838); }
     if (vs.length) claims.push({ kind: 'rail', layer: 0, shape: { t: 'rect', x: UP((u0 + u1) / 2, (vs[0] + vs[vs.length - 1]) / 2, 0)[0], z: UP((u0 + u1) / 2, (vs[0] + vs[vs.length - 1]) / 2, 0)[2], hx: (u1 - u0) / 2, hz: (vs[vs.length - 1] - vs[0]) / 2 + 2, yaw } });
-    /* a standing rake (a locomotive and ten coaches) on every third track: instanced by RailStations */
-    this.rakes = []; const uc = (uMin + uMax) / 2; vs.forEach((v, k) => { if (k % 3 !== 1) return; for (let j = 0; j < 11; j++) { const p = UP(uc - 140 + j * 24.5, v, 0.2); this.rakes.push({ x: p[0], z: p[2], tx: F0.tx, tz: F0.tz, loco: j === 0 }); } });
+    /* a rake (a locomotive and ten coaches) on every third track runs in, stands 100 s at the platforms and runs out again (cycle 300 s, every track shifted): instanced by RailStations. Not the real timetable (rail_timetable.js). */
+    this.rakeTracks = vs.filter((v, k) => k % 3 === 1).map((v, i) => ({ v, ph: i * 83, dir: i % 2 ? -1 : 1 })); this.rakeSpan = { F0, uc: (uMin + uMax) / 2, uA: uMin - 260, uB: uMax + 260 };
     /* platforms, ramps, roofs, boards */
     for (const b of P) {
       const a0 = b.u - b.len / 2, a1 = b.u + b.len / 2, v0 = b.v - b.w / 2, v1 = b.v + b.w / 2; fbox(S, F0, a0, a1, v0, v1, 0, PLAT_H, PLAT_SIDE, PLAT);
@@ -74,13 +74,17 @@ export class RailStations {
     this.dummy = new THREE.Matrix4(); this.vx = new THREE.Vector3(); this.vy = new THREE.Vector3(0, 1, 0); this.vz = new THREE.Vector3(); this.list = (T.data.rail && T.data.rail.stations || []).filter(s => s.bodies && s.bodies.length); this.stats = { stations: 0, tris: 0, calls: 0 };
   }
   /* the standing rakes of every built station into the two instanced meshes */
-  layoutRakes() {
-    const T = this.T, ox = T.origin.x, oz = T.origin.z, n = [0, 0];
-    for (const k of this.built.values()) for (const r of k.rakes) { const i = r.loco ? 1 : 0, m = this.fleet[i]; if (n[i] >= m.instanceMatrix.count) continue; this.vx.set(r.tx, 0, r.tz); this.vz.set(-r.tz, 0, r.tx); this.dummy.makeBasis(this.vx, this.vy, this.vz); this.dummy.setPosition(r.x - ox, T.city.gy, r.z - oz); m.setMatrixAt(n[i]++, this.dummy); }
+  layoutRakes(t = this.T.t) {
+    const T = this.T, ox = T.origin.x, oz = T.origin.z, n = [0, 0], ease = x => x * x * (3 - 2 * x);
+    for (const k of this.built.values()) { const { F0, uc, uA, uB } = k.rakeSpan; for (const r of k.rakeTracks) {
+      const c = (t + r.ph) % 300; let f; if (c < 70) f = -1 + ease(c / 70) * 1; else if (c < 170) f = 0; else if (c < 240) f = ease((c - 170) / 70); else continue;     // -1 at the entry end, 0 at the platform, +1 at the exit end
+      const uC = r.dir > 0 ? (f < 0 ? uc + (uc - uA) * f : uc + (uB - uc) * f) : (f < 0 ? uc - (uB - uc) * f : uc - (uc - uA) * f);
+      for (let j = 0; j < 11; j++) { const i = j === 0 ? 1 : 0, m = this.fleet[i]; if (n[i] >= m.instanceMatrix.count) continue; const u = uC + (r.dir > 0 ? 5 - j : j - 5) * 24.5, p = pt(F0, u, r.v, 0.2);
+        this.vx.set(F0.tx, 0, F0.tz); this.vz.set(-F0.tz, 0, F0.tx); this.dummy.makeBasis(this.vx, this.vy, this.vz); this.dummy.setPosition(p[0] - ox, T.city.gy + 0.2, p[2] - oz); m.setMatrixAt(n[i]++, this.dummy); } } }
     this.fleet.forEach((m, i) => { m.count = n[i]; m.instanceMatrix.needsUpdate = true; });
   }
   update(px, pz) {
-    const T = this.T, S = T.S; let want = null, wd = Infinity;
+    const T = this.T, S = T.S; this.layoutRakes(); let want = null, wd = Infinity;
     for (const st of this.list) { if (this.built.has(st.id)) continue; const d = Math.hypot(st.x - px, st.z - pz); if (d < RAD && d < wd && T.city.tiles.has(Math.floor(st.x / S) + '_' + Math.floor(st.z / S))) { wd = d; want = st; } }
     if (want) { const k = new RailKit(T, want); this.built.set(want.id, k); T.group.add(k.group); this.refresh(); this.layoutRakes(); }
     for (const [id, k] of [...this.built]) if (Math.hypot(k.st.x - px, k.st.z - pz) > KEEP) { T.group.remove(k.group); k.dispose(); T.unclaim('metro:rs:' + id); this.built.delete(id); this.refresh(); this.layoutRakes(); }

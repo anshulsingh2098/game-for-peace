@@ -206,7 +206,7 @@ Done: `?play&city=delhi[&at=<spawn|landmark|gate id>]` (`src/world/city/`), stre
 |---|---|
 | D6.1 | Underground track and station interiors; open cuttings at portals |
 | D6.2 | Stairs done for the lead line's outer platforms; still open: other lines at interchanges, walking it in the game, railings at the stair opening |
-| D6.3 | Standing rakes exist at railway stations; still open: moving trains with a timetable (rail_timetable.js), the proper coach art (train_art.js), link to the India-world rail network |
+| D6.3 | Rakes run in, stand and leave at railway stations (fake 300 s cycle); still open: the real timetable (rail_timetable.js), the proper coach art (train_art.js), link to the India-world rail network |
 | D6.4 | Look check done for Blue Line and Laxmi Nagar only (DELHI_TRANSIT 10.1); still to check: other lines' liveries, cars per train, speeds, PSD, railway stations (round signs done) |
 | D6.5 | Ride animation instead of a fade; no sound |
 | D6.6 | Buildings under viaducts (needs the tile renderer to take Metro claims) |
