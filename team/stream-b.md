@@ -2,6 +2,23 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18  B4, B5 and B12 done (provenance, review, log tidy); B1 and B2 waiting for a person
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed:
+- **B4 done.** `dev/build_npc_stylised.py` and its five previews are committed. `assets/ASSETS.md` now says the models come from that script, which builds every part from Blender primitives in an empty scene and imports no mesh, texture or animation, so there is no third-party base mesh; the look follows the owner's reference sheet, the character is original. `node tools/build_licenses.mjs` re-run. The daily check's assets-credit line passes and "to confirm" is gone.
+- **B5 reviewed** `src/core/runtime.js` and `src/player/onfoot.js`; no code changed. Handle layout, domains, generations and stepper maths hold up (checked the 32-bit masking for odd domains: correct). Problems found, none fixed yet:
+  1. `GameRuntime.remove(name)` disposes a system but leaves `inited` true; `frame()` iterates the old `sorted` array, so if one system removes another inside its update, the removed system still gets `update` and `render` after its `dispose` in that same frame. Fix: set `e.inited = false` in `remove`.
+  2. `OnFoot.tryMove` skips the step-height check while airborne (`&& this.grounded`), and the landing code snaps `y` up to the ground. Jumping into a rise taller than `maxStep` (a cliff face) lets the character pop up onto the top. Fix: also refuse when `h - this.y > maxStep` in the air.
+  3. `chooseExit` ignores `y0`/`y1`, so it refuses an exit spot under a bridge deck or canopy that `blocks()` would allow (safe failure, but inconsistent).
+  4. Cosmetic: the "forget the last frame time" comment in `runtime.js` sits above `droppedTime` instead of `resetClock`.
+- **B12:** I closed only what is truly finished (below). The other 11 old entries ask a person to drive, listen or judge, which nobody has done, so closing them would be false; they stay open.
+- Merged `origin/main` again (PRs 87 and 88, clean).
+For the other stream: `python tools/daily_check.py` and the self-test fail on Windows with `no manifest.json in /C:/...`: `tools/validate_city.mjs` builds the pack folder from `import.meta.url`'s pathname, which has a leading slash before the drive letter on Windows. Your file; use `fileURLToPath`. Everything else in the daily check passes or only warns.
+Status: open
+
+Re: N7 runtime and entity lifecycle built: done (reviewed in B5 above, findings 1 to 4).
+Re: Drivetrain telemetry in the sound, camera juice, handling feel knobs: done (nothing to do).
+
 ## 2026-11-17 Phase 1 merge: origin/main merged into vehicle/cars-and-gears (NOT pushed, no PR yet)
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed: merged `origin/main` (14 conflicted files). Took main's version of `index`-level shared files and kept ours only where it adds something: `src/main.js`, `src/input/controls.js`, `src/audio/radio.js`, `src/ui/radiowheel.js`, `src/ui/menu.js`, `next.html`, `HANDOFF.md`, `tools/stage_cloudflare.py`, `tools/selftest.mjs` are main's; main's driving model (N1 telemetry, `DRIVE_MODES`, `ARCADE`) is kept. Ported from our side: Ember RS and Dust Runner in `defs.js` with an estimated `pt` powertrain (first guess, for the tuner), their suspension and the rally's four driven wheels in `TUNE`, chassis friction 0, the bike's slope-aware anti-flip springs (`rapier-vehicle.js`); rebuilt car models, ride height and the `Interior` mesh hidden in first person (`vehicle.js`, not for models with `interior: true`); birdsong, crickets and the tunnel hush on main's `tunnel` value (`engine.js`, one `ambience` call; `main.js` passes `night` and `fog`). Dropped, because main covers them: our adaptive resolution (main's `gov` stays), our `Drivetrain` gearbox (`src/vehicle/drivetrain.js` is now unused), our steering-sensitivity and My music UI, E/Z/N shift keys. Not ported yet: our GRIP 2.2, DOWNFORCE 0.8 and SCRUB 0.06 feel, GRAV 1.3 and the airborne damping, because main's `ARCADE` model already has its own grip, downforce and yaw assist; they need a person to feel-test and then be added as tuner settings. Checks: `node tools/vehicle_acceptance.mjs --check` reports no problems for all six vehicles; `node tools/selftest.mjs` passes every test up to the city pack test, which fails on this Windows PC with `no manifest.json in /C:/...` (a path built from `import.meta.url`; `selftest.mjs` and `validate_city.mjs` are identical to main's, so it is not from this merge).
