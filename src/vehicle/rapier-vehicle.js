@@ -280,6 +280,7 @@ export class RapierVehicle {
       const cx = this.x + px + c * off, cz = this.z + pz + s * off;
       for (const list of lists) for (let i = 0; i < list.length; i++) {
         const o = list[i], dx = cx - o.x, dz = cz - o.z, rr = p.radius + o.r, d2 = dx * dx + dz * dz; if (d2 >= rr * rr || d2 === 0) continue;
+        if (o.kerb && Math.abs(u) < 2.5) continue;                                                                                            // a kerb (a city pavement edge) can be mounted at walking pace, not driven over
         if (o.y !== undefined ? Math.abs(o.y - this.y) > 3.2 : onDeck) continue;                                                       // on the other level of an overpass (rails, posts and cars carry their height y)
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, pen = rr - d; px += nx * pen; pz += nz * pen; moved = true;
         const wx = u * c - v * s, wz = u * s + v * c, vn = wx * nx + wz * nz; if (vn >= 0) continue;

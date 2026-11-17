@@ -158,6 +158,7 @@ export class VehiclePhysics {
       for (const list of lists) for (let i = 0; i < list.length; i++) {
         const o = list[i], dx = cx - o.x, dz = cz - o.z, rr = p.radius + o.r, d2 = dx * dx + dz * dz; if (d2 >= rr * rr || d2 === 0) continue;
         if (o.y !== undefined && Math.abs(o.y - this.y) > 3.2) continue;                  // the other level of an overpass
+        if (o.kerb && Math.abs(this.u) < 2.5) continue;                                    // a kerb (a city pavement edge) can be mounted at walking pace, not driven over
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, pen = rr - d;
         this.x += nx * pen; this.z += nz * pen;
         const wx = this.u * c - this.v * s, wz = this.u * s + this.v * c, vn = wx * nx + wz * nz; if (vn >= 0) continue;

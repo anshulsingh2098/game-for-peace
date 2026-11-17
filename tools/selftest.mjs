@@ -1192,6 +1192,33 @@ test('city pack delhi: the five stations have footprints, stand clear of the str
   }
 });
 
+/* ---- D5b follow-up: the city's navigation (src/world/city/citynav.js): A* on the pack graph, turn steps, the path an autodrive follows ---- */
+test('city nav: A* routes on the Delhi graph from a point on a street to a point on a street, steps and a PathRoad follow it', async () => {
+  const nav = await import('../src/world/city/citynav.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8'))), R = new nav.CityRouter(G);
+  const at = id => M.spawns.find(s => s.id === id), A = at('centre'), B = at('indiagate'), r = R.plan(A.x, A.z, 0, B.x, B.z); assert.ok(r, 'a route'); assert.ok(r.metres > 2000 && r.metres < 8000, 'CP to India Gate: ' + r.metres);
+  assert.ok(r.steps.length >= 4 && r.steps[0].text.startsWith('Head along') && r.steps[r.steps.length - 1].text === 'You have arrived', 'turn steps'); const p = new nav.PathRoad(r.poly); assert.ok(p.length > r.metres * 0.9 && p.length < r.metres * 1.3, 'the polyline is as long as the route: ' + p.length + ' vs ' + r.metres);
+  assert.ok(p.closestS(A.x, A.z, 0) < 30, 'the start is at the start'); const o = p.at(p.length / 2, {}); assert.ok(Math.abs(Math.hypot(o.tx, o.tz) - 1) < 1e-9, 'unit tangent'); assert.ok(Math.abs(p.closestS(o.x, o.z, p.length / 2 - 40) - p.length / 2) < 2, 'closestS finds the point it was given, searching near the hint');
+  const back = R.plan(B.x, B.z, 0, A.x, A.z); assert.ok(back && Math.abs(back.metres - r.metres) / r.metres < 0.6, 'the way back is of similar length');
+  const bn = nav.roundCorners([0, 0, 50, 0, 50, 50], 9); assert.ok(bn.length > 6 && Math.min(...bn.filter((_, i) => i % 2 === 0).map((x, i) => Math.hypot(x - 50, bn[i * 2 + 1] - 0))) < 10, 'a right angle is rounded off but the path still passes near the corner'); assert.equal(nav.roundCorners([0, 0, 50, 0, 100, 1], 9).length, 6, 'a gentle bend is left alone');
+  const ban = new Set(r.edges.slice(5, 6)); R.banned = ban; const r2 = R.plan(A.x, A.z, 0, B.x, B.z); assert.ok(r2 && !r2.edges.includes(r.edges[5]), 'a banned street is routed around'); R.banned = new Set();
+});
+
+test('city gates: each pack gate maps to the India road arm that leaves Delhi the same way; the entry gate follows the road you drive in on', async () => {
+  const { mapGates, pickGate } = await import('../src/world/city/gates.js'), { RoadNetwork } = await import('../src/world/network.js'), sk = JSON.parse(readFileSync(new URL('../assets/india/skeleton.json', import.meta.url), 'utf8')), net = new RoadNetwork(sk);
+  const M = JSON.parse(readFileSync(new URL('../assets/cities/delhi/manifest.json', import.meta.url), 'utf8')), gs = mapGates(net, 'delhi', M.gates), by = id => gs.find(g => g.id === id);
+  assert.ok(gs.every(g => g.road && g.toward), 'every gate has an India road'); assert.equal(by('nh48-south-16').toward, 'jaipur', 'the Delhi-Gurugram expressway leaves towards Jaipur'); assert.equal(by('nh44-north-14').toward, 'ambala', 'the Grand Trunk Road north leaves towards Ambala');
+  assert.equal(by('nh709b-north-17').road, 'nh-delhi-dehradun', 'the Dehradun expressway'); assert.equal(by('nh24-east-11').road, 'nh-delhi-lucknow', 'NH24 east is the Lucknow road');
+  const g = pickGate(gs, 'gq-delhi-mumbai', Math.atan2(-Math.cos(by('nh48-south-16').bearing), Math.sin(by('nh48-south-16').bearing)), 'NH48'); assert.ok(g && g.road === 'gq-delhi-mumbai', 'driving in from Jaipur on the GQ enters by a gate of the GQ');
+  const w = net.worldStart('delhi', { road: 'ns', toward: 'ambala' }), w2 = net.worldStart('delhi', { road: 'ns', toward: 'agra' }); assert.ok(w && w.road === 'ns' && w.gA.toward === 'ambala' && w2.gA.toward === 'agra', 'leaving by a gate starts the India world on that road, heading out'); assert.ok(net.worldStart('delhi').road, 'no options: the best road as before');
+  const { sanitiseSaved } = await import('../src/core/saved.js'); assert.equal(sanitiseSaved({ enclave: 'delhi' }).enclave, 'delhi', 'the save keeps the city you were in'); assert.equal(sanitiseSaved({ enclave: '../x' }).enclave, undefined, 'a bad enclave is dropped');
+});
+
+test('city underpasses: a street on layer -1 is on the ground at a portal and one level (5.6 m) down in the middle, a ground street is never sunk', () => {
+  const dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8'))); let n = 0, flat = 0;
+  for (let i = 0; i < G.n; i++) if (G.layer[i] === -1 && G.len[i] > 200 && G.dn[G.a[i]] === 1 && G.dn[G.b[i]] >= 2) { const ax = G.xz[G.a[i] * 2], az = G.xz[G.a[i] * 2 + 1], bx = G.xz[G.b[i] * 2], bz = G.xz[G.b[i] * 2 + 1]; assert.equal(cityPack.underDepth(G, i, ax, az), 0, 'on the ground at the portal'); assert.ok(Math.abs(cityPack.underDepth(G, i, bx, bz) - cityPack.LEVEL) < 1e-6, 'a level down where the street continues underground'); assert.ok(cityPack.underDepth(G, i, (ax + bx) / 2, (az + bz) / 2) <= cityPack.LEVEL + 1e-9); n++; }
+  assert.ok(n >= 3, 'Delhi has underpasses: ' + n); for (let i = 0; i < G.n && flat < 100; i++) if (G.layer[i] >= 0) { assert.equal(cityPack.underDepth(G, i, G.xz[G.a[i] * 2], G.xz[G.a[i] * 2 + 1]), 0); flat++; }
+});
+
 test('Delhi Metro plan (D6): every route has a height profile within 4 %, every station is on its routes, timetables stop at every station, trains fit the headway', async () => {
   const P = await import('../src/world/city/transit_plan.js'), T = JSON.parse(readFileSync(new URL('../assets/cities/delhi/transit.json', import.meta.url))), N = P.buildNetwork(T);
   assert.equal(N.routes.length, 28); assert.equal(N.stations.size, T.metro.stations.length, 'every station record is called at by a route');
