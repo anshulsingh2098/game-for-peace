@@ -26,6 +26,9 @@ What changed: (1) `tilemesh.js` `Mesher.cells(size)` and `cityworld.js` (`CELLED
 ## 2026-11-18 03:00  Delhi: landmark starts were inside the landmark models; tiles were fetched twice
 Branch: claude/delhi-spawn-and-tile-fixes  Commit: see the PR
 What changed: `src/world/city/pack.js` only. (1) `start(id)` for a landmark now picks the nearest street node OUTSIDE the landmark footprint (`nearestNode(x, z, avoid)`); before, 38 of 63 landmark starts (e.g. `?at=new-delhi-station`, red-fort, connaught-place) were inside the footprint, and with the D8 models the car started inside a wall. Checked in the browser: all 63 starts are outside, New Delhi station start seen from the street. (2) `tile()` shares the raw tile JSON between the near city and the far skyline (a 64-entry cache): 62 fetches of 48 tiles became 48 of 48 at start. Not fixed: `/api/settings` and `/settings.json` answer 404 on the local server (only the Cloudflare worker serves them); the frame cost at the Delhi start (about 430 draw calls, 570k triangles at `q=med`) is unchanged and over the phone budget.
+## 2026-11-18 02:00  D6c (first part): platform number boards at the railway stations
+Branch: claude/delhi-d6c-platform-numbers  Commit: see the PR
+What changed: `src/world/city/transit_rail.js` only (number atlas texture, board quads, dispose); `docs/DELHI_TRANSIT.md` section 4 note. Boards are numbered in OSM order, not the real platform numbers. Checked in the browser at New Delhi: 36 boards, 144 triangles, no console errors; not seen by eye (the pane renders black).
 For the other stream: nothing.
 Status: open
 
