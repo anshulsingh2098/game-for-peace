@@ -27,9 +27,16 @@ export class Menu {
   show(screen) {
     const was = this.screen; this.screen = screen; this.root.hidden = false; this.root.dataset.screen = screen; this.root.textContent = '';
     ({ title: () => this.title(), garage: () => this.garage(), locations: () => this.locations(), settings: () => this.settings(), credits: () => this.credits(), travel: () => this.travel(), pause: () => this.pause() })[screen]();
-    if (!was) this.api.onOpen(screen); else this.api.onScreen && this.api.onScreen(screen);
+    this.whereLine(); if (!was) this.api.onOpen(screen); else this.api.onScreen && this.api.onScreen(screen);
   }
-  hide() { if (!this.screen) return; this.screen = null; this.root.hidden = true; this.api.onClose(); }
+  /* the bottom line of every menu screen: where the player is (real lat and lon, game x and z, street, area), with a Copy button, so a place can be named exactly in a report */
+  whereLine() {
+    if (!this.api.where) return; const f = mk('div', 'm-where', this.root); f.style.cssText = 'position:fixed;left:12px;right:12px;bottom:10px;display:flex;gap:10px;align-items:center;justify-content:center;font:12px ui-monospace,Menlo,Consolas,monospace;color:#cfe0ff;background:rgba(8,12,20,.78);border:1px solid rgba(160,190,255,.28);border-radius:10px;padding:8px 12px;z-index:5;flex-wrap:wrap';
+    const t = mk('span', '', f), b = mk('button', '', f, 'Copy'); b.type = 'button'; b.style.cssText = 'font:12px system-ui,sans-serif;color:#fff;background:#1d4ed8;border:1px solid #8ab4ff;border-radius:7px;padding:4px 10px;cursor:pointer';
+    const upd = () => { const w = this.api.where(); this.whereText = w ? w.text : ''; t.textContent = this.whereText || 'no position yet'; }; upd(); clearInterval(this.whereTimer); this.whereTimer = setInterval(() => { if (!this.root.hidden) upd(); }, 400);
+    b.onclick = e => { e.stopPropagation(); if (navigator.clipboard) navigator.clipboard.writeText(this.whereText).then(() => { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); }).catch(() => {}); };
+  }
+  hide() { if (!this.screen) return; this.screen = null; this.root.hidden = true; clearInterval(this.whereTimer); this.api.onClose(); }
   /* Esc: back out of a screen, or open / close the pause menu while driving */
   escape() {
     if (!this.screen) this.show('pause');
