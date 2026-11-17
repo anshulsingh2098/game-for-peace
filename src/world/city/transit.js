@@ -182,16 +182,16 @@ export class CityTransit {
 
 /* one car of a line in its own frame: length along x, rail top at y = 0, front at +x. Silver body, the line colour as a band under the windows, four doors a side, a windscreen at both ends (measured nowhere: guesses) */
 export function carGeometry(spec, hex) {
-  const S = new Soup(0, 0), F = frame(0, 0, 1, 0), L = CAR_L, W = spec.w, band = hexRgb(hex), silver = C(0xc9ced2), roof = C(0xaab0b5), dark = C(0x2b2d30), glass = C(0x16212b), door = C(0xdcdfe0), lamp = C(0xfff2c0);
+  const S = new Soup(0, 0), F = frame(0, 0, 1, 0), L = CAR_L, W = spec.w, band = hexRgb(hex), silver = C(0xb4b9bd), roof = C(0xaab0b5), dark = C(0x2b2d30), glass = C(0x16212b), door = C(0xc2c6c9), lamp = C(0xff2a2a);
   fbox(S, F, -L / 2, L / 2, -W / 2, W / 2, 0.95, 3.55, silver); fbox(S, F, -L / 2 + 0.5, L / 2 - 0.5, -W / 2 + 0.35, W / 2 - 0.35, 3.55, 3.85, roof); for (const u of [-5, 5]) fbox(S, F, u - 1.5, u + 1.5, -0.8, 0.8, 3.85, 4.2, C(0x8e9498));
   fbox(S, F, -L / 2 + 1, L / 2 - 1, -W / 2 + 0.35, W / 2 - 0.35, 0.45, 0.95, dark); for (const u of [-7.2, 7.2]) fbox(S, F, u - 1.3, u + 1.3, -W / 2 + 0.5, W / 2 - 0.5, 0.12, 0.95, dark);
   const q = (u0, u1, y0, y1, l, col) => S.quad([u0, y0, l], [u1, y0, l], [u1, y1, l], [u0, y1, l], col);
   for (const sg of [-1, 1]) {
     const l0 = sg * (W / 2 + 0.015), l1 = sg * (W / 2 + 0.04);
-    q(-L / 2 + 0.7, L / 2 - 0.7, 2.05, 3.0, l0, glass); q(-L / 2, L / 2, 1.55, 1.95, l0, band); q(-L / 2, L / 2, 0.95, 1.08, l0, band);
-    for (const u of [-8.2, -2.7, 2.7, 8.2]) { q(u - 0.7, u + 0.7, 0.98, 3.35, l1, door); q(u - 0.5, u + 0.5, 2.15, 3.0, sg * (W / 2 + 0.05), glass); }
-    S.quad([L / 2 + 0.015, 2.0, sg * (W / 2 - 0.25)], [L / 2 + 0.015, 2.0, sg * 0.05], [L / 2 + 0.015, 3.3, sg * 0.05], [L / 2 + 0.015, 3.3, sg * (W / 2 - 0.25)], glass);
-    S.quad([-L / 2 - 0.015, 2.0, sg * (W / 2 - 0.25)], [-L / 2 - 0.015, 2.0, sg * 0.05], [-L / 2 - 0.015, 3.3, sg * 0.05], [-L / 2 - 0.015, 3.3, sg * (W / 2 - 0.25)], glass);
+    q(-L / 2 + 0.7, L / 2 - 0.7, 2.05, 3.0, l0, glass); q(-L / 2, L / 2, 1.55, 1.95, l0, band);
+    for (const u of [-8.2, -2.7, 2.7, 8.2]) { q(u - 0.7, u + 0.7, 0.98, 3.35, l1, door); q(u - 0.3, u + 0.3, 2.3, 3.0, sg * (W / 2 + 0.05), glass); }
+    S.quad([L / 2 + 0.015, 1.7, sg * (W / 2 - 0.2)], [L / 2 + 0.015, 1.7, sg * 0.05], [L / 2 + 0.015, 3.4, sg * 0.05], [L / 2 + 0.015, 3.4, sg * (W / 2 - 0.2)], glass); if (sg > 0) { S.quad([L / 2 + 0.02, 3.05, -0.9], [L / 2 + 0.02, 3.05, 0.9], [L / 2 + 0.02, 3.3, 0.9], [L / 2 + 0.02, 3.3, -0.9], C(0xff8a1a)); S.quad([-L / 2 - 0.02, 3.05, -0.9], [-L / 2 - 0.02, 3.05, 0.9], [-L / 2 - 0.02, 3.3, 0.9], [-L / 2 - 0.02, 3.3, -0.9], C(0xff8a1a)); }
+    S.quad([-L / 2 - 0.015, 1.7, sg * (W / 2 - 0.2)], [-L / 2 - 0.015, 1.7, sg * 0.05], [-L / 2 - 0.015, 3.4, sg * 0.05], [-L / 2 - 0.015, 3.4, sg * (W / 2 - 0.2)], glass);
     for (const e of [-1, 1]) S.quad([e * (L / 2 + 0.02), 1.15, sg * (W / 2 - 0.5)], [e * (L / 2 + 0.02), 1.15, sg * (W / 2 - 0.8)], [e * (L / 2 + 0.02), 1.4, sg * (W / 2 - 0.8)], [e * (L / 2 + 0.02), 1.4, sg * (W / 2 - 0.5)], lamp);
   }
   return S.geometry();

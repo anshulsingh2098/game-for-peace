@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { Soup, C, fbox, frame, pt, slab, extrude } from './transit_geo.js';
 import { kitOf, platformLen, lineColour, nextArrival, DWELL, RAIL_H, GIRDER } from './transit_plan.js';
 
-const PLAT = C(0xb7b2a6), PLAT_SIDE = C(0x8f8b83), PLAT_DK = C(0x6f6c66), TACTILE = C(0xe6b800), ROOF = [C(0xd2d9dd), C(0xeef4f6)], COL = C(0x7d8084), STEEL = C(0x9aa0a6), GLASS = C(0xa8d4e6), GLAZE = C(0x7e9db0), WALL = C(0xd8d2c4), BAND = C(0x9a968e), DARK = C(0x0d0f12), STAIR = C(0x6d6a65), STAIR_T = C(0xcfd5d9);
+const PLAT = C(0xa7a29a), PLAT_SIDE = C(0x8f8b83), PLAT_DK = C(0x6f6c66), TACTILE = C(0xe6b800), ROOF = [C(0x4b525a), C(0x7b848c)], COL = C(0x2e3a52), STEEL = C(0x9aa0a6), GLASS = C(0xa8d4e6), GLAZE = C(0x7e9db0), WALL = C(0xd8d2c4), BAND = C(0x9a968e), DARK = C(0x0d0f12), STAIR = C(0x6d6a65), STAIR_T = C(0xcfd5d9);
 const PW = 4.0, EDGE = 1.5, ISLAND_MIN = 8;
 
 const px = (F, u, l) => pt(F, u, l, 0);
@@ -46,6 +46,7 @@ export class StationKit {
       for (const p of plats) {
         const R = p.t.R, i0 = R.indexAt(p.t.s - Lp / 2), i1 = Math.min(R.n - 1, R.indexAt(p.t.s + Lp / 2) + 1);
         extrude(solid, R, i0, i1, [[p.l0, -1.6], [p.l1, -1.6], [p.l1, 1.0], [p.l0, 1.0]], [PLAT_DK, PLAT_SIDE, PLAT, PLAT_SIDE], true);
+        for (const ed of [0, 1]) if (!p.edges.includes(ed)) { const l = ed ? p.l1 : p.l0; extrude(solid, R, i0, i1, [[l, 1.0], [l, 2.1]], [C(0x8a9096)], false); }       // railing on the open side (photo: Laxmi Nagar)
         for (const ed of p.edges) { const l = ed ? p.l1 : p.l0, d = ed ? 0.6 : -0.6; extrude(solid, R, i0, i1, [[l, 1.012], [l - d, 1.012]], [TACTILE], false); if (psd) extrude(glass, R, i0, i1, [[l + (ed ? -0.05 : 0.05), 1.0], [l + (ed ? -0.05 : 0.05), 3.0]], [GLASS], false); }
         lo = Math.min(lo, p.t.l + p.l0); hi = Math.max(hi, p.t.l + p.l1); rows.push({ p, R, mid: (p.l0 + p.l1) / 2 });
         for (const q of [[R.at(p.t.s - Lp / 2), 0], [R.at(p.t.s + Lp / 2), 0]]) { const f = toFrame(q[0].x, q[0].z); box.u0 = Math.min(box.u0, f.u); box.u1 = Math.max(box.u1, f.u); box.l0 = Math.min(box.l0, f.l + p.l0 - 0.5 + 0 * q[1]); box.l1 = Math.max(box.l1, f.l + p.l1 + 0.5); }
