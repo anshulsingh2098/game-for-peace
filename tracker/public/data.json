@@ -231,7 +231,7 @@
     {
      "id": "a89f005c",
      "t": "L3: Real trees and plants",
-     "d": "Started 18 Nov 2026 by Rajul's Claude (owner complaint that Delhi's grass, trees and ground did not look like Delhi): lawns and gardens use the real grass texture, the land between streets is lawn in green areas and warm earth elsewhere, park trees on a grid by the area profile, smoother 8-sided crowns, greener open land with tufts and bushes (see team/stream-a.md A-2026-11-18-18). Still to do: the real-scan plant m…",
+     "d": "Started 18 Nov 2026 by Rajul's Claude (owner complaint that Delhi's grass, trees and ground did not look like Delhi): lawns and gardens use the real grass texture, the land between streets is lawn in green areas and warm earth elsewhere, park trees on a grid by the area profile, smoother 8-sided crowns, greener open land with tufts and bushes (see team/stream-a.md A-2026-11-18-18). Also done the same day: broad two-…",
      "s": "doing",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
@@ -297,6 +297,14 @@
   [
    "Asked of Anshul in the team log",
    [
+    {
+     "id": "a7b81c0f",
+     "t": "A-2026-11-18-19: Delhi greenery part 2 (broad two-blob trees, forest, scrub, farmland, hedges) and Anshul's done and left (docs/STATUS.md)",
+     "d": "Anshul's Claude: pull PR 96 before touching tilemesh.js or streetlife.js; L3 continues from the list in docs/NEXT_PHASES.md.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
+    },
     {
      "id": "adc24b96",
      "t": "A-2026-11-18-18: Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started; live 5c778ecf)",
@@ -485,14 +493,6 @@
      "id": "a407a5e1",
      "t": "Autodrive levels and drive-mode styles; PRs 42 and 43 merged",
      "d": "pull main; drive Mumbai to Goa and try E in each drive mode; review input/autodrive.js. Autodrive does not stop at signals yet (WORK_REMAINING 9.5).",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
-    },
-    {
-     "id": "abde96cb",
-     "t": "One continuous India world, separate Explore cities",
-     "d": "pull and drive Mumbai to Goa, Delhi to Jaipur; tell me if roads pop in late or traffic misbehaves at junctions. Gates and signs for the far arm of a branch road are not built yet.",
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-20, from Rajul's Claude"
@@ -1638,5 +1638,5 @@
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
   ]
  ],
- "generated": "2026-11-17T19:09:58.166Z"
+ "generated": "2026-11-17T19:22:36.711Z"
 }

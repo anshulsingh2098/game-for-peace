@@ -129,7 +129,10 @@ export function* buildTileSteps(tile, ctx) {
     const an = IDN && IDN.areaNameAt ? IDN.areaNameAt(cx, cz) : '', h = ((Math.floor(cx * 0.37) * 73856093) ^ (Math.floor(cz * 0.37) * 19349663)) >>> 0, v = (h % 1000) / 1000;
     if (GREEN_USE.has(b.landuse) || (GREEN_AREAS.has(an) && v < 0.8)) flat(M.lawn, b.ring, b.holes, shade(0xcfe69a, 0.82 + 0.3 * v), LIFT.park * 0.5);
     else flat(M.ground, b.ring, b.holes, shade(0xb9a888, 0.85 + 0.25 * v), 0); }
-  for (const p of tile.parks) flat(M.lawn, p.ring, p.holes, PARK, LIFT.park);          // lawns and gardens: the real grass texture (mats.lawn), the water stays plain
+  const PARKC = { forest: shade(0xb4cf86, 0.72), scrub: col(0xd6c98e), sports: shade(0xe2f6aa, 1.0), golf: shade(0xe2f6aa, 1.05), garden: shade(0xd3ec9e, 0.95) };
+  for (const p of tile.parks) flat(M.lawn, p.ring, p.holes, PARKC[p.class] || PARK, LIFT.park);          // by class: forest deeper green, scrub dry olive, sports and golf bright
+  /* the Yamuna floodplain and other farmland: fields in greens and ochres (they were left as bare ground) */
+  for (const l of tile.landuse) if (l.class === 'farmland') { let cx = 0, cz = 0; const n = l.ring.length / 2; for (let i = 0; i < n; i++) { cx += l.ring[i * 2]; cz += l.ring[i * 2 + 1]; } cx /= n || 1; cz /= n || 1; const v = (((Math.floor(cx * 0.21) * 73856093) ^ (Math.floor(cz * 0.21) * 19349663)) >>> 0) % 1000 / 1000; flat(M.lawn, l.ring, l.holes, v < 0.45 ? shade(0xcde88c, 0.85 + 0.3 * v) : v < 0.8 ? shade(0xe6dc8a, 0.9 + 0.2 * v) : shade(0xcab27a, 0.9), LIFT.park * 0.4); }          // lawns and gardens: the real grass texture (mats.lawn), the water stays plain
   for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, LIFT.park);
   /* ---- streets ---- */
   const groundSeg = new Map(), CELLQ = 24;                                           // ground carriageways of this tile, to keep flyover piers out of them
