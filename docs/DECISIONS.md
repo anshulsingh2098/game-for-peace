@@ -6,6 +6,8 @@ Newest first. A decision here is the owner's word; an agent follows it and does 
 
 ## 17 Nov 2026 (last): phone check and optimisation, sound, Add to Home Screen (full screen, landscape), tuner storage and password, handoff, plan and tracker updated. The owner reported the phone screenshot (board covering the controls); fixed. The tuner password was generated and given to the owner in chat; it is not in the repo.
 
+## 18 Nov 2026: product split. The browser game (Web Lite) plays **Delhi only**; the **whole India map and more cities are in a downloadable app for PC and phone** (Full), for better compute and graphics from the hardware and room for better engines. Plan: `docs/LITE_AND_FULL_PLAN.md` (accepted in principle). The engine for Full is chosen after benchmarks (its Phase 6), not before. Open: cars in Lite, minimum device, PC or phone first, a "get the full game" button (defaults in the plan). Consequences: the India map, highway driving, "Other cities" and the city and highway flow (v2 to v4, B7) belong to Full; Lite boots into Delhi; N17 to N20 go in shared code for both; N21 onward starts in Full.
+
 ## 17 Nov 2026 (later still): deploys go to Rajul's Cloudflare account (paid services); Anshul's account keeps the older original versions (`.workers.dev` and `/next`). First deploy done: https://game-for-peace.mailrajulsingh-in.workers.dev, version `17594f28`. Rule and method are in `CLAUDE.md`.
 
 ## 17 Nov 2026 (later): R14 yes, flyovers and underpasses carry ambient city traffic. Built as v4 in `src/world/city/citytraffic.js`.

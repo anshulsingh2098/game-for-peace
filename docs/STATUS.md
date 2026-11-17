@@ -52,3 +52,6 @@ Built and seen in an emulated 740 x 340 phone: compact title menu, small station
 
 ## 17 Nov 2026, end of session
 PRs 83 (audit fixes, phone, sound, app icon, tuner, bundle, prefetch, NPCs) and 85 (roads out of Delhi) are merged into `main`; self-test 112. `vehicle/cars-and-gears` (Anshul) is not merged: 14 files and 42 hunks conflict and the two sides carry different driving models; the steps are in `docs/NEXT_PHASES.md`. The owner's session limit ended here; the next session starts from `docs/NEXT_PHASES.md`.
+
+## 18 Nov 2026: product split
+Web Lite plays Delhi only; the India map and more cities are in a downloadable PC and phone app (`docs/LITE_AND_FULL_PLAN.md`, accepted in principle; four details open). New tasks B14 to B16 in `docs/NEXT_PHASES.md`.

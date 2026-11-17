@@ -1,6 +1,6 @@
 # Plan: Web Lite (Delhi only) and Full (downloadable, all India)
 
-Status: DRAFT by Stream B (Anshul's Claude), 2026-11-17. Needs Anshul's and Rajul's yes before work starts.
+Status: **ACCEPTED IN PRINCIPLE by the owner, 18 Nov 2026** (drafted by Stream B, Anshul's Claude, 17 Nov 2026). Owner's words: only Delhi is playable in the browser; exploring more cities and the whole India map is in a downloadable app for PC and phone, for better compute and graphics from the hardware and so better engines can be used. Settled: Lite is Delhi only; Full is the downloadable PC and phone app with India and more cities; the engine for Full is decided with benchmarks (Phase 6), not before. **Still open, answers needed from the owner:** (1) how many cars in Lite (the draft says 2), (2) the minimum device for Lite, (3) PC or phone first for Full, (4) whether Lite shows a "get the full game" button. Until answered, work to the draft's defaults (2 cars, a mid laptop and a mid phone, PC first, yes to the button) and say so in the PR.
 
 ## Why
 
