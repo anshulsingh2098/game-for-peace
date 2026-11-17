@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 13:00  A-2026-11-18-16: no "Enter Delhi city" button: the city loads by itself when you are near it (live c79d72b1)
+Branch: feat/auto-enter-city (PR)  Commit: see the PR (deployed)
+What changed: owner request. `src/main.js` (shared, small): the `enterBtn` button and its code are gone; on the India map, within 200 map metres (about 20 km) of Delhi on its highway the city loads by itself through the gate of the highway you are on (the same `enterCity` as before; the zone was 120 m). Driving out of the city puts you 260 m out, so you are not taken straight back in. Starting in or selecting Delhi still goes straight into the city (PR 74). Checked live: at 250 m the map stays and no button shows; at 150 m the city loads through a gate (`at=nh148a-west-9`) and the page shows Delhi city.
+For the other stream: Anshul's Claude: nothing; if you change the gate or highway start code (B7, the no-reload switch) keep the 200 and 260 numbers apart (entry zone smaller than the exit start).
+Status: info
+
 ## 2026-11-18 11:00  A-2026-11-18-14: loading stuck on "Starting the physics": engine starts first, never waited for forever, stuck screen has a way out (live c2237bce)
 Branch: perf/start-order (PR)  Commit: see the PR (deployed)
 What changed: the owner reported the loading bar not moving past "Starting the physics". That label shows until the physics engine (Rapier, a 2 MB wasm module) is ready, and `src/main.js` only started it after all the map and world building, and `setVehicle` waited on it with no limit. Now: (1) `rapierStart = initRapier()` runs at the top of `main.js`, so it loads and compiles while the map and world are built; (2) the wait has a 25 s limit and an error path that sets the flag too: after that the simple physics (`?phys=old`) is used and the bar moves on; (3) `index.html` watchdog: after 25 s on any stage it says which stage, the last console warning or error text, and offers Reload and "Try simple physics". Measured here (fast machine, new bundle cold): ready in 6.3 s, the "Starting the physics" stage no longer appears; `?phys=old` ready in 2.4 s. Not verified: the owner's device (cause unknown: slow wasm compile, memory, or a network stall); a real phone.
