@@ -54,6 +54,9 @@ export function footprintRect(fp, yaw) {
   const cu = (u0 + u1) / 2, cv = (v0 + v1) / 2; return { t: 'rect', x: cu * c - cv * s, z: cu * s + cv * c, hx: (u1 - u0) / 2, hz: (v1 - v0) / 2, yaw };
 }
 
+/* point in a flat polygon [x0, z0, x1, z1, ...]; used so a landmark start is a street node outside its footprint (a model fills the footprint: a start inside it is inside a wall) */
+function insidePoly(f, x, z) { let c = false; const n = f.length / 2; for (let i = 0, j = n - 1; i < n; j = i++) { const xi = f[i * 2], zi = f[i * 2 + 1], xj = f[j * 2], zj = f[j * 2 + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; }
+
 export class CityPack {
   constructor(base, fetchJson) { this.base = base.replace(/\/$/, ''); this.get = fetchJson || (async u => { const r = await fetch(u); if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }); this.have = null; }
   async init() {
@@ -62,14 +65,14 @@ export class CityPack {
     this.have = new Set(M.tiles.map(t => t.tx + '_' + t.tz)); return this;
   }
   hasTile(tx, tz) { return this.have.has(tx + '_' + tz); }
-  async tile(tx, tz) { if (!this.hasTile(tx, tz)) return null; return decodeTile(await this.get(this.base + '/tiles/' + tx + '_' + tz + '.json'), this.size); }
+  async tile(tx, tz) { if (!this.hasTile(tx, tz)) return null; const u = this.base + '/tiles/' + tx + '_' + tz + '.json', c = this.raw || (this.raw = new Map()); let p = c.get(u); if (p) { c.delete(u); } else { p = this.get(u); p.catch(() => c.delete(u)); } c.set(u, p); if (c.size > 64) c.delete(c.keys().next().value); return decodeTile(await p, this.size); }       /* the near city and the far skyline both ask for a tile: the raw JSON is fetched and parsed once (decodeTile copies, it never changes it), the last 64 are kept */
   /* where to start: ?at=<spawn, landmark or gate id>, default the centre spawn. Returns { x, z, yaw (game), name } */
   start(id) {
     const M = this.M, sp = M.spawns.find(s => s.id === id) || M.spawns.find(s => s.id === 'centre') || M.spawns[0];
     if (id) { const g = M.gates.find(x => x.id === id); if (g) return { x: g.x, z: g.z, yaw: yawFromBearing(g.bearing), name: g.name || g.id };
-      const l = this.lm.get(id); if (l && !M.spawns.find(s => s.id === id)) { const n = this.nearestNode(l.x, l.z); return { x: n.x, z: n.z, yaw: Math.atan2(l.z - n.z, l.x - n.x), name: l.name.en }; } }
+      const l = this.lm.get(id); if (l && !M.spawns.find(s => s.id === id)) { const n = this.nearestNode(l.x, l.z, l.footprint); return { x: n.x, z: n.z, yaw: Math.atan2(l.z - n.z, l.x - n.x), name: l.name.en }; } }
     return { x: sp.x, z: sp.z, yaw: yawFromBearing(sp.yaw), name: sp.name };
   }
   /* the graph node nearest to (x, z) (a plain scan: used once at the start) */
-  nearestNode(x, z) { const xz = this.G.xz; let best = 0, bd = Infinity; for (let i = 0; i < this.G.nodes; i++) { const d = (xz[i * 2] - x) ** 2 + (xz[i * 2 + 1] - z) ** 2; if (d < bd) { bd = d; best = i; } } return { x: xz[best * 2], z: xz[best * 2 + 1], d: Math.sqrt(bd) }; }
+  nearestNode(x, z, avoid) { const xz = this.G.xz; let best = 0, bd = Infinity; for (let i = 0; i < this.G.nodes; i++) { const d = (xz[i * 2] - x) ** 2 + (xz[i * 2 + 1] - z) ** 2; if (d < bd && !(avoid && avoid.length >= 6 && insidePoly(avoid, xz[i * 2], xz[i * 2 + 1]))) { bd = d; best = i; } } return { x: xz[best * 2], z: xz[best * 2 + 1], d: Math.sqrt(bd) }; }
 }
