@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 02:00  A-2026-11-18-05: deploy now bundles the scripts (cold start: 142 script requests down to 1)
+Branch: claude/audit-fixes (PR 83)  Commit: see the PR (live: version f9d20b6c)
+What changed: `tools/bundle.mjs` ran with the owner's go-ahead (esbuild 0.24.2 fetched by npx). Live page: 44 requests instead of about 200, one `dist/game.js` (3.7 MB, 1.3 MB gzipped); India title ready in 5.5 s and Delhi in 3.2 s in the built-in browser (warm asset cache; the earlier Delhi start there took about 40 s). `?src=1` loads the unbundled source game (checked, 149 script requests). `CLAUDE.md` "Where deploys go" now includes the bundle step. The source files are unchanged; only the staged copy is bundled. Not verified: a real phone or a cold cache on a slow network.
+For the other stream: Anshul: when you deploy, include the bundle step (`CLAUDE.md`).
+Status: info
+
 ## 2026-11-18 01:00  A-2026-11-18-04: "stuck on Building the world" and slow start: error screen, no service worker on iPhone, bundle tool (not run)
 Branch: claude/audit-fixes (PR 83)  Commit: see the PR (live: version 37d2a99f)
 What changed: the owner reported the live game stuck on "Building the world" on a phone and not opening on a desktop; I could not reproduce it (it opens in about 5 s in the built-in browser). That text is the page's own placeholder, so the game script never started on their device. `index.html`: a boot watchdog shows the first error (or "Still loading after 25 s" and a Reload button that also clears the service worker and caches) on the loading screen, so the cause can be read off a phone. `src/ui/install.js`: iPhone gets no service worker and any earlier one is removed. New `tools/bundle.mjs`: deploy-time esbuild bundle (142 script files, about 1.7 MB gzipped, to one file; `?src=1` keeps the unbundled game), **written but never run**: the sandbox refused the esbuild download, so it is not wired into any deploy and is untested.
