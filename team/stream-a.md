@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 11:00  Delhi scale check and the phased polish plan (docs only)
+Branch: claude/delhi-scale-plan  Commit: see the PR
+What changed: new `docs/DELHI_POLISH_PLAN.md` (measured scale table, phases P1 to P8, N0 to N20 status), a pointer in `docs/OVERALL_PLAN.md`. No code. Finding: lane, storey and street widths and the car are the right scale; the city looks empty because building coverage of a 1 km tile is only 6 to 19 percent (OpenStreetMap has gaps), roads have no medians or junction shaping, facades repeat.
+For the other stream: nothing.
+Status: open
+
 ## 2026-11-18 10:00  Delhi seen from the air: denser far city, no random trees, one ground tone
 Branch: claude/delhi-aerial-look  Commit: see the PR
 What changed: `cityworld.js` (`cityConfig`: the engine's own scatter has no trees or bushes in a city, they stood in empty plains and in the middle of nowhere beyond the pack; the three ground tones are one grey-tan so the terrain under and past the city has no pale green and peach blotches; the dense far ring `dense: bd < 2800` passed to the skyline), `skyline.js` (`MAX_DENSE` 650 boxes a tile and buildings from 90 m2 up in the first far ring, 260 and the old thresholds beyond it; most Delhi buildings are 9 m and under 700 m2, so the old far layer showed almost none). Frame at `?play&city=delhi&q=med`: 268 calls and 242k triangles (was 328 and 241k): the far layer is 35k triangles. Seen in the browser: a low aerial view out to the fog is now built-up; Purana Qila from above. Not changed, and true to the data: the Yamuna floodplain east of Purana Qila has few buildings in the pack and the pack ends at the NCR edge; the fog at altitude is white and starts at about 1.1 km; the detailed city loads 1.3 km round the CAR, not the free camera.
