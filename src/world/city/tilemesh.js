@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { buildStreetLife } from './streetlife.js';
 
+/* layers that lie in the ground plane are given real height steps (metres over the ground: it was 0 for all of them and only depth offsets told them apart, which shimmers with distance): ground 0, parks and water, pavement, road, markings */
+const LIFT = { park: 0.015, walk: 0.03, road: 0.05, mark: 0.07 };
 const WALL_R = 1.1;                   // a wall circle's radius, and how far its centre sits inside the footprint edge: the circle ends exactly at the drawn wall (it was 1.25 m wide, 0.7 m inside: an invisible 0.55 m of wall in the street)
 export class Mesher {
   constructor() { this.p = []; this.n = []; this.c = []; this.u = []; this.i = []; }
@@ -84,8 +86,8 @@ export function* buildTileSteps(tile, ctx) {
   /* ---- ground: land use first, then blocks, parks and water ---- */
   for (const l of tile.landuse) { const c = BLOCK[l.class]; if (c && !['residential', 'commercial', 'retail', 'industrial'].includes(l.class)) flat(M.ground, l.ring, l.holes, c, 0); }
   for (const b of tile.blocks) flat(M.ground, b.ring, b.holes, BLOCK[b.landuse] || BLOCK.urban, 0);
-  for (const p of tile.parks) flat(M.park, p.ring, p.holes, PARK, 0);
-  for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, 0);
+  for (const p of tile.parks) flat(M.park, p.ring, p.holes, PARK, LIFT.park);
+  for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, LIFT.park);
   /* ---- streets ---- */
   const groundSeg = new Map(), CELLQ = 24;                                           // ground carriageways of this tile, to keep flyover piers out of them
   const hashSeg = (x0, z0, x1, z1, hw, id) => { const a = Math.floor(Math.min(x0, x1) / CELLQ), b = Math.floor(Math.max(x0, x1) / CELLQ), c = Math.floor(Math.min(z0, z1) / CELLQ), d = Math.floor(Math.max(z0, z1) / CELLQ); for (let i = a; i <= b; i++) for (let j = c; j <= d; j++) { const k = i + ',' + j; let l = groundSeg.get(k); if (!l) groundSeg.set(k, l = []); l.push([x0, z0, x1, z1, hw, id]); } };
@@ -129,7 +131,7 @@ export function* buildTileSteps(tile, ctx) {
     for (let i = 0; i < F.n; i++) H[i] = hAt(pts[i * 2], pts[i * 2 + 1]);
     const strip = (m, a, b, c, dy, hExtra = 0) => {                                                 // a strip between lateral offsets a and b along the whole piece
       let prev = -1; for (let i = 0; i < F.n; i++) {
-        const x = pts[i * 2], z = pts[i * 2 + 1], y = gy + H[i] + dy + hExtra, k = F.sc[i]; const va = m.v(X(x + F.nx[i] * a * k), y, Z(z + F.nz[i] * a * k), 0, 1, 0, c), vb = m.v(X(x + F.nx[i] * b * k), y, Z(z + F.nz[i] * b * k), 0, 1, 0, c);
+        const x = pts[i * 2], z = pts[i * 2 + 1], y = gy + H[i] + dy + hExtra + (m === M.road ? LIFT.road : m === M.walk ? LIFT.walk : m === M.mark ? LIFT.mark : 0), k = F.sc[i]; const va = m.v(X(x + F.nx[i] * a * k), y, Z(z + F.nz[i] * a * k), 0, 1, 0, c), vb = m.v(X(x + F.nx[i] * b * k), y, Z(z + F.nz[i] * b * k), 0, 1, 0, c);
         if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va;
       }
     };
