@@ -133,7 +133,35 @@ Heights: from `height` or `building:levels` x 3.2 m, else a guess from landuse a
 Curated list (from OSM and Wikidata): `{ id, wikidata, name, x, z, yaw, footprint, height, model: "procedural:india-gate" | "cc0:<file>", look: "<identity key>", card: { text, built (year), source }, importance, collision }`. Real-name landmarks are our own procedural or CC0 models (CITY_PLAN rules).
 
 ### transit.json
-`lines: [{ id, mode (metro, rail, tram, bus), name, ref, colour, grade per segment (underground, elevated, ground), path [x, z, ...], stations: [ids] }]`, `stations: [{ id, name {en, hi}, x, z, lines, platforms, entrances [[x, z]...], interchange }]`, `terminals: [{ id, kind (railway, bus, airport), ... }]`. Delhi Metro line colours and station names come from OSM tags.
+Written by `tools/build_delhi_transit.mjs`, checked by `tools/validate_transit.mjs` (self-test). Built from OSM, Wikipedia and Wikidata; Delhi's is `assets/cities/delhi/transit.json` (444 KB, 125 KB gzipped); the numbers, sources and gaps are in `docs/DELHI_TRANSIT.md`. **Format 1** (versioned: a loader refuses a higher number; `builder.version` must equal `TRANSIT_BUILDER_VERSION` in `tools/lib_transit.mjs`). Coordinates are the pack frame of section 1 (`frame` carries the constants). The packs of the street builder and of transit use the same `project()`.
+```json
+{ "format": 1, "kind": "transit", "id": "delhi", "builder": { "name": "build_delhi_transit", "version": 1 }, "origin": { "lat": 28.6139, "lon": 77.209 },
+  "frame": { "earthRadiusM": 6371008.8, "x": "...", "z": "..." },
+  "sources": [ { "id": "osm", "licence": "ODbL 1.0", "credit": "(c) OpenStreetMap contributors", "use": "..." } ],
+  "metro": {
+    "lines": [ { "id": "yellow", "mode": "metro", "ref": "2", "name": { "en": "Yellow Line", "hi": "..." }, "colour": "#FFDF00", "operator": "DMRC", "network": "Delhi Metro",
+        "track": { "gauge": "1676", "osmGauge": "1676", "electrified": "contact_line", "voltage": "25000", "maxspeed": null },
+        "routes": [ { "id": "yellow-1", "from": "Samaypur Badli", "to": "Millennium City Centre", "osmRelation": 447210, "km": 47.68,
+            "path": [ x, z, x, z, "..." ],
+            "grades": [ [ 0, "e" ], [ 112, "u" ] ],
+            "stops": [ [ "SB", 0 ], [ "HN", 1388.2 ] ] } ],
+        "stations": [ "ids in service order" ] } ],
+    "stations": [ { "id": "KG", "name": { "en": "Kashmere Gate", "hi": "..." }, "nameNow": "only when Wikipedia's current name differs", "code": "KG", "x": 1859.7, "z": -6090.5,
+        "lines": [ "red", "violet", "yellow" ],
+        "per": [ { "line": "violet", "grade": "underground", "layout": "island", "opened": "28 May 2017", "osmGrade": "underground", "railDist": 2.7 } ],
+        "entrances": [ [ x, z ] ], "interchange": true, "osm": "n11174317216", "wikidata": "Q4207344", "hiSrc": "osm" } ],
+    "depots": [ { "id": "depot-shastri-park", "name": { "en": "Shastri Park depot", "hi": null }, "x": 0, "z": 0, "nearestLine": "red", "railDist": 19.1, "osm": "w80429917" } ],
+    "transfers": [ [ "idA", "idB", metres_on_foot ] ] },
+  "rail": { "stations": [ { "id": "NDLS", "name": { "en": "New Delhi", "hi": "..." }, "x": 0, "z": 0, "class": "terminal+through",
+        "platforms": { "osmFaces": [ "1", "2", "..." ], "osmCount": 16, "wikipedia": 16, "tracksWikipedia": 20 }, "axis": 1.369,
+        "bodies": [ { "faces": [ "2", "3" ], "type": "island", "x": 0, "z": 0, "len": 592, "w": 22, "osm": "w123" } ],
+        "entrances": [ [ x, z ] ], "buildings": [ { "kind": "train_station", "name": "...", "ring": [ x, z, "..." ] } ], "footbridges": [ { "kind": "bridge", "path": [ x, z, "..." ] } ],
+        "metro": [ "NDI", "NDLS" ], "opened": "...", "note": "...", "src": "..." } ] },
+  "bus": { "operators": { "dtc": {}, "cluster": {} }, "stops": [ [ x, z, "name" ] ], "routes": [ { "ref": "740", "op": "dtc | cluster | haryana | noida | unknown", "from": "...", "to": "...", "osm": 1, "km": 21.4, "stops": [ index into stops ] } ],
+           "places": [ { "kind": "isbt | depot | terminal", "name": "...", "x": 0, "z": 0, "operator": "dtc", "osm": "w1" } ] } }
+```
+Rules the data keeps (validated): every `path` is an ordered polyline of one direction with no jump, simplified to 1.5 m; `grades` runs are `[firstPointIndex, "u" | "e" | "g"]` (underground, elevated, ground) and start at 0; `stops[i][1]` is the distance in metres along the path; every station lies within 160 m of the track of each line it names; two directions of one line section are two routes (`yellow-1`, `yellow-2`); ids are unique inside `metro.stations` and inside `rail.stations` (the lists are separate: `NDLS` is a metro id and a railway code). A route's `stops` for buses are indices into `bus.stops` and the polyline is the stop chain (no road geometry; snap to the street graph). Heights are not stored: a viaduct is the terrain height plus a deck height chosen by the renderer.
+Not yet in the format: timetables and frequencies (the Delhi GTFS was not taken, see `DELHI_TRANSIT.md` section 1), platform heights, underground box dimensions, rail track layout inside stations, `terminals` for airports.
 
 ### 5a. As built by `tools/build_city.mjs` 1.0.0 (Delhi pack, format 1): where it differs from the proposal above
 The proposal said "start with JSON, change `format` if the size budget fails". The size budget bit (the first Delhi build was 28.6 MB gzip against 20 MB), so the files keep JSON but are written compactly. Everything below is in `manifest.json` (`encoding`, `defaults`, `cuts`) and implemented in `tools/lib/packio.mjs`, which a loader copies or imports.

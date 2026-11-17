@@ -27,6 +27,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 1.8 | The tuner page login and the live Publish setup (N5 leftovers) | |
 | 1.9 | (answered 22 Nov: agreed) **City scale: 1:1 city enclaves entered from the highway** (`docs/CITY_PACK.md` section 3), the budgets in section 4 and the pack format in section 5 | Blocks Phase 1 of `docs/CITY_PLAN.md` |
 | 1.10 | (answered 22 Nov: yes, download the maps needed; log each file in OPEN_DATA.md) OSM extract for Delhi NCR | CITY_PLAN Phase 1 |
+| 1.11 | **Delhi Open Transit Data GTFS** (DTC, cluster buses, DMRC timetables): it needs a click-through agreement with a stated purpose and identity, and the Terms restrict use to that purpose; not taken. Terms accepted by the owner on 17 Nov 2026 but the portal answers 403 Forbidden to every download (see OPEN_DATA.md): retry later or ask DoT via the Contact page, and ask whether derived route and frequency data may be published in an open-source game, or keep OSM-only (no timetable or frequency). | `docs/DELHI_TRANSIT.md` section 1 |
 
 ## 2. Engine and phases N7 to N10
 | # | Limit | Tag |
@@ -160,6 +161,17 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 | 10.5 | The provider claim (roads) is answered by point samples for a rectangle (nine points), so a thin road across the middle of a small plot can be missed; plots are at least 8 m wide and roads are at least 7 m, so a 4 m gap is the worst case. | P3 |
 | 10.6 | Stations and rail bridges still lift the railway over the road in `rail_view.js` (`BRIDGE_H`); the road should go over the rail (PR 49 note). Not touched here. | P2 [build] |
 
+## 11. Delhi transit (D2 and D3, 23 Nov 2026)
+Done: `assets/cities/delhi/transit.json` (11 metro lines, 285 stations, 14 depots, 47 railway stations, 479 bus routes), `tools/build_delhi_transit.mjs` and its fetchers, `tools/validate_transit.mjs` and a self-test check, `docs/DELHI_TRANSIT.md`. Open:
+| # | What | Priority |
+|---|---|---|
+| 11.1 | Decision 1.11 (GTFS terms). Without it buses have no frequency and no operator for 374 of 479 routes. | P1 [owner] |
+| 11.2 | Nobody looked at photographs: all the look statements (station colours, signage, train livery, viaduct size, DTC green, cluster orange and blue) are unverified. D6 and D7 start by looking at Commons references. | P1 [person] |
+| 11.3 | Five stations where OSM and Wikipedia disagree on elevated or ground (`DELHI_TRANSIT.md` 3.2) and five railway stations whose platform counts differ (4.1): someone who knows Delhi checks them. | P2 [person] |
+| 11.4 | Bus routes are stop chains, not roads: snap to the street graph when D1 and D5 land. | P2 [build] |
+| 11.5 | Register the metro viaduct and the stations in the keep-out registry (`src/world/keepout.js`) as D6 builds them; the railway session owns `rail_*.js`, nothing was changed there. | P2 [build] |
+| 11.6 | `docs/CITY_PLAN.md` on `main` does not carry the Delhi flagship table (it is on `docs/handoff-23nov`): the status lines for D2 and D3 are at the end of the file; merge them into the table. | P3 |
+| 11.7 | The data is a snapshot of Nov 2026 (Wikipedia list with the 2026 openings and renames, OSM as of the fetch); rerun the fetchers and `build_delhi_transit.mjs` to refresh (the public Overpass server is often busy and the fetcher retries). | P3 |
 ## 11. City pipeline and the Delhi pack, leftovers (D1 and D4)
 | # | Limit | Tag |
 |---|---|---|
