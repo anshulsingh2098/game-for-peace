@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-17  Smoother game: adaptive resolution
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: shared file `src/main.js` only (about 14 lines before `frame()`): if the frame rate stays below about 46 fps for 1.5 s, the picture is drawn at a lower pixel ratio (down to 0.55) and goes back up slowly (never to a level that was too slow). `?adapt=off` disables it; `__next.adapt` shows its state. Measured at 1920x1080: about 16 ms average, 346 draw calls, 326k triangles on the south location; no long hitches found (world tile building already has a per-frame budget).
+For the other stream: nothing. If a world change adds many draw calls or triangles it will show up in that measurement; keep tile building inside `view.budgetMs`.
+Status: open
+
 ## 2026-11-17 23:00  PROPOSAL: split into Web Lite (Delhi only) and a downloadable Full build
 Branch: vehicle/cars-and-gears  Commit: not committed yet
 What changed: nothing in code. New `docs/LITE_AND_FULL_PLAN.md` (phased plan, device gates, who does what). Reason: the game lags on a Mac mini M4 and a laptop. Proposal: Lite in the browser with Delhi only and GTA-like driving; Full as a downloadable PC/mobile app with all India, other cities and heavy graphics. Benchmark on this PC (main, med): 81 fps average, p99 27.8 ms, 921 draw calls, 514k triangles.

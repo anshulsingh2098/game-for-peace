@@ -229,7 +229,19 @@ function orbitCam(dt) {
 
 /* ---------- one frame of the world: move, keep road and tiles built around the player, draw ---------- */
 const rp = {}; let last = performance.now();
-function frame(now) { requestAnimationFrame(frame); step(Math.min(0.05, (now - last) / 1000), now); last = now; }
+/* adaptive resolution: if the frame rate stays low the picture is drawn at a lower pixel ratio, so the game stays smooth on weak graphics cards;
+   it never goes back to a level that already proved too slow. ?adapt=off turns it off. */
+const ADAPT = { on: q.get('adapt') !== 'off', ema: 16.7, ratio: renderer.getPixelRatio(), max: renderer.getPixelRatio(), min: 0.55, slow: 0, fast: 0 };
+function adaptRes(ms) {
+  if (!ADAPT.on || document.hidden || ms > 120) return;                                  // ignore a stalled or hidden tab
+  ADAPT.ema += (ms - ADAPT.ema) * 0.05;
+  ADAPT.slow = ADAPT.ema > 21.5 ? ADAPT.slow + ms : 0; ADAPT.fast = ADAPT.ema < 17.6 ? ADAPT.fast + ms : 0;
+  let to = 0;
+  if (ADAPT.slow > 1500 && ADAPT.ratio > ADAPT.min) { to = Math.max(ADAPT.min, ADAPT.ratio - (ADAPT.ema > 30 ? 0.2 : 0.1)); ADAPT.max = Math.max(ADAPT.min, ADAPT.ratio - 0.05); }
+  else if (ADAPT.fast > 8000 && ADAPT.ratio < ADAPT.max) to = Math.min(ADAPT.max, ADAPT.ratio + 0.05);
+  if (to) { ADAPT.ratio = to; ADAPT.slow = ADAPT.fast = 0; ADAPT.ema = 16.7; renderer.setPixelRatio(to); resize(); }
+}
+function frame(now) { requestAnimationFrame(frame); adaptRes(now - last); step(Math.min(0.05, (now - last) / 1000), now); last = now; }
 function step(dt, now) {
   WIND.t.value = now / 1000; let px, pz;
   if (mode === 'drive' && phys) {
@@ -269,6 +281,6 @@ function step(dt, now) {
 }
 setVehicle(vehicle).then(() => { setMode('drive'); if (!q.has('play')) menu.show('title'); requestAnimationFrame(frame); }).catch(e => { console.error(e); toast('Could not load the vehicle'); setMode('fly'); requestAnimationFrame(frame); });
 
-window.__next = { get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
+window.__next = { adapt: ADAPT, get config() { return config; }, get terrain() { return terrain; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
