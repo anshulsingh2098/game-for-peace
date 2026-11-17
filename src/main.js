@@ -51,6 +51,7 @@ import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
 import { Autodrive } from './input/autodrive.js';
 import { TouchUI } from './input/touchui.js';
+import { registerServiceWorker } from './ui/install.js';
 import { Backdrop } from './env/backdrop.js';
 import { Environment, TIMES, WX } from './env/environment.js';
 import { registerRoot, setOverrides, applyWorld, describe, overrides } from './core/tuning.js';
@@ -60,7 +61,8 @@ import { RadioWheel, logo } from './ui/radiowheel.js';
 import { Menu } from './ui/menu.js';
 import { Gps } from './ui/gps.js';
 import { CityNav, CityMap } from './ui/citymap.js';
-import { mapGates, pickGate } from './world/city/gates.js';
+import { mapGates, pickGate, gateForCity } from './world/city/gates.js';
+import { prefetch, CITY_FILES, INDIA_FILES } from './world/prefetch.js';
 import { installCutHoles } from './world/city/cuts.js';
 import { RailLine, RailNetwork, classifyCrossings } from './world/rail.js';
 import { RailGrade } from './world/rail_grade.js';
@@ -79,7 +81,7 @@ import { statsPanel } from './debug/stats.js';
 import { createFx, loadSkyLight } from './fx/pipeline.js';
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], q = new URLSearchParams(location.search);
-const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500;
+const phone = matchMedia('(pointer: coarse)').matches || innerWidth < 500; registerServiceWorker();
 const quality = VIEW_PRESETS[q.get('q')] ? q.get('q') : phone ? 'low' : 'med';
 let savedLoc = null, savedCity = null, savedEnclave = null; try { const o = JSON.parse(localStorage.getItem('gfp-next') || '{}'); savedLoc = o.location || null; savedCity = typeof o.city === 'string' ? o.city : null; savedEnclave = typeof o.enclave === 'string' ? o.enclave : null; } catch (e) { /* no saved choice */ }
 /* a real highway to drive (docs/INDIA_MAP_PLAN.md section 9): ?india=<road id>&from=<city>&toward=<city>. The road follows the path of that highway at 1:100 through procedural land; the signs name the next cities. Roads and cities: assets/india/skeleton.json */
@@ -91,6 +93,8 @@ const gateFade = (() => { const d = document.createElement('div'); d.style.cssTe
   if (carry && Date.now() - carry.t < 30000) { d.style.transition = 'none'; d.style.opacity = '1'; } else carry = null; return { d, carry, frames: 0 }; })();
 function gateJump(search, speed) { try { sessionStorage.setItem('gfp-gate', JSON.stringify({ u: Math.max(0, speed || 0), t: Date.now() })); } catch (e) { /* no storage */ } gateFade.d.style.transition = 'opacity .5s ease'; gateFade.d.style.opacity = '1'; setTimeout(() => { location.search = search; }, 520); }
 const wantWorld = !cityMode && (q.get('india') === 'world' || (!q.get('india') && !q.get('loc') && !q.get('c')));
+const startNav = q.get('nav') || ''; let startNavDone = false;       // ?nav=<city id>: the destination chosen on the city map, carried through the gate
+let cityNet = null, cityGates = null;      // the India network and the mapped gates of the city (used by the city map's roads out)
 let entering = false, CITY_GATES = null;       // declared up here: the GPS code that uses them runs while the world is built, before the city code further down
 /* the way into the full Delhi city from the India map: a button, shown within 80 km of Delhi on its highway (a highway gate also takes you in when you drive into the city) */
 const enterBtn = (() => { const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Enter Delhi city'; b.style.cssText = 'position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:40;padding:10px 20px;border-radius:10px;border:1px solid #8ab4ff;background:#1d4ed8;color:#fff;font:600 15px system-ui,sans-serif;display:none;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)'; document.body.appendChild(b); return b; })();
@@ -150,7 +154,7 @@ const shadowsOn = q.get('shadows') ? q.get('shadows') !== 'off' : quality !== 'l
 renderer.shadowMap.enabled = shadowsOn; renderer.shadowMap.type = quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap; env.setShadows(shadowsOn ? (quality === 'high' ? 4096 : 2048) : 0, quality === 'high' ? 90 : 70);
 /* saved choices for this preview */
 const loaded = loadSave((() => { try { return localStorage; } catch (e) { return { getItem: () => null, setItem() { throw e; }, removeItem() {} }; } })(), { vehicles: VEHICLES.length, vehicleIds: VEHICLES.map(v => v.id), locations: LOCATIONS.map(l => l.id) });      // versioned, checked, recovers from damage (core/save.js)
-const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, traffic: quality === 'low' ? 'off' : quality === 'med' ? 'low' : 'mid', ...loaded.data }, save = () => writeSave((() => { try { return localStorage; } catch (e) { return { setItem() { throw e; } }; } })(), S, loaded);
+const S = { time: 'day', weather: 'clear', lights: 'auto', vehicle: 0, muted: false, paint: {}, traffic: quality === 'low' ? 'off' : quality === 'med' ? 'low' : 'mid', ...loaded.data }; let saveFailShown = false, save = () => { const ok = writeSave((() => { try { return localStorage; } catch (e) { return { setItem() { throw e; } }; } })(), S, loaded); if (!ok && !saveFailShown) { saveFailShown = true; setTimeout(() => { try { toast(loaded.readOnly ? 'This save is from a newer version: your changes will not be kept' : 'Could not save: your changes will be lost when you close the game'); } catch (e) { /* page not ready */ } }, 0); } return ok; };       // a failed write is shown once (audit R11)
 if (cityMode) S.enclave = 'delhi'; else if (S.enclave) { delete S.enclave; save(); }                          // the save remembers that you were last inside a city (saved.js `enclave`)
 env.setTime(S.time); env.setWeather(S.weather);
 
@@ -220,7 +224,7 @@ makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
 let arriveT = 0, adStuck = 0, city = null, cityStart = null, cityNav = null, cityMap = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); city.transit.onTeleport = (x, z, yaw) => { if (mode === 'foot' && foot) foot.place(x, z, yaw); else if (phys) { phys.reset(x, z, yaw, city.gy); view.camYaw = null; } }; city.traffic.setMode(S.traffic); city.peds.setMode(S.traffic); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
 function updateCityMap(now, dt) {                                                                       // the city's GPS (src/ui/citymap.js): hidden India map, city map in its place
-  if (!cityMap) { cityNav = new CityNav(city.pack, { geom: e => city.edgeGeom(e), toast }); city.onStreets = () => cityNav.refine(); cityMap = new CityMap({ nav: cityNav, player: () => { const o = phys && mode !== 'fly' && mode !== 'foot' ? phys : mode === 'foot' && foot ? foot : cam; return { x: o.x, z: o.z, yaw: o.yaw || 0 }; }, size: touchUI ? 150 : 184 }); if (city.transit.data) cityMap.setTransit(city.transit.data); /* the transit data the Metro already loaded (transit.js), no second fetch */ window.__cityNav = cityNav; }
+  if (!cityMap) { cityNav = new CityNav(city.pack, { geom: e => city.edgeGeom(e), toast }); city.onStreets = () => cityNav.refine(); cityMap = new CityMap({ nav: cityNav, player: () => { const o = phys && mode !== 'fly' && mode !== 'foot' ? phys : mode === 'foot' && foot ? foot : cam; return { x: o.x, z: o.z, yaw: o.yaw || 0 }; }, size: touchUI ? 150 : 184 }); if (city.transit.data) cityMap.setTransit(city.transit.data); /* the transit data the Metro already loaded (transit.js), no second fetch */ window.__cityNav = cityNav; wireGates(); }
   cityMap.setVisible(mode === 'drive' || mode === 'foot'); cityMap.update(now, dt);
 }
 function makeScenery() {
@@ -246,7 +250,10 @@ const world = { height: (x, z, y) => { if (city && y !== -Infinity) { const dk =
   grip: key => (1 - env.w.wet * (key === 'asphalt' ? 0.26 : 0.12)) * (1 - env.w.snow * 0.45) };       // rain makes the road slippery; lying snow more so
 const sound = new Sound();
 const unlockAudio = () => { if (!sound.ctx) { sound.init(); sound.music = 0; sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } sound.resume(); };      // browsers only allow sound after a key or tap
-for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, unlockAudio, { passive: true });
+for (const ev of ['pointerdown', 'keydown', 'touchstart', 'touchend', 'click']) addEventListener(ev, unlockAudio, { passive: true });          // iPhone Safari only accepts touchend and click as the tap that allows sound
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older browsers */ }          // iPhone: play through the silent switch like a game
+addEventListener('keyup', e => { if (e.code === 'KeyK') sound.horn(false); }); addEventListener('blur', () => sound.horn(false));
+document.addEventListener('visibilitychange', () => { if (document.hidden) sound.horn(false); else if (sound.ctx) sound.resume(); });          // coming back to the tab or the home-screen app: wake the sound again
 document.addEventListener('visibilitychange', () => { if (!sound.ctx) return; if (document.hidden) sound.ctx.suspend(); else sound.resume(); });
 let mode = 'drive', vehicle = Math.max(0, Math.min(VEHICLES.length - 1, S.vehicle | 0)), phys = null, rideYaw = 0, auto = null, input = { steer: 0, throttle: 0, brake: 0 }, buffT = 0, buffCd = 0, boostEase = 0, tunnelAmt = 0;      // mode: 'drive', 'fly' (free camera) or 'ride' (camera glides along the road)
 let menu = null; const frozen = () => !!(menu && menu.open);
@@ -348,7 +355,7 @@ $('#viewBtn').addEventListener('click', cycleCam); $('#reset').addEventListener(
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
 controls.on('auto', cycleAuto); $('#autoBtn').addEventListener('click', cycleAuto); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('interact', useNearby); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
-let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
+let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); touchUI.onHorn = on => { if (on && mode !== 'drive') return; sound.horn(on); }; view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
 $('#time').value = S.time; $('#weather').value = S.weather;
 $('#time').addEventListener('change', e => { S.time = e.target.value; save(); env.setTime(S.time); e.target.blur(); });
 $('#weather').addEventListener('change', e => { S.weather = e.target.value; save(); env.setWeather(S.weather); e.target.blur(); });
@@ -370,13 +377,21 @@ const toggleMute = () => { S.muted = !S.muted; save(); radio.setMuted(S.muted); 
 function exploreCity(id) { location.search = '?play&loc=' + encodeURIComponent(id) + '&seed=' + encodeURIComponent(config.seed) + '&q=' + quality; }
 /* the highway gate of a city enclave (docs/CITY_PACK.md section 3): driving into Delhi on a national highway reloads into the city at that highway's gate; driving out through a gate returns to the India world at Delhi, heading out */
 function enterCity(nh, roadId) { if (entering || city || !phys || mode !== 'drive') return; const gs = CITY_GATES; if (!gs) return; const g = pickGate(gs, roadId, phys.yaw || 0, nh); if (!g) return; entering = true; toast('Entering Delhi…'); S.enclave = 'delhi'; save(); gateJump('?play&city=delhi&at=' + encodeURIComponent(g.id) + '&seed=' + encodeURIComponent(config.seed) + '&q=' + quality, phys.u); }
-let leaving = false, cityGates = null;
+let leaving = false;
 /* the India map button inside the city: out through the gate nearest to the car, onto its highway (the same hand-over as driving out; the car starts at rest) */
-function leaveCity() { if (leaving) return; let g = null, bd = Infinity; for (const x of city.pack.M.gates) { const d = Math.hypot(phys.x - x.x, phys.z - x.z); if (d < bd) { bd = d; g = x; } } if (!g) { goWorld('delhi'); return; } leaving = true; const m = (cityGates || []).find(x => x.id === g.id), u = new URLSearchParams(); u.set('play', ''); u.set('india', 'world'); u.set('at', 'delhi'); if (m && m.road) { u.set('via', m.road); u.set('toward', m.toward); } u.set('fromcity', '1'); u.set('seed', config.seed); u.set('q', quality); S.enclave = null; save(); gateJump('?' + u.toString(), 0); }
-function updateGateExit() { if (!city || leaving || !phys || mode !== 'drive' || phys.u < 3) return; for (const g of city.pack.M.gates) { if (Math.hypot(phys.x - g.x, phys.z - g.z) > 40) continue; const b = yawOfBearing(g.bearing); if (Math.cos(phys.yaw - b) < -0.5) { leaving = true; toast('Leaving Delhi…'); const m = (cityGates || []).find(x => x.id === g.id), u = new URLSearchParams(); u.set('play', ''); u.set('india', 'world'); u.set('at', 'delhi'); if (m && m.road) { u.set('via', m.road); u.set('toward', m.toward); } u.set('fromcity', '1'); u.set('seed', config.seed); u.set('q', quality); S.enclave = null; save(); gateJump('?' + u.toString(), phys.u); return; } } }
+function leaveCity() { if (leaving) return; let g = null, bd = Infinity; for (const x of city.pack.M.gates) { const d = Math.hypot(phys.x - x.x, phys.z - x.z); if (d < bd) { bd = d; g = x; } } if (!g) { goWorld('delhi'); return; } leaving = true; const m = (cityGates || []).find(x => x.id === g.id), u = new URLSearchParams(); u.set('play', ''); u.set('india', 'world'); u.set('at', 'delhi'); if (m && m.road) { u.set('via', m.road); u.set('toward', m.toward); } u.set('fromcity', '1'); if (cityMap && cityMap.cityTarget) u.set('nav', cityMap.cityTarget); u.set('seed', config.seed); u.set('q', quality); S.enclave = null; save(); gateJump('?' + u.toString(), 0); }
+function updateGateExit() { if (!city || leaving || !phys || mode !== 'drive' || phys.u < 3) return; for (const g of city.pack.M.gates) { const gd = Math.hypot(phys.x - g.x, phys.z - g.z); if (gd < 800) prefetch(INDIA_FILES); if (gd > 40) continue; const b = yawOfBearing(g.bearing); if (Math.cos(phys.yaw - b) < -0.5) { leaving = true; toast('Leaving Delhi…'); const m = (cityGates || []).find(x => x.id === g.id), u = new URLSearchParams(); u.set('play', ''); u.set('india', 'world'); u.set('at', 'delhi'); if (m && m.road) { u.set('via', m.road); u.set('toward', m.toward); } u.set('fromcity', '1'); if (cityMap && cityMap.cityTarget) u.set('nav', cityMap.cityTarget); u.set('seed', config.seed); u.set('q', quality); S.enclave = null; save(); gateJump('?' + u.toString(), phys.u); return; } } }
 const yawOfBearing = b => Math.atan2(-Math.cos(b), Math.sin(b));
 if (indiaRoute && indiaRoute.world && !cityMode) fetch('assets/cities/delhi/manifest.json').then(r => r.json()).then(m => { CITY_GATES = mapGates(indiaRoute.net, 'delhi', m.gates); }).catch(() => {});
-if (cityMode) Promise.all([fetch('assets/india/skeleton.json').then(r => r.json()), fetch('assets/cities/delhi/manifest.json').then(r => r.json())]).then(([sk, m]) => { cityGates = mapGates(new RoadNetwork(sk), 'delhi', m.gates); }).catch(() => {});
+if (cityMode) Promise.all([fetch('assets/india/skeleton.json').then(r => r.json()), fetch('assets/cities/delhi/manifest.json').then(r => r.json())]).then(([sk, m]) => { cityNet = new RoadNetwork(sk); cityGates = mapGates(cityNet, 'delhi', m.gates); wireGates(); }).catch(e => console.warn('the roads out of the city could not be listed', e));
+/* the city map's roads out: every gate is labelled with the city it leads to and the highway, and Other cities lists the cities with the gate each is reached by (the first road of the shortest route from Delhi) */
+function wireGates() {
+  if (!cityMap || !cityGates || !cityNet) return; const nm = id => (CITY[id] && CITY[id].name) || id, info = {};
+  for (const g of cityGates) if (g.road) info[g.id] = { label: 'To ' + nm(g.toward) + ' \u00b7 ' + (g.india || g.ref || ((cityNet.roads.get(g.road) || {}).nh) || ((cityNet.roads.get(g.road) || {}).name) || 'highway'), toward: g.toward, road: g.road };
+  cityMap.setGates(info); const list = [];
+  for (const c of cityNet.cities.values()) { if (c.id === 'delhi') continue; const r = gateForCity(cityNet, 'delhi', cityGates, c.id); if (r && info[r.gate.id]) list.push({ id: c.id, name: c.name, km: r.km, gate: r.gate.id, label: info[r.gate.id].label }); }
+  list.sort((a, b) => a.km - b.km); cityMap.setCities(list);
+}
 function goWorld(cityId, outside) { if ((cityId || currentCityId()) === 'delhi' && !cityMode && !outside) { location.search = '?play&city=delhi&seed=' + encodeURIComponent(config.seed) + '&q=' + quality; return; }       // Delhi on the India map is the full city we built (a highway gate leads out of it and back), not the old stylised district
   const u = new URLSearchParams(); u.set('play', ''); u.set('india', 'world'); u.set('at', cityId || currentCityId()); if ((cityId || currentCityId()) === 'delhi') { u.set('via', 'nh-delhi-lucknow'); u.set('toward', 'kanpur'); u.set('fromcity', '1'); } u.set('seed', config.seed); u.set('q', quality); location.search = '?' + u.toString(); }
 function setLocation(id) {
@@ -407,6 +422,7 @@ menu = new Menu({
 controls.on('pause', () => menu.escape()); $('#pauseBtn').addEventListener('click', () => menu.show('pause'));
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || frozen()) return;
+  if (e.code === 'KeyK' && !e.repeat && (mode === 'drive' || mode === 'ride')) sound.horn(true);                 // K: the horn, held
   if (e.code === 'KeyR') regenerate(randomSeed());
   if (e.code === 'KeyT') setMode(mode === 'ride' ? 'drive' : 'ride');
   if (e.code === 'KeyG') ground.wireframe = !ground.wireframe;
@@ -473,7 +489,11 @@ const gameFrame = (x, z) => { const g = guideWorld(), n0 = indiaRoute.net.cities
 function ensureCityJunction(c) { if (!buildCityRoads(c)) throw new Error('the road to ' + c.name + ' is not built yet'); }
 const sectors = new SectorManager({ bus,
   meta: s => { const meta = { region: config.location, assets: ['traffic:pack'], cities: [] }; if (guideWorld()) { const cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, gf = gameFrame(cx, cz), ll = fromGame(gf.x, gf.z), r = regionAt(ll.lat, ll.lon, REGIONS); if (r) { meta.region = r.id; meta.blend = r.blend; } meta.cities = cityNodes().filter(c => c.x >= s.x0 && c.x < s.x1 && c.z >= s.z0 && c.z < s.z1); } return meta; },
-  load: async (s, signal) => { for (const k of s.meta.assets) await assetCache.acquire(k); if (nav) nav.loadSector(s.sx, s.sz); for (const c of s.meta.cities) ensureCityJunction(c); return { held: s.meta.assets.slice(), cities: s.meta.cities.map(c => c.id) }; },
+  load: async (s, signal) => {       // all or nothing: a failure part-way hands back everything this load took (audit R04), so a retry starts clean
+    const held = [], cities = []; let navOn = false;
+    try { for (const k of s.meta.assets) { await assetCache.acquire(k); held.push(k); } if (nav) { nav.loadSector(s.sx, s.sz); navOn = true; } for (const c of s.meta.cities) { ensureCityJunction(c); cities.push(c.id); } }
+    catch (e) { for (const id of cities) { try { dropBranches(id); } catch (x) { /* already gone */ } } if (navOn && nav) { try { nav.unloadSector(s.sx, s.sz); } catch (x) { /* already gone */ } } for (const k of held) { try { assetCache.release(k); } catch (x) { /* already released */ } } throw e; }
+    return { held, cities }; },
   unload: s => { if (nav) nav.unloadSector(s.sx, s.sz); if (s.data && s.data.cities) for (const id of s.data.cities) dropBranches(id); if (s.data && s.data.held) for (const k of s.data.held) assetCache.release(k); } });
 bus.on('world:rebuilt', () => { sectors.reset(); if (rail) { rail.dispose(); rail = null; } gateReg.clear(); });                                                    // a new world: every sector starts again
 runtime.add({ name: 'world', order: 0, update: (dt, now) => update(dt, now) }); runtime.add({ name: 'sectors', order: 10, update: (dt, now) => sectors.update(focus.x, focus.z, focus, now) });
@@ -509,7 +529,7 @@ function resultCard(def, r, rec) {
   resultBox.style.display = 'block'; clearTimeout(resultT); resultT = setTimeout(() => { resultBox.style.display = 'none'; }, 6000);
 }
 /* India route readout (only with ?india): the next city and the real distance left, and the OpenStreetMap credit the road data needs */
-const routeHud = document.createElement('div'); routeHud.style.cssText = 'position:fixed;left:50%;top:128px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.7);border-radius:999px;padding:5px 14px;font-size:13px;pointer-events:none'; document.body.appendChild(routeHud);
+const routeHud = document.createElement('div'); routeHud.id = 'routehud'; routeHud.style.cssText = 'position:fixed;left:50%;top:128px;transform:translateX(-50%);z-index:20;display:none;background:rgba(8,12,20,.7);border-radius:999px;padding:5px 14px;font-size:13px;pointer-events:none'; document.body.appendChild(routeHud);
 if (indiaRoute) { const cr = document.createElement('div'); cr.textContent = 'Road shapes © OpenStreetMap contributors (ODbL)'; cr.style.cssText = 'position:fixed;right:8px;bottom:4px;font-size:10px;color:#9fb0c8;z-index:5;pointer-events:none'; document.body.appendChild(cr); }
 /* ---------- one India world: every highway is a road, all of them connected at the cities ----------
    A "road record" (rec) wraps one Road of the world: { id (the skeleton road id), road, mesh, te (its traffic), cityAlong (Map city id -> signed distance along its guide: positive ahead of where it was started, negative behind), hint }.
@@ -627,11 +647,12 @@ function syncCrossingGates(now) {
 /* the readout on an India drive: the road you are on, the next city ahead and how far (real km), and, with a destination set, what to do at that city */
 function updateRoute() {
   if (!indiaRoute) return; const rec = activeRec; if (!rec) return; const px = phys && mode !== 'fly' ? phys.x : cam.x, pz = phys && mode !== 'fly' ? phys.z : cam.z, arc = rec.road.guideArcSigned(px, pz); if (arc === null) return;
+  if (startNav && !startNavDone && CITY[startNav]) { startNavDone = true; navDest = startNav; setTimeout(() => toast('Navigating to ' + CITY[startNav].name), 1500); }
   const net = indiaRoute.net; if (!gps) gps = new Gps({ net, player: () => { const o = phys && mode !== 'fly' ? phys : cam, g = gameFrame(o.x, o.z); return { x: g.x, z: g.z, yaw: o.yaw || 0 }; }, nav: () => ({ dest: navDest, next: gpsNext }), pick: id => setNav(id), names: Object.fromEntries([...net.cities.values()].map(c => [c.id, c.name])), size: touchUI ? 150 : 184 });
   const p = rec.road.at(rec.hint, tmpP), dirS = phys && mode !== 'fly' ? (Math.cos((phys.yaw || 0) - p.th) >= 0 ? 1 : -1) : 1; let nc = null, nd = Infinity, here = null;
   for (const [id, a] of rec.cityAlong) { const d = (a - arc) * dirS; if (d > 40 && d < nd) { nd = d; nc = id; } if (Math.abs(a - arc) < 120) here = id; }
   if (here === 'delhi') { const r1 = net.roads.get(rec.id); enterCity(r1 && r1.nh ? r1.nh.replace(/\s+/g, '') : '', rec.id); }
-  { const dA = rec.cityAlong.get('delhi'), near = dA !== undefined && Math.abs(dA - arc) < 800 && !city && !entering && CITY_GATES; enterBtn.style.display = near ? 'block' : 'none'; enterBtn.onclick = () => { if (entering) return; entering = true; toast('Entering Delhi…'); S.enclave = 'delhi'; save(); gateJump('?play&city=delhi&seed=' + encodeURIComponent(config.seed) + '&q=' + quality, 0); }; }       // the button opens the city at its centre (Connaught Place); driving in on the highway uses a gate
+  { const dA = rec.cityAlong.get('delhi'), near = dA !== undefined && Math.abs(dA - arc) < 800 && !city && !entering && CITY_GATES; if (dA !== undefined && Math.abs(dA - arc) < 3000 && !city) prefetch(CITY_FILES); /* within about 300 km of Delhi (the map is 1:100) */ enterBtn.style.display = near ? 'block' : 'none'; enterBtn.onclick = () => { if (entering) return; entering = true; toast('Entering Delhi…'); S.enclave = 'delhi'; save(); gateJump('?play&city=delhi&seed=' + encodeURIComponent(config.seed) + '&q=' + quality, 0); }; }       // the button opens the city at its centre (Connaught Place); driving in on the highway uses a gate
   if (here && here !== lastCityToast) { lastCityToast = here; S.city = here; save(); const ch = net.junctionChoices(here).filter(c => c.road !== rec.id).slice(0, 3).map(c => (c.nh || c.name) + ' to ' + c.towardName); toast(CITY[here].name + (HINDI[here] ? ' · ' + HINDI[here] : '') + (ch.length ? '  — also: ' + ch.join(', ') : '')); if (navDest === here) { navDest = null; setTimeout(() => toast('You have arrived in ' + CITY[here].name), 2200); } }
   else if (!here && lastCityToast) lastCityToast = '';
   gpsNext = nc || here;
@@ -678,7 +699,7 @@ function update(dt, now) {
     try { rail = new RailView({ crossings: railCross, tracks: railTracks, scene, terrain, origin: grid.origin, network: railNet, grade: railGrade, book: railBook, roads: [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), cities: cityList, names: Object.fromEntries(cityList.map(c => [c.id, { en: c.name, hi: HINDI[c.id] || '' }])), toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), toGame: (wx, wz) => ({ x: n0.x + (wx - g0[0]), z: n0.z + (wz - g0[1]) }), control: q.get('control') !== 'off' }); } catch (e) { console.error('RAILVIEW', e && e.stack || e); rail = null; railNet = null; } }
   if (rail) { rail.update(dt, px, pz); updateRailLife(dt, px, pz); }
   if (grid.rebase(px, pz)) { if (city) city.reposition(); if (rail) rail.reposition(); far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
-  if (city) { city.transit.footY = mode === 'foot' && foot ? foot.y : city.gy; city.update(px, pz, dt); city.setNight(!!env.lightsOn); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
+  if (city) { city.transit.footY = mode === 'foot' && foot ? foot.y : city.gy; city.update(px, pz, dt, mode === 'foot' && foot ? foot.y : phys ? phys.y : undefined); city.setNight(!!env.lightsOn); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; }
@@ -698,6 +719,7 @@ function update(dt, now) {
     if (tunnelAmt > 0.5) { env.rain.visible = false; env.snowfall.visible = false; } }        // inside a mountain (a tunnel): no rain or snow indoors
   applyLook(canvas, quality !== 'low', env.w.dark); landmarks.update(grid.origin, env.lightsOn); if (roadMesh.district) roadMesh.district.setNight(env.lightsOn); backdrop.update(camera, camera.position.x + grid.origin.x, camera.position.z + grid.origin.z, env);
   if (mode === 'drive' && phys && S.rumble !== 'off' && !frozen()) { const r = rumbleFor({ ...(phys.telemetry ? phys.telemetry() : { speed: Math.abs(phys.u), surface: phys.surface, slip: phys.slip }), impact: phys.impact }, 1); if (r) controls.rumble(r.strong, r.weak, r.ms); }
+  if (sound.ctx) sound.cityBed(cityMode && (mode === 'drive' || mode === 'foot') ? 0.6 : 0, dt);          // the Delhi street bed: far traffic, now and then a horn
   if (mode === 'drive' && phys && sound.ctx) { const tel = phys.telemetry ? phys.telemetry() : { rpm01: null, gear: null }; sound.update({ tunnel: tunnelAmt, v: Math.abs(phys.u), rev: phys.u < -0.3, top: phys.p.top, throttle: input.throttle || 0.06, rain: env.w.rain, flash: env.flash, buff: buffT > 0,
     id: VEHICLES[vehicle].id, rpm01: tel.rpm01 === null ? undefined : tel.rpm01, gear: tel.gear === null ? undefined : tel.gear, brake: phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), hand: input.hand || 0, slip: phys.slip, off: phys.surface !== 'asphalt', view: view.view }); }
   if (phys && now - hudT > 100) { hudT = now; hud.spd.textContent = Math.round(Math.abs(phys.kmh)); hud.unit.textContent = phys.u < -0.5 ? 'R · km/h' : 'km/h'; hud.surf.textContent = phys.wet > 0.3 ? 'Water' : SURFACES[phys.surface].name; hud.sky.textContent = env.label; { const tag = $('#modeTag'), lim = phys.M && phys.M.cap > 0 && Math.abs(phys.u) > phys.M.cap * 0.97; if (tag.classList.contains('limit') !== lim) tag.classList.toggle('limit', lim); }

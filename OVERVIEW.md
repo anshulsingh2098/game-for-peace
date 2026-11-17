@@ -1,5 +1,7 @@
 # Game for Peace: overview
 
+> **Read `docs/STATUS.md` first.** It is the one status ledger; where this file disagrees with it, this file is superseded. Dates written inside this file can be wrong (some are in the future): trust git history. Owner decisions are in `docs/DECISIONS.md`.
+
 A calm, endless driving game that runs in the browser. Built with JavaScript, three.js and WebGL; everything in the world is generated on the player's device from a seed, so there is nothing to download but the page, the scripts and three small vehicle models.
 
 - **Repository:** https://github.com/anshulsingh2098/game-for-peace

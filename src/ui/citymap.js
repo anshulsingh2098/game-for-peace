@@ -62,7 +62,7 @@ export class CityNav {
 export class CityMap {
   /* nav: CityNav; player() -> { x, z, yaw } or null; transit: parsed transit.json or null (may be set later with setTransit) */
   constructor({ nav, parent = document.body, player, size = 184, transit = null, onNavigate = null }) {
-    this.nav = nav; this.pack = nav.pack; this.G = nav.G; this.player = player; this.size = size; this.t = 0; this.open = false; this.index = new DrawIndex(nav.G); this.transit = null; this.range = 650; this.view = { x: 0, z: 0, k: 0.12 }; this.onNavigate = onNavigate; this.pins = [];
+    this.nav = nav; this.pack = nav.pack; this.G = nav.G; this.player = player; this.size = size; this.t = 0; this.open = false; this.index = new DrawIndex(nav.G); this.transit = null; this.range = 650; this.view = { x: 0, z: 0, k: 0.12 }; this.onNavigate = onNavigate; this.pins = []; this.cities = []; this.cityTarget = null; this.cityTargetName = null;
     const L = this.pack.landmarks; this.places = L.map(l => ({ id: l.id, name: l.name.en, x: l.x, z: l.z, imp: l.importance || 1, type: l.type || '' }));
     for (const g of this.pack.M.gates) this.places.push({ id: g.id, name: 'Exit: ' + (g.ref ? g.ref + ' ' : '') + (g.name || g.id), x: g.x, z: g.z, imp: 1, type: 'gate', gate: true });
     this.mini = el('canvas', `position:fixed;left:12px;bottom:76px;width:${size}px;height:${size}px;border-radius:50%;border:2px solid rgba(255,255,255,.65);box-shadow:0 2px 10px rgba(0,0,0,.45);background:#1c2a26;z-index:20;cursor:pointer;touch-action:manipulation`, parent); this.mini.id = 'minimap'; this.mini.title = 'City map: click or press P';
@@ -74,7 +74,7 @@ export class CityMap {
     this.title = el('div', 'font-weight:600;white-space:nowrap', this.bar, 'Delhi: tap a street or a pin to navigate');
     this.search = el('input', 'flex:1;min-width:140px;padding:8px 10px;border-radius:10px;border:0;background:#202c3e;color:#fff;font:inherit', this.bar); this.search.placeholder = 'Search a landmark (India Gate, Khan Market, airport…)'; this.search.type = 'search';
     const btn = (t, bg, f) => { const b = el('button', `padding:8px 12px;border-radius:10px;border:0;background:${bg};color:#fff;font:inherit;cursor:pointer`, this.bar, t); b.addEventListener('click', f); return b; };
-    btn('Clear route', '#2a3a52', () => { this.nav.setDest(0, 0, null); this.drawFull(); }); btn('Me', '#2a3a52', () => { const P = this.player(); if (P) { this.view.x = P.x; this.view.z = P.z; this.drawFull(); } }); btn('Close (P)', '#3b6df0', () => this.toggle(false));
+    btn('Other cities', '#1f6f4a', () => this.showCities()); btn('Clear route', '#2a3a52', () => { this.nav.setDest(0, 0, null); this.cityTarget = null; this.cityTargetName = null; this.drawFull(); }); btn('Me', '#2a3a52', () => { const P = this.player(); if (P) { this.view.x = P.x; this.view.z = P.z; this.drawFull(); } }); btn('Close (P)', '#3b6df0', () => this.toggle(false));
     this.list = el('div', 'position:absolute;left:14px;top:58px;width:min(380px,calc(100% - 28px));max-height:46%;overflow:auto;background:rgba(16,24,38,.97);border-radius:10px;display:none;z-index:3;box-shadow:0 4px 16px rgba(0,0,0,.5)', this.panel);
     this.full = el('canvas', 'position:absolute;left:0;top:56px;width:100%;height:calc(100% - 56px);touch-action:none;cursor:grab', this.panel); this.fctx = this.full.getContext('2d');
     this.search.addEventListener('input', () => this.showList()); this.search.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { const r = this.matches()[0]; if (r) this.choose(r); } if (e.key === 'Escape') { this.list.style.display = 'none'; } });
@@ -89,7 +89,16 @@ export class CityMap {
   matches() { const q = this.search.value.trim().toLowerCase(); if (!q) return []; const P = this.player() || { x: 0, z: 0 }; return this.places.filter(p => p.name.toLowerCase().includes(q)).sort((a, b) => (b.imp - a.imp) || (Math.hypot(a.x - P.x, a.z - P.z) - Math.hypot(b.x - P.x, b.z - P.z))).slice(0, 8); }
   showList() { const m = this.matches(); this.list.innerHTML = ''; this.list.style.display = m.length ? 'block' : 'none'; const P = this.player() || { x: 0, z: 0 }; for (const p of m) { const r = el('div', 'padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.07)', this.list, p.name); el('span', 'opacity:.6;margin-left:8px;font-size:12px', r, (Math.hypot(p.x - P.x, p.z - P.z) / 1000).toFixed(1) + ' km'); r.addEventListener('click', () => this.choose(p)); } }
   choose(p) { this.list.style.display = 'none'; this.view.x = p.x; this.view.z = p.z; this.go(p); }
-  go(p) { const P = this.player(); if (!P) return; this.nav.setDest(P.x, P.z, { x: p.x, z: p.z, name: p.name }, P.yaw); if (this.onNavigate) this.onNavigate(p); this.drawFull(); }
+  /* the roads out of the city (main.js gives each gate its label and the India road it joins) and the cities beyond: tap Other cities, pick one, and the route leads to the gate of the right highway; the choice goes with you into the India map */
+  setGates(info) { for (const p of this.places) if (p.gate && info[p.id]) { const g = info[p.id]; p.name = g.label; p.toward = g.toward; p.road = g.road; } }
+  setCities(list) { this.cities = list || []; }
+  showCities() {
+    this.list.innerHTML = ''; this.list.style.display = 'block'; el('div', 'padding:9px 12px;font-size:12px;opacity:.7;border-bottom:1px solid rgba(255,255,255,.12)', this.list, 'Cities you can drive to. The route leads to the exit road; drive through it and the India map continues the way.');
+    if (!this.cities.length) el('div', 'padding:12px', this.list, 'The highway list is still loading, try again in a moment.');
+    for (const c of this.cities) { const r = el('div', 'padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.07)', this.list, c.name); el('span', 'opacity:.6;margin-left:8px;font-size:12px', r, c.km + ' km · ' + c.label); r.addEventListener('click', () => this.goCity(c)); }
+  }
+  goCity(c) { const gp = this.places.find(p => p.id === c.gate); this.list.style.display = 'none'; if (!gp) return; this.view.x = gp.x; this.view.z = gp.z; this.go({ ...gp, cityId: c.id, cityName: c.name }); }
+  go(p) { const P = this.player(); if (!P) return; this.cityTarget = p.cityId || (p.gate ? p.toward || null : null); this.cityTargetName = p.cityName || null; this.nav.setDest(P.x, P.z, { x: p.x, z: p.z, name: p.name }, P.yaw); if (this.onNavigate) this.onNavigate(p); this.drawFull(); }
   updateBanner() { const b = this.nav.banner(); if (!b || this.mini.style.display === 'none') { this.banner.style.display = 'none'; return; } this.banner.style.display = 'block'; const d = b.dist >= 1000 ? (b.dist / 1000).toFixed(1) + ' km' : Math.round(b.dist / 10) * 10 + ' m'; this.bt.textContent = (b.dist > 0 ? 'In ' + d + ': ' : '') + b.text; this.bs.textContent = b.dest + ' · ' + (b.left / 1000).toFixed(1) + ' km · ' + b.mins + ' min'; }
   update(now, dt = 0.016) {
     if (!this.index.done) this.index.step(25000);
@@ -127,10 +136,10 @@ export class CityMap {
     c.font = '12px system-ui,sans-serif'; c.textAlign = 'left'; this.pins = [];
     for (const p of this.places) { if (p.x < a[0] || p.x > b[0] || p.z < a[1] || p.z > b[1]) continue; if (v.k < 0.02 && p.imp < 4) continue; if (v.k < 0.05 && p.imp < 3 && !p.gate) continue; const q = F.map(p.x, p.z), dst = this.nav.dest && this.nav.dest.name === p.name; this.pins.push({ p, q });
       c.fillStyle = dst ? '#3b8cff' : p.gate ? '#7bd88f' : p.imp >= 4 ? '#ffd23f' : '#d6e4ff'; c.strokeStyle = 'rgba(0,0,0,.8)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(q[0], q[1] - 7); c.lineTo(q[0] + 5.5, q[1]); c.lineTo(q[0], q[1] + 7); c.lineTo(q[0] - 5.5, q[1]); c.closePath(); c.fill(); c.stroke();
-      if (dst || v.k > 0.045 || p.imp >= 4) { c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.85)'; c.fillStyle = '#fff'; c.strokeText(p.name, q[0] + 9, q[1] + 4); c.fillText(p.name, q[0] + 9, q[1] + 4); } }
+      if (dst || p.gate || v.k > 0.045 || p.imp >= 4) { c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.85)'; c.fillStyle = '#fff'; c.strokeText(p.name, q[0] + 9, q[1] + 4); c.fillText(p.name, q[0] + 9, q[1] + 4); } }
     if (this.nav.active) { const q = F.map(this.nav.dest.x, this.nav.dest.z); c.fillStyle = '#3b8cff'; c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(q[0], q[1], 7, 0, 7); c.fill(); c.stroke(); }
     if (P) { const q = F.map(P.x, P.z); c.save(); c.translate(q[0], q[1]); this.arrow(c, 11, P.yaw + Math.PI / 2); c.restore(); }
-    this.title.textContent = this.nav.active ? 'To ' + this.nav.dest.name + ': ' + (this.nav.path.remaining(this.nav.s) / 1000).toFixed(1) + ' km' : 'Delhi: tap a street or a pin to navigate';
+    this.title.textContent = this.nav.active ? 'To ' + (this.cityTargetName ? this.cityTargetName + ' (' + this.nav.dest.name + ')' : this.nav.dest.name) + ': ' + (this.nav.path.remaining(this.nav.s) / 1000).toFixed(1) + ' km' : 'Delhi: tap a pin; green pins are the roads out to other cities';
   }
   bindPan() {
     const cv = this.full, v = this.view; let drag = null, pinch = null; const pts = new Map();

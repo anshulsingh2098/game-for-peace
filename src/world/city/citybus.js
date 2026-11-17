@@ -60,7 +60,7 @@ export class CityBuses {
     for (let n = 0; n < L.length; n++) { const b = L[n];
       if (Math.hypot(b.x - px, b.z - pz) > 1500 || b.s >= b.len - 2) { this.remove(b); L.splice(n--, 1); continue; }
       this.at(b, b.s, o); const tx = o.tx, tz = o.tz; let gap = 99;
-      for (const k of tr.cars) { const dx = k.x - b.x, dz = k.z - b.z, ahead = dx * tx + dz * tz, side = Math.abs(-dx * tz + dz * tx); if (ahead > 0 && ahead < gap && side < 2.4) gap = ahead; }
+      for (const k of tr.cars) { if (Math.abs(k.h || 0) > 3) continue; const dx = k.x - b.x, dz = k.z - b.z, ahead = dx * tx + dz * tz, side = Math.abs(-dx * tz + dz * tx); if (ahead > 0 && ahead < gap && side < 2.4) gap = ahead; }
       { const dx = px - b.x, dz = pz - b.z, ahead = dx * tx + dz * tz, side = Math.abs(-dx * tz + dz * tx); if (ahead > 0 && ahead < gap && side < 2.6) gap = ahead; }
       for (const k of L) if (k !== b) { const dx = k.x - b.x, dz = k.z - b.z, ahead = dx * tx + dz * tz, side = Math.abs(-dx * tz + dz * tx); if (ahead > 0 && ahead < gap && side < 3) gap = ahead; }
       { const q = this.at(b, Math.min(b.len, b.s + 14), {}), nd = tr.signalAt(q.x, q.z); if (nd >= 0 && !tr.green(nd, tx, tz)) gap = Math.min(gap, 6); }

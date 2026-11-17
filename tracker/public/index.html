@@ -107,7 +107,7 @@ input[type=search] { flex: 1 1 200px; }
 <div class="wrap">
   <header class="top">
     <div class="titlebar">
-      <div><h1>Game for Peace Tracker</h1><div class="sub" id="sub">Delhi city programme, plans, limits and what you asked for. Updated 18 Nov 2026.</div></div>
+      <div><h1>Game for Peace Tracker</h1><div class="sub" id="sub">Delhi city programme, plans, limits and what you asked for. Updated 17 Nov 2026.</div></div>
       <div class="overall"><div class="bar"><i id="obar"></i></div><div class="pct" id="opct">0%</div></div>
     </div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
@@ -154,6 +154,7 @@ const ITEMS = {
       I('p2g', 'Street furniture: DTC bus shelters, auto and e-rickshaw stands, police booths, petrol pumps, signal heads, sodium lights, wires', 'Some wires, poles and bus shelters exist from D7.', 'todo', 'Claude'),
       I('p2h', 'Put the scripted street-driving test into tools/', 'The pure-pursuit script that drove 143 streets was typed into the browser console; it should live in tools/ and run on demand.', 'todo', 'Claude'),
       I('p2i', 'Kerbs are no longer invisible walls', 'The car could not leave the road above 9 km/h; buildings, poles and stalls still block.', 'done', 'Claude', 'PR 71'),
+      I('p2k', 'City map: labelled roads out of Delhi, Other cities list (97 cities), destination carried through the gate into the India map', 'Self-test checks every gate and every reachable city. Signs at the gates in the 3D world are still to do.', 'doing', 'Claude', 'PR 85'),
       I('p2j', 'Building walls flush with the drawn wall, flyover piers solid, gate start on the ground', '', 'done', 'Claude', 'PR 72'),
     ]],
     ['P3 Buildings, shops and real places', [
@@ -209,7 +210,7 @@ const ITEMS = {
       I('n3', 'N3 World polish', 'Rails, tunnels, bridges, ground, hotel, lighthouse built. Tall grass and tree levels of detail open.', 'doing', 'Claude'),
       I('n4', 'N4 Phones and speed', 'Loading screen and ?bench=30 built. No phone measured.', 'blocked', 'You'),
       I('n5', 'N5 Features', 'Traffic levels, My music, rumble, saves, tuner worker built. Customisation, tuner login and live publish setup open.', 'doing', 'Anshul'),
-      I('n6', 'N6 Switch-over and launch', 'Done in the repo (index.html is the new engine). Not deployed, not accepted on devices.', 'blocked', 'Anshul'),
+      I('n6', 'N6 Switch-over and launch', 'Done in the repo and live on the owner\'s Cloudflare account since 17 Nov 2026 (game-for-peace.mailrajulsingh-in.workers.dev). Anshul\'s account keeps the old build. Not accepted on real phones.', 'doing', 'Claude'),
     ]],
     ['Open-world programme (N7 to N15, first increments)', [
       I('n7', 'N7 Runtime and entity lifecycle', 'docs/RUNTIME.md', 'doing', 'Anshul'),
@@ -219,7 +220,7 @@ const ITEMS = {
       I('n11', 'N11 District slice', 'Mumbai first increment; Delhi\'s real city replaces the stylised district.', 'doing', 'Claude'),
       I('n12', 'N12 Indian traffic', 'Two-wheelers, rickshaws, signals; junction routing and overtaking open.', 'doing', 'Anshul'),
       I('n13', 'N13 Pedestrians', 'Boxes on sidewalks; real models and reactions open.', 'doing', 'Anshul'),
-      I('n14', 'N14 On foot', 'First increment; phones not decided.', 'doing', 'Anshul'),
+      I('n14', 'N14 On foot', 'Capsule controller built 17 Nov 2026 (sweep, slide, step-up, obstacle heights); cars now block exits. The world does not yet give obstacle heights; camera collision, stairs and interiors are open; phones not tried.', 'doing', 'Claude'),
       I('n15', 'N15 Activities and saves', 'Point to point, save v2 with migration.', 'doing', 'Anshul'),
     ]],
     ['Later (N16 to N20)', [
@@ -233,7 +234,7 @@ const ITEMS = {
   back: [
     ['Waiting on people', [
       I('b1', 'Play-test Delhi in a normal browser window and report anything wrong with the coordinate line', 'Menu, bottom line, Copy button; paste it to Claude.', 'blocked', 'You'),
-      I('b2', 'Anshul: review his files, run the N0 gate, stage the city pack, deploy', 'This machine is signed in to a different Cloudflare account; nothing is deployed.', 'blocked', 'Anshul', 'CHECKLIST.md, WORK_REMAINING 12.1'),
+      I('b2', 'Anshul: review his files and run the N0 gate', 'Review runtime.js (handle domains, dropped-time count) and onfoot.js (capsule) changed by the audit fixes (PR 83). Deploys now go to the owner\'s Cloudflare account, so this no longer waits on Anshul\'s account.', 'blocked', 'Anshul', 'CHECKLIST.md, PR 83'),
       I('b3', 'Lawyer: OpenStreetMap ODbL, the 10 train audio clips, announcement recordings, Delhi transit data terms, 2016 train data, licenses.html', '', 'blocked', 'Lawyer'),
       I('b4', 'Owner decisions: city after Delhi, licensed radio music, official map outline, asset budget, on-foot on phones, GTFS terms, tuner login', 'WORK_REMAINING section 1.', 'blocked', 'You'),
       I('b5', 'Native speakers for the regional announcement translations and Hindi signage', '', 'blocked', 'You'),
@@ -250,6 +251,9 @@ const ITEMS = {
       I('b12', 'Remaining map-audit classes: 30 buildings on parks, 119 roads through buildings (rule hides them), 94 footways inside carriageways (not drawn), 4,684 void blocks (mostly outside Delhi)', 'docs/CITY_AUDIT.md lists them with latitude and longitude.', 'doing', 'Claude'),
       I('b13', 'The India map\'s own Delhi is just a point at 1:100; Mumbai, Agra, Bhopal still use the stylised street edge', '', 'todo', 'Claude'),
       I('b15', 'Deploy the Cloudflare copy of this tracker', 'Deployed 17 Nov 2026 on your own Cloudflare account (mailrajulsingh.in@gmail.com) as the separate Worker game-for-peace-tracker, with a KV store and a password secret; the game site was not touched.', 'done', 'Claude', 'https://game-for-peace-tracker.mailrajulsingh-in.workers.dev'),
+      I('b16', 'Drive a Delhi flyover and an underpass with traffic on (v4)', 'Watch for floating or sinking cars, cars stopping for the other level, cars jumping levels at ramps.', 'todo', 'You', 'CHECKLIST.md'),
+      I('b17', 'Try it on a real phone: home-screen icon opens full screen, sound after the first tap, horn, board and menu layout, frame rate', 'The emulated phone is software-rendered, so it cannot give a real frame rate.', 'todo', 'You', 'CHECKLIST.md'),
+      I('b18', 'Mumbai at the low tier draws about 800 to 1000 calls and 350 k triangles (the California baseline was 183 calls)', 'Landmarks (about 290 meshes) and the rail group (about 190) are the big groups; merging or culling them is the next phone cost cut. Phone pixel ratio is already 1 and the governor lowers it further.', 'todo', 'Claude', 'PERFORMANCE.md'),
       I('b14', 'Claude in Chrome is not connected; all visual checks used the built-in browser (black at night)', 'Connect the extension for a real-GPU check.', 'blocked', 'You'),
     ]],
   ],
@@ -269,6 +273,12 @@ const ITEMS = {
       I('d12', 'PR 81 Junction shaping', '', 'done', 'Claude', 'PR 81'),
       I('d13', 'PR 78 Connaught Place open Central Park, area wall colours', '', 'done', 'Claude', 'PR 78'),
       I('d14', 'PR 82 Menu coordinate line, map-wide audit, generation rules, zebra rule fixed', '', 'done', 'Claude', 'PR 82'),
+      I('d15', 'Audit fixes v1 to v4: staging with terrain and attribution, loader rollback, handle domains, safe exits, capsule on foot, save failure shown, dropped-time count, seeded city random streams, tile retry back-off, traffic on flyovers and underpasses', 'Built and self-tested (110 checks). Flyover and underpass traffic not seen by a person yet.', 'done', 'Claude', 'PR 83, docs/STATUS.md'),
+      I('d16', 'Live on the owner\'s Cloudflare account', 'game-for-peace.mailrajulsingh-in.workers.dev, redeployed after each change. Anshul\'s account untouched.', 'done', 'Claude', 'https://game-for-peace.mailrajulsingh-in.workers.dev'),
+      I('d17', 'Tuner: storage (KV SETTINGS) and the Publish password set up on the owner\'s account', 'The password is not in the repo; the owner has it from the session.', 'done', 'Claude', 'tuner.html, cloudflare/wrangler.jsonc'),
+      I('d18', 'Phone layout: station board small, menu compact on a short screen, round map under the speed readout, nothing from the road shows through a menu', 'Checked in a 740 x 340 emulated phone, not on a real one.', 'done', 'Claude', 'index.html, src/ui/railboard.js'),
+      I('d19', 'Sound: horn (K, or the Horn button on a phone), a Delhi street bed with far horns, iPhone sound unlock and silent-switch fix', 'Built; not listened to on a real phone.', 'done', 'Claude', 'src/audio/engine.js'),
+      I('d20', 'Add to Home Screen: app icon, manifest, service worker, button in the title menu; opens full screen, landscape', 'Android and Chrome get the install prompt; iPhone shows the Share steps. Needs a real phone to confirm.', 'done', 'Claude', 'manifest.webmanifest, sw.js, src/ui/install.js'),
     ]],
     ['Before this session (from the handoff)', [
       I('d15', 'Delhi city renderer, Metro viaducts and stations, underground stations, 22 landmark models, street life and identity, buses on real routes', '', 'done', 'Claude', 'HANDOFF.md'),
@@ -287,7 +297,7 @@ const ITEMS = {
       I('c1', 'Use Google Maps data to make the map more accurate', 'Its terms forbid copying it or building a dataset from it, and there is no licensed bulk export. The base stays OpenStreetMap; Claude can check specific spots against photos or screenshots you supply.', 'nope', 'Claude'),
       I('c2', 'GTA V quality from generated shapes alone', 'The gap is textures, props, trees and car models: it needs real 3D art (licensed packs downloaded by hand, or a budget).', 'nope', 'Claude'),
       I('c3', 'Measure a real frame rate or phone performance', 'The browser pane runs slowly (software rendering) and no phone is attached; only draw calls and triangles are measured.', 'nope', 'Claude'),
-      I('c4', 'Deploy to the live site', 'Only Anshul deploys; this machine is signed in to a different Cloudflare account; Claude never deploys.', 'nope', 'Claude'),
+      I('c4', 'Deploy to Anshul\'s Cloudflare account', 'Not done on purpose: from 17 Nov 2026 new versions deploy to the owner\'s own account; Anshul\'s account keeps the older original versions (/ and /next).', 'nope', 'Claude'),
       I('c5', 'Legal sign-off on data and audio licences', 'Needs the owner\'s lawyer.', 'nope', 'Claude'),
       I('c6', 'Verify the look under night and dusk lighting', 'The pane renders black at night in this setup; daytime renders properly.', 'nope', 'Claude'),
       I('c7', 'Bypass the Google CAPTCHA to look at reference photos', 'Never done; photographs have to come from you or from sources that load (Wikimedia Commons).', 'nope', 'Claude'),
@@ -298,7 +308,7 @@ const ITEMS = {
       I('m1', 'Plan usage limits: a 5-hour window and a weekly window', 'On 17 Nov the 5-hour window was 81 % used. Three parallel sessions ended a window. Prefer two at a time, with small finishable scopes.', 'note', 'Claude', 'docs/OVERALL_PLAN.md section 5'),
       I('m2', 'The browser pane renders slowly (software GL) and goes black at night; real frame rates need a visible window and a real GPU', '', 'note', 'Claude'),
       I('m3', 'One writer per set of files; Claude edits only its stream\'s files (A: world, B: vehicle and game); shared files get the smallest change and a log entry', 'CLAUDE.md, PARALLEL_PLAN.md', 'note', 'Claude'),
-      I('m4', 'Never deploy, never touch cloudflare/public, never merge unless told; run node tools/selftest.mjs before every push', '', 'note', 'Claude'),
+      I('m4', 'Deploys go to the owner\'s Cloudflare account; Anshul\'s keeps the originals. Never touch cloudflare/public, never merge unless told; run node tools/selftest.mjs before every push', 'CLAUDE.md, Where deploys go', 'note', 'Claude'),
       I('m5', 'Keep line endings as they are (the repo mixes LF and CRLF); make surgical edits', '', 'note', 'Claude'),
     ]],
     ['Data and content limits', [
@@ -375,6 +385,7 @@ const ITEMS = {
       I('q15', 'Junction shaping', '', 'done', 'You'),
       I('q16', 'A system so a fix applies everywhere, and a coordinate readout in the menu', 'Audit, rules and coordinate line built (PR 82).', 'done', 'You'),
       I('q17', 'This tracker page with checkboxes, comments and remarks', '', 'done', 'You'),
+      I('q19', 'The city map does not show the connection to the highways: how do I leave Delhi and reach another city?', 'The gates were mapped but invisible. Gate pins are labelled with the city and highway, an Other cities list routes you to the right exit, and the destination continues in the India map (PR 85).', 'doing', 'You', 'PR 85'),
       I('q18', 'Also a Cloudflare page, and keep it updated through memory', 'Deployed on your Cloudflare account; memory notes written; PR 84 merged.', 'done', 'You', 'tracker/README.md'),
     ]],
   ],
@@ -384,12 +395,12 @@ const PRS = [
   ['67', 'Platform number boards', 'merged'], ['68', 'Landmark starts outside footprint; tiles fetched once', 'merged'], ['69', 'Frame cost cut', 'merged'], ['70', 'Shadow pass cut', 'merged'],
   ['71', 'Kerbs not walls', 'merged'], ['72', 'Walls, piers, gate start, props', 'merged'], ['73', 'Title screen India map and Explore cities', 'merged'], ['74', 'Delhi always the real city', 'merged'],
   ['75', 'Aerial look', 'merged'], ['78', 'Connaught Place park', 'merged'], ['79', 'Flicker and zebra', 'merged'], ['80', 'Textures', 'merged'], ['81', 'Junction shaping', 'merged'], ['82', 'Coordinate line, audit, rules', 'merged'],
-  ['84', 'Tracker page: source in the repo and the Cloudflare Worker (deployed)', 'merged'], ['83', 'Another session: audit fixes (staging, loader rollback, handles, capsule on-foot, city traffic on flyovers, deploy rule)', 'open'], ['77', 'Infill buildings; loading waits for the city', 'merged'], ['76', 'Scale check, plan, N0 to N20 (docs)', 'merged'],
+  ['85', 'City map: roads out of Delhi, Other cities list, destination carried into the India map', 'open'], ['84', 'Tracker page: source in the repo and the Cloudflare Worker (deployed)', 'merged'], ['83', 'Another session: audit fixes (staging, loader rollback, handles, capsule on-foot, city traffic on flyovers, deploy rule)', 'open'], ['77', 'Infill buildings; loading waits for the city', 'merged'], ['76', 'Scale check, plan, N0 to N20 (docs)', 'merged'],
 ];
 const FACTS = [
-  ['Self-test on main', '107 checks passing'], ['Delhi frame, default start (q=med)', 'about 358 calls, 300 k triangles with infill (was 408, 610 k before the cost work; 270, 256 k before infill)'],
+  ['Self-test', '110 checks passing (branch claude/audit-fixes)'], ['Delhi frame, default start (q=med)', 'about 358 calls, 300 k triangles with infill (was 408, 610 k before the cost work; 270, 256 k before infill)'],
   ['Building coverage, 1 km tile', '6 to 19 % in the data; infill adds roughly 5 to 15 points'], ['Map audit', '30 on parks, 119 roads through buildings, 94 footways in roads, 3 landmark offsets, 4,684 voids'],
-  ['Landmarks', '63 listed, 22 with models'], ['Not deployed', 'live site is the old build; only Anshul deploys'],
+  ['Landmarks', '63 listed, 22 with models'], ['Live', 'owner\'s Cloudflare account (game-for-peace.mailrajulsingh-in.workers.dev); Anshul\'s account keeps the originals'],
 ];
 
 /* ===================== state and saving ===================== */
