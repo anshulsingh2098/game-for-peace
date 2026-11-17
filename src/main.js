@@ -195,7 +195,7 @@ function makeWorld() { for (const b of branches) b.mesh.dispose(); branches.leng
     const net = indiaRoute.net, n0 = net.cities.get(indiaRoute.from), g0 = config.road.guide; railNet = new RailNetwork(net.rails); railBook = net.trainsJson ? new TrainBook(net.trainsJson, railNet) : null; railTracks = railNet.edges.map(e => railBook ? railBook.tracks(e.edgeId) : 1); railCross = classifyCrossings(railNet.edges, [...net.roads.values()].map(r => ({ id: r.id, pts: r.pts, kind: r.kind })), [...net.cities.values()], railNet.stations); railGrade = new RailGrade({ crossings: railCross, tracks: railTracks, edges: railNet.edges, toWorld: (gx, gz) => ({ x: gx - n0.x + g0[0], z: gz - n0.z + g0[1] }), natural: (x, z) => terrain.base(x, z) }); terrain.attachRail(railGrade); } }
 makeWorld();
 const grid = new TileGrid(scene, terrain, config.view, ground), far = new TileGrid(scene, terrain.far, farView(), ground); far.origin = grid.origin;
-let arriveT = 0, adStuck = 0, city = null, cityStart = null, cityNav = null, cityMap = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); city.traffic.setMode(S.traffic); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
+let arriveT = 0, adStuck = 0, city = null, cityStart = null, cityNav = null, cityMap = null; if (cityMode) { city = new CityWorld(scene, grid.origin, terrain); await city.init(); city.traffic.setMode(S.traffic); city.peds.setMode(S.traffic); cityStart = city.pack.start(q.get('at') || q.get('gate')); }
 function updateCityMap(now, dt) {                                                                       // the city's GPS (src/ui/citymap.js): hidden India map, city map in its place
   if (!cityMap) { cityNav = new CityNav(city.pack, { geom: e => city.edgeGeom(e), toast }); city.onStreets = () => cityNav.refine(); cityMap = new CityMap({ nav: cityNav, player: () => { const o = phys && mode !== 'fly' && mode !== 'foot' ? phys : mode === 'foot' && foot ? foot : cam; return { x: o.x, z: o.z, yaw: o.yaw || 0 }; }, size: touchUI ? 150 : 184 }); fetch('assets/cities/delhi/transit.json').then(r => r.ok ? r.json() : null).then(t => { if (t) cityMap.setTransit(t); }).catch(() => {}); window.__cityNav = cityNav; }
   cityMap.setVisible(mode === 'drive' || mode === 'foot'); cityMap.update(now, dt);
@@ -369,7 +369,7 @@ menu = new Menu({
     if (k === 'time') { S.time = v; save(); env.setTime(v); } else if (k === 'weather') { S.weather = v; save(); env.setWeather(v); } else if (k === 'lights') { S.lights = v; save(); }
     else if (k === 'sfx') { S.muted = v === 'off'; save(); radio.setMuted(S.muted); if (sound.ctx) { sound.sfx = S.muted ? 0 : 0.6; sound.applyVolumes(); } }
     else if (k === 'rumble') { S.rumble = v; save(); }
-    else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (city) city.traffic.setMode(v); if (peds) peds.setLevel(v); }
+    else if (k === 'traffic') { S.traffic = v; save(); if (traffic) traffic.setMode(v); if (city) { city.traffic.setMode(v); city.peds.setMode(v); } if (peds) peds.setLevel(v); }
     else if (k === 'radioVol') radio.setVolume(v); else if (k === 'quality') reloadWith('q', v); else if (k === 'shadows') reloadWith('shadows', v);
   },
   currentCity: () => currentCityId(), travel: id => goWorld(id), navigate: id => setNav(id), indiaMap: () => goWorld(currentCityId()), inWorld: () => !!indiaRoute, navTarget: () => navDest,
