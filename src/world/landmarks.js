@@ -28,7 +28,7 @@ function materials() {
   const s = (hex, rough = 0.85, o = {}) => new THREE.MeshStandardMaterial({ color: hex, roughness: rough, metalness: 0, envMapIntensity: 0.5, ...o });
   M = {
     basalt: s(0xd3b177), basaltDark: s(0xa68a5a), marble: s(0xf3efe6, 0.4, { envMapIntensity: 0.9 }), marbleDim: s(0xdad5c8, 0.5), sandstone: s(0xa14a35), sandstoneLight: s(0xc98264), indiaStone: s(0xc88b66), granite: s(0x76503f),
-    dark: s(0x2c3238), gold: s(0xd9b24c, 0.3, { metalness: 0.6 }), copper: s(0x9c3f2a, 0.5, { metalness: 0.2 }), lawn: s(0x5f9a3c, 1), lawnLight: s(0x78b24d, 1), water: s(0x4f9fb8, 0.08, { metalness: 0.3, envMapIntensity: 1.4 }),
+    dark: s(0x2c3238), lhRed: s(0xc4302b, 0.7), lhWhite: s(0xf1efe8, 0.7), glass: s(0xbfe3ee, 0.1, { metalness: 0.4, envMapIntensity: 1.2 }), tiles: s(0xb5472f, 0.8), gold: s(0xd9b24c, 0.3, { metalness: 0.6 }), copper: s(0x9c3f2a, 0.5, { metalness: 0.2 }), lawn: s(0x5f9a3c, 1), lawnLight: s(0x78b24d, 1), water: s(0x4f9fb8, 0.08, { metalness: 0.3, envMapIntensity: 1.4 }),
     concrete: s(0xb9b4aa, 0.95), path: s(0xd9c9a3, 1), cypress: s(0x2f5a2e, 1), lamp: new THREE.MeshBasicMaterial({ color: 0xfff0c0 }), roof: s(0x8a8378, 0.95),
     facade: new THREE.MeshStandardMaterial({ map: tex.map, emissiveMap: tex.glow, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.85, color: 0xf2ead8 })
   };
@@ -87,6 +87,16 @@ function tajHotel(off) {
   cyl(g, m.copper, 8.6, 8.6, 3, 0, y0 + 42, -6, 16); dome(g, m.copper, 9.6, 17, 0, y0 + 45, -6); cyl(g, m.gold, 0.25, 0.25, 6, 0, y0 + 62, -6, 6);        // the great rust-red dome
   for (const sx of [-1, 1]) { dome(g, m.copper, 3.4, 5, sx * 30, y0 + 32, 4, true); box(g, m.marbleDim, 8, 4, 8, sx * 30, y0 + 32, 4); dome(g, m.copper, 3.4, 5, sx * 30, y0 + 36, 4); }
   box(g, m.marble, 50, 1.2, 8, 0, y0 + 6, 9); for (let k = -4; k <= 4; k++) box(g, m.marble, 0.9, 6, 0.9, k * 6, y0, 12.6);                      // arcade in front
+  // detail: string courses and cornices on every block, corner turrets with small domes, a parapet of finials, balcony rails, an entrance porch and a lit forecourt
+  for (const [w, h, d, x, z] of [[62, 32, 26, 0, -6], [26, 28, 34, -44, 2], [26, 28, 34, 44, 2]]) {
+    for (const f of [0.34, 0.67]) box(g, m.marbleDim, w + 0.8, 0.5, d + 0.8, x, y0 + h * f, z);                                                              // string courses
+    box(g, m.marble, w + 1.6, 1.0, d + 1.6, x, y0 + h, z);                                                                                           // cornice
+    for (let k = 0; k <= Math.round(w / 6); k++) box(g, m.marble, 0.8, 1.6, 0.8, x - w / 2 + k * w / Math.round(w / 6), y0 + h + 1, z + d / 2 + 0.6);   // parapet finials along the front
+  }
+  for (const [x, z] of [[-31, 8], [31, 8], [-31, -20], [31, -20]]) { cyl(g, m.marbleDim, 2.4, 2.6, 30, x, y0, z, 12); dome(g, m.copper, 3.1, 4.6, x, y0 + 30, z); cyl(g, m.gold, 0.12, 0.12, 2.2, x, y0 + 34.4, z, 6); }   // corner turrets
+  for (let k = -4; k <= 4; k++) for (const f of [12, 20]) box(g, m.dark, 3.4, 0.14, 1.0, k * 6, y0 + f, 7.4);                                           // balcony rails on the main front
+  box(g, m.marble, 12, 0.6, 8, 0, 0.9, 17); for (const sx of [-1, 1]) box(g, m.marble, 1.2, 8, 1.2, sx * 5.4, 1.5, 20); box(g, m.marble, 12.6, 1.2, 1.6, 0, 9, 20);   // entrance porch
+  for (let k = -3; k <= 3; k++) { cyl(g, m.dark, 0.1, 0.1, 4, k * 8, 1, 30, 6); cyl(g, m.lamp, 0.35, 0.35, 0.5, k * 8, 5, 30, 8); }                    // forecourt lamps
   return { group: g, circles: [{ x: -14, z: -6, r: 18 }, { x: 14, z: -6, r: 18 }, { x: -44, z: 2, r: 18 }, { x: 44, z: 2, r: 18 }, { x: 0, z: -6, r: 12 }], zone: { r: 78, blend: 50 }, name: 'Taj Mahal Palace' };
 }
 function indiaGate(off) {
@@ -131,7 +141,23 @@ function tajMahal(off) {
   for (const sx of [-1, 1]) for (let k = 0; k < 11; k++) { const cx = sx * 8.5, cz = 36 + k * 19; cyl(g, m.cypress, 0.25, 0.3, 2, cx, 0, cz, 5); mesh(g, new THREE.ConeGeometry(1.7, 8.5, 7), m.cypress, cx, 6.2, cz); }   // cypress rows
   return { group: g, circles: [...perimeter(49, 49, 8, 5), { x: 0, z: 0, r: 31 }, ...[-1, 1].flatMap(sx => perimeter(19, 27, 9, 5, sx * 98, 0))], zone: { r: 200, blend: 80, cz: 85 }, name: 'Taj Mahal' };
 }
-const BUILDERS = { gateway, tajHotel, marine: () => ({ group: new THREE.Group(), circles: [], zone: { r: 45, blend: 30 }, name: 'Marine Drive' }), indiaGate, tajMahal };      // marine is built along the road (see Landmarks.marineStrip)
+/* a banded lighthouse on the southern coast: a tapering tower of red and white bands, a gallery with a railing, the lantern room and cap, a keeper's cottage and a low wall */
+function lighthouse() {
+  const m = materials(), g = new THREE.Group(), H = 36, rb = 4.6, rt = 3.0, bands = 6;
+  cyl(g, m.concrete, 7.5, 8.2, 1.2, 0, 0, 0, 20); cyl(g, m.lhWhite, 6.2, 6.8, 1.2, 0, 1.2, 0, 20);                                                          // two-step base
+  for (let k = 0; k < bands; k++) { const y0 = 2.4 + k * (H - 2.4) / bands, y1 = 2.4 + (k + 1) * (H - 2.4) / bands, r0 = rb + (rt - rb) * (y0 - 2.4) / (H - 2.4), r1 = rb + (rt - rb) * (y1 - 2.4) / (H - 2.4); cyl(g, k % 2 ? m.lhWhite : m.lhRed, r1, r0, y1 - y0, 0, y0, 0, 20); }
+  for (const [y, w] of [[8, 0.7], [18, 0.7], [27, 0.7]]) box(g, m.dark, 0.9, 1.5, 0.3, 0, y, rb - 0.4 - (y - 8) * 0.045 + w * 0);                                // small slit windows facing the road (+z)
+  cyl(g, m.lhWhite, 4.9, 3.1, 0.8, 0, H, 0, 20); cyl(g, m.dark, 4.4, 4.4, 0.25, 0, H + 0.8, 0, 20);                                                        // gallery floor
+  for (let a = 0; a < 20; a++) { const t = a / 20 * PI * 2; box(g, m.dark, 0.1, 1.1, 0.1, Math.cos(t) * 4.3, H + 1.05, Math.sin(t) * 4.3); }               // railing posts
+  cyl(g, m.dark, 4.35, 4.35, 0.08, 0, H + 2.1, 0, 20);
+  cyl(g, m.glass, 2.2, 2.2, 3.0, 0, H + 1.05, 0, 16); cyl(g, m.lamp, 0.7, 0.7, 1.2, 0, H + 1.95, 0, 10); cyl(g, m.dark, 2.4, 2.4, 0.3, 0, H + 4.05, 0, 16);       // lantern room
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(2.6, 2.2, 16), m.lhRed); cap.position.set(0, H + 5.4, 0); cap.castShadow = true; g.add(cap); cyl(g, m.gold, 0.12, 0.12, 1.6, 0, H + 6.4, 0, 6);
+  box(g, m.lhWhite, 14, 3.4, 7, 14, 0, 12); const roof = new THREE.Mesh(new THREE.ConeGeometry(9.4, 2.6, 4), m.tiles); roof.rotation.y = PI / 4; roof.scale.set(1, 1, 0.55); roof.position.set(14, 4.7, 12); roof.castShadow = true; g.add(roof);   // keeper's cottage
+  box(g, m.dark, 1.6, 2.4, 0.3, 14, 0, 15.6); for (const dx of [-4, 4]) box(g, m.dark, 1.3, 1.2, 0.3, 14 + dx, 1.2, 15.6);
+  box(g, m.lhWhite, 0.6, 1.1, 36, -16, 0, 6); box(g, m.lhWhite, 32, 1.1, 0.6, 0, 0, 24);                                                                   // low boundary walls
+  return { group: g, circles: [{ x: 0, z: 0, r: 8 }, { x: 14, z: 12, r: 8.5 }, { x: 8, z: 12, r: 6 }], zone: { r: 38, blend: 26 }, name: 'Coast lighthouse' };
+}
+const BUILDERS = { gateway, tajHotel, marine: () => ({ group: new THREE.Group(), circles: [], zone: { r: 45, blend: 30 }, name: 'Marine Drive' }), indiaGate, tajMahal, lighthouse };      // marine is built along the road (see Landmarks.marineStrip)
 export const LANDMARK_KINDS = Object.keys(BUILDERS);
 
 /* ---------- placing them in a world ---------- */
@@ -148,7 +174,7 @@ export class Landmarks {
   /* find a flat spot beside the road (and sea, if wanted) near s0; returns the placed landmark or null */
   place(sp) {
     const T = this.terrain, R = this.road, B = BUILDERS[sp.kind], sea = T.seaLevel, off = sp.off || 70, p = {}; let best = null;
-    const zr = { gateway: 40, tajHotel: 80, marine: 45, indiaGate: 60, tajMahal: 150 }[sp.kind] || 40;
+    const zr = { gateway: 40, tajHotel: 80, marine: 45, indiaGate: 60, tajMahal: 150, lighthouse: 40 }[sp.kind] || 40;
     const kMax = Math.min(50, Math.ceil((sp.range || 2200) / 45));
     for (let k = 0; k < kMax; k++) for (const dir of k === 0 ? [0] : [1, -1]) {
       const s = sp.s + dir * k * 45; if (s < R.sMin + 120 || s > R.sMax - 120) continue; R.at(s, p);
@@ -157,7 +183,7 @@ export class Landmarks {
         for (let a = 0; a < 8; a++) for (const rr of [0, zr * 0.6, zr]) { const h = T.base(x + Math.cos(a * PI / 4) * rr, z + Math.sin(a * PI / 4) * rr); lo = Math.min(lo, h); hi = Math.max(hi, h); if (h < sea + 1) wet++; }
         if (wet > 0 || hi - lo > 14 || Math.abs(p.slope) > 0.05) continue;
         let seaward = 0; if (sp.sea) { const dirs = sp.sea === 'front' ? [-1] : [-1, 1]; for (const dr of dirs) for (const dd of (sp.sea === 'front' ? [10, 25, 45, 80, 130] : [70, 130, 200, 300, 420])) if (T.base(x + nx * dr * (dd + (dr < 0 ? off : 0)), z + nz * dr * (dd + (dr < 0 ? off : 0))) < sea - 0.5) seaward = 1; if (!seaward) continue; }
-        const score = (hi - lo) + Math.abs(dir * k) * 0.02 - seaward * 5; if (!best || score < best.score) best = { score, s, side, x, z, nx, nz, y: p.y, th: p.th };
+        const score = (hi - lo) + Math.abs(dir * k) * 0.15 - seaward * 5; if (!best || score < best.score) best = { score, s, side, x, z, nx, nz, y: p.y, th: p.th };
       }
       if (best && best.score < 3 && k > 1) break;
     }
@@ -175,6 +201,7 @@ export class Landmarks {
     const T = this.terrain, R = this.road, m = materials(), g = new THREE.Group(), cols = [0xf0e6cf, 0xcfe3d6, 0xf3d9c4, 0xe9e9e4, 0xd9e0ea, 0xf1e2b8, 0xe9cfd0], sea = T.seaLevel;
     const rng = (() => { let q = 11; return () => (q = (q * 16807) % 2147483647) / 2147483647; })(), p = {}, circles = [];
     const yaw = Math.atan2(-best.nx, -best.nz), cs = Math.cos(yaw), sn = Math.sin(yaw), gy = Math.max(best.y - 0.35, sea + 0.6);
+    g.rotation.y = yaw;                                                                                                                      // the strip's positions below are in this frame
     const local = (wx, wz) => ({ x: (wx - best.x) * cs - (wz - best.z) * sn, z: (wx - best.x) * sn + (wz - best.z) * cs });
     const lamps = new THREE.InstancedMesh(new THREE.SphereGeometry(0.55, 6, 5), m.lamp, 80), tm = new THREE.Matrix4(); let nl = 0, i = 0, sv = best.s - 240;
     const side = best.side, put = (sd, lat, fn) => { R.at(sd, p); const nx = -p.tz * side, nz = p.tx * side, wx = p.x + nx * lat, wz = p.z + nz * lat, l = local(wx, wz), hd = Math.atan2(-nx, -nz) - yaw; fn(l, hd, p.y - 0.35 - gy, wx, wz); };
@@ -184,13 +211,14 @@ export class Landmarks {
         circles.push({ x: wx, z: wz, r: Math.max(w, d) * 0.55 }); T.addZone(wx, wz, Math.max(w, d) * 0.7, gy + y, 25); });
       sv += w + 3 + rng() * 5;
     }
-    for (let sd = best.s - 245; sd < best.s + 245; sd += 22) put(sd, -15, (l, hd, y, wx, wz) => {                                                              // promenade and sea wall across the road
+    for (let sd = best.s - 245; sd < best.s + 245; sd += 22) put(sd, -22, (l, hd, y, wx, wz) => {                                                              // promenade and sea wall across the road
       const b = new THREE.Group(); b.position.set(l.x, y, l.z); b.rotation.y = hd; g.add(b); box(b, m.concrete, 15, 0.5, 23, 0, 0, 0); box(b, m.concrete, 1.4, 1.0, 23, -8.2, 0, 0);
       T.addZone(wx, wz, 17, gy + y, 14);
     });
-    for (let sd = best.s - 245; sd < best.s + 245; sd += 11) put(sd, -21, (l, hd, y) => { if (nl >= lamps.count) return; cyl(g, m.dark, 0.1, 0.14, 7, l.x, y + 0.5, l.z, 5); lamps.setMatrixAt(nl++, tm.makeTranslation(l.x, y + 7.9, l.z)); });       // the Queen's Necklace of lights
+    for (let sd = best.s - 245; sd < best.s + 245; sd += 11) put(sd, -28, (l, hd, y) => { if (nl >= lamps.count) return; cyl(g, m.dark, 0.1, 0.14, 7, l.x, y + 0.5, l.z, 5); lamps.setMatrixAt(nl++, tm.makeTranslation(l.x, y + 7.9, l.z)); });       // the Queen's Necklace of lights
+    if (sea - T.base(best.x, best.z) > -2 || true) for (let sd = best.s - 300; sd <= best.s + 300; sd += 30) for (const lat of [-60, -95, -135]) put(sd, lat, (l, hd, y, wx, wz) => { if (T.base(wx, wz) > sea - 3) T.addZone(wx, wz, 38, sea - 4, 30); });      // a bay in front of the sea wall when the coast is not already there
     lamps.count = nl; g.add(lamps);
-    for (let k = 0; k < 44; k++) put(best.s - 240 + k * 11, -27 - (k % 2) * 3, (l, hd, y) => { const t = mesh(g, new THREE.BoxGeometry(2.2, 2.2, 2.2), m.concrete, l.x, y + 0.7, l.z, false); t.rotation.set(0.6 * (k % 3), k, 0.4); });   // tetrapods
+    for (let k = 0; k < 44; k++) put(best.s - 240 + k * 11, -34 - (k % 2) * 3, (l, hd, y) => { const t = mesh(g, new THREE.BoxGeometry(2.2, 2.2, 2.2), m.concrete, l.x, y + 0.7, l.z, false); t.rotation.set(0.6 * (k % 3), k, 0.4); });   // tetrapods
     this.group.add(g); return { group: g, circles, zone: { r: 0, blend: 0 }, name: 'Marine Drive', x: best.x, z: best.z, y: gy, yaw, kind: 'marine', s: best.s };
   }
   /* keep each model at its world place relative to the render origin; windows glow at night */

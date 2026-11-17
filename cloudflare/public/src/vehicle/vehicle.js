@@ -28,21 +28,20 @@ export class VehicleView {
       if (/^Rider/.test(o.name)) this.riders.push(o);
       if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = 0.7; }); }
     });
-    this.buildCockpit(def.id, def); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
+    this.buildCockpit(def.id); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
   }
   /* dashboard and steering wheel for the driver view (the models have no interior) */
-  buildCockpit(id, def) {
+  buildCockpit(id) {
     if (id === 'bike') return;
     const g = new THREE.Group(), dark = new THREE.MeshLambertMaterial({ color: 0x15151b }), mid = new THREE.MeshLambertMaterial({ color: 0x30303a }), glow = new THREE.MeshBasicMaterial({ color: 0x6fd0ff });
     const box = (w, h, d, x, y, z, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || dark); m.position.set(x, y, z); g.add(m); return m; };
     let pos, R, tilt;
-    if (id !== 'truck') { box(1.5, 0.07, 0.42, 0, 0.955, 0.66); box(0.46, 0.08, 0.2, -0.32, 1.0, 0.64, mid); box(0.28, 0.01, 0.05, -0.32, 1.045, 0.58, glow); box(0.3, 0.05, 0.1, 0.2, 0.99, 0.60, mid); box(0.08, 0.22, 0.08, -0.32, 0.86, 0.54, mid); pos = [-0.32, 0.98, 0.50]; R = 0.13; tilt = 0.6; }
+    if (id === 'car') { box(1.5, 0.07, 0.42, 0, 0.955, 0.66); box(0.46, 0.08, 0.2, -0.32, 1.0, 0.64, mid); box(0.28, 0.01, 0.05, -0.32, 1.045, 0.58, glow); box(0.3, 0.05, 0.1, 0.2, 0.99, 0.60, mid); box(0.08, 0.22, 0.08, -0.32, 0.86, 0.54, mid); pos = [-0.32, 0.98, 0.50]; R = 0.13; tilt = 0.6; }
     else { box(2.0, 0.24, 0.8, 0, 2.30, 3.95); box(0.8, 0.12, 0.26, -0.5, 2.43, 3.85, mid); box(0.5, 0.012, 0.05, -0.5, 2.5, 3.75, glow); box(0.2, 0.5, 0.15, -0.5, 2.1, 3.65, mid); pos = [-0.5, 2.36, 3.62]; R = 0.24; tilt = 0.3; }
     const sw = new THREE.Group(); sw.position.set(...pos); sw.rotation.x = tilt; const inner = new THREE.Group(); sw.add(inner);
     inner.add(new THREE.Mesh(new THREE.TorusGeometry(R, R * 0.14, 8, 28), mid));
     for (const [w, h] of [[R * 1.9, R * 0.16], [R * 0.16, R * 0.95]]) { const sp = new THREE.Mesh(new THREE.BoxGeometry(w, h, R * 0.1), mid); if (h > w) sp.position.y = -R * 0.47; inner.add(sp); }
     inner.add(new THREE.Mesh(new THREE.CylinderGeometry(R * 0.3, R * 0.3, R * 0.2, 12).rotateX(Math.PI / 2), dark));
-    if (id !== 'truck' && def) g.position.set(0, def.eye[1] - 1.22, def.eye[2] - 0.14);                              // the car-style dash is drawn for the first car's eye height; other cars shift it
     g.add(sw); this.model.add(g); this.cockpit = g; this.wheel = inner;
   }
   /* glow sprites at the lamps, the lamp materials, and a headlight beam */
@@ -67,7 +66,7 @@ export class VehicleView {
   setView(v) {
     this.view = v; const fp = v === 'first'; if (!this.model) return;
     this.model.traverse(o => {                                  // the models' glass is opaque, so from inside the cabin and glass are hidden
-      if (o.name === 'Cab' || o.name === 'Cabin' || o.name === 'Interior') o.visible = !fp;
+      if (o.name === 'Cab' || o.name === 'Cabin') o.visible = !fp;
       if (o.isMesh) [].concat(o.material).forEach(m => { if (m.name === 'Glass') { m.colorWrite = !fp; m.depthWrite = !fp; } });
     });
     if (this.cockpit) this.cockpit.visible = fp; for (const o of this.riders) o.visible = !fp;
@@ -78,6 +77,9 @@ export class VehicleView {
     if (rb) {                                                                                                   // rigid-body physics: use the body's real orientation, then a touch of pitch and lean for the look
       const q = ph.quat; r.position.set(ph.x - origin.x, ph.bodyY, ph.z - origin.z); r.quaternion.set(q.x, q.y, q.z, q.w); r.translateY(-ph.hCom); r.rotateX(-ph.dPitch); r.rotateZ(ph.dRoll + ph.lean);
     } else { r.position.set(ph.x - origin.x, ph.y, ph.z - origin.z); r.rotation.set(-(ph.pitch + ph.dPitch), Math.PI / 2 - ph.yaw, ph.roll + ph.dRoll + ph.lean); }
+    /* a little road feel: the body trembles with speed, more on gravel and grass than on asphalt (the road itself is perfectly smooth) */
+    { const t = performance.now() / 1000, sp = Math.min(Math.abs(ph.u) / 30, 1), rough = ph.surface === 'asphalt' ? 1 : ph.surface === 'gravel' ? 3.5 : 2.5;
+      r.position.y += (Math.sin(t * 23.1) * 0.5 + Math.sin(t * 37.7 + 1.3) * 0.5) * 0.006 * sp * rough; r.rotateZ(Math.sin(t * 17.3) * 0.0012 * sp * rough); r.rotateX(Math.sin(t * 29.9 + 2.1) * 0.0008 * sp * rough); }
     /* front wheels follow the real road-wheel angle, with Ackermann geometry: the inner wheel turns more than the outer */
     const L = ph.p.L, T = ph.p.track, tn = Math.tan(ph.delta), R = Math.abs(tn) > 1e-4 ? L / tn : 1e6;
     for (const w of this.wheels) {
@@ -89,21 +91,39 @@ export class VehicleView {
     if (this.wheel) this.wheel.rotation.z = -clamp(ph.delta * 15, -2.6, 2.6);              // steering wheel: a real car turns it about 15 times as far as the road wheels
     this.shadow.position.set(r.position.x, ph.y + 0.05, r.position.z); this.shadow.rotation.y = Math.PI / 2 - ph.yaw; this.shadow.visible = ph.wet < 0.3 && !this.realShadow;
   }
+  /* camera views, cycled with V (like the old GTA games): chase cameras at three distances, bumper, hood, driver's seat and a TV-style cinematic cut.
+     'cockpit' is the old 'first' view (the cabin is hidden and the cockpit shown); the other views show the whole car. */
+  setMode(name) {
+    this.mode = name; this.setView(name === 'cockpit' ? 'first' : 'third'); this.camYaw = null; this.cine = null;
+  }
   /* aim the camera. floor(x, z) is the lowest height the camera may sit at. */
   aim(camera, ph, origin, dt, floor, boost = 0) {
-    const d = this.def, speed = Math.abs(ph.u);
-    if (this.view === 'first') {
-      this.root.updateMatrixWorld(true); this.eye.set(...d.eye); this.root.localToWorld(this.eye); camera.position.copy(this.eye);
-      camera.rotation.order = 'YXZ'; camera.rotation.set(ph.pitch * 0.9 - 0.03, -Math.PI / 2 - ph.yaw, -(ph.roll + ph.lean) * 0.5);
-      camera.fov = 70 + Math.min(14, speed * 0.18) + boost * 4;
-    } else {
+    const d = this.def, speed = Math.abs(ph.u), cm = this.camMul || { back: 1, up: 1, look: 1, fov: 0 }, mode = this.mode || 'middle';       // camMul: closer, lower, wider on phones (set in main.js)
+    const body = (x, y, z, fov) => {                                                                                                       // a camera fixed to the car at model position (x, y, z)
+      this.root.updateMatrixWorld(true); this.eye.set(x, y, z); this.root.localToWorld(this.eye); camera.position.copy(this.eye);
+      camera.rotation.order = 'YXZ'; camera.rotation.set(ph.pitch * 0.9 - 0.03, -Math.PI / 2 - ph.yaw, -(ph.roll + ph.lean) * 0.5); camera.fov = fov + Math.min(14, speed * 0.18) + boost * 4;
+    };
+    if (mode === 'cockpit') body(d.eye[0], d.eye[1], d.eye[2], 70);
+    else if (mode === 'hood') body(0, d.eye[1] - 0.18, d.eye[2] + 1.7, 68);
+    else if (mode === 'bumper') body(0, d.body.wheelR + 0.32, d.body.front + (d.id === 'car' ? 0.95 : 0.45), 76);
+    else if (mode === 'cinematic') {                                                                                                         // like a TV camera: fixed beside or ahead of the road, turning to follow the car, then a cut
+      const now = performance.now() / 1000, c = Math.cos(ph.yaw), sn = Math.sin(ph.yaw), C = this.cine;
+      const behind = C ? (ph.x - C.x) * c + (ph.z - C.z) * sn : 0, far = C ? Math.hypot(ph.x - C.x, ph.z - C.z) : 0;
+      if (!C || now - C.t > 7 || behind > 22 || far > 70) {
+        const ahead = 22 + Math.random() * 26, side = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 10);
+        this.cine = { t: now, x: ph.x + c * ahead * Math.max(0.4, Math.min(1.6, 0.5 + speed / 25)) - sn * side, z: ph.z + sn * ahead * Math.max(0.4, Math.min(1.6, 0.5 + speed / 25)) + c * side, h: 1.2 + Math.random() * 3.2, fov: 40 + Math.random() * 22 };
+      }
+      const K = this.cine, y = Math.max(ph.y + K.h, floor(K.x, K.z) + 1.0);
+      camera.position.set(K.x - origin.x, y, K.z - origin.z); camera.lookAt(ph.x - origin.x, ph.y + 0.9, ph.z - origin.z); camera.fov = K.fov;
+    } else {                                                                                                                                  // chase cameras: middle (the default), far (high and distant), close (low and tight)
+      const m = mode === 'far' ? { back: 1.75, up: 1.9, look: 1.25 } : mode === 'close' ? { back: 0.62, up: 0.72, look: 0.9 } : { back: 1, up: 1, look: 1 };
       const want = ph.yaw + Math.atan2(ph.v, Math.max(Math.abs(ph.u), 4)) * 0.4;       // follow where the car is going, a little, when it slides
-      if (this.camYaw === null) this.camYaw = want;
+      if (this.camYaw === null || this.camYaw === undefined) this.camYaw = want;
       this.camYaw += Math.atan2(Math.sin(want - this.camYaw), Math.cos(want - this.camYaw)) * Math.min(1, dt * 3.2);
-      const cx = Math.cos(this.camYaw), cz = Math.sin(this.camYaw), wx = ph.x - cx * d.cam.back, wz = ph.z - cz * d.cam.back;
-      const y = Math.max(ph.y + d.cam.up, floor(wx, wz) + 1.2);
-      camera.position.set(wx - origin.x, y, wz - origin.z); camera.lookAt(ph.x + cx * d.cam.look - origin.x, ph.y + d.cam.up * 0.45, ph.z + cz * d.cam.look - origin.z);
-      camera.fov = 56 + Math.min(14, speed * 0.16) + boost * 4;
+      const cx = Math.cos(this.camYaw), cz = Math.sin(this.camYaw), back = d.cam.back * cm.back * m.back, wx = ph.x - cx * back, wz = ph.z - cz * back;
+      const y = Math.max(ph.y + d.cam.up * cm.up * m.up, floor(wx, wz) + 1.2);
+      camera.position.set(wx - origin.x, y, wz - origin.z); camera.lookAt(ph.x + cx * d.cam.look * cm.look * m.look - origin.x, ph.y + d.cam.up * 0.45, ph.z + cz * d.cam.look * cm.look * m.look - origin.z);
+      camera.fov = 56 + cm.fov + (mode === 'far' ? 4 : mode === 'close' ? 6 : 0) + Math.min(14, speed * 0.16) + boost * 4;
     }
     camera.updateProjectionMatrix();
   }

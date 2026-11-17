@@ -13,6 +13,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
 
 if __name__ == '__main__':
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    port = int(args[0]) if args else 8765
+    lan = '--lan' in sys.argv                                    # --lan: also reachable from a phone on the same wifi
+    host = '0.0.0.0' if lan else '127.0.0.1'
     print(f'Serving {ROOT} at http://localhost:{port}/  (Ctrl+C to stop)', flush=True)
-    http.server.ThreadingHTTPServer(('127.0.0.1', port), Handler).serve_forever()
+    if lan:
+        import socket
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(('10.255.255.255', 1)); ip = s.getsockname()[0]; s.close()
+            print(f'On the same wifi, a phone can open http://{ip}:{port}/next.html?play  (anyone on your network can reach this while it runs)', flush=True)
+        except OSError:
+            print('Could not work out this computer\'s address: look it up in your network settings.', flush=True)
+    http.server.ThreadingHTTPServer((host, port), Handler).serve_forever()

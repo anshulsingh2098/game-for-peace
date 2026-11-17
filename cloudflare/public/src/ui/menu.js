@@ -11,11 +11,9 @@ const OPTIONS = {
   quality: [['low', 'Low'], ['med', 'Medium'], ['high', 'High']],
   shadows: [['on', 'On'], ['off', 'Off']],
   lights: [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']],
-  sound: [['on', 'On'], ['off', 'Off']],
-  manual: [['auto', 'Automatic'], ['manual', 'Manual']],
-  steering: [['0.8', 'Relaxed'], ['1', 'Normal'], ['1.3', 'Responsive'], ['1.7', 'Sharp']]
+  sound: [['on', 'On'], ['off', 'Off']]
 };
-const KEYS = [['W A S D / arrows', 'Drive'], ['Space', 'Use your vehicle\'s boost'], ['E / Z', 'Shift up / down with a manual gearbox; N switches gearbox'], ['C', 'Chase or driver camera'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
+const KEYS = [['W A S D / arrows', 'Drive (S reverses)'], ['Space', 'Brake'], ['X', 'Handbrake'], ['Shift', 'Use your vehicle\'s boost'], ['E', 'Autodrive'], ['V', 'Change camera view'], ['C', 'Driver\'s seat and back'], ['B', 'Back onto the road'], ['L', 'Headlights'], ['Hold Q', 'Radio wheel (Tab: India / World)'], ['M', 'Sound on / off'], ['Esc', 'Pause']];
 
 export class Menu {
   constructor(api) {
@@ -57,7 +55,7 @@ export class Menu {
     const bars = mk('div', 'm-bars', p);
     for (const k of ['Speed', 'Accel', 'Handling', 'Grip']) { const r = mk('div', 'm-bar', bars); mk('span', '', r, k); const t = mk('i', '', r); mk('u', '', t).style.width = def.stats[k] + '%'; }
     mk('div', 'm-top', p, 'Top speed ' + def.stats.Top + ' km/h');
-    const buff = mk('div', 'm-buff', p); mk('b', '', buff, def.buff.name + ' (Space)'); mk('span', '', buff, def.buff.desc + ' ' + def.buff.secs + ' s, then ' + def.buff.cooldown + ' s to recharge.');
+    const buff = mk('div', 'm-buff', p); mk('b', '', buff, def.buff.name + ' (Shift)'); mk('span', '', buff, def.buff.desc + ' ' + def.buff.secs + ' s, then ' + def.buff.cooldown + ' s to recharge.');
     mk('h3', '', p, def.paint.label + ' colour'); const sw = mk('div', 'm-sw', p), cur = st.paint[def.id] || def.paint.colors[0];
     for (const c of def.paint.colors) { const b = mk('button', 'sw', sw); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'Colour ' + c); b.setAttribute('aria-pressed', c === cur);
       b.onclick = e => { e.stopPropagation(); api.paint(st.vehicle, c); for (const x of sw.children) x.setAttribute('aria-pressed', x === b); }; }
@@ -81,13 +79,7 @@ export class Menu {
     const s = api.state();
     seg('Time of day', 'time', s.time); seg('Weather', 'weather', s.weather); seg('Headlights', 'lights', s.lights);
     seg('Graphics quality', 'quality', s.quality, 'Changing this reloads the world.'); seg('Shadows', 'shadows', s.shadows ? 'on' : 'off', 'Changing this reloads the world.');
-    seg('Steering sensitivity', 'steering', String(s.steering), 'How quickly the wheels turn and how much lock you get at speed.');
-    seg('Gearbox', 'manual', s.manual ? 'manual' : 'auto', 'Manual: shift with E and Z (or gamepad bumpers, or the on-screen buttons). The bike is electric and has one gear.');
     seg('Engine and weather sounds', 'sfx', s.muted ? 'off' : 'on');
-    const mg = mk('div', 'm-group', p); mk('h3', '', mg, 'My music'); const cnt = api.music.count();
-    const inp = mk('input', '', mg); inp.type = 'file'; inp.multiple = true; inp.hidden = true; inp.accept = 'audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac'; inp.onchange = () => { api.music.add(inp.files); inp.value = ''; this.show('settings'); };
-    const mr = mk('div', 'm-row', mg); btn(mr, 'Add songs', () => inp.click()); if (cnt) btn(mr, 'Remove all (' + cnt + ')', () => { api.music.clear(); this.show('settings'); });
-    mk('small', '', mg, cnt ? cnt + (cnt > 1 ? ' songs' : ' song') + ' on this device. Hold Q in the game and open the My music page to play them.' : 'Play your own songs on the radio. They stay on this device and are never uploaded.');
     const g = mk('div', 'm-group', p); mk('h3', '', g, 'Radio volume'); const v = mk('input', 'm-range', g); v.type = 'range'; v.min = 0; v.max = 100; v.value = Math.round(s.radioVol * 100); v.oninput = () => api.set('radioVol', v.value / 100);
     const rb = mk('div', 'm-row', g); btn(rb, 'Open radio', () => api.radio());
     const k = mk('div', 'm-group', p); mk('h3', '', k, 'Controls'); const t = mk('div', 'm-keys', k); for (const [a, b] of KEYS) { mk('b', '', t, a); mk('span', '', t, b); }

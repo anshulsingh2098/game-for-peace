@@ -3,16 +3,20 @@
 export const VEHICLES = [
   { id: 'car', file: 'assets/car_01_gt.glb', name: 'Dusk GT', tag: 'Fast', color: '#6f9bff',
     desc: 'Low, wide and quick. Stretch it out on the long straights.',
-    stats: { Speed: 92, Accel: 86, Handling: 72, Grip: 64, Top: 240 },
-    body: { mass: 1350, front: 1.62, rear: 1.34, track: 1.64, wheelR: 0.35, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 7, aero: 0.25, lean: 0.06, cg: 0.5, radius: 0.95, circles: [1.5, 0, -1.4] },
+    stats: { Speed: 92, Accel: 86, Handling: 72, Grip: 64, Top: 270 },
+    body: { mass: 1450, front: 1.62, rear: 1.34, track: 1.64, wheelR: 0.35, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 9, aero: 0.25,
+      /* a real sports coupe, from published data: 330 kW (450 hp) at 6500 rpm, 7600 rpm redline, 6-speed box, 4.0 final drive, Cd 0.33 x 2.0 m2 frontal area, 88% driveline efficiency */
+      pt: { kw: 330, peak: 6500, redline: 7600, idle: 900, launch: 4200, gears: [3.3, 2.2, 1.6, 1.25, 1.05, 0.93], final: 4.0, eff: 0.88, cdA: 0.66, upshift: 0.97, shiftTime: 0.16, tcs: 0.85, brakeMul: 0.85 }, lean: 0.06, cg: 0.5, radius: 0.95, circles: [1.5, 0, -1.4] },
     cam: { back: 7.5, up: 3.0, look: 2.5 }, eye: [-0.32, 1.22, 0.14], shadow: [3.4, 6],
     lights: { tail: [[-0.68, 0.84, -2.27], [0.68, 0.84, -2.27]], head: [[-0.66, 0.74, 2.14], [0.66, 0.74, 2.14]], tailSize: 0.8, headSize: 1.1, beam: [0.7, 2.3] },
-    buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 4, cooldown: 14, mod: { top: 1.3, accel: 1.6 } },
+    buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 5, cooldown: 9, mod: { top: 1.25, accel: 2.1 } },
     paint: { label: 'Stripe', mask: 'assets/car_01_livery_mask.png', colors: ['#2846a4', '#d62828', '#f08a24', '#2a9d5b', '#16181d', '#f2f2f2'] } },
   { id: 'truck', file: 'assets/truck_01.glb', name: 'Freight Hauler', tag: 'Heavy', color: '#ff9a3d',
     desc: 'A big rig. Steady, planted and calm.',
     stats: { Speed: 34, Accel: 28, Handling: 30, Grip: 84, Top: 110 },
-    body: { mass: 14000, front: 4.6, rear: 0.9, track: 2.1, wheelR: 0.55, steerMax: 0.36, brake: 6, revAccel: 1.6, revTop: 4.5, aero: 3, lean: 0.03, cg: 1.25, radius: 1.35, circles: [5, 2.6, 0.2, -2.2, -4.6, -6.6] },
+    body: { mass: 14000, front: 4.6, rear: 0.9, track: 2.1, wheelR: 0.55, steerMax: 0.36, brake: 6, revAccel: 1.6, revTop: 6, aero: 3, lean: 0.03, cg: 1.25, radius: 1.35, circles: [5, 2.6, 0.2, -2.2, -4.6, -6.6],
+      /* a heavy diesel truck, from typical published data: 300 kW (400 hp) at 1900 rpm, 2200 rpm limit, 8-speed box, 4.1 final drive, Cd 0.7 x about 7 m2 frontal area, slow gear changes */
+      pt: { kw: 300, peak: 1900, redline: 2200, idle: 600, launch: 1200, gears: [9.0, 6.3, 4.5, 3.3, 2.4, 1.7, 1.25, 1.0], final: 4.1, eff: 0.9, cdA: 5, upshift: 0.92, shiftTime: 0.5, tcs: 0.8, downforce: 0.1, down: 0.48, downEasy: 0.4, brakeMul: 0.8 } },
     cam: { back: 17, up: 6.5, look: 4 }, eye: [-0.5, 2.85, 3.3], shadow: [3.4, 15],
     lights: { tail: [[-1.1, 1.7, -7.44], [1.1, 1.7, -7.44]], head: [[-0.98, 1.72, 5.96], [0.98, 1.72, 5.96]], tailSize: 0.9, headSize: 1.3, beam: [1.5, 6.1] },
     buff: { name: 'Hill Hauler', desc: 'Pulls as if hills and soft ground were not there.', label: 'Haul', secs: 5, cooldown: 12, mod: { slope: 0, drag: 0.15, accel: 1.3 } },
@@ -20,7 +24,9 @@ export const VEHICLES = [
   { id: 'bike', file: 'assets/bike_01.glb', name: 'Volt Bike', tag: 'Agile', color: '#b6f03c',
     desc: 'Sharp and light. Leans into every curve.',
     stats: { Speed: 82, Accel: 90, Handling: 96, Grip: 46, Top: 200 },
-    body: { mass: 260, front: 0.72, rear: 0.68, track: 0.5, wheelR: 0.34, steerMax: 0.60, brake: 9, revAccel: 1.8, revTop: 4, aero: 0.12, lean: 1, cg: 0.62, radius: 0.5, circles: [0.5, -0.5] },
+    body: { mass: 260, front: 0.72, rear: 0.68, track: 0.5, wheelR: 0.34, steerMax: 0.60, brake: 9, revAccel: 1.8, revTop: 5, aero: 0.12, lean: 1, cg: 0.62, radius: 0.5, circles: [0.5, -0.5],
+      /* a 100 hp sport motorcycle, from typical published data: 75 kW at 10000 rpm, 12000 rpm limit, 6-speed quick-shifter box, 7.2 overall final ratio, Cd 0.7 x 0.5 m2. The two-wheel lean model keeps its own tyres (tyres: false), and there is no downforce. */
+      pt: { kw: 75, peak: 10000, redline: 12000, idle: 1200, launch: 5500, gears: [2.8, 2.0, 1.6, 1.35, 1.2, 1.07], final: 7.2, eff: 0.9, cdA: 0.35, upshift: 0.96, shiftTime: 0.08, tcs: 0.7, downforce: 0, tyres: false } },
     cam: { back: 5.0, up: 2.2, look: 2.0 }, eye: [0, 1.60, 0.20], shadow: [2.2, 3.2],
     lights: { tail: [[0, 1.07, -1.05]], head: [[0, 0.86, 0.84]], tailSize: 0.6, headSize: 0.9, beam: [0.8, 0.95] },
     buff: { name: 'Lean-In', desc: 'Tighter turns and extra grip for a few seconds.', label: 'Lean', secs: 5, cooldown: 10, mod: { steer: 1.4, grip: 1.25 } },
@@ -28,7 +34,9 @@ export const VEHICLES = [
   { id: 'sport', file: 'assets/car_02_sport.glb', name: 'Ember RS', tag: 'Track', color: '#ff6a2c',
     desc: 'A low mid-engined sports car. Sharp, light and hungry for corners.',
     stats: { Speed: 96, Accel: 94, Handling: 90, Grip: 76, Top: 285 },
-    body: { mass: 1250, front: 1.3, rear: 1.36, track: 1.66, wheelR: 0.345, steerMax: 0.50, brake: 11, revAccel: 2.6, revTop: 7, aero: 0.28, lean: 0.05, cg: 0.46, radius: 0.98, circles: [1.6, 0, -1.6] },
+    body: { mass: 1250, front: 1.3, rear: 1.36, track: 1.66, wheelR: 0.345, steerMax: 0.50, brake: 11, revAccel: 2.6, revTop: 7, aero: 0.28,
+      /* estimated mid-engined sports car (280 kW, 8200 rpm redline, 6-speed, 3.9 final for 0.345 m wheels): the numbers are a first guess for the tuner */
+      pt: { kw: 280, peak: 7200, redline: 8200, idle: 1000, launch: 4600, gears: [3.4, 2.3, 1.7, 1.35, 1.12, 0.96], final: 3.9, eff: 0.88, cdA: 0.6, upshift: 0.97, shiftTime: 0.14, tcs: 0.8, brakeMul: 0.85 }, lean: 0.05, cg: 0.46, radius: 0.98, circles: [1.6, 0, -1.6] },
     cam: { back: 7.0, up: 2.6, look: 2.5 }, eye: [-0.30, 0.99, 0.10], shadow: [3.2, 5.4],
     lights: { tail: [[-0.7, 0.76, -2.18], [0.7, 0.76, -2.18]], head: [[-0.66, 0.58, 2.2], [0.66, 0.58, 2.2]], tailSize: 0.8, headSize: 1.0, beam: [0.55, 2.1] },
     buff: { name: 'Nitro', desc: 'A hard shove of extra power for a few seconds.', label: 'Nitro', secs: 3.5, cooldown: 12, mod: { top: 1.25, accel: 1.8 } },
@@ -36,9 +44,21 @@ export const VEHICLES = [
   { id: 'rally', file: 'assets/car_03_rally.glb', name: 'Dust Runner', tag: 'Rally', color: '#2fb6c8',
     desc: 'A raised rally hatchback. Four driven wheels, long travel and happy on gravel.',
     stats: { Speed: 72, Accel: 84, Handling: 86, Grip: 92, Top: 195 },
-    body: { mass: 1250, front: 1.22, rear: 1.3, track: 1.54, wheelR: 0.34, steerMax: 0.56, brake: 9.5, revAccel: 2.4, revTop: 6.5, aero: 0.32, lean: 0.08, cg: 0.56, radius: 0.95, circles: [1.4, 0, -1.4] },
+    body: { mass: 1250, front: 1.22, rear: 1.3, track: 1.54, wheelR: 0.34, steerMax: 0.56, brake: 9.5, revAccel: 2.4, revTop: 6.5, aero: 0.32,
+      /* estimated rally hatchback (200 kW, 7000 rpm redline, 6-speed, 5.2 final for 0.34 m wheels, four driven wheels): a first guess for the tuner */
+      pt: { kw: 200, peak: 6000, redline: 7000, idle: 1000, launch: 4200, gears: [3.6, 2.3, 1.65, 1.28, 1.05, 0.88], final: 5.2, eff: 0.86, cdA: 0.75, upshift: 0.97, shiftTime: 0.15, tcs: 0.9, brakeMul: 0.9 }, lean: 0.08, cg: 0.56, radius: 0.95, circles: [1.4, 0, -1.4] },
     cam: { back: 7.0, up: 3.0, look: 2.4 }, eye: [-0.32, 1.24, 0.10], shadow: [3.0, 5.2],
     lights: { tail: [[-0.66, 0.82, -1.99], [0.66, 0.82, -1.99]], head: [[-0.62, 0.69, 2.02], [0.62, 0.69, 2.02]], tailSize: 0.7, headSize: 1.0, beam: [0.8, 2.0] },
     buff: { name: 'Gravel Grip', desc: 'Extra bite and a sharper turn-in, and loose ground drags less.', label: 'Grip', secs: 6, cooldown: 12, mod: { grip: 1.3, steer: 1.2, drag: 0.35 } },
-    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#dde0e2', '#f08a24', '#d62828', '#2846a4', '#2a9d5b', '#16181d'] } }
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#dde0e2', '#f08a24', '#d62828', '#2846a4', '#2a9d5b', '#16181d'] } },
+  { id: 'concept', file: 'assets/car_04_concept.glb', interior: true, name: 'Aero Concept', tag: 'Wild', color: '#c8101c',
+    desc: 'A wide, low concept coupe with a full cockpit. Same engine as the Dusk GT, bigger wheels.',
+    stats: { Speed: 92, Accel: 86, Handling: 72, Grip: 64, Top: 270 },
+    body: { mass: 1450, front: 1.49, rear: 1.31, track: 1.96, wheelR: 0.384, steerMax: 0.50, brake: 10, revAccel: 2.6, revTop: 9, aero: 0.25,
+      /* a real sports coupe, from published data: 330 kW (450 hp) at 6500 rpm, 7600 rpm redline, 6-speed box, 4.4 final drive (set for 0.384 m wheels), Cd 0.33 x 2.0 m2 frontal area, 88% driveline efficiency */
+      pt: { kw: 330, peak: 6500, redline: 7600, idle: 900, launch: 4200, gears: [3.3, 2.2, 1.6, 1.25, 1.05, 0.93], final: 4.4, eff: 0.88, cdA: 0.66, upshift: 0.97, shiftTime: 0.16, tcs: 0.85, brakeMul: 0.85 }, lean: 0.06, cg: 0.5, radius: 1.0, circles: [1.6, 0, -1.45] },
+    cam: { back: 8.4, up: 3.3, look: 2.7 }, eye: [0, 1.02, 0.3], shadow: [3.8, 6.6],
+    lights: { tail: [[-0.5, 0.96, -1.6], [0.5, 0.96, -1.6]], head: [[-0.62, 0.66, 2.2], [0.62, 0.66, 2.2]], tailSize: 0.8, headSize: 1.1, beam: [0.66, 2.2] },
+    buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 5, cooldown: 9, mod: { top: 1.25, accel: 2.1 } },
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#c8101c', '#2846a4', '#f08a24', '#2a9d5b', '#16181d', '#e9ecef'] } }
 ];

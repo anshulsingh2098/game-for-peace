@@ -14,31 +14,27 @@
    left; the game's steering angle (delta) is positive to the right, so the two are opposite in sign. */
 import RAPIER from '../../vendor/rapier/rapier.mjs';
 import { SURFACES, NO_MOD } from './physics.js';
-import { Drivetrain } from './drivetrain.js';
 
 let ready = null;
 export const initRapier = () => ready || (ready = RAPIER.init().then(() => RAPIER));
 
-const SCRUB = 0.06, DOWNFORCE = 0.8, V_DF = 60;                // DOWNFORCE: extra grip (as a fraction) at V_DF m/s and above, growing with speed squared, so fast corners still bite
-const G = 9.81, H = 1 / 120, GRAV = 1.3, GRIP = 2.2 / GRAV, PUSH = 0.5, AIR_DAMP = 6;                     // GRIP: tyres bite harder than the stats say, which keeps the cars lively and quick to turn; SCRUB: speed lost per unit of sideways acceleration
+const G = 9.81, H = 1 / 120;
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* per-vehicle suspension and body tuning (stiffness is per unit mass, so it reads as a natural frequency) */
 const TUNE = {
-  car:   { rest: 0.30, travel: 0.27, k: 46, comp: 4.2, relax: 5.2, hy: 0.32, extraL: 0.55, rollK: 0, rollC: 0, ang: 0.4 },
-  truck: { rest: 0.40, travel: 0.30, k: 22, comp: 2.8, relax: 3.8, hy: 0.9,  extraL: 1.2,  rollK: 0, rollC: 0, ang: 0.6 },
-  sport: { rest: 0.27, travel: 0.23, k: 56, comp: 5.0, relax: 6.0, hy: 0.30, extraL: 0.5, rollK: 0, rollC: 0, ang: 0.4 },
-  rally: { rest: 0.36, travel: 0.31, k: 42, comp: 3.6, relax: 4.8, hy: 0.34, extraL: 0.5, rollK: 0, rollC: 0, ang: 0.45, awd: true },      // long travel, four driven wheels
-  bike:  { rest: 0.28, travel: 0.22, k: 80, comp: 4.0, relax: 5.5, hy: 0.3,  extraL: 0.3,  rollK: 16000, rollC: 2400, pitchK: 22000, pitchC: 3000, ang: 0.8 }
+  car:   { rest: 0.26, travel: 0.20, k: 32, comp: 3.6, relax: 5.0, hy: 0.32, extraL: 0.55, rollK: 0, rollC: 0, ang: 0.4 },
+  truck: { rest: 0.40, travel: 0.30, k: 18, comp: 2.8, relax: 3.8, hy: 0.9,  extraL: 1.2,  rollK: 0, rollC: 0, ang: 0.6 },
+  bike:  { rest: 0.24, travel: 0.18, k: 38, comp: 4.0, relax: 5.5, hy: 0.3,  extraL: 0.3,  rollK: 16000, rollC: 2400, pitchK: 22000, pitchC: 3000, ang: 0.8 }
 };
 
 /* build a rigid body + vehicle controller in a Rapier world. Returns what is needed to drive and read it. */
 function makeCar(world, p, id, startY) {
   const T = TUNE[id] || TUNE.car, drive = id === 'bike' ? 'rear' : 'rear';
-  const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, startY, 0).setCanSleep(false).setAngularDamping(T.ang).setLinearDamping(0.0).setGravityScale(GRAV));
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, startY, 0).setCanSleep(false).setAngularDamping(T.ang).setLinearDamping(0.0));
   const halfL = (p.front + p.rear) / 2 + T.extraL, midZ = (p.front - p.rear) / 2;
-  world.createCollider(RAPIER.ColliderDesc.cuboid(Math.max(0.2, p.track / 2 + 0.12), T.hy, halfL).setTranslation(0, 0, 0).setMass(p.mass).setFriction(0).setRestitution(0), body);        // the chassis box slides over the ground if it ever touches it, instead of gripping and stopping the car dead
+  world.createCollider(RAPIER.ColliderDesc.cuboid(Math.max(0.2, p.track / 2 + 0.12), T.hy, halfL).setTranslation(0, 0, 0).setMass(p.mass).setFriction(0.2).setRestitution(0), body);
   const vc = world.createVehicleController(body); vc.indexUpAxis = 1; vc.setIndexForwardAxis = 2;
   const cy = p.wheelR + T.rest - 0.08 - p.cg;                                      // hard point height relative to the centre of mass; puts the centre of mass about `cg` over the road
   const wheels = id === 'bike' ? [[0, p.front, true], [0, -p.rear, false]]
@@ -48,17 +44,17 @@ function makeCar(world, p, id, startY) {
     vc.setWheelSuspensionStiffness(i, T.k); vc.setWheelSuspensionCompression(i, T.comp); vc.setWheelSuspensionRelaxation(i, T.relax);
     vc.setWheelMaxSuspensionTravel(i, T.travel); vc.setWheelMaxSuspensionForce(i, 1e7); vc.setWheelFrictionSlip(i, 1); vc.setWheelSideFrictionStiffness(i, 1);
   }
-  return { body, vc, wheels: wheels.map(([x, z, front]) => ({ x, z, front, side: x === 0 ? 0 : x > 0 ? 1 : -1, drive: !front || !!T.awd })), T, cy };
+  return { body, vc, wheels: wheels.map(([x, z, front]) => ({ x, z, front, side: x === 0 ? 0 : x > 0 ? 1 : -1, drive: !front })), T, cy };
 }
 
 /* anti-roll and anti-pitch springs about the body's forward and left axes: tall vehicles lean but do not tip over, and a bike stays upright and
    does not flip forward under hard braking. */
-function stabilise(b, T, gPitch = 0, gRoll = 0) {                                          // gPitch, gRoll: the slope of the ground under the vehicle; the springs aim for that, not for level
+function stabilise(b, T) {
   b.resetTorques(true); if (!T.rollK && !T.pitchK) return;
   const q = b.rotation(), av = b.angvel(), fx = 2 * (q.x * q.z + q.w * q.y), fy = 2 * (q.y * q.z - q.w * q.x), fz = 1 - 2 * (q.x * q.x + q.y * q.y), lx = 1 - 2 * (q.y * q.y + q.z * q.z), ly = 2 * (q.x * q.y + q.w * q.z), lz = 2 * (q.x * q.z - q.w * q.y);
   let tx = 0, ty = 0, tz = 0;
-  if (T.rollK) { const tq = -T.rollK * (Math.asin(clamp(ly, -1, 1)) - gRoll) - T.rollC * (av.x * fx + av.y * fy + av.z * fz); tx += fx * tq; ty += fy * tq; tz += fz * tq; }
-  if (T.pitchK) { const tq = T.pitchK * (Math.asin(clamp(fy, -1, 1)) - gPitch) - T.pitchC * (av.x * lx + av.y * ly + av.z * lz); tx += lx * tq; ty += ly * tq; tz += lz * tq; }
+  if (T.rollK) { const tq = -T.rollK * Math.asin(clamp(ly, -1, 1)) - T.rollC * (av.x * fx + av.y * fy + av.z * fz); tx += fx * tq; ty += fy * tq; tz += fz * tq; }
+  if (T.pitchK) { const tq = T.pitchK * Math.asin(clamp(fy, -1, 1)) - T.pitchC * (av.x * lx + av.y * ly + av.z * lz); tx += lx * tq; ty += ly * tq; tz += lz * tq; }
   b.addTorque({ x: tx, y: ty, z: tz }, true);
 }
 
@@ -77,12 +73,11 @@ function calibrate(p, id) {
 export class RapierVehicle {
   /* params: from vehicleParams(); id: 'car' | 'truck' | 'bike'; world: { height, surface, near, seaLevel, grip? } */
   constructor(params, id, world) {
-    this.p = params; this.id = id; this.world = world; this.mod = NO_MOD; this.acc = 0; this.drive = new Drivetrain(id, params); this.steerGain = 1.3; this.flying = false; this.gear = 1; this.gearLabel = this.drive.label; this.rpm01 = 0;
+    this.p = params; this.id = id; this.world = world; this.mod = NO_MOD; this.acc = 0;
     this.cal = calibrate(params, id); this.hCom = this.cal.hCom; this.L0 = this.cal.L0;
     this.R = new RAPIER.World({ x: 0, y: -G, z: 0 }); this.R.timestep = H;
     this.N = 44; this.cell = 1.5; this.patch = null; this.ox = 0; this.oz = 0;       // heightfield patch: N x N cells of `cell` metres
     this.car = makeCar(this.R, params, id, this.hCom + 0.5); this.body = this.car.body; this.vc = this.car.vc;
-    this.Iz = params.mass / 12 * ((params.track + 0.24) ** 2 + ((params.front + params.rear) + 2 * this.car.T.extraL) ** 2);          // yaw inertia of the body box, for the turn assist
     this.wheelStates = this.car.wheels.map(w => ({ front: w.front, side: w.side, spin: 0, steer: 0, susp: 0 }));
     this.reset(0, 0, 0);
   }
@@ -109,21 +104,12 @@ export class RapierVehicle {
     const q = qm(qm({ x: 0, y: Math.sin(th / 2), z: 0, w: Math.cos(th / 2) }, { x: Math.sin(-pitch / 2), y: 0, z: 0, w: Math.cos(pitch / 2) }), { x: 0, y: 0, z: Math.sin(rollA / 2), w: Math.cos(rollA / 2) });
     const b = this.body; b.setTranslation({ x: 0, y: gy + this.hCom + 0.02, z: 0 }, true); b.setRotation(q, true); b.setLinvel({ x: 0, y: 0, z: 0 }, true); b.setAngvel({ x: 0, y: 0, z: 0 }, true);
     for (let i = 0; i < this.car.wheels.length; i++) { this.vc.setWheelSteering(i, 0); this.vc.setWheelEngineForce(i, 0); this.vc.setWheelBrake(i, 0); }
-    this.drive.reset();
     Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0, dPitch: 0, dRoll: 0, afS: 0, arS: 0, axL: 0 });
     this.y = gy; this.groundY = gy; this.quat = { x: q.x, y: q.y, z: q.z, w: q.w }; this.R.step(); this.read();
   }
   get speed() { return Math.hypot(this.u, this.v); }
   get kmh() { return this.u * 3.6; }
-  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; this.drive.setMod(this.mod); }
-  /* aerodynamic grip: 1 at rest, 1 + DOWNFORCE at V_DF m/s and above */
-  down(u) { const k = Math.min(1, (u * u) / (V_DF * V_DF)); return 1 + DOWNFORCE * k; }
-  /* the sensitivity setting also lends the tyres a little grip, so a sharper setting really does turn the car harder at speed (1 at Normal) */
-  assist() { return 1 + 0.35 * (this.steerGain - 1); }
-  /* manual gearbox: shift(+1) up, shift(-1) down (false if refused); setManual switches between automatic and manual */
-  shift(d) { return this.drive.shift(d, this.u); }
-  setManual(on) { this.drive.setManual(on); }
-  get manual() { return this.drive.manual; }
+  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; }
 
   step(dt, input) {
     this.acc += Math.min(dt, 0.1); this.impact = 0;
@@ -142,7 +128,6 @@ export class RapierVehicle {
     this.y = t.y - this.hCom; this.bodyY = t.y;                                                                           // y: the tyre plane under the body centre
     this.ay = this.u * this.r; this.slip = Math.min(2, Math.abs(Math.atan2(this.v, Math.max(Math.abs(this.u), 2))));
     this.lean += (clamp(Math.atan(this.u * this.r / G), -0.8, 0.8) * this.p.lean - this.lean) * 0.15;
-    this.gear = this.drive.gear; this.gearLabel = this.drive.label; this.rpm01 = this.drive.rpm01; this.rev01 = this.drive.rev01; this.hasGears = !this.drive.ev;
     const vc = this.vc;
     this.car.wheels.forEach((w, i) => { const st = this.wheelStates[i]; st.spin = -(vc.wheelRotation(i) || 0); st.steer = vc.wheelSteering(i) || 0; st.susp = this.L0 - (vc.wheelSuspensionLength(i) ?? this.L0); st.contact = vc.wheelIsInContact(i); });
     this.spin = this.wheelStates[this.wheelStates.length - 1].spin;
@@ -155,70 +140,54 @@ export class RapierVehicle {
     if (ex > edge * 0.55 || ez > edge * 0.55) { const lead = clamp(this.u * 0.45, -14, 14); this.buildPatch(this.x + Math.cos(this.yaw) * lead, this.z + Math.sin(this.yaw) * lead); this.patchNew = true; }
     else if (this.old) this.dropOld();
 
-    /* steering: the wheel follows the input quickly (a little slower at high speed), comes back to centre quickly, and the lock at speed is about what the
-       tyres can use. steerGain is the player's sensitivity setting: it scales how fast the wheel moves and how much lock is allowed. A gentle curve
-       makes small or analog inputs count for more than a straight line would. */
-    const sg = this.steerGain, raw = clamp(input.steer, -1, 1), want = Math.sign(raw) * Math.pow(Math.abs(raw), 0.8), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = (back ? 11 : 9 / (1 + Math.abs(this.u) / 32)) * sg;
+    /* steering: rate-limited, slower at speed, quick to centre; the lock shrinks with speed */
+    const want = clamp(input.steer, -1, 1), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = back ? 8 : 5.5 / (1 + Math.abs(this.u) / 14);
     this.steer += clamp(want - this.steer, -rate * h, rate * h);
-    this.delta = this.steer * Math.min(p.steerMax, Math.max(3.0 * sg * M.steer * p.mu * GRIP * this.assist() * this.down(this.u) * G * p.L / Math.max(this.u * this.u, 1), 0.2 * p.steerMax * Math.min(1.4, sg)));      // lock shrinks with speed, but never below a fifth of full lock
+    this.delta = this.steer * Math.min(p.steerMax, 2.1 * M.steer * p.mu * G * p.L / Math.max(this.u * this.u, 1));
     const tn = Math.tan(this.delta), R = Math.abs(tn) > 1e-4 ? p.L / tn : 1e6;
 
     const key = W.surface(this.x, this.z); this.surface = key; const S0 = SURFACES[key] || SURFACES.grass;
     const depth = W.seaLevel - this.groundY; this.wet = depth > 0 ? depth : 0; this.groundY = this.y; const flooded = depth > 1.1;
-    const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), u = this.u;
+    const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), hnd = clamp(input.hand || 0, 0, 1), rev = thr > 0 ? 0 : clamp(input.rev || 0, 0, 1), u = this.u;
 
-    /* forces on the wheels */
-    let engine = 0, brake = 0; const dr = this.drive, gear = dr.gear;
-    engine = dr.update(h, u, thr, brk, flooded);                                                                // engine, clutch and gearbox decide the driving force
-    if (thr > 0 && !flooded && ((u < -0.4 && gear >= 0) || (u > 0.4 && gear < 0))) brake = m * p.brake * thr;       // throttle against the direction of travel brakes first
-    else if (brk > 0 && (u > 0.5 || dr.manual)) brake = m * p.brake * brk;              // the brake pedal; with a manual box it never reverses you
-    else if (brk === 0 && thr === 0 && Math.abs(u) < 0.25) brake = m * G * 0.9;                                  // parked: hold still, even on a slope
-    else if (thr === 0 && brk === 0 && Math.abs(u) < 0.6) brake = m * 0.55 * clamp(Math.abs(u), 0, 1);           // settle to a stop
-    if (engine * u < 0 && Math.abs(u) > 0.3) { brake += Math.abs(engine); engine = 0; }                           // engine braking works through the brakes: Rapier ignores the brakes while an engine force is set
+    /* forces on the wheels. Four separate controls: throttle, reverse, the foot brake (never reverses) and the handbrake (rear wheels only). */
+    let engine = 0, brake = 0, rearBrake = 0, coast = false;
+    if (thr > 0 && !flooded) { if (u < -0.4) brake = m * p.brake * thr; else engine = m * p.accel * M.accel * thr * Math.max(0, 1 - (u / top) ** 2); }                    // gas while rolling backwards brakes first
+    else if (rev > 0) { if (u > 1.2) brake = m * p.brake * 0.9 * rev; else if (!flooded) engine = -m * p.revAccel * 1.35 * rev * Math.max(0, 1 - (u / p.revTop) ** 2); }   // reverse: brakes while still rolling forward, then drives backwards
+    if (brk > 0) brake = Math.max(brake, m * p.brake * brk);                                                  // foot brake: all four wheels
+    if (hnd > 0) rearBrake = m * p.brake * 1.0 * hnd;                                                         // handbrake: the rear wheels lock
+    if (thr === 0 && rev === 0 && brk === 0 && hnd === 0) {
+      if (Math.abs(u) < 0.25) brake = m * G * 0.9;                                                            // parked: hold still, even on a slope
+      else coast = true;                                                                                       // lifting off: engine braking, applied to the body below so it works on any surface
+    }
     const nDrive = car.wheels.filter(w => w.drive).length, nF = car.wheels.filter(w => w.front).length, nR = car.wheels.length - nF;
     const fShare = this.id === 'bike' ? 0.55 : 0.62;
     car.wheels.forEach((w, i) => {
       const pos = vc.wheelContactPoint(i), wx = pos ? pos.x + this.ox : this.x, wz = pos ? pos.z + this.oz : this.z, S = SURFACES[W.surface(wx, wz)] || S0;
       const wet = (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(W.surface(wx, wz)) : 1);
-      vc.setWheelFrictionSlip(i, p.mu * GRIP * this.assist() * this.down(u) * S.grip * wet * M.grip);
+      vc.setWheelFrictionSlip(i, p.mu * S.grip * wet * M.grip * (!w.front && hnd > 0 ? 1 - 0.5 * hnd : 1));      // a locked rear wheel slides: the tail steps out
       let a = 0; if (w.front) a = w.side === 0 ? this.delta : Math.atan(p.L / (R + w.side * p.track / 2));       // Ackermann: the inner wheel turns more
       vc.setWheelSteering(i, w.front ? -a : 0);
       vc.setWheelEngineForce(i, w.drive ? engine / nDrive : 0);
-      const share = w.front ? fShare / nF : (1 - fShare) / nR; vc.setWheelBrake(i, brake * share * h);
+      const share = w.front ? fShare / nF : (1 - fShare) / nR; vc.setWheelBrake(i, (brake * share + (w.front ? 0 : rearBrake / nR)) * h);
     });
     /* rolling resistance by surface, water drag, air drag, and what a buff changes about slopes */
     const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
     const roll = -m * G * (S0.drag * M.drag + (depth > 0 ? Math.min(1.2, depth * 1.4) : 0)) * clamp(u / 0.5, -1, 1), air = -p.aero * u * Math.abs(u);
-    let F = roll + air - SCRUB * m * Math.abs(this.ay) * Math.sign(u) * sstep(2, 8, Math.abs(u)); const fwd = { x: c, z: s };                // hard cornering scrubs off speed, so holding the throttle in a corner does not widen the arc as much
+    let F = roll + air; const fwd = { x: c, z: s };
+    if (coast) F -= Math.sign(u) * m * (0.30 + 0.008 * Math.abs(u)) * clamp(Math.abs(u) / 0.5, 0, 1);                  // engine braking: not limited by tyre grip, so the car slows on grass as well as on tarmac
     if (M.slope < 1) F += m * G * Math.sin(this.pitch) * (1 - M.slope);                                           // Hill Hauler: climbs as if the slope were not there
     b.resetForces(true); b.addForce({ x: fwd.x * F, y: 0, z: fwd.z * F }, true);
     /* anti-roll: a spring and damper about the forward axis so tall vehicles lean but do not tip over (a bike is held upright) */
-    let gp = 0, gr = 0;
-    if (car.T.rollK || car.T.pitchK) {                                                                 // slope of the ground under the wheels, for the bike's anti-flip springs
-      const A = p.front, Bk = p.rear, w = 0.6, hf = W.height(this.x + c * A, this.z + s * A), hb = W.height(this.x - c * Bk, this.z - s * Bk);
-      const hl = W.height(this.x + s * w, this.z - c * w), hr = W.height(this.x - s * w, this.z + c * w); gp = Math.atan2(hf - hb, p.L); gr = Math.atan2(hl - hr, 2 * w);
-    }
-    stabilise(b, car.T, gp, gr);
-    /* keep the car on the road: a downward push that grows with speed squared, and a firm grip on its own rotation while it is in the air, so a crest
-       cannot launch it into a spin. */
-    { const kp = Math.min(1, (u * u) / (V_DF * V_DF)); if (kp > 0.01) b.addForce({ x: 0, y: -m * G * PUSH * kp, z: 0 }, true);
-      let air = 0; for (let i = 0; i < car.wheels.length; i++) if (!vc.wheelIsInContact(i)) air++; const flying = air >= car.wheels.length - (car.wheels.length > 2 ? 1 : 0);
-      if (flying !== this.flying) { this.flying = flying; b.setAngularDamping(flying ? AIR_DAMP : car.T.ang); } }
-    /* turn assist: nudge the body's yaw rate toward the rate the steering asks for (speed x tan(steering angle) / wheelbase), but never beyond what the
-       tyres can hold on this surface (grip x gravity / speed). Holding the throttle in a corner then no longer washes the car wide. It fades out at a
-       crawl, and follows the sensitivity setting. */
-    {                                                                                           // always on: with no steering the wanted yaw rate is zero, so a wobble or a spin is damped out (like stability control)
-      const au = Math.abs(u), muEff = p.mu * GRIP * this.assist() * this.down(au) * S0.grip * (depth > 0.3 ? 0.6 : 1) * M.grip, rT = u * Math.tan(this.delta) / p.L, rMax = 1.0 * muEff * G / Math.max(au, 3), rTgt = clamp(rT, -rMax, rMax);
-      const fade = sstep(1.0, 5.0, au), alpha = clamp(7 * this.steerGain * (rTgt - this.r), -9, 9) * fade;          // wanted change of yaw rate per second, capped
-      const t = b.rotation(), ty = -this.Iz * alpha;                                                                                                  // r is minus the body's world y spin, hence the sign
-      b.addTorque({ x: 0, y: ty, z: 0 }, true);
-    }
+    stabilise(b, car.T);
     vc.updateVehicle(h); this.R.step();
     if (this.patchNew) this.patchNew = false;
-    const du = (this.u - u) / h; this.axL += (du - this.axL) * Math.min(1, h * 6);
-    this.dPitch += (this.axL * 0.012 * p.cg - this.dPitch) * Math.min(1, h * 7); this.dRoll += (this.ay * 0.014 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);
+    /* body pitch and lean are worked out after read() below, once the new speed is known (they used to compare the old speed with itself, so the body never moved) */
     this.stuck = flooded ? this.stuck + h : 0;
     this.read(); this.collide();
+    const du = (this.u - u) / h; this.axL += (clamp(du, -14, 14) - this.axL) * Math.min(1, h * 6);                       // longitudinal acceleration, smoothed
+    this.dPitch += (clamp(this.axL, -12, 12) * (this.axL < 0 ? 0.013 : 0.02) * p.cg - this.dPitch) * Math.min(1, h * 7);                          // nose dips under braking, squats under power
+    this.dRoll += (-clamp(this.ay, -12, 12) * 0.022 * p.cg * (1 - Math.min(1, p.lean)) - this.dRoll) * Math.min(1, h * 7);   // body leans in corners (a bike leans by its own model)
     if (this.u > Math.max(top * 1.08, 1)) { const lv = b.linvel(), k = Math.max(top * 1.08, this.u - 6 * h) / this.u; b.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); }          // hard speed ceiling (a buff's extra speed bleeds off)
   }
 

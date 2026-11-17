@@ -1,0 +1,547 @@
+<title>Game for Peace Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: a working tracker. A sticky header with overall progress and tabs, then rows that open to remarks and comments. Graphite ink on a cool paper ground, one deep-teal accent, status colours kept separate from the accent. */
+:root {
+  --bg: #f3f5f7; --panel: #ffffff; --ink: #14181f; --muted: #5b6573; --line: #dde2e8; --soft: #eaeef2;
+  --accent: #0b7a85; --accent-ink: #ffffff; --accent-soft: #d9eef0;
+  --done: #1d8a4a; --doing: #2563eb; --todo: #6b7585; --blocked: #c2410c; --nope: #7c3aed; --note: #4b6a88;
+  --done-bg: #dff3e6; --doing-bg: #e0e9fd; --todo-bg: #eceff3; --blocked-bg: #fde6d9; --nope-bg: #ece3fb; --note-bg: #e3ebf3;
+  --shadow: 0 1px 2px rgba(20,24,31,.06), 0 4px 14px rgba(20,24,31,.05);
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; --head: 'Space Grotesk', 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1318; --panel: #171c23; --ink: #e8ecf1; --muted: #9aa5b4; --line: #2a323d; --soft: #202732;
+  --accent: #3fb6c2; --accent-ink: #06161a; --accent-soft: #11343a;
+  --done: #4cc47f; --doing: #6c9bff; --todo: #93a0b2; --blocked: #ff8a57; --nope: #b79bff; --note: #86aacb;
+  --done-bg: #12301f; --doing-bg: #172648; --todo-bg: #232a34; --blocked-bg: #3a2216; --nope-bg: #2b2147; --note-bg: #1c2a38;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1318; --panel: #171c23; --ink: #e8ecf1; --muted: #9aa5b4; --line: #2a323d; --soft: #202732;
+  --accent: #3fb6c2; --accent-ink: #06161a; --accent-soft: #11343a;
+  --done: #4cc47f; --doing: #6c9bff; --todo: #93a0b2; --blocked: #ff8a57; --nope: #b79bff; --note: #86aacb;
+  --done-bg: #12301f; --doing-bg: #172648; --todo-bg: #232a34; --blocked-bg: #3a2216; --nope-bg: #2b2147; --note-bg: #1c2a38;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3); color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 30; }
+.wrap { max-width: 1040px; margin: 0 auto; }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); padding: 14px 0 0; }
+.titlebar { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: end; justify-content: space-between; }
+h1 { font: 700 24px/1.15 var(--head); margin: 0; letter-spacing: -.01em; }
+.sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.overall { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.bar { height: 8px; background: var(--soft); border-radius: 99px; overflow: hidden; min-width: 120px; flex: 1; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; width: 0; transition: width .3s; }
+.pct { font: 600 20px/1 var(--head); font-variant-numeric: tabular-nums; }
+nav.tabs { display: flex; gap: 4px; overflow-x: auto; margin-top: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+nav.tabs button { flex: none; border: 0; background: transparent; color: var(--muted); font: 500 13px var(--font); padding: 7px 11px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+nav.tabs button:hover { background: var(--soft); color: var(--ink); }
+nav.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+nav.tabs button .n { font: 500 11px var(--mono); opacity: .8; margin-left: 6px; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main { padding-top: 16px; display: flex; flex-direction: column; gap: 14px; }
+.banner { background: var(--blocked-bg); color: var(--blocked); border-radius: 10px; padding: 8px 12px; font-size: 12.5px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 14px 16px; min-width: 0; }
+.panel h2 { font: 600 15px var(--head); margin: 0 0 10px; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.stats { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.stat { background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+.stat b { display: block; font: 600 22px/1.1 var(--head); font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 12px; }
+.stat.s-done b { color: var(--done); } .stat.s-doing b { color: var(--doing); } .stat.s-blocked b { color: var(--blocked); } .stat.s-nope b { color: var(--nope); }
+.tabrow { display: grid; grid-template-columns: minmax(80px, 140px) 1fr 54px; gap: 10px; align-items: center; padding: 5px 0; font-size: 13px; }
+.tabrow button { all: unset; cursor: pointer; color: var(--accent); font-weight: 500; }
+.tabrow .t { font: 500 12px var(--mono); color: var(--muted); text-align: right; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11px var(--font); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td.num { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.scroll { overflow-x: auto; }
+.pill { display: inline-block; font: 600 11px var(--font); padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.p-done { background: var(--done-bg); color: var(--done); } .p-doing { background: var(--doing-bg); color: var(--doing); } .p-todo { background: var(--todo-bg); color: var(--todo); }
+.p-blocked { background: var(--blocked-bg); color: var(--blocked); } .p-nope { background: var(--nope-bg); color: var(--nope); } .p-note { background: var(--note-bg); color: var(--note); }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+input[type=search], .tools input[type=text], .add input, select, textarea { font: 13px var(--font); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+input[type=search] { flex: 1 1 200px; }
+.chip { border: 1px solid var(--line); background: var(--panel); color: var(--muted); font: 500 12px var(--font); padding: 5px 10px; border-radius: 99px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font: 600 12.5px var(--font); padding: 7px 12px; border-radius: 8px; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.gh { font: 600 12px var(--font); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 10px 0 0; display: flex; justify-content: space-between; gap: 10px; }
+.gh span { font-family: var(--mono); text-transform: none; letter-spacing: 0; }
+.item { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.item.is-done { background: color-mix(in srgb, var(--done-bg) 55%, var(--panel)); }
+.row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.row input[type=checkbox] { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+.ttl { font-weight: 600; overflow-wrap: anywhere; }
+.is-done .ttl { text-decoration: line-through; text-decoration-color: var(--muted); color: var(--muted); }
+.det { color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
+.tag { font: 500 11px var(--mono); color: var(--muted); background: var(--soft); border-radius: 6px; padding: 1px 6px; }
+.tag.who { color: var(--accent); background: var(--accent-soft); }
+.side { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.side select { padding: 4px 6px; font-size: 12px; }
+.more { background: transparent; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font: 500 12px var(--font); padding: 4px 8px; cursor: pointer; }
+.more .c { font-family: var(--mono); }
+.drawer { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); display: grid; gap: 10px; }
+.drawer label { font: 600 11px var(--font); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: block; margin-bottom: 4px; }
+.drawer textarea { width: 100%; min-height: 60px; resize: vertical; }
+.cm { background: var(--soft); border-radius: 8px; padding: 7px 10px; font-size: 13px; overflow-wrap: anywhere; }
+.cm small { color: var(--muted); font: 11px var(--mono); display: block; }
+.cm button { all: unset; cursor: pointer; color: var(--muted); font-size: 11px; float: right; }
+.addc { display: flex; gap: 8px; }
+.addc input { flex: 1; min-width: 0; }
+.add { display: flex; gap: 8px; flex-wrap: wrap; }
+.add input { flex: 1 1 220px; }
+.empty { color: var(--muted); padding: 22px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+.kv { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 6px 14px; font-size: 13px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 99px; font-size: 13px; z-index: 40; }
+@media (max-width: 560px) { .row { grid-template-columns: 22px minmax(0, 1fr); } .side { grid-column: 2; justify-content: flex-start; } .kv { grid-template-columns: 1fr; } .tabrow { grid-template-columns: 90px 1fr 48px; } }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="titlebar">
+      <div><h1>Game for Peace Tracker</h1><div class="sub" id="sub">Delhi city programme, plans, limits and what you asked for. Updated 17 Nov 2026.</div></div>
+      <div class="overall"><div class="bar"><i id="obar"></i></div><div class="pct" id="opct">0%</div></div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
+  </header>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ===================== the content: what Claude knows as of 18 Nov 2026 =====================
+   An item is { id, t: title, d: detail, s: starting status, w: who, r: where (file, PR, address) }.
+   Starting status is only the first value: ticking, changing the status or writing remarks is saved for everyone with the page. */
+const I = (id, t, d, s, w, r) => ({ id, t, d, s, w, r });
+const STATUS = { done: 'Done', doing: 'In progress', todo: 'To do', blocked: 'Waiting on someone', nope: 'Cannot be done', note: 'Reference' };
+
+const TABS = [
+  { id: 'dash', name: 'Dashboard' },
+  { id: 'phases', name: 'Phases', intro: 'The plan for Delhi (P1 to P8, from docs/DELHI_POLISH_PLAN.md), the look upgrade steps (L1 to L6) and the Metro leftovers (D6c). "Done" means built, tested by script and looked at in a desktop browser, not judged on a phone.' },
+  { id: 'n20', name: 'N0 to N20', intro: 'The programme from the plans. N0 to N15 exist as first increments in the repo; none has been accepted on a real phone or reviewed by Anshul.' },
+  { id: 'back', name: 'Backlog', intro: 'Open problems and things waiting on a person.' },
+  { id: 'done', name: 'Done', intro: 'Everything finished and merged, with the pull request.' },
+  { id: 'left', name: 'Left and cannot', intro: 'What is still to do, and what cannot be done here, with the reason.' },
+  { id: 'limits', name: 'Limits' },
+  { id: 'tech', name: 'Technicals' },
+  { id: 'docs', name: 'Docs and PRs' },
+  { id: 'inputs', name: 'Your inputs', intro: 'Every request you made in this session, in order, with where it stands.' },
+];
+
+const ITEMS = {
+  phases: [
+    ['P1 Fill the voids', [
+      I('p1a', 'Infill buildings along the street frontage of built-up blocks', 'Adds buildings where OpenStreetMap is silent (buildings cover only 6 to 19 % of a 1 km tile). Rows of lots, set back by the street width, never on a street, park, water or another building. ?noinfill turns it off. Costs about 88 more draw calls at the default start.', 'done', 'Claude', 'PR 77 (merged), src/world/city/infill.js'),
+      I('p1b', 'Loading screen waits for the first ring of city tiles', 'It used to disappear while the city streamed in, so the game started on bare plains for a few seconds.', 'done', 'Claude', 'PR 77 (merged), src/main.js whenCityReady'),
+      I('p1c', 'Interiors and forecourts of large blocks, plazas with paving, trees, parked cars', 'The map data lets lots go only along streets, so the middle of big blocks stays open.', 'todo', 'Claude'),
+      I('p1d', 'Area styles tuned from identity.json (Old Delhi dense and tall, Lutyens low)', 'A table in infill.js exists; real densities per area still to set and check.', 'todo', 'Claude'),
+    ]],
+    ['P2 Roads and infrastructure', [
+      I('p2a', 'Asphalt and paving textures on city roads and pavements', 'Real colour, normal and roughness maps (already in assets/roads) with world-space UVs.', 'done', 'Claude', 'PR 80'),
+      I('p2b', 'Junction shaping: rounded corners, kerb arcs, pavement rings, filled bends', 'About +32k triangles in the loaded area at medium quality.', 'done', 'Claude', 'PR 81, junctionShapes() in tilemesh.js'),
+      I('p2c', 'Footways that cross a road become zebra crossings', 'Only where a footway crosses at 40 degrees or more over 16 m or less; a footway inside a carriageway is not drawn.', 'done', 'Claude', 'PR 79 and PR 82'),
+      I('p2d', 'Flicker: real height steps for ground layers, city 30 cm off the terrain, 1 m near plane', 'Measured: high view 0.205 to 0.024 % of flat pixels flip. The flicker you saw while driving was not reproduced; the grey rectangles were found and fixed.', 'done', 'Claude', 'PR 79'),
+      I('p2e', 'Medians on dual carriageways (kerbed strip, shrubs, lamp poles)', 'Divided roads are drawn as two one-way pieces with a grey void between.', 'todo', 'Claude'),
+      I('p2f', 'Stop lines, lane arrows, speed breakers, road wear (patches, edge dirt)', '', 'todo', 'Claude'),
+      I('p2g', 'Street furniture: DTC bus shelters, auto and e-rickshaw stands, police booths, petrol pumps, signal heads, sodium lights, wires', 'Some wires, poles and bus shelters exist from D7.', 'todo', 'Claude'),
+      I('p2h', 'Put the scripted street-driving test into tools/', 'The pure-pursuit script that drove 143 streets was typed into the browser console; it should live in tools/ and run on demand.', 'todo', 'Claude'),
+      I('p2i', 'Kerbs are no longer invisible walls', 'The car could not leave the road above 9 km/h; buildings, poles and stalls still block.', 'done', 'Claude', 'PR 71'),
+      I('p2k', 'City map: labelled roads out of Delhi, Other cities list (97 cities), destination carried through the gate into the India map', 'Self-test checks every gate and every reachable city. Signs at the gates in the 3D world are still to do.', 'doing', 'Claude', 'PR 85'),
+      I('p2j', 'Building walls flush with the drawn wall, flyover piers solid, gate start on the ground', '', 'done', 'Claude', 'PR 72'),
+    ]],
+    ['P3 Buildings, shops and real places', [
+      I('p3a', 'Buildings take their area wall colours (Connaught Place white, Lutyens cream, Old Delhi sandstone)', 'identity.json walls were unused before.', 'done', 'Claude', 'PR 78'),
+      I('p3b', 'Facade kits per area: relief, balconies, AC units, tanks, shutters, cornices, colonnades at Connaught Place', '', 'todo', 'Claude'),
+      I('p3c', 'Roof clutter and setbacks, arcades', '', 'todo', 'Claude'),
+      I('p3d', 'Real shop and place names from the pack\'s OpenStreetMap points (credited, generic signs, no brand logos)', 'The pack already has pois and furniture lists per tile.', 'todo', 'Claude', 'tile fields pois, furniture'),
+      I('p3e', 'A few famous places by hand (Karim\'s, Paranthe Wali Gali, Khan Market, Palika Bazaar...)', '', 'todo', 'Claude'),
+      I('p3f', 'Five named streets checked against five photographs each (Chandni Chowk, Karol Bagh, Connaught Place, Khan Market, Lajpat Nagar)', 'Needs photograph sources and a Delhi person to mark them.', 'blocked', 'You', 'DELHI_LOOK.md'),
+    ]],
+    ['P4 Banners, posters, ads, hoardings', [
+      I('p4a', 'Unipoles at junctions, bus-shelter panels, lamp-post banners, shop boards, awnings', 'Built in D7; look not judged on a real GPU.', 'done', 'Claude', 'docs/DELHI_LOOK.md'),
+      I('p4b', 'Wall posters (peeling layers), rooftop hoardings, Metro pillar wraps, flyover ads, bus body ads, painted wall ads, festival rotation by month', 'Generic or fictional brands, Hindi and English.', 'todo', 'Claude'),
+    ]],
+    ['P5 Landmarks', [
+      I('p5a', '22 landmark models (India Gate, Rashtrapati Bhavan, Red Fort, Jama Masjid, Humayun\'s Tomb, Qutub Minar, Lotus Temple, Akshardham...)', '', 'done', 'Claude', 'D8, src/world/city/landmarks'),
+      I('p5b', 'Connaught Place: open Central Park instead of a solid white ring', 'The model drew the colonnade on the park\'s own outline.', 'done', 'Claude', 'PR 78'),
+      I('p5c', 'The other 41 landmarks, in priority order', 'Sansad Bhavan details, Safdarjung Tomb, Bangla Sahib, Birla Mandir, IGI T3, Bharat Mandapam, stadiums, markets as places.', 'todo', 'Claude'),
+      I('p5d', 'Check the 22 models against photographs', 'Needs sources and your call on what may be looked at.', 'blocked', 'You'),
+      I('p5e', 'Audit hits to inspect: Purana Qila block on a park, Humayun\'s Tomb garden polygon, station polygons in parks, 3 landmark labels (delhi-zoo, jln-stadium, anand-vihar-isbt) offset over 150 m', 'See docs/CITY_AUDIT.md.', 'todo', 'Claude', 'tools/audit_city.mjs'),
+    ]],
+    ['P6 Metro and railway stations', [
+      I('p6a', 'Platform number boards at the railway stations', '', 'done', 'Claude', 'PR 67'),
+      I('p6b', 'Stairs for the other lines at interchange stations', '', 'todo', 'Claude'),
+      I('p6c', 'Tunnels between underground stations and open cuttings at portals', 'The biggest D6c item.', 'todo', 'Claude'),
+      I('p6d', 'Platform screen doors, signage, concourse lighting, entrance kiosks in the DMRC look', '', 'todo', 'Claude'),
+      I('p6e', 'Check the other lines\' liveries and railway stations against photographs', 'Google Images returned a CAPTCHA and was not bypassed; Commons thumbnails did not load in the pane.', 'blocked', 'You'),
+      I('p6f', 'Railway trains through the real control layer and timetable', '', 'todo', 'Claude'),
+    ]],
+    ['P7 People, vehicles, life', [
+      I('p7a', 'Auto-rickshaws, e-rickshaws, cycle-rickshaws, riders on bikes, DTC and cluster bus liveries', '', 'todo', 'Claude'),
+      I('p7b', 'Cows, dogs, vendors, crowds by hour, festival days, sound (horns, azaan, temple bells) from licensed sources', '', 'todo', 'Claude'),
+    ]],
+    ['P8 Measure and judge', [
+      I('p8a', 'Run ?bench=30&city=delhi on two phones and a visible desktop window', 'The browser pane runs slowly; only draw calls and triangles were measured.', 'blocked', 'You'),
+      I('p8b', 'A low level for phones (fewer props and far buildings)', 'The Delhi frame is about 256k triangles and 270 calls; the phone budget is 350k and 300.', 'todo', 'Claude'),
+      I('p8c', 'A Delhi person lists what feels wrong; a fixing pass', '', 'blocked', 'You'),
+    ]],
+    ['L1 to L6 Look upgrade (compared with the GTA frame you sent)', [
+      I('l1', 'L1 Junction shaping, road surface and wear', 'Shaping and textures done; wear, arrows and stop lines to do.', 'doing', 'Claude'),
+      I('l2', 'L2 Facade relief: window depth, cornices, balconies, roof edges', '', 'todo', 'Claude'),
+      I('l3', 'L3 Real trees and plants instead of lollipop trees; hedges, walls, median planting', 'The real-scan trees of the India map can be reused.', 'todo', 'Claude'),
+      I('l4', 'L4 Street props: lamp posts, signal heads, bins, shelters, wires, hoardings', '', 'todo', 'Claude'),
+      I('l5', 'L5 Cars and traffic models', 'Needs licensed 3D art you download by hand, or a budget decision.', 'blocked', 'You', 'docs/ASSET_PLAN.md'),
+      I('l6', 'L6 Lighting and colour grade; a cheaper version of the ambient-shadow filter', '?fx=1 adds contact shadows and a warmer look but is very slow per frame.', 'todo', 'Claude'),
+    ]],
+  ],
+  n20: [
+    ['Base engine (N0 to N6)', [
+      I('n0', 'N0 Baseline, checklist, real phones', 'Baseline and checklist done. Phones, listening to the engine, Anshul\'s deploy and review are open.', 'blocked', 'You'),
+      I('n1', 'N1 Driving and sound', 'Telemetry, powertrains for car, truck and bike, acceptance script built. Nobody has driven it by feel or listened.', 'doing', 'Anshul'),
+      I('n2', 'N2 Weather and look', 'Matrix captured on a desktop for California only. Dawn, fog and storm at dusk and night, other locations open.', 'doing', 'Claude'),
+      I('n3', 'N3 World polish', 'Rails, tunnels, bridges, ground, hotel, lighthouse built. Tall grass and tree levels of detail open.', 'doing', 'Claude'),
+      I('n4', 'N4 Phones and speed', 'Loading screen and ?bench=30 built. No phone measured.', 'blocked', 'You'),
+      I('n5', 'N5 Features', 'Traffic levels, My music, rumble, saves, tuner worker built. Customisation, tuner login and live publish setup open.', 'doing', 'Anshul'),
+      I('n6', 'N6 Switch-over and launch', 'Done in the repo and live on the owner\'s Cloudflare account since 17 Nov 2026 (game-for-peace.mailrajulsingh-in.workers.dev). Anshul\'s account keeps the old build. Not accepted on real phones.', 'doing', 'Claude'),
+    ]],
+    ['Open-world programme (N7 to N15, first increments)', [
+      I('n7', 'N7 Runtime and entity lifecycle', 'docs/RUNTIME.md', 'doing', 'Anshul'),
+      I('n8', 'N8 Sectors and asset streaming', 'docs/STREAMING.md', 'doing', 'Claude'),
+      I('n9', 'N9 Region model and geography', 'docs/REGIONS.md; the India world blends Mumbai, Delhi, Agra, Bhopal profiles', 'doing', 'Claude'),
+      I('n10', 'N10 Navigation graph', 'Main road only; side roads open. Delhi has its own graph of 406k edges.', 'doing', 'Claude'),
+      I('n11', 'N11 District slice', 'Mumbai first increment; Delhi\'s real city replaces the stylised district.', 'doing', 'Claude'),
+      I('n12', 'N12 Indian traffic', 'Two-wheelers, rickshaws, signals; junction routing and overtaking open.', 'doing', 'Anshul'),
+      I('n13', 'N13 Pedestrians', 'Boxes on sidewalks; real models and reactions open.', 'doing', 'Anshul'),
+      I('n14', 'N14 On foot', 'Capsule controller built 17 Nov 2026 (sweep, slide, step-up, obstacle heights); cars now block exits. The world does not yet give obstacle heights; camera collision, stairs and interiors are open; phones not tried.', 'doing', 'Claude'),
+      I('n15', 'N15 Activities and saves', 'Point to point, save v2 with migration.', 'doing', 'Anshul'),
+    ]],
+    ['Later (N16 to N20)', [
+      I('n16', 'N16 Expanded India regions', 'Started: Delhi is the first complete city. Mumbai, Bhopal and others are stylised; Gurgaon, Noida next.', 'doing', 'Claude'),
+      I('n17', 'N17 Emergency services and events', 'Tone decision pending.', 'todo', 'You'),
+      I('n18', 'N18 Interiors and commerce', 'Shops you can enter, petrol pumps.', 'todo', 'Claude'),
+      I('n19', 'N19 Vehicle depth', 'Damage, fuel, garages, ownership.', 'todo', 'Anshul'),
+      I('n20', 'N20 Persistence and polish', 'Save slots, ambient events, final performance.', 'todo', 'Claude'),
+    ]],
+  ],
+  back: [
+    ['Waiting on people', [
+      I('b1', 'Play-test Delhi in a normal browser window and report anything wrong with the coordinate line', 'Menu, bottom line, Copy button; paste it to Claude.', 'blocked', 'You'),
+      I('b2', 'Anshul: review his files and run the N0 gate', 'Review runtime.js (handle domains, dropped-time count) and onfoot.js (capsule) changed by the audit fixes (PR 83). Deploys now go to the owner\'s Cloudflare account, so this no longer waits on Anshul\'s account.', 'blocked', 'Anshul', 'CHECKLIST.md, PR 83'),
+      I('b3', 'Lawyer: OpenStreetMap ODbL, the 10 train audio clips, announcement recordings, Delhi transit data terms, 2016 train data, licenses.html', '', 'blocked', 'Lawyer'),
+      I('b4', 'Owner decisions: city after Delhi, licensed radio music, official map outline, asset budget, on-foot on phones, GTFS terms, tuner login', 'WORK_REMAINING section 1.', 'blocked', 'You'),
+      I('b5', 'Native speakers for the regional announcement translations and Hindi signage', '', 'blocked', 'You'),
+    ]],
+    ['Bugs and loose ends found', [
+      I('b6', 'Merge PRs 77 and 76 and check main afterwards', 'Conflicts in tilemesh.js, cityworld.js, selftest.mjs and the team log resolved; both merged; self-test 107 on the merged branch; looked at in the game.', 'done', 'Claude'),
+      I('b16', 'Draw calls: infill added about 88 (358 at the default start, was about 270; the phone budget is 300)', 'Merge the infill cells or use a lower level for phones.', 'todo', 'Claude'),
+      I('b17', 'The tracker page text is public (only saved ticks and remarks need the password); put the Worker behind Cloudflare Access if the plan text itself must be private', 'One setting in your Cloudflare dashboard.', 'todo', 'You', 'Cloudflare Zero Trust'),
+      I('b7', 'Pink balls on the ground are bougainvillea shrubs under flyovers (round magenta crowns without a trunk)', 'Make them a low green shrub with pink flowers or place them only at pier bases.', 'todo', 'Claude'),
+      I('b8', 'Two narrow lanes with a street stall in them (near x 707 z -1872 and x 435 z -1995)', 'Visible stall, but the lane cannot be passed.', 'todo', 'Claude'),
+      I('b9', 'Five streets still stop a scripted driver at sharp bends in 5.6 m lanes', 'Probably partly the steering script; not tried by hand.', 'todo', 'Claude'),
+      I('b10', 'Building shadows at dusk not seen by eye', 'The pane did not redraw after a time change.', 'todo', 'Claude'),
+      I('b11', 'The flicker you saw while driving: confirm it is gone', 'If not, try &shadows=off, &noinfill, &life=off and tell which one stops it.', 'blocked', 'You'),
+      I('b12', 'Remaining map-audit classes: 30 buildings on parks, 119 roads through buildings (rule hides them), 94 footways inside carriageways (not drawn), 4,684 void blocks (mostly outside Delhi)', 'docs/CITY_AUDIT.md lists them with latitude and longitude.', 'doing', 'Claude'),
+      I('b13', 'The India map\'s own Delhi is just a point at 1:100; Mumbai, Agra, Bhopal still use the stylised street edge', '', 'todo', 'Claude'),
+      I('b15', 'Deploy the Cloudflare copy of this tracker', 'Deployed 17 Nov 2026 on your own Cloudflare account (mailrajulsingh.in@gmail.com) as the separate Worker game-for-peace-tracker, with a KV store and a password secret; the game site was not touched.', 'done', 'Claude', 'https://game-for-peace-tracker.mailrajulsingh-in.workers.dev'),
+      I('n1x', 'Next phases handed to Anshul\'s Claude (docs/NEXT_PHASES.md): merge his branch with main, v2 no-reload city switch, Mumbai draw-call cut, real-phone tests', 'The owner\'s session limit ended 17 Nov 2026; the next session starts from docs/NEXT_PHASES.md.', 'todo', 'Anshul', 'docs/NEXT_PHASES.md'),
+      I('b26', 'Drive a Delhi flyover and an underpass with traffic on (v4)', 'Watch for floating or sinking cars, cars stopping for the other level, cars jumping levels at ramps.', 'todo', 'You', 'CHECKLIST.md'),
+      I('b19', 'Try it on a real phone: home-screen icon opens full screen, sound after the first tap, horn, board and menu layout, frame rate', 'The emulated phone is software-rendered, so it cannot give a real frame rate.', 'todo', 'You', 'CHECKLIST.md'),
+      I('b18', 'Mumbai at the low tier draws about 800 to 1000 calls and 350 k triangles (the California baseline was 183 calls)', 'Landmarks (about 290 meshes) and the rail group (about 190) are the big groups; merging or culling them is the next phone cost cut. Phone pixel ratio is already 1 and the governor lowers it further.', 'todo', 'Claude', 'PERFORMANCE.md'),
+      I('b14', 'Claude in Chrome is not connected; all visual checks used the built-in browser (black at night)', 'Connect the extension for a real-GPU check.', 'blocked', 'You'),
+    ]],
+  ],
+  done: [
+    ['Merged into main (18 Nov 2026)', [
+      I('d1', 'PR 67 Platform number boards at the Delhi railway stations', '', 'done', 'Claude', 'PR 67'),
+      I('d2', 'PR 68 Landmark starts outside the footprint (38 of 63 started inside a wall); each city tile fetched once (62 fetches became 48)', '', 'done', 'Claude', 'PR 68'),
+      I('d3', 'PR 69 Frame cost cut from 610k to 250k triangles and 408 to 337 draw calls (hidden terrain, whole-tile detail)', '', 'done', 'Claude', 'PR 69'),
+      I('d4', 'PR 70 Shadow pass cut (buildings cast within 200 m, no scenery shadows in a city)', '', 'done', 'Claude', 'PR 70'),
+      I('d5', 'PR 71 Kerbs no longer invisible walls', '', 'done', 'Claude', 'PR 71'),
+      I('d6', 'PR 72 Walls flush with buildings, solid flyover piers, ground start at flyover gates, props out of other streets', '', 'done', 'Claude', 'PR 72'),
+      I('d7', 'PR 73 Title screen: Play India map and Explore cities', '', 'done', 'Claude', 'PR 73'),
+      I('d8', 'PR 74 Delhi is always the real city; Enter Delhi city button on the India map', '', 'done', 'Claude', 'PR 74'),
+      I('d9', 'PR 75 Delhi from the air: denser far city, no random trees, one ground tone', '', 'done', 'Claude', 'PR 75'),
+      I('d10', 'PR 79 Flicker fix and zebra crossings instead of grey slabs', '', 'done', 'Claude', 'PR 79'),
+      I('d11', 'PR 80 Asphalt and paving textures', '', 'done', 'Claude', 'PR 80'),
+      I('d12', 'PR 81 Junction shaping', '', 'done', 'Claude', 'PR 81'),
+      I('d13', 'PR 78 Connaught Place open Central Park, area wall colours', '', 'done', 'Claude', 'PR 78'),
+      I('d14', 'PR 82 Menu coordinate line, map-wide audit, generation rules, zebra rule fixed', '', 'done', 'Claude', 'PR 82'),
+      I('d25', 'Audit fixes v1 to v4: staging with terrain and attribution, loader rollback, handle domains, safe exits, capsule on foot, save failure shown, dropped-time count, seeded city random streams, tile retry back-off, traffic on flyovers and underpasses', 'Built and self-tested (110 checks). Flyover and underpass traffic not seen by a person yet.', 'done', 'Claude', 'PR 83, docs/STATUS.md'),
+      I('d26', 'Live on the owner\'s Cloudflare account', 'game-for-peace.mailrajulsingh-in.workers.dev, redeployed after each change. Anshul\'s account untouched.', 'done', 'Claude', 'https://game-for-peace.mailrajulsingh-in.workers.dev'),
+      I('d17', 'Tuner: storage (KV SETTINGS) and the Publish password set up on the owner\'s account', 'The password is not in the repo; the owner has it from the session.', 'done', 'Claude', 'tuner.html, cloudflare/wrangler.jsonc'),
+      I('d18', 'Phone layout: station board small, menu compact on a short screen, round map under the speed readout, nothing from the road shows through a menu', 'Checked in a 740 x 340 emulated phone, not on a real one.', 'done', 'Claude', 'index.html, src/ui/railboard.js'),
+      I('d19', 'Sound: horn (K, or the Horn button on a phone), a Delhi street bed with far horns, iPhone sound unlock and silent-switch fix', 'Built; not listened to on a real phone.', 'done', 'Claude', 'src/audio/engine.js'),
+      I('d20', 'Add to Home Screen: app icon, manifest, service worker, button in the title menu; opens full screen, landscape', 'Android and Chrome get the install prompt; iPhone shows the Share steps. Needs a real phone to confirm.', 'done', 'Claude', 'manifest.webmanifest, sw.js, src/ui/install.js'),
+    ]],
+    ['Before this session (from the handoff)', [
+      I('d15', 'Delhi city renderer, Metro viaducts and stations, underground stations, 22 landmark models, street life and identity, buses on real routes', '', 'done', 'Claude', 'HANDOFF.md'),
+      I('d16', 'Railways: real network, trains, signals, control office; multi-level roads; India world over 30 highways', '', 'done', 'Claude', 'HANDOFF.md'),
+    ]],
+  ],
+  left: [
+    ['Still to do (Claude can do these)', [
+      I('x1', 'Finish and merge PR 77 (infill) and PR 76 (plan doc)', '', 'doing', 'Claude'),
+      I('x2', 'Phases P2 to P7 and look steps L2 to L6', 'See the Phases tab.', 'todo', 'Claude'),
+      I('x3', 'D6c: interchange stairs and tunnels between underground stations', '', 'todo', 'Claude'),
+      I('x4', 'Fix the audit classes, landmarks offset, bougainvillea, stalls in lanes', '', 'todo', 'Claude'),
+      I('x5', 'Gurgaon, Noida, then Mumbai city packs (each repeats D1 to D8)', 'Owner picks the order.', 'todo', 'Claude'),
+    ]],
+    ['Cannot be done here, and why', [
+      I('c1', 'Use Google Maps data to make the map more accurate', 'Its terms forbid copying it or building a dataset from it, and there is no licensed bulk export. The base stays OpenStreetMap; Claude can check specific spots against photos or screenshots you supply.', 'nope', 'Claude'),
+      I('c2', 'GTA V quality from generated shapes alone', 'The gap is textures, props, trees and car models: it needs real 3D art (licensed packs downloaded by hand, or a budget).', 'nope', 'Claude'),
+      I('c3', 'Measure a real frame rate or phone performance', 'The browser pane runs slowly (software rendering) and no phone is attached; only draw calls and triangles are measured.', 'nope', 'Claude'),
+      I('c4', 'Deploy to Anshul\'s Cloudflare account', 'Not done on purpose: from 17 Nov 2026 new versions deploy to the owner\'s own account; Anshul\'s account keeps the older original versions (/ and /next).', 'nope', 'Claude'),
+      I('c5', 'Legal sign-off on data and audio licences', 'Needs the owner\'s lawyer.', 'nope', 'Claude'),
+      I('c6', 'Verify the look under night and dusk lighting', 'The pane renders black at night in this setup; daytime renders properly.', 'nope', 'Claude'),
+      I('c7', 'Bypass the Google CAPTCHA to look at reference photos', 'Never done; photographs have to come from you or from sources that load (Wikimedia Commons).', 'nope', 'Claude'),
+    ]],
+  ],
+  limits: [
+    ['Working limits', [
+      I('m1', 'Plan usage limits: a 5-hour window and a weekly window', 'On 17 Nov the 5-hour window was 81 % used. Three parallel sessions ended a window. Prefer two at a time, with small finishable scopes.', 'note', 'Claude', 'docs/OVERALL_PLAN.md section 5'),
+      I('m2', 'The browser pane renders slowly (software GL) and goes black at night; real frame rates need a visible window and a real GPU', '', 'note', 'Claude'),
+      I('m3', 'One writer per set of files; Claude edits only its stream\'s files (A: world, B: vehicle and game); shared files get the smallest change and a log entry', 'CLAUDE.md, PARALLEL_PLAN.md', 'note', 'Claude'),
+      I('m4', 'Deploys go to the owner\'s Cloudflare account; Anshul\'s keeps the originals. Never touch cloudflare/public, never merge unless told; run node tools/selftest.mjs before every push', 'CLAUDE.md, Where deploys go', 'note', 'Claude'),
+      I('m5', 'Keep line endings as they are (the repo mixes LF and CRLF); make surgical edits', '', 'note', 'Claude'),
+    ]],
+    ['Data and content limits', [
+      I('m6', 'OpenStreetMap building footprints are incomplete in Delhi: 6 to 19 % coverage of a 1 km tile (real built-up Delhi 30 to 70 %); 97 % of heights are guessed', 'Infill (PR 77) fills the street frontage only.', 'note', 'Claude', 'docs/CITY_PACK.md 5a'),
+      I('m7', 'The Delhi pack ends at the NCR edge; beyond it the world is open plain', '', 'note', 'Claude'),
+      I('m8', 'The India world is 1:100; cities are 1:1 enclaves entered through highway gates (only Delhi so far)', '', 'note', 'Claude', 'docs/CITY_PACK.md'),
+      I('m9', 'OpenStreetMap is under ODbL (attribution and share-alike); asset packs are CC0 or CC-BY and credited in assets/ASSETS.md and licenses.html', '', 'note', 'Claude', 'docs/OPEN_DATA.md'),
+      I('m10', 'Free licensed art for Indian vehicles, rigged people and building kits is scarce; scripted downloads from some sites are refused, so the owner downloads by hand', '', 'note', 'Claude', 'docs/ASSET_PLAN.md'),
+    ]],
+    ['Performance budgets', [
+      I('m11', 'Desktop budget 900 draw calls and 1.5 M triangles; phone budget 300 calls and 350 k triangles', 'docs/CITY_PACK.md section 4', 'note', 'Claude'),
+      I('m12', 'Delhi frame now: about 358 draw calls and 300 k triangles at q=med at the default start with infill (270 and 256 k without; 408 and 610 k originally); dense Karol Bagh about 494 k', 'Browser renderer counters including the shadow pass.', 'note', 'Claude'),
+      I('m13', 'Depth range: camera near 0.3 m (1 m in a city chase view), far 14 km; shadow map 2048 over 140 m', '', 'note', 'Claude'),
+    ]],
+  ],
+  tech: [
+    ['Stack', [
+      I('t1', 'three.js r187 (local copy in vendor/three) and Rapier 0.19.3 (vendor/rapier); plain ES modules, no bundler', '', 'note', 'Claude'),
+      I('t14', 'This tracker is deployed as a Cloudflare Worker + KV on the owner\'s own account (mailrajulsingh.in@gmail.com): https://game-for-peace-tracker.mailrajulsingh-in.workers.dev; the game itself has a deploy from the audit session (game-for-peace.mailrajulsingh-in.workers.dev); Anshul\'s account is left alone', 'Update the tracker with: cd tracker && npx wrangler deploy (wrangler is logged in as the owner)', 'note', 'Claude', 'tracker/README.md'),
+      I('t2', 'Static site on Cloudflare (cloudflare/public is generated by tools/stage_cloudflare.py); a Worker serves the tuner settings API', '', 'note', 'Anshul'),
+      I('t3', 'Self-test: node tools/selftest.mjs (106 checks on main); daily check: python tools/daily_check.py', '', 'note', 'Claude'),
+    ]],
+    ['The Delhi city pipeline', [
+      I('t4', 'OpenStreetMap extract to a city pack (tools/build_city.mjs): 1,925 tiles of 1 km, graph.json columns, landmarks.json, manifest.json; coordinates in decimetres, delta coded (enc 1); 19.8 MB gzip', '77.5 MB raw: 406k street edges, 244k buildings, 82k blocks, 25 gates, 63 landmarks', 'note', 'Claude', 'docs/CITY_PACK.md'),
+      I('t5', 'Tile mesher: src/world/city/tilemesh.js (Mesher, layers with height steps LIFT, junctionShapes, cells for distance culling); city streaming in cityworld.js', '', 'note', 'Claude'),
+      I('t6', 'Generation rules: src/world/city/rules.js (map errors fixed everywhere); infill: src/world/city/infill.js; identity: assets/cities/delhi/identity.json', '', 'note', 'Claude'),
+      I('t7', 'Keep-out registry (src/world/keepout.js): roads, rails, stations, landmarks and buildings register the ground they cover so scenery and Metro piers avoid them', '', 'note', 'Claude'),
+      I('t8', 'Metro and rail: transit.json (11 lines, 285 stations, 47 rail stations, 479 bus routes); src/world/city/transit*.js', '', 'note', 'Claude', 'docs/DELHI_TRANSIT.md'),
+      I('t9', 'Map audit: node tools/audit_city.mjs [--write] scans all tiles for 5 error classes with latitude and longitude; the self-test keeps each class from getting worse', '', 'note', 'Claude', 'docs/CITY_AUDIT.md'),
+    ]],
+    ['Useful address options and tools', [
+      I('t10', '?play&city=delhi&q=med&at=<landmark id>  (also &fx=1 realism filter, &noinfill, &shadows=off, &life=off, &month=N, &bench=30)', '', 'note', 'Claude'),
+      I('t11', 'Menu bottom line and window.__where(): latitude and longitude from the pack origin (inverse of projectLL), game x and z, heading, street, area, nearest landmark', 'Copy the line and paste it to Claude to name an exact spot.', 'note', 'Claude', 'src/main.js where()'),
+      I('t12', 'Graphics layers (metres over ground): ground 0, parks 0.015, pavement 0.03, road 0.05, markings 0.07; city 0.3 above the engine terrain', '', 'note', 'Claude'),
+      I('t13', 'Team log: team/stream-a.md (Rajul\'s Claude) and team/stream-b.md (Anshul\'s Claude); every shared-file change gets an entry', '', 'note', 'Claude'),
+    ]],
+  ],
+  docs: [
+    ['Project docs (in the repo)', [
+      I('o1', 'HANDOFF.md: state of the work, newest on top', '', 'note', 'Claude', 'HANDOFF.md'),
+      I('o2', 'OVERVIEW.md: what the project is, modules, roadmap', '', 'note', 'Claude', 'OVERVIEW.md'),
+      I('o3', 'docs/OVERALL_PLAN.md: whole picture, what people must do, limits', '', 'note', 'Claude', 'docs/OVERALL_PLAN.md'),
+      I('o4', 'PARALLEL_PLAN.md: who owns which files, phases N0 to N15', '', 'note', 'Claude', 'PARALLEL_PLAN.md'),
+      I('o5', 'docs/WORK_REMAINING.md: every known limit with priority', '', 'note', 'Claude', 'docs/WORK_REMAINING.md'),
+      I('o6', 'docs/CITY_PLAN.md and docs/CITY_PACK.md: the city programme and pack format', '', 'note', 'Claude'),
+      I('o7', 'docs/DELHI_TRANSIT.md, DELHI_LANDMARKS.md, DELHI_LOOK.md: Delhi data and look', '', 'note', 'Claude'),
+      I('o8', 'CHECKLIST.md: manual daily checks; CLAUDE.md: rules for the Claudes', '', 'note', 'Claude'),
+      I('o9', 'docs/OPEN_DATA.md and docs/ASSET_PLAN.md: every download and licence; asset sourcing', '', 'note', 'Claude'),
+      I('o10', 'docs/post-n6-open-world-plan.md: N7 to N20 programme', '', 'note', 'Claude'),
+    ]],
+    ['Written this session', [
+      I('o11', 'docs/DELHI_POLISH_PLAN.md: scale check, phases P1 to P8, N0 to N20 status', 'PR 76, merged', 'done', 'Claude', 'PR 76'),
+      I('o12', 'docs/CITY_AUDIT.md and tools/city_audit_baseline.json: map audit report with coordinates', 'generated by tools/audit_city.mjs --write', 'done', 'Claude', 'PR 82'),
+      I('o13', 'team/stream-a.md entries for every PR (what changed, measured numbers, what is not done)', '', 'done', 'Claude'),
+      I('o14', 'This tracker page: tracker/public/index.html (+ worker.js, wrangler.jsonc, README.md) and the Artifact copy', 'Kept current through the project memory notes', 'done', 'Claude', 'PR 84'),
+    ]],
+  ],
+  inputs: [
+    ['Your requests, in order', [
+      I('q1', 'Read the handoff, plan and docs', '', 'done', 'You'),
+      I('q2', 'Begin in order: sync, daily check, then D6c', 'Platform number boards done; stairs and tunnels still open.', 'doing', 'You'),
+      I('q3', 'Verify everything visually: too many errors, clashes and conflicts at start, laggy', 'Found landmark starts inside walls, tiles fetched twice, hidden terrain; frame cost cut.', 'done', 'You'),
+      I('q4', 'Cut the cost, then the shadows', '', 'done', 'You'),
+      I('q5', 'The car is blocked by invisible things; physics not correct', 'Kerb walls, building walls, piers, gate starts fixed.', 'done', 'You'),
+      I('q6', 'Fix stalls and the pier; merge all in order', '', 'done', 'You'),
+      I('q7', 'Title screen: India map play and Explore cities; India map must show the full Delhi', '', 'done', 'You'),
+      I('q8', 'Delhi must be the real Delhi everywhere, not the old stylised city', '', 'done', 'You'),
+      I('q9', 'Why is it empty and worse looking (aerial screenshots)', 'Far layer, random trees, ground blotches fixed; some emptiness is real data limits.', 'done', 'You'),
+      I('q10', 'Check the scale; improve infra, graphics, landmarks, roads, banners, shops, spots, Metro in phases; where are we on N0 to N20', 'docs/DELHI_POLISH_PLAN.md', 'done', 'You'),
+      I('q11', 'Start P1', 'First increment built (PR 77).', 'doing', 'You'),
+      I('q12', 'Use Google Maps data for accuracy; the park at Connaught Place is wrong', 'Not possible (terms). The park was drawn under a model error; fixed.', 'done', 'You'),
+      I('q13', 'Check why things flicker while driving; the grey rectangles in front of the car', 'Cause found (coplanar layers and footways); fixed.', 'done', 'You'),
+      I('q14', 'Roads and proportions look basic and unprofessional compared with a GTA frame', 'Textures and junctions done; facades, trees, props, cars still to do.', 'doing', 'You'),
+      I('q15', 'Junction shaping', '', 'done', 'You'),
+      I('q16', 'A system so a fix applies everywhere, and a coordinate readout in the menu', 'Audit, rules and coordinate line built (PR 82).', 'done', 'You'),
+      I('q17', 'This tracker page with checkboxes, comments and remarks', '', 'done', 'You'),
+      I('q19', 'The city map does not show the connection to the highways: how do I leave Delhi and reach another city?', 'The gates were mapped but invisible. Gate pins are labelled with the city and highway, an Other cities list routes you to the right exit, and the destination continues in the India map (PR 85).', 'doing', 'You', 'PR 85'),
+      I('q18', 'Also a Cloudflare page, and keep it updated through memory', 'Deployed on your Cloudflare account; memory notes written; PR 84 merged.', 'done', 'You', 'tracker/README.md'),
+    ]],
+  ],
+};
+
+const PRS = [
+  ['67', 'Platform number boards', 'merged'], ['68', 'Landmark starts outside footprint; tiles fetched once', 'merged'], ['69', 'Frame cost cut', 'merged'], ['70', 'Shadow pass cut', 'merged'],
+  ['71', 'Kerbs not walls', 'merged'], ['72', 'Walls, piers, gate start, props', 'merged'], ['73', 'Title screen India map and Explore cities', 'merged'], ['74', 'Delhi always the real city', 'merged'],
+  ['75', 'Aerial look', 'merged'], ['78', 'Connaught Place park', 'merged'], ['79', 'Flicker and zebra', 'merged'], ['80', 'Textures', 'merged'], ['81', 'Junction shaping', 'merged'], ['82', 'Coordinate line, audit, rules', 'merged'],
+  ['85', 'City map: roads out of Delhi, Other cities list, destination carried into the India map', 'merged'], ['84', 'Tracker page: source in the repo and the Cloudflare Worker (deployed)', 'merged'], ['83', 'Another session: audit fixes (staging, loader rollback, handles, capsule on-foot, city traffic on flyovers, deploy rule)', 'merged'], ['77', 'Infill buildings; loading waits for the city', 'merged'], ['76', 'Scale check, plan, N0 to N20 (docs)', 'merged'],
+];
+const FACTS = [
+  ['Self-test', '112 checks passing (main)'], ['Delhi frame, default start (q=med)', 'about 358 calls, 300 k triangles with infill (was 408, 610 k before the cost work; 270, 256 k before infill)'],
+  ['Building coverage, 1 km tile', '6 to 19 % in the data; infill adds roughly 5 to 15 points'], ['Map audit', '30 on parks, 119 roads through buildings, 94 footways in roads, 3 landmark offsets, 4,684 voids'],
+  ['Landmarks', '63 listed, 22 with models'], ['Live', 'owner\'s Cloudflare account (game-for-peace.mailrajulsingh-in.workers.dev); Anshul\'s account keeps the originals'],
+];
+
+/* ===================== state and saving ===================== */
+const LS = 'gfp-tracker-v1';
+let state = {}, custom = {}, db = null, canWrite = true, usingLocal = false;
+/* On Cloudflare (no claude.use) the page talks to the Worker in worker.js: GET and PUT /api/tracker with the shared password in the x-tracker-key header */
+let api = null, needKey = false, apiMsg = '', apiBusy = false, apiTimer = null; const apiPend = { items: {}, custom: {}, delItems: [], delCustom: [] };
+function apiPush(p) { Object.assign(apiPend.items, p.items || {}); Object.assign(apiPend.custom, p.custom || {}); apiPend.delItems.push(...(p.delItems || [])); apiPend.delCustom.push(...(p.delCustom || [])); clearTimeout(apiTimer); apiTimer = setTimeout(apiFlush, 600); }
+async function apiFlush() {
+  if (!api) return; if (apiBusy) { apiTimer = setTimeout(apiFlush, 400); return; }
+  const payload = JSON.stringify({ items: apiPend.items, custom: apiPend.custom, delItems: apiPend.delItems, delCustom: apiPend.delCustom }); apiPend.items = {}; apiPend.custom = {}; apiPend.delItems = []; apiPend.delCustom = []; apiBusy = true;
+  try { const r = await fetch('/api/tracker', { method: 'PUT', headers: { 'content-type': 'application/json', 'x-tracker-key': api.key }, body: payload }); if (r.status === 401) { needKey = true; api = null; render(); } else if (!r.ok) toast('Could not save, try again'); } catch (e) { toast('Could not save, try again'); }
+  apiBusy = false;
+}
+async function apiLoad(key, quiet) {
+  try {
+    const r = await fetch('/api/tracker', { headers: { 'x-tracker-key': key } });
+    if (r.status === 401 || r.status === 503) { if (!quiet) { needKey = true; apiMsg = r.status === 503 ? 'The tracker has no password set yet (see tracker/README.md).' : (key ? 'Wrong password.' : ''); } return false; }
+    if (!r.ok) throw new Error('status ' + r.status);
+    const d = await r.json(), now = Date.now(), keep = {}; for (const id in state) if (state[id] && now - (state[id].at || 0) < 4000) keep[id] = state[id];
+    api = { key }; needKey = false; apiMsg = ''; state = { ...(d.items || {}), ...keep }; custom = d.custom || {}; usingLocal = false; return true;
+  } catch (e) { if (!quiet) toast('Could not reach the tracker'); return false; }
+}
+function startPoll() { if (startPoll.on) return; startPoll.on = true; setInterval(async () => { if (!api || apiBusy || document.hidden) return; const a = document.activeElement; if (a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT')) return; if (await apiLoad(api.key, true)) render(); }, 20000); }
+async function startApi() { let key = ''; try { key = localStorage.getItem('gfp-tracker-key') || ''; } catch (e) { /* no storage */ } const ok = await apiLoad(key, !key); if (!ok && !key) { needKey = true; } render(); if (ok) startPoll(); }
+function unlockPanel() {
+  const inp = el('input', { type: 'password', id: 'tk', placeholder: 'Tracker password', 'aria-label': 'Tracker password', autocomplete: 'current-password' });
+  const go = async () => { const k = inp.value; if (!k) return; if (await apiLoad(k)) { try { localStorage.setItem('gfp-tracker-key', k); } catch (e) { /* no storage */ } startPoll(); } render(); };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  return el('div', { class: 'panel' }, el('h2', { text: 'Unlock the tracker' }), el('div', { class: 'det', text: 'The saved ticks, remarks and comments are protected: enter the shared password to read and change them.' }), apiMsg ? el('div', { class: 'banner', style: 'margin-top:8px', text: apiMsg }) : null, el('div', { class: 'add', style: 'margin-top:10px' }, inp, el('button', { class: 'btn', onclick: go }, 'Unlock')));
+}
+const flat = [];                                                   /* every item: { ...item, tab, group } */
+for (const tab of Object.keys(ITEMS)) for (const [group, list] of ITEMS[tab]) for (const it of list) flat.push({ ...it, tab, group });
+const byId = Object.fromEntries(flat.map(i => [i.id, i]));
+const esc = s => String(s == null ? '' : s);
+const el = (tag, props, ...kids) => { const e = document.createElement(tag); if (props) for (const k in props) { if (k === 'class') e.className = props[k]; else if (k === 'text') e.textContent = props[k]; else if (k.startsWith('on')) e.addEventListener(k.slice(2), props[k]); else if (k === 'checked' || k === 'value' || k === 'hidden' || k === 'disabled') e[k] = props[k]; else e.setAttribute(k, props[k]); } for (const kid of kids.flat()) if (kid != null) e.append(kid.nodeType ? kid : document.createTextNode(kid)); return e; };
+const allItems = () => [...flat, ...Object.entries(custom).map(([id, c]) => ({ id, t: c.t, d: c.d || '', s: 'todo', w: c.w || 'You', r: 'added by you', tab: c.tab, group: 'Added by you', custom: true }))];
+const cur = it => { const st = state[it.id] || {}; const status = st.status || it.s; return { done: st.done !== undefined ? !!st.done : it.s === 'done', status: st.done === true && !st.status ? 'done' : status, remark: st.remark || '', comments: st.comments || [] }; };
+function toast(t) { const e = document.getElementById('toast'); e.textContent = t; e.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { e.hidden = true; }, 1800); }
+const chain = {};
+function save(id, patch, delay) {
+  const next = { ...(state[id] || {}), ...patch, at: Date.now() }; state[id] = next;
+  const run = () => { if (api) { apiPush({ items: { [id]: state[id] } }); return Promise.resolve(); } if (!db || usingLocal) { try { localStorage.setItem(LS, JSON.stringify({ state, custom })); } catch (e) { /* storage unavailable */ } return Promise.resolve(); }
+    chain[id] = (chain[id] || Promise.resolve()).then(() => db.doc('items/' + id).set(state[id])).catch(e => { if (e && e.code === 'invalid_argument') { canWrite = false; toast('You can read but not change this page'); render(); } else toast('Could not save, try again'); }); return chain[id]; };
+  clearTimeout(save['t' + id]); if (delay) save['t' + id] = setTimeout(run, delay); else run();
+}
+function addCustom(tab, t) { if (!t.trim()) return; const id = 'c' + Date.now().toString(36); const c = { tab, t: t.trim(), w: 'You', at: Date.now() }; custom[id] = c; if (api) apiPush({ custom: { [id]: c } }); else if (db && !usingLocal) db.doc('custom/' + id).set(c).catch(() => toast('Could not save, try again')); else { try { localStorage.setItem(LS, JSON.stringify({ state, custom })); } catch (e) { /* ignore */ } } render(); }
+function delCustom(id) { delete custom[id]; delete state[id]; if (api) apiPush({ delItems: [id], delCustom: [id] }); else if (db && !usingLocal) { db.doc('custom/' + id).delete().catch(() => {}); db.doc('items/' + id).delete().catch(() => {}); } else { try { localStorage.setItem(LS, JSON.stringify({ state, custom })); } catch (e) { /* ignore */ } } render(); }
+
+/* ===================== view ===================== */
+let tab = (location.hash || '').replace('#', '') || 'dash', q = '', sf = 'all'; const open = new Set();
+const counts = list => { const c = { total: 0, done: 0, doing: 0, todo: 0, blocked: 0, nope: 0, note: 0 }; for (const it of list) { const v = cur(it); c.total++; if (v.done) c.done++; c[v.status] = (c[v.status] || 0) + 1; } return c; };
+const tabItems = id => allItems().filter(i => i.tab === id);
+function setProgress() { const all = allItems(), c = counts(all); const p = c.total ? Math.round(100 * c.done / c.total) : 0; document.getElementById('obar').style.width = p + '%'; document.getElementById('opct').textContent = p + '%'; }
+function renderTabs() { const nav = document.getElementById('tabs'); nav.textContent = ''; for (const t of TABS) { const n = t.id === 'dash' ? null : counts(tabItems(t.id)); nav.append(el('button', { role: 'tab', 'aria-selected': String(tab === t.id), onclick: () => { tab = t.id; location.hash = t.id; render(); window.scrollTo(0, 0); } }, t.name, n ? el('span', { class: 'n', text: n.done + '/' + n.total }) : null)); } }
+const pill = s => el('span', { class: 'pill p-' + s, text: STATUS[s] });
+
+function itemNode(it) {
+  const v = cur(it), isOpen = open.has(it.id), node = el('div', { class: 'item' + (v.done ? ' is-done' : ''), 'data-id': it.id });
+  const cb = el('input', { type: 'checkbox', checked: v.done, disabled: !canWrite, 'aria-label': 'Done: ' + it.t, onchange: e => { const d = e.target.checked; save(it.id, { done: d, status: d ? 'done' : (v.status === 'done' ? 'todo' : v.status) }); render(); } });
+  const sel = el('select', { 'aria-label': 'Status', disabled: !canWrite, onchange: e => { const s = e.target.value; save(it.id, { status: s, done: s === 'done' }); render(); } }, Object.keys(STATUS).map(k => { const o = el('option', { value: k, text: STATUS[k] }); if (k === v.status) o.selected = true; return o; }));
+  const more = el('button', { class: 'more', 'aria-expanded': String(isOpen), onclick: () => { if (open.has(it.id)) open.delete(it.id); else open.add(it.id); render(); } }, isOpen ? 'Close' : 'Notes', v.comments.length || v.remark ? el('span', { class: 'c', text: ' ' + (v.remark ? '✎' : '') + (v.comments.length ? v.comments.length : '') }) : null);
+  const meta = el('div', { class: 'meta' }, pill(v.status), it.w ? el('span', { class: 'tag who', text: it.w }) : null, it.r ? el('span', { class: 'tag', text: it.r }) : null);
+  node.append(el('div', { class: 'row' }, cb, el('div', null, el('div', { class: 'ttl', text: it.t }), it.d ? el('div', { class: 'det', text: it.d }) : null, meta), el('div', { class: 'side' }, sel, more)));
+  if (isOpen) {
+    const ta = el('textarea', { id: 'rm-' + it.id, placeholder: 'Remarks: your decision, a link, what you saw', value: v.remark, disabled: !canWrite, oninput: e => save(it.id, { remark: e.target.value }, 700) });
+    const cin = el('input', { type: 'text', id: 'ci-' + it.id, placeholder: 'Add a comment', disabled: !canWrite });
+    const add = () => { const t = cin.value.trim(); if (!t) return; save(it.id, { comments: [...v.comments, { at: Date.now(), text: t }] }); cin.value = ''; render(); };
+    cin.addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+    node.append(el('div', { class: 'drawer' }, el('div', null, el('label', { for: 'rm-' + it.id, text: 'Remarks' }), ta),
+      el('div', null, el('label', { text: 'Comments' }), el('div', { class: 'list' }, v.comments.map((c, i) => el('div', { class: 'cm' }, el('small', { text: new Date(c.at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) }), canWrite ? el('button', { 'aria-label': 'Delete comment', onclick: () => { save(it.id, { comments: v.comments.filter((_, j) => j !== i) }); render(); } }, 'delete') : null, c.text))), el('div', { class: 'addc', style: 'margin-top:8px' }, cin, canWrite ? el('button', { class: 'btn', onclick: add }, 'Add') : null)),
+      it.custom && canWrite ? el('div', null, el('button', { class: 'btn ghost', onclick: () => delCustom(it.id) }, 'Remove this item')) : null));
+  }
+  return node;
+}
+
+function listView(t) {
+  const frag = el('div', { class: 'list' }); const meta = TABS.find(x => x.id === t.id);
+  if (meta.intro) frag.append(el('div', { class: 'det', text: meta.intro }));
+  const tools = el('div', { class: 'tools' }); const search = el('input', { type: 'search', id: 'srch', placeholder: 'Search this tab', value: q, 'aria-label': 'Search', oninput: e => { q = e.target.value; keepFocus('srch', renderBody); } });
+  tools.append(search); for (const k of ['all', 'done', 'doing', 'todo', 'blocked', 'nope', 'note']) tools.append(el('button', { class: 'chip', 'aria-pressed': String(sf === k), onclick: () => { sf = k; render(); } }, k === 'all' ? 'All' : STATUS[k]));
+  frag.append(tools);
+  const all = tabItems(t.id).filter(it => { const v = cur(it); if (sf !== 'all' && v.status !== sf) return false; if (!q) return true; const h = (it.t + ' ' + it.d + ' ' + (it.r || '') + ' ' + (it.w || '') + ' ' + v.remark + ' ' + v.comments.map(c => c.text).join(' ')).toLowerCase(); return h.includes(q.toLowerCase()); });
+  const groups = []; for (const it of all) { let g = groups.find(x => x.n === it.group); if (!g) groups.push(g = { n: it.group, l: [] }); g.l.push(it); }
+  if (!groups.length) frag.append(el('div', { class: 'empty', text: 'Nothing matches. Clear the search or the status filter.' }));
+  for (const g of groups) { const c = counts(g.l); frag.append(el('div', { class: 'gh' }, g.n, el('span', { text: c.done + ' of ' + c.total + ' done' })), ...g.l.map(itemNode)); }
+  if (canWrite) { const inp = el('input', { type: 'text', id: 'addin', placeholder: 'Add your own item to this tab', 'aria-label': 'New item' }); const go = () => { addCustom(t.id, inp.value); }; inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); }); frag.append(el('div', { class: 'add', style: 'margin-top:8px' }, inp, el('button', { class: 'btn', onclick: go }, 'Add item'))); }
+  return frag;
+}
+
+function dashView() {
+  const all = allItems(), c = counts(all), wrap = el('div', { style: 'display:flex;flex-direction:column;gap:14px' });
+  wrap.append(el('div', { class: 'panel' }, el('h2', { text: 'Overall' }), el('div', { class: 'stats' },
+    [['Items', c.total, ''], ['Done', c.done, 's-done'], ['In progress', c.doing, 's-doing'], ['To do', c.todo, ''], ['Waiting on someone', c.blocked, 's-blocked'], ['Cannot be done', c.nope, 's-nope']].map(([n, v, k]) => el('div', { class: 'stat ' + k }, el('b', { text: v }), el('span', { text: n }))))));
+  const g = el('div', { class: 'grid' });
+  const tabsP = el('div', { class: 'panel' }, el('h2', { text: 'Progress by tab' })); for (const t of TABS.filter(x => x.id !== 'dash')) { const n = counts(tabItems(t.id)), p = n.total ? Math.round(100 * n.done / n.total) : 0; tabsP.append(el('div', { class: 'tabrow' }, el('button', { onclick: () => { tab = t.id; location.hash = t.id; render(); } }, t.name), el('div', { class: 'bar' }, el('i', { style: 'width:' + p + '%' })), el('div', { class: 't', text: n.done + '/' + n.total }))); }
+  g.append(tabsP);
+  const factsP = el('div', { class: 'panel' }, el('h2', { text: 'Current status' }), el('dl', { class: 'kv' }, FACTS.map(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]).flat())); g.append(factsP);
+  wrap.append(g);
+  const need = allItems().filter(it => { const v = cur(it); return v.status === 'blocked' && !v.done; });
+  const needP = el('div', { class: 'panel' }, el('h2', { text: 'Waiting on someone (' + need.length + ')' }));
+  if (!need.length) needP.append(el('div', { class: 'det', text: 'Nothing is waiting.' }));
+  else { const t = el('table'); t.append(el('tr', null, el('th', { text: 'Who' }), el('th', { text: 'What' }), el('th', { text: 'Tab' }))); for (const it of need) t.append(el('tr', null, el('td', { class: 'num', text: it.w || '' }), el('td', { text: it.t }), el('td', { class: 'num', text: TABS.find(x => x.id === it.tab).name }))); needP.append(el('div', { class: 'scroll' }, t)); }
+  wrap.append(needP);
+  const next = allItems().filter(it => it.tab === 'phases' && cur(it).status === 'todo').slice(0, 6);
+  wrap.append(el('div', { class: 'panel' }, el('h2', { text: 'Next up in the phases' }), el('div', { class: 'list' }, next.map(it => el('div', { class: 'det', text: '• ' + it.t })))));
+  const pt = el('table'); pt.append(el('tr', null, el('th', { text: 'PR' }), el('th', { text: 'What' }), el('th', { text: 'State' })));
+  for (const [n, t, s] of PRS) pt.append(el('tr', null, el('td', { class: 'num', text: '#' + n }), el('td', { text: t }), el('td', null, el('span', { class: 'pill ' + (s === 'merged' ? 'p-done' : 'p-doing'), text: s }))));
+  wrap.append(el('div', { class: 'panel' }, el('h2', { text: 'Pull requests (anshulsingh2098/game-for-peace)' }), el('div', { class: 'scroll' }, pt)));
+  wrap.append(el('div', { class: 'panel' }, el('h2', { text: 'Share' }), el('div', { class: 'tools' }, el('button', { class: 'btn', onclick: copySummary }, 'Copy summary as text'), el('span', { class: 'det', text: 'Everything with its status, remarks and comments, ready to paste to Claude or Anshul.' }))));
+  return wrap;
+}
+function copySummary() {
+  const out = ['# Game for Peace Tracker', new Date().toLocaleString(), ''];
+  for (const t of TABS.filter(x => x.id !== 'dash')) { out.push('## ' + t.name); let g = ''; for (const it of tabItems(t.id)) { const v = cur(it); if (it.group !== g) { g = it.group; out.push('### ' + g); } out.push('- [' + (v.done ? 'x' : ' ') + '] ' + it.t + ' (' + STATUS[v.status] + (it.w ? ', ' + it.w : '') + ')' + (v.remark ? '\n  remark: ' + v.remark : '') + v.comments.map(c => '\n  comment: ' + c.text).join('')); } out.push(''); }
+  const text = out.join('\n'); const fallback = () => { const ta = el('textarea', { style: 'position:fixed;left:-999px' }); ta.value = text; document.body.append(ta); ta.select(); try { document.execCommand('copy'); toast('Copied'); } catch (e) { toast('Copy not allowed here'); } ta.remove(); };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast('Copied'), fallback); else fallback();
+}
+
+let pending = false;
+function keepFocus(id, fn) { fn(); const e = document.getElementById(id); if (e) { e.focus(); const n = e.value.length; try { e.setSelectionRange(n, n); } catch (x) { /* ignore */ } } }
+function renderBody() { const main = document.getElementById('main'); main.textContent = ''; if (needKey) { main.append(unlockPanel()); return; } if (usingLocal) main.append(el('div', { class: 'banner', text: 'Saving only in this browser: sign in to the artifact to share the checklist.' })); if (!canWrite) main.append(el('div', { class: 'banner', text: 'You can read this page but not change it.' })); const t = TABS.find(x => x.id === tab) || TABS[0]; main.append(t.id === 'dash' ? dashView() : listView(t)); }
+function render() { const a = document.activeElement; if (a && a.tagName === 'TEXTAREA' && document.getElementById('main').contains(a) && !render.force) { pending = true; return; } pending = false; setProgress(); renderTabs(); renderBody(); }
+document.addEventListener('focusout', () => { setTimeout(() => { if (pending) render(); }, 50); });
+window.addEventListener('hashchange', () => { const h = location.hash.replace('#', ''); if (TABS.some(t => t.id === h) && h !== tab) { tab = h; render(); } });
+
+/* ===================== start: render at once from the built-in content, then connect the shared store ===================== */
+try { const raw = JSON.parse(localStorage.getItem(LS) || 'null'); if (raw) { state = raw.state || {}; custom = raw.custom || {}; } } catch (e) { /* no stored copy */ }
+if (!TABS.some(t => t.id === tab)) tab = 'dash';
+render();
+(async () => {
+  try {
+    if (typeof claude === 'undefined' || !claude.use) { await startApi(); return; }
+    const [d, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    if (!d) { usingLocal = true; render(); return; }
+    db = d; usingLocal = false; state = {}; custom = {};
+    try { const w = user && user.can ? await user.can('data.write') : null; if (w === false) { canWrite = false; } } catch (e) { /* not told */ }
+    let timer = setTimeout(() => toast('Shared data is slow to answer'), 10000);
+    db.collection('items').onSnapshot(s => { clearTimeout(timer); const n = {}; s.docs.forEach(x => { n[x.id] = x.data(); }); state = n; render(); }, e => { clearTimeout(timer); if (e && e.code !== 'revoked') toast('Could not read shared data'); });
+    db.collection('custom').onSnapshot(s => { const n = {}; s.docs.forEach(x => { n[x.id] = x.data(); }); custom = n; render(); }, () => {});
+  } catch (e) { if (!api) { usingLocal = true; render(); } }
+})();
+</script>

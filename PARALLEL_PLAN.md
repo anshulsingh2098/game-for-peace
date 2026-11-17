@@ -1,5 +1,7 @@
 # Parallel plan: two people, two Claudes, no collisions
 
+> **Read `docs/STATUS.md` first.** It is the one status ledger; where this file disagrees with it, this file is superseded. Dates written inside this file can be wrong (some are in the future): trust git history. Owner decisions are in `docs/DECISIONS.md`.
+
 Built from `HANDOFF.md` and `OVERVIEW.md` (state of 14 Nov 2026, branch `phase/3-driving`). Read those first.
 
 Two streams. Each person owns one stream and one set of files. Claude only edits files its stream owns.
@@ -9,6 +11,96 @@ Two streams. Each person owns one stream and one set of files. Claude only edits
 | Person | (name) | (name) |
 | Works on | Roads, terrain, scenery, locations, landmarks, world tools | Driving, vehicles, traffic, sound, menus, radio, graphics, the old game |
 | Branch prefix | `world/...` | `vehicle/...` |
+
+## Status (16 Nov 2026)
+
+`main` has pull requests 1 to 22. What is done and what is not, by phase (details in `HANDOFF.md`, `PERFORMANCE.md`, `VISUAL_MATRIX.md`, the team logs):
+
+| Phase | Done (checked by script or on a desktop) | Not done |
+|---|---|---|
+| **N0** | Baseline on the real clone; checklist; Rapier warning fixed | Anshul's deploy; two real phones; listening to the engine; Anshul's review of everything in his files |
+| **N1** | Telemetry contract, real powertrain for car, truck and bike, acceptance script in the daily check, tunnel-aware weather sound, arcade handling, steering, Aero Concept car and the restored Dusk GT | A person driving and listening; cleaner engine recordings; tyre/road/wind refinement; truck and bike sound pass |
+| **N2** | Weather made to read; matrix captured (desktop, California): all six weathers at day, clear at dusk and night, rain and snow at night; white paint measured | Dawn; overcast, fog and storm at dusk and night; other locations and tiers; bridge and tunnel at night and in rain |
+| **N3** (A) | Rail collision, world contract, Marine Drive, mountain grades, tunnel walkway and signs, steel truss bridge, location smoke test | Retaining walls; tall grass and ground normal maps; tree levels of detail; better hotel; southern coast landmark; collision for tunnel walls and bridge piers; Rohtang terrain research |
+| **N4** | Loading screen, `?bench=30`, measured tiers on a desktop | Any real phone; texture and mesh compression (only if a phone needs it); long-session leak test |
+| **N5** | Traffic (Off/Low/Mid/High, thirteen vehicle shapes), My music, rumble, validated saved choices, hardened tuner worker | Customisation beyond paint; the tuner page's own login (owner's decision); Cloudflare KV and password setup (operator) |
+| **N6** | Switch-over done in the repo at the owner's request (`index.html` is the new engine, `classic.html` the old game, `next.html` a redirect); script checks all pass | Anshul's stage and deploy; the real-phone and driving acceptance the plan wanted first |
+
+Waiting on people: Anshul (deploy, review, Cloudflare setup), Rajul and Anshul (phones, driving, listening, `CHECKLIST.md`).
+Direction: the whole game goes photorealistic (`team/photoreal-plan.md`). **Product direction (owner, 15 Nov 2026): after N6, grow into an open-world India game, see the N7 to N15 section below.**
+
+## Phases from here (the plan, replacing the original phase numbers below)
+
+Each phase ends with: `python tools/daily_check.py` clean, the relevant `CHECKLIST.md` items ticked by a person, a merge into `main`, a deploy by Anshul, and `HANDOFF.md` updated. Stream A and Stream B can run side by side, as before; the "(A)" and "(B)" marks say who owns the files.
+
+| Phase | Owner | Work | Done when |
+|---|---|---|---|
+| **N0** this week | both | Anshul deploys `main`. Both go through the whole checklist, on two real phones too. Listen to the engine sound. Every defect goes into the team log as an open entry. | Live `/next` works on two phones; the defect list exists and is ordered. |
+| **N1** Driving and sound | B | Cleaner engine recordings (steady revs at six speeds, 10 s each) and a second pass on the loops; tyre, road and wind sounds; rain sound out of tunnels; a physics feel pass with the hard-coded constants moved into the tuner (`rapier-vehicle.js`, `physics.js`); sports car and rally hatchback integrated; manual gears. | Rajul drives the car, truck and bike and says the feel and sound are natural; the tuner exposes the physics constants. |
+| **N2** Sky, weather, vehicle look | B (A helps) | An HDRI that follows weather and time of day (`env/environment.js`), fog and clouds, wet and snow surfaces, headlight beams; fix the white paint glare; detailed vehicle models and clearcoat paint (R2, R3); a calmer, hazier colour grade like slowroads. | Every weather at day, dusk and night looks right on the checklist; vehicles look close to real. |
+| **N3** World polish | A | Tall-grass look and normal maps on the ground; tree levels of detail; Marine Drive seafront, southern coast landmark, better hotel model; bridge rail collision (shared collision list), steel truss bridge and retaining walls from the Atal references, interior signs and walkway; steep-land driving checks in the Alps and Himalayas; research real Rohtang terrain from open height data. | The checklist's world items pass in all eight locations; no known visual defect at a landmark. |
+| **N4** Phones and speed | both | Compressed textures (KTX2) and meshes (meshopt), draw-call and triangle budgets per tier, tune the high tier (9.1 ms on a desktop now, see `PERFORMANCE.md`; phones not measured), a loading screen, automatic quality choice, a frame-time budget per tier. | Two real phones hold a steady frame rate on low and medium; download size is written down. |
+| **N5** Features | B | Traffic with modes (`src/traffic/`, uses `road.carriedW` and the road lookup), the "My music" station for local songs in the radio, controller rumble, vehicle customisation in the garage, a password for the tuner page and the Publish setup. | Each feature has a checklist line and passes it. | **Status 16 Nov (updated):** traffic now has Off/Low/Mid/High and thirteen real vehicle shapes; the original Dusk GT is back and the new car is an extra vehicle; My music, controller rumble, saved-choice validation, tuner worker hardening and traffic are built and tested (PR 22); the tuner page's own login and the live Publish setup are still decisions/ops for the owner, and nothing has been tried on a phone.
+| **N6** Switch-over and launch | both | `index.html` becomes the new engine, `game.js` is retired, `next.html` stays as an alias for a while, final full checklist, final deploy. | The live `/` is the new game and plays well on phones and computers. |
+
+Order: N0 first, then N1 and N3 in parallel (different files), N2 after N1 starts, N4 once N1 to N3 have landed, N5 any time after N1, N6 last.
+
+## After N6: the open-world India programme (N7 to N15)
+
+The owner supplied a second plan on 15 Nov 2026, kept in full in `docs/post-n6-open-world-plan.md` (it was written from a study of the public `gta-reversed` repository as an architecture reference only: nothing is copied from it, its code, assets, maps or scripts, which matches the project's earlier decision not to port decompiled game code). **N7 onward must not start until N0 to N6 are accepted on real devices** (N6 is built but not yet accepted). Until then agents may read it and, if the owner asks, write a design note for N7 that touches no runtime file.
+
+| Phase | Owner | What | Builds on what exists |
+|---|---|---|---|
+| **N7** Runtime and entity lifecycle (**built 17 Nov 2026**, `docs/RUNTIME.md`) | B (A reviews) | A small `GameRuntime` and system order (init, fixed update, update, render, dispose), a clamped fixed-step accumulator, a low-frequency event bus, stable entity handles, one pooled entity type as proof | `src/main.js` (a composition root that has grown long); the traffic sim already has a tested bounded car list |
+| **N8** Sectors and asset streaming (**built 17 Nov 2026**, `docs/STREAMING.md`) | A (sectors) and B (asset runtime) | Sector metadata above the terrain tiles, load states, prioritised and cancellable requests, pinning, LOD with hysteresis, disposal, a developer overlay | `src/world/chunks.js` stays the terrain streamer; the traffic pack and scenery loaders are the first assets to put behind it |
+| **N9** Region model and India geography (**built 17 Nov 2026**, `docs/REGIONS.md`) | A | A versioned region schema (climate, roads, buildings, vegetation, traffic and population profiles, audio, landmarks, sectors), Mumbai and Bhopal test profiles, a geography-source policy (hand-made, procedural or OpenStreetMap with ODbL) | `LOCATIONS` in `locations.js` (eight profiles with `drive`, landmarks, climate) is the seed of the schema; share codes and `saved.js` already carry versions |
+| **N10** Navigation graph (**built 17 Nov 2026**, `docs/NAVIGATION.md`) | A (graph) and B (consumers) | Nodes and directed edges with lanes, sidewalks, crossings, signals, bounded cached queries, graph chunks per sector, a debug view | `Road`, `WORLD_CONTRACT.md`, `laneOffsets`, `Autodrive.lane`, `Traffic` lane maths |
+| **N11** Mumbai district vertical slice (**first increment built 17 Nov 2026**: buildings, sidewalks, crossings, furniture; junction, promenade, route and phone numbers still open, `docs/DISTRICT.md`) | A (world) and B (ambient) | One small district: arterial, local street, junction, market strip, promenade; modular Indian building kit; sidewalks, crossings, street furniture; 5 to 10 minute route | Marine Drive, Gateway of India, Taj Hotel, bridges, the Mumbai profile |
+| **N12** Indian traffic (**first increment built 17 Nov 2026**: mix, two-wheelers, rickshaws, signals; junction routing open, `docs/TRAFFIC.md`) | B | Cars, two-wheelers and auto-rickshaws on the lane graph with intersections, signals, avoidance and recovery, pooled, three densities plus Off | `src/traffic/sim.js` (tested lanes, gaps, spawn safety, determinism) is the baseline to extend, and its tests must keep passing |
+| **N13** Pedestrians (**first increment built 17 Nov 2026**: sidewalk walkers, crossings, signals; real models and reactions open, `docs/PEDESTRIANS.md`) | B (A: sidewalks and POI data) | Rigged licensed models, sidewalk-only spawn, a state machine, crossings, near/mid/far tiers, caps | nothing yet |
+| **N14** On foot, enter and exit, interactions (**first increment built 17 Nov 2026**, `docs/ONFOOT.md`) | B (A: anchors and interiors) | Player state machine, a capsule character controller, vehicle entry and exit, prompts, simple streamed interiors, touch controls for on foot | `phys.telemetry()`, `Controls`, `TouchUI`, `view` cameras |
+| **N15** Activities and saves (**first increment built 17 Nov 2026**, `docs/ACTIVITIES.md`) | B (A: POI data) | Data-driven activities, a versioned save with corruption recovery and migration | `sanitiseSaved` is the start of the save schema |
+| N16 to N20 | later | More regions (Bhopal, Delhi, Jaipur, Himalaya, south), emergency services and events, deeper interiors, vehicle depth, long-term persistence | only after N7 to N15 |
+
+**Review notes (16 Nov 2026), what to know before N7 starts**
+1. **Gate:** nothing in N7 to N15 is begun. The N7 kickoff report the document asks for (current `main.js` update order, lifecycle conventions, who allocates and disposes entities, the physics timestep, the smallest change, files and tests) is Stream B's first task when the gate opens.
+2. **Missing companion document:** the plan refers to `Game_for_Peace_Asset_Acquisition_Brief.md`. It was not supplied and is not in the repo. It is needed before N11 to N14, because the assets are the hard part: the current free packs have cars and trucks only. Two-wheelers, auto-rickshaws, rigged pedestrians and an Indian building kit have to be found (free and properly licensed, or built in Blender) or bought with the owner's approval. Scripted downloads from Kenney's site and OpenGameArt are refused, so the owner downloads packs by hand (as was done for the traffic cars). Realistic free cars of GTA quality do not exist as licensed downloads.
+   **Owner instruction (16 Nov 2026): Claude finds, buys-with-approval or builds all of these assets, as a later job (before N11).** First task of that job: write `docs/ASSET_PLAN.md` (the asset acquisition brief this plan refers to): for each asset (two-wheelers, auto-rickshaws, more cars and trucks, rigged pedestrians, Indian building kit, street furniture, signs, props, audio), the source options (CC0 or properly licensed free packs the owner downloads by hand; Blender builds by script like `tools/blender/make_traffic_pack.py`; paid packs only with the owner's approval), the licence, the polygon and texture budget, and the credit row for `assets/ASSETS.md`.
+3. **Product direction change:** the Master Plan said the game stays a calm endless driving game with no missions or pursuits unless the owner decides otherwise. This document is that decision. Record it; N17 (police and emergency services) stays out of scope until chosen.
+4. **Real risks:** (a) phone performance is unmeasured, and the N8 budgets depend on it, so the phone benchmark (N4) should come first; (b) N7 to N15 is a very large programme, so the documents's own advice stands: do N7 to N10 as foundations, then one small Mumbai district, not a city; (c) a capsule character controller on the vendored Rapier (0.19.3) needs its API checked before N14 is promised; (d) OpenStreetMap use needs an owner decision on ODbL attribution and share-alike before any data is used.
+5. **Ownership:** the document says each agent edits only its own files and log. The owner has so far asked one Claude to do both streams' parts, all logged; that continues until Anshul takes over his stream.
+6. **Decisions needed from the owner before N9 and N11:** hand-made versus OpenStreetMap-derived geography; which Mumbai district; how two-wheelers, auto-rickshaws, pedestrians and the building kit are sourced and what may be spent; whether on-foot play is wanted on phones.
+
+### Addendum: open-world core architecture (supplied 16 Nov 2026)
+
+Kept in full in `docs/open-world-core-architecture-addendum.md`. It does not renumber or replace N7 to N20; it says what kind of engine N7 onward should become and how to design it (principles, not code to copy). Same gate: no implementation until N0 to N6 are accepted. Where it adds to this plan:
+
+| Addendum area | Where it lands | Already in the code | Gap or note |
+|---|---|---|---|
+| 2.1 continuous world, sectors, world coordinates | N8, N9 | floating-origin tiles, `ChunkGrid`, seeded roads | sector metadata, region directory, safe unload |
+| 2.2 streaming and resources | N8 | tile pools, traffic pack and scenery loaders | one request queue with priorities, pinning, budgets, disposal audit |
+| 2.3 entities and handles | N7 | traffic car list only | typed registries, stable handles, reset behaviour |
+| 2.4 on foot | N14 | none | needs a capsule controller check on Rapier 0.19.3 and a character asset |
+| 2.5 vehicles | N1 (done), N12, N14 | `RapierVehicle`, three classes plus Concept | one shared vehicle representation for player and AI; occupants; horns, lights |
+| 2.6 traffic | N10, N12 | `TrafficSim` | lane graph, intersections, signals |
+| 2.7 pedestrians | N13 | none | assets first |
+| 2.8 AI behaviours | N12, N13 | autodrive hooks (`lane`, `leader`) | shared perception, destination and behaviour concepts |
+| 2.9 interaction contract | N14 | none | one contract (detect, prompt, activate) before any activity |
+| 2.10 activities and progression | N15 | none | data-driven; start with point-to-point driving |
+| 2.11 police, factions | N17, out of scope | none | do not couple to traffic or missions |
+| 2.12 interiors | N14, N19 | tunnels only | a few meaningful interiors |
+| 2.13 time, weather | N2 (done for visuals) | `env`, `grade`, weather sound | one shared world-state and event interface so visuals, physics, sound and AI agree |
+| 2.14 camera, HUD, audio, feedback | N14, N15 | seven camera views, wheel UI, audio | **not a phase today**: HUD, map or route guidance, prompts, accessibility. Proposed sub-phase below |
+| 2.15 persistence | N15 | `sanitiseSaved`, share codes | persistence categories (transient, rebuildable, player, progress, world changes) |
+
+Ten cross-system principles in section 3 of the addendum become review criteria for every N7 to N15 design note (central orchestration, explicit lifecycle, data-driven regions, separate spatial concepts, bounded simulation, distance-aware detail, events, ownership and cleanup, profile first, build vertically).
+
+**Change requests this addendum asks us to raise (as proposals, not rewrites):**
+1. **N7a Core contracts note (design only, joint A and B, after the gate opens):** one short document, `docs/CORE_CONTRACTS.md`, agreeing world coordinates, entity identity, sector activation, navigation, events, simulation ticks and resource ownership. Both streams sign it off in their logs before any cross-stream code. This is the addendum's "joint responsibility".
+2. **N14a Player-facing layer (HUD, map and route guidance, prompts, accessibility):** the plan has no home for it. Proposed between N13 and N14, or inside N14; the owner decides.
+3. Shared world state for weather and time (N7 or N8): visuals already exist, the event interface does not.
+
+Rules unchanged: `/classic.html` (the old game) stays untouched; work on the game at `/`, stream file ownership, PR workflow, self-test and daily check, no deploys, no edits to `cloudflare/public/`.
 
 ## File ownership (the anti-collision rule)
 
@@ -38,6 +130,8 @@ Both Claudes read `CLAUDE.md` automatically. It tells them to log changes in `te
 5. **One deployer.** Deploys happen only from the integration branch after a merge (wrangler is logged in on Anshul's PC).
 6. Line endings: the repo mixes LF and CRLF. Do not run tools that rewrite whole files. Make surgical edits and check `git diff --stat` for huge diffs.
 7. The old game (`index.html`, `game.js`) is Stream B's. Stream A never touches it.
+
+## The original phases (kept for reference: Phases 0 to 2 are done for Stream A; the rest is folded into "Phases from here" above)
 
 ## Phase 0: sync (together, about 30 minutes, do first)
 

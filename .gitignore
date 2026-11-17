@@ -2,6 +2,9 @@
 *.mp3
 *.m4a
 *.wav
+# our own engine loops (cut from Rajul's car recording) are not commercial music: keep them
+!assets/audio/*.mp3
+!assets/audio/*.wav
 
 # Hand-made backups from before git; history replaces these
 dev/*_before_*
@@ -23,3 +26,9 @@ __pycache__/
 *.blend1
 Thumbs.db
 Desktop.ini
+
+# raw downloaded map data (OpenStreetMap etc.): licences in docs/OPEN_DATA.md; only the small derived files in assets/ are committed
+data/
+
+# the city pack is staged into cloudflare/public by tools/stage_cloudflare.py at deploy time; it already lives in assets/cities (do not commit a second 77 MB copy)
+cloudflare/public/assets/cities/

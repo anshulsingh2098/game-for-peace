@@ -1,16 +1,16 @@
 """Builds the Cloudflare deploy folder from the project, replacing hand copying.
 Usage: python tools/stage_cloudflare.py [--out <folder>] [--dry-run]
-Default output is cloudflare/public. Copies the pages, scripts, three.js, models and textures; leaves out Blender
-sources, dev files, backups and the music/ folder (its songs are commercial tracks and are not to be published; players add their own
-songs in the browser and they never reach the server). Files in the output that are no
+Default output is cloudflare/public. Copies the pages, scripts, three.js, models, textures and the radio
+playlist and songs; leaves out Blender sources, dev files and backups. Files in the output that are no
 longer part of the site are removed, so the folder always mirrors the project."""
 import os, sys, shutil, filecmp
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FILES = ['index.html', 'next.html', 'game.js', 'audio.js']                      # single files, if present
+FILES = ['manifest.webmanifest', 'sw.js', 'index.html', 'next.html', 'classic.html', 'tuner.html', 'licenses.html', 'india_map.html', 'game.js', 'audio.js']                      # single files, if present
 TREES = {                                                                      # folder -> allowed extensions
-    'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', ''}, 'assets': {'.glb', '.png', '.jpg', '.webp'},
-}                                                                              # no 'music' tree: nothing from music/ is deployed
+    'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', '', '.wasm'}, 'assets': {'.glb', '.png', '.jpg', '.webp', '.hdr', '.mp3', '.wav', '.json', '.bin', '.txt'},   # .bin: assets/india/terrain.bin; .txt: data attribution files; .wasm: the vendored decoders (audit R01)
+    'music': {'.json', '.mp3', '.m4a', '.ogg'},
+}
 
 def lp(p):                                                                     # long-path safe on Windows
     p = os.path.abspath(p); pre = '\\\\?\\'
@@ -22,7 +22,8 @@ def wanted():
         for d, _, names in os.walk(os.path.join(ROOT, tree)):
             for n in names:
                 if os.path.splitext(n)[1].lower() in exts:
-                    out.append(os.path.relpath(os.path.join(d, n), ROOT).replace('\\', '/'))
+                    rel = os.path.relpath(os.path.join(d, n), ROOT).replace('\\', '/')
+                    out.append(rel)
     return sorted(out)
 
 def main():

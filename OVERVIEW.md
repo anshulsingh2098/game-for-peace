@@ -1,9 +1,11 @@
 # Game for Peace: overview
 
+> **Read `docs/STATUS.md` first.** It is the one status ledger; where this file disagrees with it, this file is superseded. Dates written inside this file can be wrong (some are in the future): trust git history. Owner decisions are in `docs/DECISIONS.md`.
+
 A calm, endless driving game that runs in the browser. Built with JavaScript, three.js and WebGL; everything in the world is generated on the player's device from a seed, so there is nothing to download but the page, the scripts and three small vehicle models.
 
 - **Repository:** https://github.com/anshulsingh2098/game-for-peace
-- **Live site:** https://game-for-peace.anshul-rawat.workers.dev (Cloudflare). `/` is the original game; `/next` is the new engine.
+- **Live site:** https://game-for-peace.anshul-rawat.workers.dev (Cloudflare). `/` is the new engine (from the N6 switch-over, once deployed); `/classic.html` is the original game; `/next.html` redirects to `/`.
 - **Account for everything:** rawatanshul525@gmail.com (git, GitHub, Cloudflare). No other account is to be used.
 
 ## Two games in one folder
@@ -12,10 +14,10 @@ The project is in the middle of an engine rebuild, so there are two entry pages.
 
 | Page | What it is | Code |
 |---|---|---|
-| `index.html` | **The current game.** One endless road with land shaped around it; the car is held to a 9 m strip. Menu, garage, paint, settings, weather, day and night, engine sounds, radio. This is what is live. | `index.html`, `game.js`, `audio.js` |
-| `next.html` | **The new engine.** An open world generated terrain-first, a road routed through it, scenery, free-roam driving on Rapier physics, weather, time of day, shadows, engine sound, live radio, menus and garage, and eight locations (landscapes and Indian city landmarks). Not yet the main page. | `src/`, `vendor/three/`, `vendor/rapier/` |
+| `classic.html` | **The original game (was `index.html`, kept for rollback).** One endless road with land shaped around it; the car is held to a 9 m strip. Menu, garage, paint, settings, weather, day and night, engine sounds, radio. This is what is live. | `index.html`, `game.js`, `audio.js` |
+| `index.html` | **The game: the new engine** (`next.html` is now only a redirect to it). An open world generated terrain-first, a road routed through it, scenery, free-roam driving on Rapier physics, weather, time of day, shadows, engine sound, live radio, menus and garage, and eight locations (landscapes and Indian city landmarks). Not yet the main page. | `src/`, `vendor/three/`, `vendor/rapier/` |
 
-When the new engine can do everything the current game does, `index.html` switches to it and `game.js` is retired.
+The switch-over (N6) has been done in the repo: `index.html` is the new engine and `game.js` serves only `classic.html`.
 
 ## How to run it
 
@@ -23,9 +25,9 @@ When the new engine can do everything the current game does, `index.html` switch
 python tools/serve.py
 ```
 
-Then open `http://localhost:8765/` for the current game or `http://localhost:8765/next.html` for the new engine. Opening the HTML files directly from disk does not work: browsers block the scripts.
+Then open `http://localhost:8765/` for the game or `http://localhost:8765/classic.html` for the original. Opening the HTML files directly from disk does not work: browsers block the scripts.
 
-Useful address options for `next.html`: `?seed=word` (which world), `?loc=id` (location: alps, himalayas, california, south, mumbai, delhi, agra), `?q=low|med|high` (quality), `?shadows=on|off`, `?play` (skip the title screen), `?dev` or `?debug` (developer panels and stats), `?phys=old` (the old simple physics).
+Useful address options for `index.html`: `?seed=word` (which world), `?loc=id` (location: alps, himalayas, california, south, mumbai, delhi, agra), `?q=low|med|high` (quality), `?shadows=on|off`, `?play` (skip the title screen), `?dev` or `?debug` (developer panels and stats), `?phys=old` (the old simple physics).
 
 Checks before committing engine work:
 
@@ -64,8 +66,14 @@ node tools/selftest.mjs
 | `ui/radiowheel.js` | The GTA-style radio wheel (hold Q): India, World and My music pages |
 | `ui/menu.js` | Title screen, garage, location picker, settings and pause menus |
 | `debug/flycam.js`, `stats.js` | Free camera and stats panel |
+| `input/autodrive.js` | Autodrive: the car follows the road (pure pursuit, speed from bend sharpness) |
+| `input/touchui.js` | Slowroads-style touch controls for phones |
+| `world/roadstyles.js`, `bridges.js`, `tunnels.js` | Road cross-sections as data; bridges over water; tunnels with the Atal-style gate |
+| `world/groundmat.js`, `nature.js` | Photographic ground shader; real-scan trees, plants and rocks |
+| `core/tuning.js`, `tuning-docs.js`; `tuner.html` | The settings dashboard and the help text behind its "i" buttons |
+| `fx/pipeline.js` | Optional realism pipeline (`?fx=1`) |
 
-Other folders: `vendor/three/` (three.js 0.160.0, local copy), `vendor/rapier/` (Rapier 0.19.3, Apache-2.0), `tools/` (dev server, self-test, location check, Cloudflare staging script), `assets/` (vehicle models), `dev/` (Blender scripts that build the models, old patch scripts), `cloudflare/` (deploy folder), `music/` (the old game's radio playlist; song files are not in git).
+Other folders: `vendor/three/` (three.js r187, local copy with the realism addons), `vendor/rapier/` (Rapier 0.19.3, Apache-2.0), `tools/` (dev server, self-test, location check, Cloudflare staging script), `assets/` (vehicle models), `dev/` (Blender scripts that build the models, old patch scripts), `cloudflare/` (deploy folder), `music/` (the old game's radio playlist; song files are not in git).
 
 ## Roadmap
 
@@ -74,9 +82,9 @@ Other folders: `vendor/three/` (three.js 0.160.0, local copy), `vendor/rapier/` 
 | 0 | Groundwork: local three.js, dev server, self-test, staging script | Done |
 | 1 | Terrain engine: noise, config, tiles with levels of detail, floating origin | Done |
 | 2 | Road routing and grading, road mesh, scenery, water | Done |
-| 3 | Free-roam driving, sky, weather, time, lights, sound, then menus and the switch-over of `index.html` | Done in `/next` (Rapier driving, shadows, buffs, paint, live radio, menus); the switch-over of `index.html` remains |
+| 3 | Free-roam driving, sky, weather, time, lights, sound, then menus and the switch-over of `index.html` | Done in `/next` (Rapier driving, brake / handbrake / reverse, autodrive, seven camera views, touch controls, shadows, buffs, paint, live radio, menus); the switch-over of `index.html` remains (N6) |
 | 4 | Locations: California Coast, Mumbai (Marine Drive, Gateway of India, Taj Mahal Palace hotel), Delhi (India Gate), Agra (Taj Mahal), Himalayas, southern coast, Alps | Done (seven locations plus the default); polish remains |
-| 5 | Road styles: multi-lane highway, boulevard, dirt trail, gravel stage; bridges and tunnels | Not started |
+| 5 | Road styles: multi-lane highway, boulevard, dirt trail, gravel stage; bridges and tunnels | Done (five styles, bridges, tunnels with an Atal-style gate) |
 | 6 | Real drivetrain with manual gears, new vehicles (sports car, rally hatchback), tuning, customisation, controller rumble | Models drafted by another session, not integrated |
 | 7 | Traffic with selectable modes | Not started |
 | 8 | Music interface: public radio streams | Done in `/next` as live radio only (local tracks dropped); the old game still has the earlier version |

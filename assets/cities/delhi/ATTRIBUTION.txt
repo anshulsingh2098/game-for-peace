@@ -1,0 +1,5 @@
+Map data © OpenStreetMap contributors, available under the Open Database Licence (ODbL 1.0): https://www.openstreetmap.org/copyright
+Extract: OpenStreetMap via Geofabrik northern-zone extract, 2026-11-16, https://download.geofabrik.de/asia/india/northern-zone-261116.osm.pbf, sha256 211c0029f3d24db327a24b28943237ce2d42694f8ebfa8810b00b1ff24966771.
+This pack is a derived database; it is shared under the ODbL as well (share-alike). Built by tools/build_city.mjs 1.0.0.
+Landmark data also draws on Wikidata (CC0): https://www.wikidata.org . Landmark text is written for this game.
+Building heights are real only where OSM tags say so (see manifest heights: tag, levels, guess).

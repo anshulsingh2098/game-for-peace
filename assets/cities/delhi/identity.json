@@ -1,0 +1,147 @@
+{
+  "format": 1,
+  "id": "delhi",
+  "note": "What makes Delhi look like Delhi (docs/DELHI_LOOK.md has the sources). Every number marked guess:true is an estimate, not data. All brands, slogans and notices are invented. Read by src/world/city/identity.js.",
+  "zones": [
+    { "id": "oldDelhi", "area": "oldDelhi", "lat": 28.6562, "lon": 77.2300, "r": 900, "src": "Chandni Chowk, Jama Masjid: OSM positions" },
+    { "id": "sadar", "area": "market", "lat": 28.6615, "lon": 77.2125, "r": 650, "src": "Sadar Bazaar", "guess": true },
+    { "id": "cp", "area": "cp", "lat": 28.6315, "lon": 77.2167, "r": 650, "src": "Connaught Place" },
+    { "id": "karolbagh", "area": "market", "lat": 28.6514, "lon": 77.1907, "r": 800, "src": "Karol Bagh" },
+    { "id": "lajpat", "area": "market", "lat": 28.5700, "lon": 77.2430, "r": 700, "src": "Lajpat Nagar" },
+    { "id": "sarojini", "area": "market", "lat": 28.5750, "lon": 77.1990, "r": 600, "src": "Sarojini Nagar" },
+    { "id": "lutyens", "area": "lutyens", "lat": 28.6020, "lon": 77.2150, "r": 2600, "src": "Lutyens' Bungalow Zone (centre and radius approximate)", "guess": true },
+    { "id": "hauzkhas", "area": "village", "lat": 28.5535, "lon": 77.1940, "r": 600, "src": "Hauz Khas Village, Shahpur Jat" },
+    { "id": "nehruplace", "area": "business", "lat": 28.5491, "lon": 77.2518, "r": 900, "src": "Nehru Place" },
+    { "id": "aerocity", "area": "business", "lat": 28.5530, "lon": 77.1200, "r": 1100, "src": "Aerocity" },
+    { "id": "dwarka", "area": "dda", "lat": 28.5823, "lon": 77.0500, "r": 4000, "src": "Dwarka sectors" },
+    { "id": "rohini", "area": "dda", "lat": 28.7380, "lon": 77.1100, "r": 4000, "src": "Rohini sectors" },
+    { "id": "laxminagar", "area": "village", "lat": 28.6330, "lon": 77.2770, "r": 1500, "src": "Laxmi Nagar, Shakarpur", "guess": true },
+    { "id": "mehrauli", "area": "village", "lat": 28.5180, "lon": 77.1850, "r": 1500, "src": "Mehrauli, Saket villages", "guess": true }
+  ],
+  "areas": {
+    "default":  { "walls": ["#d2c3a3", "#c8b896", "#b9a78a", "#d9ccb0", "#a99a84", "#cdbfa5"], "tone": 0.98, "shop": { "density": 0.35, "stack": 1, "awning": 0.4, "wires": 0.2, "canopy": 0, "stalls": 0.0 }, "ads": 0.25, "trees": { "density": 0.5, "species": ["neem", "peepal", "jamun", "bougainvillea"] }, "people": { "density": 0.5, "mix": ["resident", "student", "worker"] }, "traffic": { "two": 0.40, "hatch": 0.21, "suv": 0.07, "auto": 0.10, "erick": 0.09, "taxi": 0.03, "tempo": 0.04, "truck": 0.02, "cyclerick": 0.0, "bus": 0.04, "guess": true } },
+    "oldDelhi": { "walls": ["#cdb89a", "#b9a384", "#d6c4a2", "#a98f73", "#c2a888", "#d9b9a0"], "tone": 0.9, "shop": { "density": 0.95, "stack": 3, "awning": 0.7, "wires": 1.0, "canopy": 0.5, "stalls": 0.7 }, "ads": 0.3, "trees": { "density": 0.05, "species": ["peepal", "neem"] }, "people": { "density": 1.0, "mix": ["trader", "porter", "resident", "visitor", "vendor"] }, "traffic": { "two": 0.28, "hatch": 0.08, "suv": 0.01, "auto": 0.10, "erick": 0.20, "taxi": 0.01, "tempo": 0.08, "truck": 0.0, "cyclerick": 0.22, "bus": 0.02, "guess": true },
+      "shopKinds": { "sweets": 3, "cloth": 4, "electronics": 2, "hardware": 2, "chai": 2, "paan": 2, "jewellery": 3, "spices": 3, "mobile": 2, "pharmacy": 1, "barber": 1 } },
+    "market":   { "walls": ["#d6c2a0", "#c9b794", "#bda68a", "#cfc4ae", "#d9cbb0"], "tone": 0.95, "shop": { "density": 0.9, "stack": 2, "awning": 0.8, "wires": 0.7, "canopy": 0.45, "stalls": 0.8 }, "ads": 0.55, "trees": { "density": 0.15, "species": ["neem", "peepal"] }, "people": { "density": 0.95, "mix": ["shopper", "vendor", "porter", "worker", "student"] }, "traffic": { "two": 0.34, "hatch": 0.14, "suv": 0.04, "auto": 0.14, "erick": 0.16, "taxi": 0.03, "tempo": 0.06, "truck": 0.01, "cyclerick": 0.04, "bus": 0.04, "guess": true },
+      "shopKinds": { "cloth": 5, "electronics": 3, "sweets": 2, "hardware": 2, "chai": 2, "paan": 1, "jewellery": 3, "mobile": 3, "pharmacy": 2, "barber": 1, "shoes": 3 } },
+    "cp":       { "walls": ["#f1ede2", "#ebe6d8", "#f4f1e8"], "tone": 1.0, "shop": { "density": 0.8, "stack": 1, "awning": 0.1, "wires": 0.05, "canopy": 0, "stalls": 0.1, "colonnade": true }, "ads": 0.7, "trees": { "density": 0.5, "species": ["neem", "jamun", "gulmohar"] }, "people": { "density": 0.8, "mix": ["office", "visitor", "shopper", "student"] }, "traffic": { "two": 0.22, "hatch": 0.26, "suv": 0.16, "auto": 0.1, "erick": 0.06, "taxi": 0.12, "tempo": 0.0, "truck": 0.0, "cyclerick": 0.0, "bus": 0.08, "guess": true },
+      "shopKinds": { "fashion": 4, "restaurant": 4, "electronics": 2, "bookshop": 2, "jewellery": 2, "cafe": 3, "pharmacy": 1 } },
+    "lutyens":  { "walls": ["#f0ebdc", "#e8e1cd", "#f3efe3", "#e2dac4"], "tone": 1.0, "shop": { "density": 0.04, "stack": 1, "awning": 0.1, "wires": 0.0, "canopy": 0, "stalls": 0 }, "ads": 0.04, "trees": { "density": 1.0, "species": ["jamun", "neem", "peepal", "ashoka", "gulmohar", "amaltas"], "avenue": true, "src": "Krishen: one species per avenue" }, "people": { "density": 0.2, "mix": ["office", "resident", "visitor"] }, "traffic": { "two": 0.18, "hatch": 0.28, "suv": 0.3, "auto": 0.05, "erick": 0.01, "taxi": 0.08, "tempo": 0.0, "truck": 0.0, "cyclerick": 0.0, "bus": 0.1, "guess": true },
+      "shopKinds": { "cafe": 2, "pharmacy": 1, "bookshop": 1 } },
+    "village":  { "walls": ["#b8a68a", "#c5b69a", "#a39078", "#d0c1a4", "#9c8d78", "#c9a98a"], "tone": 0.88, "shop": { "density": 0.6, "stack": 2, "awning": 0.5, "wires": 0.9, "canopy": 0.2, "stalls": 0.4 }, "ads": 0.3, "trees": { "density": 0.15, "species": ["neem", "peepal", "bougainvillea"] }, "people": { "density": 0.7, "mix": ["resident", "student", "vendor", "worker"] }, "traffic": { "two": 0.46, "hatch": 0.12, "suv": 0.03, "auto": 0.12, "erick": 0.16, "taxi": 0.01, "tempo": 0.04, "truck": 0.01, "cyclerick": 0.04, "bus": 0.01, "guess": true },
+      "shopKinds": { "chai": 3, "paan": 2, "mobile": 2, "barber": 2, "pharmacy": 1, "hardware": 1, "sweets": 1, "cloth": 1 } },
+    "dda":      { "walls": ["#d8cdb2", "#cfc3a8", "#c9c2b0", "#d9d2c0", "#bdb39a"], "tone": 0.98, "shop": { "density": 0.2, "stack": 1, "awning": 0.3, "wires": 0.1, "canopy": 0, "stalls": 0.05 }, "ads": 0.15, "trees": { "density": 0.7, "species": ["neem", "jamun", "ashoka", "gulmohar", "peepal"] }, "people": { "density": 0.35, "mix": ["resident", "student", "office"] }, "traffic": { "two": 0.38, "hatch": 0.25, "suv": 0.1, "auto": 0.08, "erick": 0.09, "taxi": 0.02, "tempo": 0.01, "truck": 0.01, "cyclerick": 0.0, "bus": 0.06, "guess": true },
+      "shopKinds": { "pharmacy": 2, "sweets": 2, "chai": 2, "barber": 1, "mobile": 1, "cloth": 1 } },
+    "business": { "walls": ["#9fb3c2", "#b4c2cc", "#8aa0b2", "#c3ccd2", "#a8b4bc"], "tone": 1.0, "shop": { "density": 0.2, "stack": 1, "awning": 0.1, "wires": 0.0, "canopy": 0, "stalls": 0.1 }, "ads": 0.6, "trees": { "density": 0.6, "species": ["neem", "gulmohar", "ashoka", "bougainvillea"] }, "people": { "density": 0.5, "mix": ["office", "visitor", "student"] }, "traffic": { "two": 0.2, "hatch": 0.24, "suv": 0.24, "auto": 0.06, "erick": 0.03, "taxi": 0.15, "tempo": 0.0, "truck": 0.0, "cyclerick": 0.0, "bus": 0.08, "guess": true },
+      "shopKinds": { "cafe": 3, "electronics": 2, "restaurant": 2, "mobile": 2, "pharmacy": 1 } }
+  },
+  "landuseArea": { "commercial": "market", "retail": "market", "industrial": "default", "residential": "default" },
+  "vegetation": {
+    "species": [
+      { "id": "neem", "canopy": "#4f7a3a", "h": 9, "r": 3.6, "shape": "round", "weight": 3 },
+      { "id": "peepal", "canopy": "#5a8a3e", "h": 11, "r": 4.4, "shape": "round", "weight": 2 },
+      { "id": "jamun", "canopy": "#3f6b34", "h": 12, "r": 4.0, "shape": "oval", "weight": 3 },
+      { "id": "ashoka", "canopy": "#3a6a30", "h": 9, "r": 1.7, "shape": "cone", "weight": 2 },
+      { "id": "gulmohar", "canopy": "#4a7a34", "bloom": "#d9532a", "h": 8, "r": 4.8, "shape": "flat", "weight": 1, "bloomMonths": [4, 5, 6] },
+      { "id": "amaltas", "canopy": "#5a8a3a", "bloom": "#e3c33a", "h": 7, "r": 3.2, "shape": "round", "weight": 1, "bloomMonths": [4, 5, 6] },
+      { "id": "bougainvillea", "canopy": "#c23a7a", "h": 3, "r": 1.4, "shape": "round", "weight": 1 }
+    ],
+    "classDensity": { "primary": 1.0, "secondary": 0.9, "tertiary": 0.8, "residential": 0.6, "trunk": 0.6, "motorway": 0.0 },
+    "spacing": 16, "note": "spacing in metres at density 1; species per avenue: one species is picked per street edge (Lutyens), mixed elsewhere"
+  },
+  "sky": {
+    "months": [
+      { "m": 1, "tempC": [8, 19], "rainMm": 20, "fog": 0.55, "smog": 0.6, "guess": true },
+      { "m": 2, "tempC": [11, 24], "rainMm": 20, "fog": 0.35, "smog": 0.4, "guess": true },
+      { "m": 3, "tempC": [16, 30], "rainMm": 15, "fog": 0.15, "smog": 0.3, "guess": true },
+      { "m": 4, "tempC": [22, 37], "rainMm": 15, "fog": 0.05, "smog": 0.3, "guess": true },
+      { "m": 5, "tempC": [27, 40], "rainMm": 25, "fog": 0.0, "smog": 0.35, "dust": 0.6, "guess": true },
+      { "m": 6, "tempC": [29, 39], "rainMm": 70, "fog": 0.0, "smog": 0.25, "dust": 0.4, "guess": true },
+      { "m": 7, "tempC": [27, 35], "rainMm": 210, "fog": 0.05, "smog": 0.1, "guess": true },
+      { "m": 8, "tempC": [26, 34], "rainMm": 250, "fog": 0.05, "smog": 0.1, "guess": true },
+      { "m": 9, "tempC": [24, 34], "rainMm": 120, "fog": 0.05, "smog": 0.15, "guess": true },
+      { "m": 10, "tempC": [18, 33], "rainMm": 15, "fog": 0.15, "smog": 0.45, "guess": true },
+      { "m": 11, "tempC": [11, 28], "rainMm": 5, "fog": 0.45, "smog": 0.85, "src": "CSE: very poor to severe AQI most of November in bad years" },
+      { "m": 12, "tempC": [7, 22], "rainMm": 10, "fog": 0.6, "smog": 0.7, "guess": true }
+    ],
+    "hazeColour": "#c9bfa5"
+  },
+  "signage": {
+    "languages": ["en", "hi"],
+    "phone": "9XXXX XXXXX",
+    "shopNames": {
+      "sweets": [["Shree Mishthan Bhandar", "श्री मिष्ठान भंडार"], ["Gopal Misthan Ghar", "गोपाल मिष्ठान घर"], ["Madhur Sweets", "मधुर स्वीट्स"], ["Annapurna Sweet House", "अन्नपूर्णा स्वीट हाउस"]],
+      "cloth": [["Rangoli Cloth House", "रंगोली क्लॉथ हाउस"], ["Saree Mahal", "साड़ी महल"], ["New Fashion Point", "न्यू फैशन पॉइंट"], ["Laxmi Textiles", "लक्ष्मी टेक्सटाइल्स"], ["Royal Suit Centre", "रॉयल सूट सेंटर"]],
+      "electronics": [["Digi World", "डिजी वर्ल्ड"], ["Sharma Electronics", "शर्मा इलेक्ट्रॉनिक्स"], ["Bright Electricals", "ब्राइट इलेक्ट्रिकल्स"], ["Tech Mart", "टेक मार्ट"]],
+      "hardware": [["Jain Hardware Store", "जैन हार्डवेयर स्टोर"], ["Bharat Paint & Pipes", "भारत पेंट एंड पाइप्स"], ["Ganesh Sanitary", "गणेश सैनिटरी"]],
+      "chai": [["Chai Sutta Point", "चाय सुट्टा पॉइंट"], ["Gupta Tea Stall", "गुप्ता टी स्टॉल"], ["Kulhad Wali Chai", "कुल्हड़ वाली चाय"]],
+      "paan": [["Banarasi Paan Bhandar", "बनारसी पान भंडार"], ["Raju Paan Shop", "राजू पान शॉप"]],
+      "pharmacy": [["Jeevan Medical Store", "जीवन मेडिकल स्टोर"], ["City Chemist", "सिटी केमिस्ट"], ["Arogya Pharmacy", "आरोग्य फार्मेसी"]],
+      "mobile": [["Mobile Clinic", "मोबाइल क्लिनिक"], ["Star Mobile Repair", "स्टार मोबाइल रिपेयर"], ["Hello Mobiles", "हेलो मोबाइल्स"]],
+      "barber": [["Style Hair Saloon", "स्टाइल हेयर सैलून"], ["Raja Gents Parlour", "राजा जेंट्स पार्लर"]],
+      "jewellery": [["Swarn Mahal Jewellers", "स्वर्ण महल ज्वैलर्स"], ["Hira Moti Jewels", "हीरा मोती ज्वेल्स"]],
+      "spices": [["Kesar Masala Bhandar", "केसर मसाला भंडार"], ["Dhaniya Dry Fruits", "धनिया ड्राई फ्रूट्स"]],
+      "shoes": [["Step Up Footwear", "स्टेप अप फुटवियर"], ["Jootiyan Ghar", "जूतियाँ घर"]],
+      "fashion": [["Urban Thread", "अर्बन थ्रेड"], ["Nova Wear", "नोवा वियर"], ["Blue Loom", "ब्लू लूम"]],
+      "restaurant": [["The Spice Table", "द स्पाइस टेबल"], ["Tandoor Tales", "तंदूर टेल्स"], ["Punjabi Rasoi", "पंजाबी रसोई"]],
+      "cafe": [["Bean There Cafe", "बीन देयर कैफ़े"], ["Brew Lane", "ब्रू लेन"]],
+      "bookshop": [["Kitab Ghar", "किताब घर"], ["Page Turner Books", "पेज टर्नर बुक्स"]]
+    },
+    "ads": [
+      { "brand": "Shakti Cement", "hi": "मज़बूती की गारंटी", "en": "Strength you can build on", "bg": "#f2c230", "fg": "#1b2a4a", "art": "bars" },
+      { "brand": "Rani Tea", "hi": "हर घूँट में अपनापन", "en": "Every sip, a little home", "bg": "#b8332b", "fg": "#fff4dc", "art": "cup" },
+      { "brand": "Zoom Mobiles", "hi": "नया फ़ोन, नई उड़ान", "en": "New phone, new flight", "bg": "#2a64c9", "fg": "#ffffff", "art": "phone" },
+      { "brand": "Sundar Paints", "hi": "रंग लाए घर में बहार", "en": "Colour your home", "bg": "#e8e2d0", "fg": "#c2392f", "art": "bars" },
+      { "brand": "Nirmal Water", "hi": "साफ़ पानी, सेहत की निशानी", "en": "Pure water, pure health", "bg": "#2f9ad8", "fg": "#ffffff", "art": "drop" },
+      { "brand": "Vikas Bank", "hi": "आपका भरोसा, हमारी पूँजी", "en": "Your trust is our capital", "bg": "#1d6b4a", "fg": "#f3e9b8", "art": "coin" },
+      { "brand": "Kisan Fertiliser", "hi": "धरती की ताक़त", "en": "Power of the soil", "bg": "#4d8a36", "fg": "#fffbe0", "art": "leaf" },
+      { "brand": "Bijli Wires", "hi": "सुरक्षा हर तार में", "en": "Safe in every wire", "bg": "#d6401f", "fg": "#ffffff", "art": "bolt" },
+      { "brand": "Tez Broadband", "hi": "तेज़ इंटरनेट, तेज़ ज़िंदगी", "en": "Fast net, fast life", "bg": "#6a3fb5", "fg": "#ffffff", "art": "wave" },
+      { "brand": "Mehek Masala", "hi": "स्वाद जो दिल जीते", "en": "Taste that wins hearts", "bg": "#e0791b", "fg": "#fff7e0", "art": "bowl" },
+      { "brand": "Sehat Hospital", "hi": "सेवा ही संकल्प", "en": "Care is our promise", "bg": "#f4f4f4", "fg": "#1f7fb8", "art": "cross" },
+      { "brand": "Neo Realty", "hi": "आपके सपनों का आशियाना", "en": "Home of your dreams", "bg": "#2d3a52", "fg": "#f0d27a", "art": "tower" },
+      { "brand": "Dhoom Motors", "hi": "सड़क पर राज", "en": "Rule the road", "bg": "#1a1a1a", "fg": "#ff7a1a", "art": "wheel" },
+      { "brand": "Gyan Coaching", "hi": "सफलता की पहली सीढ़ी", "en": "First step to success", "bg": "#fbe7a1", "fg": "#7a1f1f", "art": "book" },
+      { "brand": "Shubh Jewels", "hi": "शुभ अवसर, शुभ आभूषण", "en": "Auspicious jewels", "bg": "#7a1f3a", "fg": "#f6d88a", "art": "coin" },
+      { "brand": "Cine Plex", "hi": "इस शुक्रवार, धमाकेदार!", "en": "Blockbuster this Friday", "bg": "#101828", "fg": "#ffcf3a", "art": "film" }
+    ],
+    "notices": [
+      { "hi": "यहाँ थूकना मना है", "en": "Do not spit" },
+      { "hi": "दिल्ली को स्वच्छ रखें", "en": "Keep Delhi clean" },
+      { "hi": "सड़क सुरक्षा: हेलमेट पहनें", "en": "Road safety: wear a helmet" },
+      { "hi": "यहाँ पोस्टर लगाना मना है", "en": "Stick no bills" },
+      { "hi": "पेड़ लगाएँ, दिल्ली बचाएँ", "en": "Plant trees, save Delhi" }
+    ]
+  },
+  "vehicles": {
+    "paints": {
+      "hatch": ["#f2f2f2", "#d9d9d9", "#9a9da3", "#b11f1f", "#2a4f8a", "#1b1b1d", "#e8e0c8", "#c9ccd0"],
+      "suv": ["#f2f2f2", "#1b1b1d", "#4a4d52", "#cfd2d6", "#6b1f1f"],
+      "taxi": ["#f2f2f2", "#e8c547"],
+      "two": ["#1b1b1d", "#b11f1f", "#2a4f8a", "#9a9da3", "#e8e0c8", "#3a3a3c"],
+      "tempo": ["#f2f2f2", "#2a6fb0", "#c9a227"],
+      "truck": ["#d9531e", "#2a64c9", "#2f8f5b", "#e8c547", "#b11f1f"],
+      "erick": ["#e8c547", "#2f8f5b", "#2a64c9", "#d9d9d9"],
+      "cyclerick": ["#d94a2b", "#e8c547", "#2a64c9"]
+    },
+    "auto": { "body": "#2f8f5b", "roof": "#e3b21a", "src": "National Geographic / Republic: green and yellow" },
+    "bus": {
+      "dtc": { "body": "#3f9a4a", "stripe": "#f4f4f0", "roof": "#e8e8e4", "src": "DTC green (non-AC)" },
+      "dtcAc": { "body": "#2e8a4a", "stripe": "#f4f4f0", "roof": "#e8e8e4", "guess": true, "note": "AC buses were red or maroon in older years: sources differ" },
+      "cluster": { "body": "#e8791e", "stripe": "#f4f4f0", "roof": "#e8e8e4", "src": "Wikipedia: orange non-AC" },
+      "clusterAc": { "body": "#2a6fc4", "stripe": "#f4f4f0", "roof": "#e8e8e4", "src": "Wikipedia: blue AC (one source)" },
+      "mix": { "dtc": 0.5, "cluster": 0.5, "ac": 0.35, "note": "Delhi's 50:50 DTC and cluster rule on every route (DELHI_TRANSIT 5)" }
+    }
+  },
+  "people": {
+    "clothing": {
+      "winter": ["#6a4a3a", "#3b4a6b", "#7a2f2f", "#2f4f3a", "#5a5a5a", "#8a6a3a", "#1f2a3a"],
+      "summer": ["#e8e0cf", "#c9d6e8", "#e8b6c4", "#f2d98a", "#a9c9a0", "#d9d9d9", "#f0f0f0", "#b8d0e0"],
+      "monsoon": ["#e8e0cf", "#3b6aa8", "#c24a4a", "#d9d9d9", "#2f7a5a"]
+    },
+    "byHour": [0.05, 0.03, 0.02, 0.02, 0.05, 0.15, 0.35, 0.6, 0.85, 0.8, 0.75, 0.8, 0.85, 0.8, 0.75, 0.8, 0.9, 1.0, 1.0, 0.85, 0.6, 0.4, 0.2, 0.1],
+    "guess": true
+  },
+  "traffic": { "driving": "left", "byHourFactor": [0.15, 0.1, 0.08, 0.08, 0.15, 0.3, 0.55, 0.85, 1.0, 0.9, 0.8, 0.8, 0.85, 0.85, 0.85, 0.9, 1.0, 1.0, 1.0, 0.9, 0.7, 0.5, 0.35, 0.22], "horns": 0.8, "guess": true },
+  "sound": { "ambient": ["traffic", "azaan", "koel", "crows"], "horn": "india" }
+}

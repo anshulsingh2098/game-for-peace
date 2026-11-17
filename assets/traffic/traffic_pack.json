@@ -1,0 +1,106 @@
+{
+ "sedan": {
+  "len": 4.6,
+  "w": 1.85,
+  "h": 1.45,
+  "weight": 20,
+  "paintable": true,
+  "tris": 1376
+ },
+ "hatchback-sports": {
+  "len": 3.9,
+  "w": 1.75,
+  "h": 1.42,
+  "weight": 12,
+  "paintable": true,
+  "tris": 1432
+ },
+ "suv": {
+  "len": 4.7,
+  "w": 1.92,
+  "h": 1.75,
+  "weight": 12,
+  "paintable": true,
+  "tris": 1818
+ },
+ "sedan-sports": {
+  "len": 4.4,
+  "w": 1.85,
+  "h": 1.3,
+  "weight": 6,
+  "paintable": true,
+  "tris": 1432
+ },
+ "suv-luxury": {
+  "len": 5.0,
+  "w": 1.98,
+  "h": 1.8,
+  "weight": 4,
+  "paintable": true,
+  "tris": 1430
+ },
+ "van": {
+  "len": 5.3,
+  "w": 2.0,
+  "h": 2.05,
+  "weight": 8,
+  "paintable": true,
+  "tris": 1426
+ },
+ "delivery": {
+  "len": 6.4,
+  "w": 2.15,
+  "h": 2.7,
+  "weight": 6,
+  "paintable": true,
+  "tris": 1436
+ },
+ "truck": {
+  "len": 7.6,
+  "w": 2.45,
+  "h": 3.1,
+  "weight": 5,
+  "paintable": true,
+  "tris": 1426
+ },
+ "taxi": {
+  "len": 4.6,
+  "w": 1.85,
+  "h": 1.5,
+  "weight": 9,
+  "paintable": false,
+  "tris": 1416
+ },
+ "police": {
+  "len": 4.7,
+  "w": 1.9,
+  "h": 1.5,
+  "weight": 2,
+  "paintable": false,
+  "tris": 1648
+ },
+ "ambulance": {
+  "len": 5.8,
+  "w": 2.05,
+  "h": 2.6,
+  "weight": 1,
+  "paintable": false,
+  "tris": 1764
+ },
+ "garbage-truck": {
+  "len": 8.2,
+  "w": 2.5,
+  "h": 3.3,
+  "weight": 3,
+  "paintable": false,
+  "tris": 2084
+ },
+ "firetruck": {
+  "len": 9.0,
+  "w": 2.5,
+  "h": 3.2,
+  "weight": 1,
+  "paintable": false,
+  "tris": 1727
+ }
+}

@@ -1,0 +1,126 @@
+# Daily checklist
+
+Before any work each day, in this order. Tick the boxes in your own copy; anything that fails goes into the team log (`team/stream-a.md` or `-b.md`) as an open entry, and work on it before new features.
+Rule for Claude: every time a feature is added, or something is found that nobody has verified, add a line here (a script check if a computer can judge it, a manual check if a person must look).
+
+## 1. Automatic (about two minutes)
+
+```bash
+python tools/daily_check.py
+```
+
+- [ ] Prints 0 failed. Warnings are read and understood (uncommitted files, open log entries, deploy folder out of date).
+- [ ] It covers: git is up to date, self-test passes, every location builds a road, deploy folder is current, assets and vendor sizes, every asset has a credit line, open team-log entries.
+
+## 2. Sync with the team
+
+- [ ] `git switch main && git pull`, or run `/sync` in Claude.
+- [ ] Read the newest entries in `team/stream-a.md` and `team/stream-b.md`; anything addressed to you and `open` is a task for today.
+- [ ] `HANDOFF.md` "What is next" still matches reality; `PARALLEL_PLAN.md` status table is current.
+
+## 3. Look at the game (desktop). Start `python tools/serve.py`, open `http://localhost:8765/?play`
+
+Open the browser console (F12): nothing red except known favicon 404s.
+
+- [ ] **Default world** drives: keys steer, accelerate, brake; menu, garage, settings, pause (Esc) open and close.
+- [ ] **Every location** loads from the picker: Green Valley, Alps, Himalayas, California, Southern Coast, Mumbai, Delhi, Agra. Ground, trees and road look right for the place.
+- [ ] **Road styles**: add `&road=highway`, `boulevard`, `dirt`, `gravel`: each renders, lines and kerbs present, no gaps or streaks.
+- [ ] **Shadows**: trees, the car and rocks cast clean shadows: no black streaks, stripes or flicker on trees or the car (check the Alps at midday).
+- [ ] **Ground**: photographic grass, rock on cliffs, snow, sand. No seams at tile edges, no shimmering as you drive. Compare with `&ground=flat`.
+- [ ] **Scenery**: real trees, shrubs and rocks, no dark fringes or flicker. Compare with `&nature=flat`.
+- [ ] **Bridge**: drive onto one (Alps, seed `alps`, near road distance 340; it is 726 m long and has a steel truss on both sides: top chord, uprights and diagonals, lined up from piece to piece with no gaps; short bridges have rails only): deck, rails, piers; the car rides the deck. **Rails stop the car**: steer into one at speed, the car scrapes or stops and never goes over the edge (try the car, truck and bike). Rails sit just where they are drawn (not a metre away).
+- [ ] **Tunnel** (Himalayas, seed `hill`): gate with a readable "ATAL TUNNEL, ROHTANG" board, portal, tiled lit interior, cones, a raised walkway along both walls, speed-limit (60), green EXIT and orange SOS signs on the walls, camera stays inside, no rain inside. Try the truck.
+- [ ] **Weather and time**: clear, overcast, fog, rain, storm, snow, each at day, dusk and night: nothing goes black or white, road looks wet in rain, tunnel and bridge look right at night.
+- [ ] **Driving controls**: W / Up gas, S / Down reverse (brakes first if still rolling forward, then reverses), **Space foot brake** (stops and holds the car, never reverses), **X handbrake** (the tail slides), **Shift boost**, E autodrive. On a phone: Brake, Hand, Rev and Boost circles. Lifting off the gas slows the car at a natural rate, on grass much faster than on the road (it must not glide). Measured: 100 km/h to a stop in about 3 s on the foot brake; reverse tops out at about 32 km/h for the car.
+- [ ] **Engine sound** is the real recording of Rajul's car (seven seamless loops in `assets/audio`, made by `tools/make_engine_loops.mjs`): deep and bold, no thin whine, smooth through the gears, no swirling or clicking at loop points, no sudden jumps when the revs change. `?engine=synth` plays the old synthesised engine for comparison. Nobody has listened to it yet: judge by ear and say what is off. If it still sounds unnatural the next step is a longer recording of steady revs at each speed (see the note in `team/stream-a.md`).
+- [ ] **Camera views**: V cycles Chase, Far chase, Close chase, Hood, Bumper, Driver seat, Cinematic (a TV-style cut beside the road) and back; C jumps to the driver's seat and back; the Camera button and the CAM circle on a phone do the same as V. Each view shows the road ahead, nothing clips through the car body, and the choice is remembered.
+- [ ] **Car feel** (drive by hand, any vehicle): the nose rises a little when you accelerate and dips when you brake hard; the body leans outward in a fast corner; a faint tremble at speed, stronger on gravel and grass. It should not feel like gliding on rails. (Measured on the car: about 3 degrees squat on launch, about 4 degrees dip under hard braking, about 4.5 degrees of lean at 0.5 g sideways.)
+- [ ] **The car** ("Dusk GT", Khronos CarConcept): glossy paint with reflections, dark glass, lit tail lights, plain licence plate; **no Khronos or 3D Commerce logo anywhere** (look at the tyre sidewalls and the plate up close); the four wheels turn and the front ones steer; the garage colour swatches recolour the body; driver's-seat view (V or C) shows a full interior with the steering wheel and dash.
+- [ ] **Handling** (car): steering reacts at once (not numb) at 50, 100 and 200 km/h; no spin at full lock at top speed; a handbrake flick at 100 km/h gives a slide you can hold and catch; gears change with a small power dip and the revs drop at each shift; the rev limiter holds at the top.
+- [ ] **Look**: richer colour and a soft dark edge (grade and vignette); trees are full and green with **no black rectangles** in sunlight; the car's paint shows a horizon and sky in its reflection.
+- [ ] **Camera effects**: the view stretches a little when you boost or launch hard; no camera shake by default.
+- [ ] **Autodrive** (press E, or the Auto button): the car follows the road by itself at about 70 km/h, slows for bends, goes through tunnels and over bridges; steering or braking by hand takes over. Try the Himalayas (seed `hill`) and the default world. With traffic on, it drives in its own lane (right, or left in India), follows a slower car at a gap, and never hits a car.
+- [ ] **Green Valley** looks like open meadow with tall grass and trees set back from the road, not a forest at the verge.
+- [ ] **Quality tiers**: add `&q=low`, `&q=med`, `&q=high`. Low: old cheap ground, fewer tree variants, no shadows; med: lighter photographic ground; high: full ground, bigger shadows and view. Each looks acceptable and none shows broken ground. Phones start on low. (Draw calls and triangles for the Alps at 1400x800: low 176 / 96k, med 523 / 430k, high 898 / 895k. High took about 24 ms on an M4: too slow, still to be tuned.)
+- [ ] **Vehicles**: the garage lists Dusk GT (your original sports car with the striped paint), Freight Hauler, Volt Bike and Aero Concept (the new detailed coupe); all four drive; paint colours work; white paint does not glare to a white blob.
+- [ ] **Radio and sound**: radio wheel (hold Q) plays a station; engine, wind and rain sounds; no rain, snow or thunder sound or picture inside a tunnel (try the Himalayas, seed `hill`, rain).
+- [ ] **Traffic** (Settings > Traffic: Off, Low, Mid, High; Off on phones, Low on medium, Mid on high by default): the cars are real vehicle shapes (sedans, SUVs, vans, taxis, police, ambulance, trucks, garbage and fire trucks) in many colours, not boxes; they drive in their own lanes on the right (on the left in Mumbai, Delhi and Agra), oncoming cars pass on the other side; none appear close to you; a car behind or ahead keeps a gap and slows for bends; a car stops (does not drive through) if you stop in its lane; driving into one is a solid hit; on a bridge and in a tunnel they stay on their lane; the frame rate does not drop at High; switching to Off removes them. Look at the wheels (round, dark tyres with a lighter rim) and the colours (taxis yellow; ordinary cars mostly black, white, silver and grey).
+- [ ] **My music**: in the radio wheel press "Add my songs" and pick a few audio files (also try a text file and a very large file: they are left out with a message). A "My music" tab appears, the songs play one after another and loop, "Next song" skips, "Radio off" stops. After a reload the songs are gone (they are never uploaded or stored); check that nothing was sent over the network (browser network panel).
+- [ ] **Controller rumble** (a gamepad that can vibrate): a thump on hitting something, a light buzz on gravel or grass, a rumble in a slide, a push on boost; Settings > Controller rumble > Off stops it. Playing with no gamepad works exactly as before.
+- [ ] **Overpass** (`?play&q=med&india=world&at=agra`, then find the crossings in the console: `__next.branches.find(b => b.id === 'ns').road.lifts`): the six-lane NH44 rises on a concrete deck with parapets and piers over the road below, twice; drive over it, then under it (Travel or Back to road onto the Golden Quadrilateral): the car stays on its level, nothing invisible stops it, the sky road does not catch the wheels, traffic on the deck is up on the deck.
+- [ ] **Saved choices**: in the browser console `localStorage.setItem('gfp-next', '{"paint":null,"radioVol":"loud","vehicle":"x"}')` then reload: the game starts normally with defaults and no red errors.
+
+- [ ] **City overlaps (22 Nov 2026):** open `?play&q=med&india=world&at=agra`, then `at=delhi` and `at=mumbai`; fly or drive round the station and the main road and look from above (Camera button): no building, lamp or tree stands on a track, a station or another highway, and no two buildings pass through each other. Write what you find in your team log.
+
+## 4. Tuner (`http://localhost:8765/tuner.html`)
+
+- [ ] Panel connects ("about 290 settings"). Move a weather fog slider: the game changes live.
+- [ ] A vehicle mass change rebuilds the car; a world setting regenerates the map.
+- [ ] "i" button shows text and a range for any setting you try. Reset all, Export, Import work. **Each section header has a "Reset section" button** that shows only while something in it has changed, and resets only that section. New groups: handling, camera, look.
+- [ ] Publish: only after the Cloudflare setup (see `HANDOFF.md`): wrong password is refused, right password publishes, Load live and History work.
+- [ ] Worker checks (after the Cloudflare setup): a wrong password is refused after a short wait (about 0.4 s) every time; a body over 64 KB is refused; a number over 10 million is refused; `/api/settings` without the password cannot publish; with no KV or no password the API answers 503 and the rest of the site still loads.
+
+- [ ] Mumbai (`?loc=mumbai`): the buildings, sidewalks, zebra crossings, lamps and stalls look right, nothing floats or sinks, you cannot drive through a building front, windows glow at dusk and night, the frame rate stays smooth on a phone (district piece cost not yet measured on a device).
+
+## 5. Phone (do this at least weekly, and before any deploy)
+
+- [ ] Open the live or local address on a real phone (same wifi: start the server with `python tools/serve.py --lan`; it prints the address to type into the phone. Plain `python tools/serve.py` is only reachable from the computer itself).
+- [ ] Loads in a reasonable time; touch controls work; menus fit the screen; text readable.
+- [ ] **Touch layout** (or on a computer: add `&touch` and use a phone-sized window): left, a vertical throttle lever (stays where you leave it) with BRAKE and BOOST; right, the steering handle on its arc (springs back to the middle) with AUTO, CAM and RESET; speed at the top left. Works held sideways and upright.
+- [ ] **Phone camera**: lower, closer and wider than on a computer (compare with the slowroads.io screenshots).
+- [ ] Frame rate feels smooth (note it); the phone does not heat up or crash after five minutes.
+- [ ] **The new car is heavy** (about 68,000 triangles, 41 draw calls on every tier): note the frame rate with the car next to the same drive with `?q=low`; tell the team if it is a problem.
+- [ ] Write down what you saw. Nothing so far has been measured on a phone.
+
+## 6. Speed (when you changed rendering, scenery or textures)
+
+- [ ] **Benchmark** (`&bench=30` on the address, see `PERFORMANCE.md`): run it on `q=low`, `q=med` and `q=high`, on desktop and on each phone; copy the green panel into the team log. Compare with the table in `PERFORMANCE.md`.
+- [ ] **Loading screen** shows while the game starts (what is loading, a bar) and fades away by itself; nothing is left on the screen.
+
+- [ ] In the console: `__next.renderer.info.render` shows calls and triangles; note them (the car alone is about 41 calls and 68,000 triangles). Reference on an M4 at 1400x800: plain about 5 to 7 ms a frame, 460 draw calls, 730k triangles.
+- [ ] The assets folder stayed under 30 MB (script checks this).
+
+## 7. Before and after a deploy
+
+- [ ] `python tools/daily_check.py` is clean; `cloudflare/public` is current (the script checks).
+- [ ] Deploy only from Anshul's PC: `cd cloudflare && npx wrangler deploy`.
+- [ ] After: the live `/` is the new game and loads and plays on a phone and a computer; `/classic.html` (the original game) still loads; `/next.html` redirects to `/` and keeps `?loc=...`; the console has no new errors; `/tuner.html` opens; `/api/settings` answers 200 (set up) or 503 (not set up), never a broken page.
+
+## 8. End of day
+
+- [ ] Everything committed and pushed (branch, then a pull request into `main`).
+- [ ] New checks added to this file.
+- [ ] `HANDOFF.md` updated if the state changed; a team-log entry for anything the other person needs.
+- [ ] **On foot and activities (N14, N15), on a real phone too**: stop the vehicle, press G (or the button) to get out, walk with W A S D, Shift runs, Space jumps, G beside the vehicle gets you in. Near the green beacon beside the road in Mumbai a "start" prompt appears; reach the gold beacon in time; the toast gives the time and rating; reload and the best time is kept. Not yet measured on a phone; par times are guesses.
+- [ ] **Drive modes (N)**: cycle Eco, Normal, Sport, Off-road for the car, the truck and the bike. Eco: softer throttle, stops pulling at about 110 km/h. Sport: sharper throttle, quicker steering. Off-road: stops at about 85 km/h, grips better on grass and gravel, and holds a slow speed on a steep downhill with your feet off the pedals. The tag beside the speed shows the mode. Judge by feel on a phone and with a gamepad.
+- [ ] **Real land (`?india=nh-ambala-leh&from=manali&toward=leh`, `?india=route&from=delhi&to=mumbai`)**: the Manali to Leh road climbs through snowy mountains; Delhi to Jaipur crosses a semi-arid plain with farmland and few trees; check frame rate and load time (the terrain file is 3.2 MB). **Licenses and credits** link on the title screen opens `licenses.html`: read it and correct anything wrong.
+- [ ] **Travel and lane discipline**: in the Kerala world open Menu, Travel, pick Mumbai: a drive from Kochi loads (next city Mangaluru). On a three-lane highway, cars overtake cows, trucks and buses on the right and come back to the left lane; trucks and buses stay left; nothing overlaps.
+- Play, then drive Mumbai to Goa on NH66 and Mumbai to Pune: do roads and crossings appear on time, no hitch at city gates, junction signals and traffic turn at a city
+- Explore cities, pick Kerala and Drive, then India map brings you back to the world
+- Autodrive: E once (Auto) drives alone, E twice (Cruise) you steer and it holds speed, in Sport it drives fast and overtakes, in Eco it is gentle; braking takes over
+- Drive near a rail line (Gwalior, Jhansi, Agra): do you see track and a train, do the barriers at a level crossing go down, can you not drive through the train
+- Stand in Jhansi, Gwalior or Agra: is there a station with platforms and a name board, do trains pass, is there a rail bridge over a highway away from the cities
+- At Mumbai or Jhansi station: does the departure board show real trains, do you hear the train (clatter, horn) and an announcement in English then Hindi (it needs a speech voice on the device; check Hindi), do rails cut through hills and ride embankments, is there overhead wire
+- With the 10 audio.com clips in assets/audio/trains/: station ambience at a station, a pass-by sound as a train passes close, squeal as one brakes nearby (these files are not in git: copy them by hand to test)
+- Look at a train standing at a station: yellow boards with its real name, number and Hindi route, barred sleeper windows, S/B coach plates, a loco with its number; goods trains with wagons and a brake van; busy lines with several tracks and wire over each
+- (Delhi transit data, when someone knows Delhi) Open `docs/DELHI_TRANSIT.md` sections 3.2 and 4.1 and check: Adarsh Nagar, Rohini East, Shahdara, Seelampur and Tis Hazari stations are elevated or at grade as the doc says; the platform counts of Nizamuddin (7 or 9), Anand Vihar Terminal (7), Sarai Rohilla (5), Cantonment (4); the station names you want shown (old or 2025-26 names: `nameNow`)
+- (Delhi transit, when the Metro is drawn) Compare a line's colours, station boards, trains and a viaduct with reference photos before accepting the look; nothing in `DELHI_TRANSIT.md` section 3.4 has been checked against a photograph
+- [ ] Railway control (`?play&india=world`, stand beside a line for a few minutes): trains stop at red signals and wait at stations, a slow train waits in a loop for an express, barriers are down when a train is at a crossing, the station board time matches the clock, nothing overlaps or floats. (Needs a person; the script checks collisions only.)
+
+## 9. City packs (Delhi, from the D1 session)
+- [ ] `node tools/validate_city.mjs` prints "pack is valid" and `node tools/check_city.mjs` prints "check passed" (the self-test does both in short form).
+- [ ] Plot a piece of the pack (`python tools/plot_city.py -1500 -6000 5000 1800 4 delhi_centre.png`, needs Pillow) and look at it and compare with a map you know: Connaught Place rings, the avenue from Rashtrapati Bhavan to India Gate, the Yamuna, the Red Fort, the Ring Road. Say what is missing: Old Delhi houses, a colony, a flyover that has no tag.
+- [ ] Read three landmark cards and look notes (`docs/DELHI_LANDMARKS.md`): is any fact or colour wrong? Fix them in `tools/city_data/delhi_landmarks_src.json` and rebuild.
+- [ ] After any rebuild: the pack stays under 20 MB gzip (the validator says so) and only one commit holds the tile files.
+
+## 10. The city enclave (Delhi, D5): `?play&city=delhi`
+- [ ] Open `http://localhost:8765/?play&city=delhi`: you are in Connaught Place; the circle and its radial streets match a map. Try `&at=ndls`, `&at=indiagate`, `&at=redfort`.
+- [ ] Drive the Outer and Inner Circle, Kartavya Path and a flyover (for example the ones near India Gate or Ring Road): no building in the road, no station on a road, the car stays on the deck and drops off at the ramp end.
+- [ ] Look from the air (F, fly): streets, blocks, parks and the Yamuna where you expect them; note anything that looks wrong (heights are guesses; kerbs, underpasses, traffic and people are not built yet).
+- [ ] `?bench=30&city=delhi` on a desktop and on a phone: the plan's budget is 900 draw calls and 1.5 M triangles on a desktop, 300 and 350 k on a phone (measured by script at 326 to 370 and 206 to 270 k at medium, in a hidden pane at 2 fps, so the numbers are counts, not frame times).
+- [ ] D8 models: `?play&city=delhi&at=india-gate`, then rashtrapati-bhavan, red-fort, jama-masjid, humayuns-tomb, qutub-minar, lotus-temple: each looks like the place from the road and from the air, the card and name board appear within about 70 m / 800 m, the car stops at the walls, no flicker on the platforms (z-fight), no model inside a road.
+- [ ] Delhi traffic on flyovers and underpasses (v4, R14): drive up a flyover and through an underpass with Settings > Traffic on; cars are on the road surface, none float or sink, none stop for traffic on the other level, none jump levels at ramps.
+- [ ] Phone, sideways (17 Nov 2026): open the live address in Safari or Chrome, tap the page once, and the engine sound starts (also with the silent switch on). Hold Horn: a two-tone horn. In Delhi (`?play&city=delhi`) a faint street rumble with far horns.
+- [ ] Add to Home Screen: Android Chrome shows the install box from the title menu button; iPhone Safari shows the Share steps. After adding, the icon opens full screen with no browser bars, landscape.
+- [ ] Phone layout at a station (Mumbai start): the departures board is a small strip at the top, the controls are not covered, the round map is under the speed readout, and the title menu fits without scrolling.
+- [ ] Tuner: open `tuner.html` on the live site, change a value, Publish with the password, reload the game: the value is used. A wrong password is refused.

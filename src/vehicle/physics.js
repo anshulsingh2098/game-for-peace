@@ -9,11 +9,11 @@
 
 export const SURFACES = {
   asphalt: { name: 'Road',   grip: 1.00, drag: 0.012 },
-  gravel:  { name: 'Gravel', grip: 0.76, drag: 0.030 },
-  grass:   { name: 'Grass',  grip: 0.62, drag: 0.060 },
-  sand:    { name: 'Sand',   grip: 0.50, drag: 0.140 },
+  gravel:  { name: 'Gravel', grip: 0.74, drag: 0.050 },
+  grass:   { name: 'Grass',  grip: 0.55, drag: 0.150 },
+  sand:    { name: 'Sand',   grip: 0.48, drag: 0.300 },
   rock:    { name: 'Rock',   grip: 0.70, drag: 0.040 },
-  snow:    { name: 'Snow',   grip: 0.36, drag: 0.070 }
+  snow:    { name: 'Snow',   grip: 0.36, drag: 0.100 }
 };
 const G = 9.81, H = 1 / 120;                                    // gravity; fixed physics step
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
@@ -30,16 +30,54 @@ export function vehicleParams(body, stats) {
   };
 }
 
+/* The one definition of what a vehicle reports about itself (HUD, sound, tests and tools all read this; see VEHICLE_CONTRACT.md for the full table).
+   Works for both physics classes; fields the physics does not have are null. Units: m/s, radians, rpm, 0..1 as marked. */
+export function makeTelemetry(ph, id) {
+  const inp = ph.input || {}, pt = ph.p && ph.p.pt, wheels = ph.wheelStates, contact = wheels ? wheels.filter(w => w.contact).length / wheels.length : 1;
+  let wheelSlip = null; if (ph.alpha && ph.alpha.length) { wheelSlip = 0; for (const a of ph.alpha) if (Math.abs(a) > wheelSlip) wheelSlip = Math.abs(a); }
+  return {
+    id, x: ph.x, z: ph.z, yaw: ph.yaw,
+    speed: Math.hypot(ph.u, ph.v), u: ph.u, v: ph.v, kmh: ph.u * 3.6,                  // speed m/s (never negative); u signed forward speed m/s (negative reversing); v sideways m/s
+    throttle: inp.throttle || 0, brake: inp.brake || 0, hand: inp.hand || 0, steerInput: inp.steer || 0,       // what the driver asked for: 0..1, 0..1, 0..1, -1..1 (right +)
+    steerAngle: ph.delta, yawRate: ph.r,                                                    // front road-wheel angle rad; yaw rate rad/s
+    gear: pt && ph.gear !== undefined ? ph.gear : null, gearCount: pt ? pt.gears.length : null,   // gear: 0 = first; null when the vehicle has no gearbox model
+    rpm: pt && ph.rpm !== undefined ? ph.rpm : null, rpm01: pt && ph.rpm !== undefined ? Math.max(0, Math.min(1, (ph.rpm - pt.idle) / (pt.redline - pt.idle))) : null,   // engine rpm; and 0..1 between idle and the rev limiter
+    slip: ph.slip, wheelSlip,                                                               // body sideslip angle rad; the largest wheel slip angle rad (null on the old physics)
+    surface: ph.surface, grounded: contact,                                                // surface key; share of wheels touching the ground 0..1
+    buff: !!ph.mod && ph.mod !== NO_MOD                                                    // a buff (boost, haul, lean) is active
+  };
+}
+
 /* temporary multipliers (buffs): top speed, acceleration, pull of slopes, surface drag, steering lock, grip */
 export const NO_MOD = { top: 1, accel: 1, slope: 1, drag: 1, steer: 1, grip: 1 };
 
+/* Drive modes, as on a modern car (docs/DRIVE_MODES.md). A mode is a set of multipliers plus a few settings, kept apart from a buff (boost, haul, lean) so both can be on at once.
+     cap      speed limiter, km/h (0 = none): the engine fades out as the limit nears, so the car settles at it
+     accel    engine force multiplier; pedal  throttle map exponent (above 1 = softer at part throttle, below 1 = sharper)
+     steer    steering authority at speed; shift  scales the up-shift point (below 1 = early shifts, above = holds the gear); tcs  traction limit (above 1 = traction control relaxed)
+     regen    engine-braking strength when you lift off (one-pedal feel); loose  grip multiplier on loose ground (gravel, grass, snow, sand); hdc  hill descent: speed (m/s) held on a steep
+     downhill with no pedals touched (0 = off). */
+export const DRIVE_MODES = {
+  eco:     { id: 'eco', name: 'Eco', top: 1, accel: 0.8, steer: 0.96, grip: 1, drag: 0.92, cap: 110, pedal: 1.7, shift: 0.86, tcs: 0.9, regen: 1.7, loose: 1, hdc: 0, blurb: 'Softer throttle, early shifts, stronger coasting, speed limited to 110 km/h' },
+  normal:  { id: 'normal', name: 'Normal', top: 1, accel: 1, steer: 1, grip: 1, drag: 1, cap: 0, pedal: 1, shift: 1, tcs: 1, regen: 1, loose: 1, hdc: 0, blurb: 'Balanced' },
+  sport:   { id: 'sport', name: 'Sport', top: 1, accel: 1.1, steer: 1.12, grip: 1, drag: 1, cap: 0, pedal: 0.75, shift: 1.03, tcs: 1.18, regen: 1.1, loose: 1, hdc: 0, blurb: 'Sharper throttle, holds gears, quicker steering, traction control relaxed, no limiter' },
+  offroad: { id: 'offroad', name: 'Off-road', top: 1, accel: 1.15, steer: 1, grip: 1, drag: 0.85, cap: 85, pedal: 1.3, shift: 0.85, tcs: 1.05, regen: 1.4, loose: 1.3, hdc: 3.2, blurb: 'Low-range pull, grip on loose ground, hill descent control, speed limited to 85 km/h' }
+};
+export const DRIVE_MODE_IDS = ['eco', 'normal', 'sport', 'offroad'];
+/* the multipliers physics uses: a buff's (mod) and the drive mode's together */
+export function combineMods(mod, dm) {
+  return { top: mod.top * dm.top, accel: mod.accel * dm.accel, slope: mod.slope, drag: mod.drag * dm.drag, steer: mod.steer * dm.steer, grip: mod.grip * dm.grip,
+    cap: dm.cap / 3.6, pedal: dm.pedal, shift: dm.shift, tcs: dm.tcs, regen: dm.regen, loose: dm.loose, hdc: dm.hdc };
+}
+
 export class VehiclePhysics {
-  constructor(params, world) { this.p = params; this.world = world; this.acc = 0; this.mod = NO_MOD; this.reset(0, 0, 0); }
+  constructor(params, world) { this.p = params; this.world = world; this.acc = 0; this.mod = NO_MOD; this.dm = DRIVE_MODES.normal; this.M = combineMods(NO_MOD, this.dm); this.reset(0, 0, 0); }
   /* apply a buff's multipliers, or clear them with no argument */
-  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; }
-  reset(x, z, yaw) {
+  setMod(mod) { this.mod = mod ? { ...NO_MOD, ...mod } : NO_MOD; this.M = combineMods(this.mod, this.dm); }
+  setDriveMode(id) { this.dm = DRIVE_MODES[id] || DRIVE_MODES.normal; this.M = combineMods(this.mod, this.dm); }
+  reset(x, z, yaw, yHint) {
     Object.assign(this, { x, z, yaw, u: 0, v: 0, r: 0, steer: 0, delta: 0, pitch: 0, roll: 0, lean: 0, spin: 0, slip: 0, ay: 0, impact: 0, wet: 0, stuck: 0, surface: 'asphalt', acc: 0, afS: 0, arS: 0, axL: 0, dPitch: 0, dRoll: 0 });
-    this.y = this.world.height(x, z); this.ground(1);
+    this.y = this.world.height(x, z, yHint); this.ground(1);
   }
   get speed() { return Math.hypot(this.u, this.v); }
   get kmh() { return this.u * 3.6; }
@@ -53,13 +91,13 @@ export class VehiclePhysics {
   ground(k) {
     const p = this.p, W = this.world, c = Math.cos(this.yaw), s = Math.sin(this.yaw), ht = p.track / 2;
     const fx = this.x + c * p.front, fz = this.z + s * p.front, bx = this.x - c * p.rear, bz = this.z - s * p.rear;      // right of travel is (-s, c)
-    const fl = W.height(fx + s * ht, fz - c * ht), fr = W.height(fx - s * ht, fz + c * ht), bl = W.height(bx + s * ht, bz - c * ht), br = W.height(bx - s * ht, bz + c * ht);
+    const yh = this.y, fl = W.height(fx + s * ht, fz - c * ht, yh), fr = W.height(fx - s * ht, fz + c * ht, yh), bl = W.height(bx + s * ht, bz - c * ht, yh), br = W.height(bx - s * ht, bz + c * ht, yh);
     this.gPitch = Math.atan2((fl + fr - bl - br) / 2, p.L); this.gRoll = Math.atan2((fl + bl - fr - br) / 2, p.track);
     const y = (fl + fr) / 2 * (p.rear / p.L) + (bl + br) / 2 * (p.front / p.L);
     this.y += (y - this.y) * Math.max(k, 0.85); this.pitch += (this.gPitch - this.pitch) * Math.max(k, 0.35); this.roll += (this.gRoll - this.roll) * Math.max(k, 0.35); this.groundY = y;   // the body stays on the ground (no lag, so it never sinks into a climb); tilt eases a little
   }
   sub(input) {
-    const p = this.p, W = this.world, h = H, m = p.mass, M = this.mod, top = p.top * M.top;
+    const p = this.p, W = this.world, h = H, m = p.mass, M = this.M, top = Math.min(p.top * M.top, M.cap > 0 ? M.cap : Infinity);
     /* steering: the wheel is turned at a limited rate (slower at speed, quick to come back to centre), and the lock shrinks with speed like a real car's effective steering */
     const want = clamp(input.steer, -1, 1), back = Math.abs(want) < Math.abs(this.steer) || want * this.steer < 0, rate = back ? 8 : 5.5 / (1 + Math.abs(this.u) / 14);
     this.steer += clamp(want - this.steer, -rate * h, rate * h);
@@ -70,7 +108,7 @@ export class VehiclePhysics {
     const mu = p.mu * S.grip * (depth > 0.3 ? 0.6 : 1) * (W.grip ? W.grip(key) : 1) /* weather on the tyres; 1 when dry */ * M.grip, N = m * G * Math.cos(this.gPitch);
 
     /* forward force: engine, brakes, reverse */
-    let Fx = 0; const thr = clamp(input.throttle, 0, 1), brk = clamp(input.brake, 0, 1), flooded = depth > 1.1;
+    let Fx = 0; const thr = clamp(input.throttle, 0, 1), brk = clamp(Math.max(input.brake, input.rev || 0), 0, 1), flooded = depth > 1.1;
     if (thr > 0 && !flooded) Fx = this.u < -0.4 ? m * p.brake * thr : m * p.accel * M.accel * thr * Math.max(0, 1 - (this.u / top) ** 2);
     else if (brk > 0) Fx = this.u > 0.5 ? -m * p.brake * brk : flooded ? 0 : -m * p.revAccel * brk * Math.max(0, 1 - (this.u / p.revTop) ** 2);
     else Fx = -m * 0.55 * clamp(this.u, -1, 1);                                     // engine braking when coasting
@@ -119,6 +157,8 @@ export class VehiclePhysics {
       const cx = this.x + c * off, cz = this.z + s * off;
       for (const list of lists) for (let i = 0; i < list.length; i++) {
         const o = list[i], dx = cx - o.x, dz = cz - o.z, rr = p.radius + o.r, d2 = dx * dx + dz * dz; if (d2 >= rr * rr || d2 === 0) continue;
+        if (o.y !== undefined && Math.abs(o.y - this.y) > 3.2) continue;                  // the other level of an overpass
+        if (o.kerb && Math.abs(this.u) < 2.5) continue;                                    // a kerb (a city pavement edge) can be mounted at walking pace, not driven over
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, pen = rr - d;
         this.x += nx * pen; this.z += nz * pen;
         const wx = this.u * c - this.v * s, wz = this.u * s + this.v * c, vn = wx * nx + wz * nz; if (vn >= 0) continue;

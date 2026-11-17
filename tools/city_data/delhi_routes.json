@@ -1,0 +1,97 @@
+{
+ "themes": [
+  {
+   "id": "lutyens",
+   "title": "Lutyens' Delhi and the ceremonial axis",
+   "summary": "The planned imperial capital of the 1910s to 1930s: Rashtrapati Bhavan and the Secretariat buildings on Raisina Hill, the two Parliament houses, then down the avenue to India Gate. Wide roads, roundabouts, lawns and sandstone; best in the morning light. Walk the axis if you can; the Central Vista area has parking limits and security checks.",
+   "stops": [
+    "rashtrapati-bhavan",
+    "north-block",
+    "south-block",
+    "samvidhan-sadan",
+    "sansad-bhavan-new",
+    "national-museum",
+    "kartavya-path",
+    "india-gate",
+    "national-war-memorial",
+    "major-dhyan-chand-stadium"
+   ]
+  },
+  {
+   "id": "old-delhi",
+   "title": "Old Delhi (Shahjahanabad)",
+   "summary": "Shah Jahan's walled city: the Red Fort, then Chandni Chowk and its side lanes (silver, cloth, spices, sweets), the Sikh and Mughal-era places of worship on the way, and the biggest mosque. Leave the car at the Red Fort side and walk: the lanes are shared with cycle rickshaws and handcarts, and traffic is slow at all hours.",
+   "stops": [
+    "red-fort",
+    "chandni-chowk",
+    "sis-ganj-sahib",
+    "fatehpuri-masjid",
+    "khari-baoli",
+    "jama-masjid",
+    "raj-ghat",
+    "firoz-shah-kotla"
+   ]
+  },
+  {
+   "id": "mughal",
+   "title": "Sultanate and Mughal Delhi",
+   "summary": "Tombs, a fort and gardens from the 14th to 18th centuries in the centre and south of the city: the Tughlaq citadel at Kotla, Sher Shah's Purana Qila, Humayun's Tomb with the dargah of Nizamuddin and the restored Sunder Nursery nearby, then the Lodi tombs and Safdarjung's Tomb. About half a day; most places close at sunset.",
+   "stops": [
+    "firoz-shah-kotla",
+    "purana-qila",
+    "delhi-zoo",
+    "humayuns-tomb",
+    "nizamuddin-dargah",
+    "sunder-nursery",
+    "lodhi-garden",
+    "safdarjung-tomb"
+   ]
+  },
+  {
+   "id": "south",
+   "title": "South Delhi: Qutub, Mehrauli and the modern temples",
+   "summary": "From the medieval city of Mehrauli (Qutub Minar, the archaeological park, the Garden of Five Senses) to Hauz Khas and Safdarjung's Tomb, then Nehru Place and the late-20th-century places of worship in the south-east (the Lotus Temple and the ISKCON temple), ending at the Tughlaq citadel of Tughlaqabad. Plan a day; Mehrauli is at the far southern edge.",
+   "stops": [
+    "qutub-minar",
+    "mehrauli-park",
+    "garden-of-five-senses",
+    "hauz-khas",
+    "safdarjung-tomb",
+    "nehru-place",
+    "lotus-temple",
+    "iskcon-delhi",
+    "tughlaqabad-fort"
+   ]
+  },
+  {
+   "id": "markets",
+   "title": "Markets and food",
+   "summary": "A day of Delhi's bazaars from west to east and from cheap to refined: Karol Bagh, Connaught Place and its underground market, Janpath, Khan Market, the craft bazaar at INA, the clothing markets at Sarojini Nagar and Lajpat Nagar, and the Tibetan lanes of Majnu ka Tilla. Old Delhi's own markets are on the Old Delhi route.",
+   "stops": [
+    "karol-bagh-market",
+    "connaught-place",
+    "palika-bazaar",
+    "janpath-market",
+    "khan-market",
+    "dilli-haat-ina",
+    "sarojini-nagar-market",
+    "lajpat-nagar-market",
+    "majnu-ka-tilla"
+   ]
+  },
+  {
+   "id": "modern",
+   "title": "Big venues and gateways",
+   "summary": "The places a visitor arrives at or goes to for an event: the airport, the new convention centres, the stadiums, Akshardham on the Yamuna. A driving route more than a walking one.",
+   "stops": [
+    "igi-t3",
+    "yashobhoomi",
+    "bharat-mandapam",
+    "supreme-court",
+    "akshardham",
+    "jln-stadium",
+    "arun-jaitley-stadium"
+   ]
+  }
+ ]
+}
