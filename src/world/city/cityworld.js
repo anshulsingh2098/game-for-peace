@@ -55,7 +55,7 @@ export class CityWorld {
   }
   build(tile, M, out) {
     const S = this.pack.size, k = this.tileKey(tile.tx, tile.tz);
-    const grp = new THREE.Group(), meshes = []; for (const name of ['ground', 'park', 'walk', 'road', 'mark', 'bldg']) { if (M[name].empty) continue; const m = new THREE.Mesh(M[name].geometry(), this.mats[name]); m.receiveShadow = name === 'ground' || name === 'road'; m.matrixAutoUpdate = false; m.updateMatrix(); m.userData.near = name === 'mark' || name === 'walk'; grp.add(m); meshes.push(m); }
+    const grp = new THREE.Group(), meshes = []; for (const name of ['ground', 'park', 'walk', 'road', 'mark', 'bldg', 'bldgO', 'bldgG', 'shop']) { if (M[name].empty) continue; const m = new THREE.Mesh(M[name].geometry(), this.mats[name]); m.receiveShadow = name === 'ground' || name === 'road'; m.matrixAutoUpdate = false; m.updateMatrix(); m.userData.near = name === 'mark' || name === 'walk'; m.userData.bld = name.startsWith('bldg'); grp.add(m); meshes.push(m); }
     grp.position.set(tile.tx * S - this.origin.x, 0, tile.tz * S - this.origin.z); this.group.add(grp);
     /* the registry: the streets and buildings of this tile (one notification of the scenery for the whole tile, not one per claim) */
     const owner = 'city:tile:' + k, L = this.ko.listeners.slice(); this.ko.listeners.length = 0; let bb = [Infinity, Infinity, -Infinity, -Infinity];
@@ -82,7 +82,8 @@ export class CityWorld {
     const L = this.ko.listeners.slice(); this.ko.listeners.length = 0; this.ko.removeOwner(t.owner); for (const f of L) this.ko.listeners.push(f); if (t.cuts && t.cuts.length) { const dead = new Set(t.cuts); for (const key of new Set(t.ckeys)) { const l = this.cutCells.get(key); if (l) { const n = l.filter(c => !dead.has(c)); if (n.length) this.cutCells.set(key, n); else this.cutCells.delete(key); } } this.openCuts = this.openCuts.filter(c => !dead.has(c)); }
     this.traffic.removeTile(k); for (const s of t.streets) { const l = this.geomMap.get(s.id); if (l) { const n = l.filter(q => q.k !== k); if (n.length) this.geomMap.set(s.id, n); else this.geomMap.delete(s.id); } } this.tiles.delete(k); this.refreshStats();
   }
-  refreshStats() { let b = 0, s = 0; for (const t of this.tiles.values()) { for (const m of t.meshes) if (m.material === this.mats.bldg) b += m.geometry.index.count / 3; s += t.decks.length; } this.stats.tiles = this.tiles.size; this.stats.tris = b; this.stats.decks = s; }
+  refreshStats() { let b = 0, s = 0; for (const t of this.tiles.values()) { for (const m of t.meshes) if (m.userData.bld) b += m.geometry.index.count / 3; s += t.decks.length; } this.stats.tiles = this.tiles.size; this.stats.tris = b; this.stats.decks = s; }
+  setNight(on) { if (on !== this.night) { this.night = on; this.mats.setNight(on); } }
   reposition() { for (const t of this.tiles.values()) t.grp.position.set(t.tx * this.pack.size - this.origin.x, 0, t.tz * this.pack.size - this.origin.z); for (const f of this.far.values()) { f.mesh.position.set(f.tx * this.pack.size - this.origin.x, 0, f.tz * this.pack.size - this.origin.z); f.mesh.updateMatrix(); } }
   /* the loaded geometry of street edge `id` as flat points running a -> b (pieces from several tiles are chained), or null when no tile with it is loaded: for the GPS route line and autodrive */
   edgeGeom(id) {
