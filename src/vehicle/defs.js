@@ -40,25 +40,5 @@ export const VEHICLES = [
     cam: { back: 8.4, up: 3.3, look: 2.7 }, eye: [0, 1.02, 0.3], shadow: [3.8, 6.6],
     lights: { tail: [[-0.5, 0.96, -1.6], [0.5, 0.96, -1.6]], head: [[-0.62, 0.66, 2.2], [0.62, 0.66, 2.2]], tailSize: 0.8, headSize: 1.1, beam: [0.66, 2.2] },
     buff: { name: 'Afterburn', desc: 'A strong burst of speed for a few seconds.', label: 'Boost', secs: 5, cooldown: 9, mod: { top: 1.25, accel: 2.1 } },
-    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#c8101c', '#2846a4', '#f08a24', '#2a9d5b', '#16181d', '#e9ecef'] } },
-  { id: 'sport', file: 'assets/car_02_sport.glb', name: 'Ember RS', tag: 'Track', color: '#ff6a2c',
-    desc: 'A low mid-engined sports car. Sharp, light and hungry for corners.',
-    stats: { Speed: 96, Accel: 94, Handling: 90, Grip: 76, Top: 285 },
-    body: { mass: 1250, front: 1.3, rear: 1.36, track: 1.66, wheelR: 0.345, steerMax: 0.50, brake: 11, revAccel: 2.6, revTop: 7, aero: 0.28,
-      /* a light mid-engined sports car: about 260 kW (350 hp) at 7000 rpm, 8300 rpm redline, 6-speed box, 4.3 final drive, Cd 0.30 x 1.9 m2, 88% driveline efficiency */
-      pt: { kw: 260, peak: 7000, redline: 8300, idle: 950, launch: 4500, gears: [3.4, 2.3, 1.7, 1.3, 1.08, 0.92], final: 4.3, eff: 0.88, cdA: 0.57, upshift: 0.97, shiftTime: 0.14, tcs: 0.85, brakeMul: 0.9 }, lean: 0.05, cg: 0.46, radius: 0.98, circles: [1.6, 0, -1.6] },
-    cam: { back: 7.0, up: 2.6, look: 2.5 }, eye: [-0.30, 0.99, 0.10], shadow: [3.2, 5.4],
-    lights: { tail: [[-0.7, 0.76, -2.18], [0.7, 0.76, -2.18]], head: [[-0.66, 0.58, 2.2], [0.66, 0.58, 2.2]], tailSize: 0.8, headSize: 1.0, beam: [0.55, 2.1] },
-    buff: { name: 'Nitro', desc: 'A hard shove of extra power for a few seconds.', label: 'Nitro', secs: 3.5, cooldown: 12, mod: { top: 1.25, accel: 1.8 } },
-    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#e77026', '#d62828', '#2846a4', '#2a9d5b', '#16181d', '#f2f2f2'] } },
-  { id: 'rally', file: 'assets/car_03_rally.glb', name: 'Dust Runner', tag: 'Rally', color: '#2fb6c8',
-    desc: 'A raised rally hatchback. Four driven wheels, long travel and happy on gravel.',
-    stats: { Speed: 72, Accel: 84, Handling: 86, Grip: 92, Top: 195 },
-    body: { mass: 1250, front: 1.22, rear: 1.3, track: 1.54, wheelR: 0.34, steerMax: 0.56, brake: 9.5, revAccel: 2.4, revTop: 6.5, aero: 0.32,
-      /* a rally hatchback: about 108 kW (145 hp) at 6000 rpm, 7000 rpm redline, 6-speed box, 4.2 final drive, Cd 0.36 x 2.1 m2, four driven wheels */
-      pt: { kw: 108, peak: 6000, redline: 7000, idle: 900, launch: 3800, gears: [3.5, 2.3, 1.7, 1.3, 1.05, 0.88], final: 4.2, eff: 0.86, cdA: 0.76, upshift: 0.97, shiftTime: 0.15, tcs: 0.9, brakeMul: 0.85 }, lean: 0.08, cg: 0.56, radius: 0.95, circles: [1.4, 0, -1.4] },
-    cam: { back: 7.0, up: 3.0, look: 2.4 }, eye: [-0.32, 1.24, 0.10], shadow: [3.0, 5.2],
-    lights: { tail: [[-0.66, 0.82, -1.99], [0.66, 0.82, -1.99]], head: [[-0.62, 0.69, 2.02], [0.62, 0.69, 2.02]], tailSize: 0.7, headSize: 1.0, beam: [0.8, 2.0] },
-    buff: { name: 'Gravel Grip', desc: 'Extra bite and a sharper turn-in, and loose ground drags less.', label: 'Grip', secs: 6, cooldown: 12, mod: { grip: 1.3, steer: 1.2, drag: 0.35 } },
-    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#dde0e2', '#f08a24', '#d62828', '#2846a4', '#2a9d5b', '#16181d'] } }
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#c8101c', '#2846a4', '#f08a24', '#2a9d5b', '#16181d', '#e9ecef'] } }
 ];
