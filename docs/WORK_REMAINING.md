@@ -205,7 +205,7 @@ Done: `?play&city=delhi[&at=<spawn|landmark|gate id>]` (`src/world/city/`), stre
 | ID | What |
 |---|---|
 | D6.1 | Underground track and station interiors; open cuttings at portals |
-| D6.2 | A stair from the concourse to the platforms of elevated stations (walk on) |
+| D6.2 | Stairs done for the lead line's outer platforms; still open: other lines at interchanges, walking it in the game, railings at the stair opening |
 | D6.3 | Trains and a timetable on the railway tracks in the stations; link to the India-world rail network |
 | D6.4 | Look check done for Blue Line and Laxmi Nagar only (DELHI_TRANSIT 10.1); still to check: other lines' liveries, cars per train, speeds, PSD, round station signs, railway stations |
 | D6.5 | Ride animation instead of a fade; no sound |

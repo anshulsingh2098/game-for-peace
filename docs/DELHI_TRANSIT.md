@@ -177,7 +177,7 @@ Files: `src/world/city/transit_plan.js` (pure: height profile, timetable, networ
 
 **Not built / not verified**
 1. Underground track, tunnels, open cuttings, underground station interiors (only kiosks).
-2. Walking to the platforms of an elevated station (the concourse is walkable, there is no stair from it to the platforms; use fast travel). Platforms, ramps and foot bridges of the railway stations are walkable (`deckAt`), not tested on foot.
+2. Walking to the platforms of an elevated station: a stair now rises from the concourse to the lead line's two outer platforms at the platform ends (the platform stops 15 m short, the concourse ceiling has a hole); walk surfaces give the right heights (checked by calling `deckAt`, not walked in the game). Platforms of the other lines at an interchange have no stair. Platforms, ramps and foot bridges of the railway stations are walkable (`deckAt`), not tested on foot.
 3. Station buildings of the railway stations: the pack draws the landmark ones; no extra architecture, no Old Delhi sandstone, no Nizamuddin green roofs beyond the roof colour. No trains on the mainline tracks and no link to the India-world rail network; no platform number boards.
 4. A pack building that stands under a viaduct stays (the tile meshes belong to the renderer session); only piers and kiosks move. Two layers of crossing flyover (layer 2) and the Metro are not checked; Metro heights are the same at every interchange (no real vertical separation).
 5. Every look figure in section 3.4 (colours, sign style, livery, speeds, cars, PSD) is still from general knowledge; no photographs were looked at. The sprite font for Hindi needs a system Devanagari font.

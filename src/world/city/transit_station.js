@@ -35,7 +35,7 @@ export class StationKit {
     const UVQ = [0, 0, 1, 0, 1, 1, 0, 1];
     const bq = (S, P0, P1, hgt) => { S.quad(P0, P1, [P1[0], P1[1] + hgt, P1[2]], [P0[0], P0[1] + hgt, P0[2]], [1, 1, 1], UVQ); S.quad(P1, P0, [P0[0], P0[1] + hgt, P0[2]], [P1[0], P1[1] + hgt, P1[2]], [1, 1, 1], UVQ); };       // a board readable from both sides (two quads back to back, each reads left to right from its own side)
     const free = (x, z, hx, hz, yaw, m = 0.6) => { const r = Math.min(hx, hz) + m * 0.3, c = Math.cos(yaw), sn = Math.sin(yaw); for (const u of [0, hx * 0.6, -hx * 0.6]) if (T.blocked(x + c * u, z + sn * u, r)) return false; return true; };
-    const box = { u0: Infinity, u1: -Infinity, l0: Infinity, l1: -Infinity }, depQuads = [];
+    const box = { u0: Infinity, u1: -Infinity, l0: Infinity, l1: -Infinity }, depQuads = [], holes = [];
 
     /* platforms, roof, boards of every line that has track above ground here */
     for (const it of this.items) {
@@ -44,7 +44,13 @@ export class StationKit {
       if (!plats.length) { plats.push({ t: ts[0], l0: -EDGE - PW, l1: -EDGE, edges: [1] }); plats.push({ t: ts[ts.length - 1], l0: EDGE, l1: EDGE + PW, edges: [0] }); }       // else a side platform outside each outer track
       let lo = Infinity, hi = -Infinity; const rows = [];
       for (const p of plats) {
-        const R = p.t.R, i0 = R.indexAt(p.t.s - Lp / 2), i1 = Math.min(R.n - 1, R.indexAt(p.t.s + Lp / 2) + 1);
+        const R = p.t.R, q0 = R.at(p.t.s); let sa = p.t.s - Lp / 2, sb = p.t.s + Lp / 2;
+        if (it === lead && it.kit === 'elevated' && (p === plats[0] || p === plats[plats.length - 1])) {       // the stair to the platform comes up at this platform's end in the lead direction: the platform stops 15 m short there and the concourse reaches under the gap
+          const sgn = p === plats[0] ? 1 : -1, fwd = q0.tx * Fa.tx + q0.tz * Fa.tz > 0, endS = (sgn > 0) === fwd ? 1 : -1; if (endS > 0) sb -= 15; else sa += 15;
+          const c = p.edges.length === 2 ? (p.l0 + p.l1) / 2 : p.l0 > 0 ? p.l0 + 2.5 : p.l1 - 2.5; holes.push({ sgn, l: p.t.l + c });
+        }
+        this.walk.push({ x: q0.x, z: q0.z, tx: q0.tx, tz: q0.tz, u0: sa - p.t.s, u1: sb - p.t.s, l0: p.l0, l1: p.l1, ya: q0.h + 1.0, yb: q0.h + 1.0 });
+        const i0 = R.indexAt(sa), i1 = Math.min(R.n - 1, R.indexAt(sb) + 1);
         extrude(solid, R, i0, i1, [[p.l0, -1.6], [p.l1, -1.6], [p.l1, 1.0], [p.l0, 1.0]], [PLAT_DK, PLAT_SIDE, PLAT, PLAT_SIDE], true);
         for (const ed of [0, 1]) if (!p.edges.includes(ed)) { const l = ed ? p.l1 : p.l0; extrude(solid, R, i0, i1, [[l, 1.0], [l, 2.1]], [C(0x8a9096)], false); }       // railing on the open side (photo: Laxmi Nagar)
         for (const ed of p.edges) { const l = ed ? p.l1 : p.l0, d = ed ? 0.6 : -0.6; extrude(solid, R, i0, i1, [[l, 1.012], [l - d, 1.012]], [TACTILE], false); if (psd) extrude(glass, R, i0, i1, [[l + (ed ? -0.05 : 0.05), 1.0], [l + (ed ? -0.05 : 0.05), 3.0]], [GLASS], false); }
@@ -62,10 +68,14 @@ export class StationKit {
 
     /* the concourse (elevated stations) in the frame of the lead line, over every platform of the interchange, and the stair towers */
     if (this.items.some(i => i.kit === 'elevated') && box.u0 < box.u1) {
-      const u0 = box.u0 + 10, u1 = box.u1 - 10, l0 = Math.max(box.l0, -40), l1 = Math.min(box.l1, 40), top = RAIL_H - GIRDER - 0.2, uc = (u0 + u1) / 2, lc = (l0 + l1) / 2;
+      const u0 = box.u0 + (holes.some(h => h.sgn < 0) ? 1 : 10), u1 = box.u1 - (holes.some(h => h.sgn > 0) ? 1 : 10), l0 = Math.max(box.l0, -40), l1 = Math.min(box.l1, 40), top = RAIL_H - GIRDER - 0.2, uc = (u0 + u1) / 2, lc = (l0 + l1) / 2;
       const wall = (ua, la, ub, lb, y0, y1, col) => solid.quad(pt(Fa, ua, la, y0), pt(Fa, ub, lb, y0), pt(Fa, ub, lb, y1), pt(Fa, ua, la, y1), col);       // hollow: four walls, a floor you can walk on (5.5 m) and a ceiling
       for (const [ya, yb, cw] of [[5.5, 6.1, BAND], [6.1, 8.9, GLAZE], [8.9, top, BAND]]) { wall(u0, l0, u1, l0, ya, yb, cw); wall(u0, l1, u1, l1, ya, yb, cw); wall(u0, l0, u0, l1, ya, yb, cw); wall(u1, l0, u1, l1, ya, yb, cw); }
-      fbox(solid, Fa, u0, u1, l0, l1, 5.2, 5.5, BAND, C(0xcfcac0)); fbox(solid, Fa, u0, u1, l0, l1, top - 0.3, top, BAND, BAND); this.walk.push({ x: Fa.x, z: Fa.z, tx: Fa.tx, tz: Fa.tz, u0, u1, l0, l1, ya: 5.5, yb: 5.5 }); const cp = pt(Fa, uc, lc, 0); this.access.push({ x: cp[0], z: cp[2] });
+      fbox(solid, Fa, u0, u1, l0, l1, 5.2, 5.5, BAND, C(0xcfcac0)); { const uA = u0 + (holes.some(h => h.sgn < 0) ? 15 : 0), uB = u1 - (holes.some(h => h.sgn > 0) ? 15 : 0); fbox(solid, Fa, uA, uB, l0, l1, top - 0.3, top, BAND, BAND);       // ceiling, with a hole where a stair goes up through it
+        for (const h of holes) { const ua = h.sgn > 0 ? uB : u0, ub = h.sgn > 0 ? u1 : uA, hl = Math.max(l0 + 1.5, Math.min(l1 - 1.5, h.l)); fbox(solid, Fa, ua, ub, l0, hl - 1.5, top - 0.3, top, BAND, BAND); fbox(solid, Fa, ua, ub, hl + 1.5, l1, top - 0.3, top, BAND, BAND);
+          const ue = h.sgn > 0 ? u1 : u0, f = pt(Fa, ue - h.sgn * 0.5, hl, 5.5), t = pt(Fa, ue - h.sgn * 14.5, hl, 12.5); slab(solid, f[0], f[2], 5.5, t[0], t[2], 12.5, 2.4, 0.4, STAIR, STAIR_T);
+          const dx = t[0] - f[0], dz = t[2] - f[2], L = Math.hypot(dx, dz); this.walk.push({ x: f[0], z: f[2], tx: dx / L, tz: dz / L, u0: 0, u1: L, l0: -1.2, l1: 1.2, ya: 5.5, yb: 12.5 }); } }
+       this.walk.push({ x: Fa.x, z: Fa.z, tx: Fa.tx, tz: Fa.tz, u0, u1, l0, l1, ya: 5.5, yb: 5.5 }); const cp = pt(Fa, uc, lc, 0); this.access.push({ x: cp[0], z: cp[2] });
       for (const sg of [-1, 1]) { const l = sg > 0 ? l1 + 0.06 : l0 - 0.06, a = pt(Fa, uc - 5.4 * sg, l, 6.35), b = pt(Fa, uc + 5.4 * sg, l, 6.35); bq(names, sg > 0 ? a : b, sg > 0 ? b : a, 2.7); }
       claims.push({ kind: 'station', layer: 1, shape: { t: 'rect', x: Fa.x + Fa.tx * uc - Fa.tz * lc, z: Fa.z + Fa.tz * uc + Fa.tx * lc, hx: (u1 - u0) / 2, hz: (l1 - l0) / 2, yaw: Math.atan2(Fa.tz, Fa.tx) } });
       const yaw = Math.atan2(Fa.tz, Fa.tx); let placedT = 0;
