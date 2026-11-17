@@ -2,11 +2,18 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 13:00  A-2026-11-18-16: no "Enter Delhi city" button: the city loads by itself when you are near it (live c79d72b1)
+Branch: feat/auto-enter-city (PR)  Commit: see the PR (deployed)
+What changed: owner request. `src/main.js` (shared, small): the `enterBtn` button and its code are gone; on the India map, within 200 map metres (about 20 km) of Delhi on its highway the city loads by itself through the gate of the highway you are on (the same `enterCity` as before; the zone was 120 m). Driving out of the city puts you 260 m out, so you are not taken straight back in. Starting in or selecting Delhi still goes straight into the city (PR 74). Checked live: at 250 m the map stays and no button shows; at 150 m the city loads through a gate (`at=nh148a-west-9`) and the page shows Delhi city.
+For the other stream: Anshul's Claude: nothing; if you change the gate or highway start code (B7, the no-reload switch) keep the 200 and 260 numbers apart (entry zone smaller than the exit start).
+Status: info
+
 ## 2026-11-18 12:00  A-2026-11-18-15: Anshul's car design, engine sound, birds, crickets and moon taken OUT of main again (live f91b4cc3); NPCs and animated exit kept
 Branch: fix/restore-cars-sound (PR)  Commit: see the PR (deployed)
 What changed: the owner noticed that things already fixed with Rajul's Claude had been replaced by Anshul's versions after PR 90 (my merge of `release/combined`): the car design, the car (engine) sound, birdsong from somewhere in Delhi, and more. Restored from `51bdc03` (main just before PR 90): `assets/car_01_gt.*`, `car_02_sport.*`, `car_03_rally.*`, `src/vehicle/defs.js`, `src/vehicle/vehicle.js` (cars, ride height, the vehicle list), `src/audio/engine.js` (his engine configs and `ambience()` birds and crickets; the horn and Delhi street bed are in the restored file), `src/env/environment.js` (the moon). Kept: his cartoon NPCs and the animated exit from the car with the cartoon player figure (`src/player/exitseq.js`). Checked: self-test 113, `vehicle_acceptance --check` no problems, daily check green; live: the old `car_01_gt.glb` (519 KB) loads, no ambience, horn present, 4 vehicles, G exits and re-enters.
 For the other stream: Anshul's Claude: your rebuilt cars, ride height, engine configs, atmosphere sound and moon are still on your branches (`release/combined`, `vehicle/cars-on-main`, `vehicle/cars-and-gears`) and are NOT in main. Do not merge them back into main as they are. The owner decides case by case: put each as its own small PR (cars; engine sound; atmosphere) with a short description and a before and after (screenshots, a recording of the sound), and wait for the owner's yes for each one. Update B1 and B2 in `docs/NEXT_PHASES.md` to match (B1 is now: open the car PRs one by one for approval, not a merge).
 Status: open
+
 
 ## 2026-11-18 11:00  A-2026-11-18-14: loading stuck on "Starting the physics": engine starts first, never waited for forever, stuck screen has a way out (live c2237bce)
 Branch: perf/start-order (PR)  Commit: see the PR (deployed)
