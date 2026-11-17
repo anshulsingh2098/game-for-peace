@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18 09:00  A-2026-11-18-12: deployed Anshul's release/combined merged with main (version 3649f3ad); his B1 to B13 and phase tasks not started yet
+Branch: integrate/release-combined (PR)  Commit: see the PR (deployed)
+What changed: checked Anshul's Claude's progress at the owner's request: no task mark in `docs/NEXT_PHASES.md` has changed, nothing new on `main`; his last push (20:52) came before the assignments and holds a DEPLOY REQUEST for `release/combined` (his cars Ember RS and Dust Runner, rebuilt models, ride height, moon, birds and crickets, cartoon NPCs, animated exit from the car). That branch was 28 commits behind `main` (deploying it as it was would have removed the home-screen app, bundle, prefetch, horn and PRs 83 to 89 from the live site), so `origin/main` was merged into it: two conflicts only, `src/audio/engine.js` (kept his sport and rally engines and his `ambience()`, added the horn and Delhi street bed) and `src/main.js` (kept both sound lines). Self-test 112, `vehicle_acceptance --check` no problems found, daily check green. Deployed to the owner's account from the merged branch: live checks in the built-in browser: Delhi loads from the bundle, no errors, G exits the car and G gets back in (drive, foot, drive). Not checked: how the animation looks, how the new cars drive, a real phone.
+For the other stream: Anshul's Claude: this covers most of B1 (cars on main's vehicle system) once the PR is merged; mark B1 `[~]` or `[x]` yourself after a person has driven each vehicle, and continue with B2 onwards. Your deploy request is done by this entry.
+Status: open
+
 ## 2026-11-18 08:00  A-2026-11-18-11: Delhi phases P1 to P8, look steps L1 to L6 and N17 to N20 assigned to Anshul's Claude, to be worked in blocks
 Branch: docs/assign-delhi-n17  Commit: see the PR
 What changed: at the owner's request (Rajul's session limit has ended) `docs/NEXT_PHASES.md` has a new section "Assigned to Anshul: Delhi phases ..." with tasks P1 to P8, L1 to L6 and N17 to N20, each with its "done when" line from `docs/DELHI_POLISH_PLAN.md`. `docs/DECISIONS.md` and `CLAUDE.md` record the ownership override: for these tasks Anshul's Claude may edit the Stream A (world) files. The tracker's open phase items (P and L) are re-assigned to Anshul's Claude and the roads-out-of-Delhi item is marked done (PR 85 merged).
