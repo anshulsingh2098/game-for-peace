@@ -18,7 +18,7 @@ import { WX } from '../../env/environment.js';
 /* the world config of a city: the region's palette and plants, on flat land (no hills, no sea) with the engine's own placeholder road parked far away (the engine always has one road; here it only gives the vehicle code something to ask) */
 export function cityConfig(base, seed) {
   const T = base.terrain, flatT = { ...T, seaLevel: -30, seabed: -60, lowland: 8, continent: { ...T.continent, rise: 0 }, coast: { lo: -9, hi: -8 }, hills: { ...T.hills, amp: 0 }, mountains: { ...T.mountains, amp: 0 }, detail: { ...T.detail, amp: 0 } };
-  return { ...base, location: 'default', seed, terrain: flatT, palette: { ...base.palette, grass: [0.6, 0.55, 0.42], grass2: [0.5, 0.48, 0.36], dry: [0.62, 0.56, 0.42] }, scatter: { ...base.scatter, trees: 0.0006, rocks: 0, bushes: 0.0004, tufts: 0.002, clearRoad: 6, shadows: false },
+  return { ...base, location: 'default', seed, terrain: flatT, palette: { ...base.palette, grass: [0.56, 0.53, 0.45], grass2: [0.54, 0.51, 0.44], dry: [0.57, 0.53, 0.45] }, scatter: { ...base.scatter, trees: 0, rocks: 0, bushes: 0, tufts: 0.0006, clearRoad: 6, shadows: false },
     road: { ...base.road, style: 'two-lane', start: { x: -200000, z: 0, y: 8 }, guide: [0, 0, 300, 0, 600, 0, 900, 0] } };
 }
 
@@ -59,7 +59,7 @@ export class CityWorld {
     if (this.loading.size || this.job || this.farLoading.size >= 2) return; const tx0 = Math.floor((px - FAR) / S), tx1 = Math.floor((px + FAR) / S), tz0 = Math.floor((pz - FAR) / S), tz1 = Math.floor((pz + FAR) / S); let best = null, bd = Infinity;
     for (let i = tx0; i <= tx1; i++) for (let j = tz0; j <= tz1; j++) { const k = this.tileKey(i, j); if (this.tiles.has(k) || this.far.has(k) || this.farLoading.has(k) || !this.pack.hasTile(i, j)) continue; const d = Math.hypot((i + 0.5) * S - px, (j + 0.5) * S - pz); if (d < FAR && d < bd) { bd = d; best = [i, j, k]; } }
     if (!best) return; const [i, j, k] = best; this.farLoading.add(k);
-    this.pack.tile(i, j).then(t => { this.farLoading.delete(k); if (!t || this.tiles.has(k)) return; const g = buildSkyline(t, { gy: this.gy, size: S }); if (!g) { this.far.set(k, { tx: i, tz: j, mesh: new THREE.Object3D(), empty: true }); return; } const m = new THREE.Mesh(g, this.mats.sky); m.matrixAutoUpdate = false; m.position.set(i * S - this.origin.x, 0, j * S - this.origin.z); m.updateMatrix(); this.group.add(m); this.far.set(k, { tx: i, tz: j, mesh: m }); }).catch(() => { this.farLoading.delete(k); });
+    this.pack.tile(i, j).then(t => { this.farLoading.delete(k); if (!t || this.tiles.has(k)) return; const g = buildSkyline(t, { gy: this.gy, size: S, dense: bd < 2800 }); if (!g) { this.far.set(k, { tx: i, tz: j, mesh: new THREE.Object3D(), empty: true }); return; } const m = new THREE.Mesh(g, this.mats.sky); m.matrixAutoUpdate = false; m.position.set(i * S - this.origin.x, 0, j * S - this.origin.z); m.updateMatrix(); this.group.add(m); this.far.set(k, { tx: i, tz: j, mesh: m }); }).catch(() => { this.farLoading.delete(k); });
   }
   fetchTile(tx, tz) { const k = this.tileKey(tx, tz); this.loading.set(k, true); this.pack.tile(tx, tz).then(t => { if (t && this.loading.has(k)) this.ready.push(t); else this.loading.delete(k); }).catch(e => { this.stats.failed++; console.warn('city tile', k, e); this.loading.delete(k); }); }
   /* a tile is meshed in slices of about SLICE_MS a frame (tilemesh.js buildTileSteps), then added to the scene in one go */
