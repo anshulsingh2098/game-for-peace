@@ -22,11 +22,19 @@ export class CityNav {
     this.dest = null; this.route = null; this.steps = []; this.stepArc = []; this.path = new PathRoad([]); this.s = 0; this.si = 0; this.off = 0; this.dirty = false; this.arrived = false; this.t = 0;
   }
   get active() { return !!this.dest && !!this.route; }
-  /* route from (x, z) heading `yaw` to a place { x, z, name } (null clears) */
+  /* route from (x, z) heading `yaw` to a place { x, z, name } (null clears). The route is worked out a few milliseconds per frame (audit R09, B10), so this returns a
+     Promise of the route (null if there is none); this.route is set when it arrives. A newer call cancels one still running. */
   setDest(x, z, to, yaw = 0) {
-    this.dest = to; this.arrived = false; if (!to) { this.route = null; this.steps = []; this.path.set([]); this.onChange(); return null; }
-    const r = this.router.plan(x, z, yaw, to.x, to.z, this.geom); if (!r) { this.dest = null; this.route = null; this.toast('No drivable route to ' + to.name); this.onChange(); return null; }
-    this.route = r; this.steps = r.steps; this.build(x, z); this.toast('Route to ' + to.name + ': ' + (r.metres / 1000).toFixed(1) + ' km, about ' + Math.max(1, Math.round(r.seconds / 60)) + ' min'); this.onChange(); return r;
+    if (this.pending) { this.pending.abort(); this.pending = null; }
+    const same = to && to === this.dest; this.dest = to; this.arrived = false;
+    if (!to || !same) { this.route = null; this.steps = []; this.path.set([]); }              // a new place: no route until the new one arrives (a re-route to the same place keeps driving on the old one meanwhile)
+    if (!to) { this.onChange(); return Promise.resolve(null); }
+    const ac = this.pending = new AbortController();
+    return this.router.planSliced(x, z, yaw, to.x, to.z, this.geom, { signal: ac.signal }).then(r => {
+      if (ac !== this.pending) return null; this.pending = null;
+      if (!r) { this.dest = null; this.route = null; this.toast('No drivable route to ' + to.name); this.onChange(); return null; }
+      this.route = r; this.steps = r.steps; this.build(x, z); this.toast('Route to ' + to.name + ': ' + (r.metres / 1000).toFixed(1) + ' km, about ' + Math.max(1, Math.round(r.seconds / 60)) + ' min'); this.onChange(); return r;
+    }, e => { if (e && e.name === 'AbortError') return null; throw e; });
   }
   /* the polyline (the start and end pieces fixed, the middle from the loaded street geometry) and the arc position of each step: the share of the route's edge length at the step's node, spread over the middle part */
   build(x, z) {

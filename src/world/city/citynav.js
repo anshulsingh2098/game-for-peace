@@ -4,6 +4,8 @@ const DRIVE_SKIP = new Set(['footway', 'cycleway', 'busway', 'service']), SLOW =
 export const bearingWord = d => { const a = Math.abs(d); return a < 25 ? 'Continue' : a < 60 ? (d > 0 ? 'Bear right' : 'Bear left') : a < 135 ? (d > 0 ? 'Turn right' : 'Turn left') : 'Make a U-turn'; };
 
 /* a spatial index of the street edges (500 m cells, an edge in every cell its chord crosses), filled a slice per step() so it never costs a frame; `keep(className)` chooses the classes (default all but foot, cycle and bus ways) */
+const SLICE_POPS = 400, EDGE_SLICE = 2000;                                        // node expansions per slice of a search, and edges per slice of the street index: each about a millisecond
+const drain = it => { for (;;) { const r = it.next(); if (r.done) return r.value; } };       // run a generator to its end (the one-go versions of routeNodes and plan)
 export class EdgeIndex {
   constructor(G, keep = c => c !== 'footway' && c !== 'cycleway' && c !== 'busway') { this.G = G; this.cell = 500; this.cells = new Map(); this.next = 0; this.done = false; this.seen = new Uint32Array(G.n); this.gen = 0; this.keep = G.classes.map(keep); }
   step(budget = 30000) {
@@ -35,25 +37,33 @@ export class CityRouter {
     for (let e = 0; e < n; e++) { if (!ok(e)) continue; const o = G.oneway[e], a = G.a[e], b = G.b[e]; if (o >= 0) { to[fill[a]] = b; ed[fill[a]++] = e; } if (o <= 0) { to[fill[b]] = a; ed[fill[b]++] = e; } }
     this.start = start; this.to = to; this.ed = ed; this.cell = 250; this.grid = new Map();
     for (let i = 0; i < N; i++) if (start[i + 1] > start[i]) { const k = Math.floor(G.xz[i * 2] / this.cell) + ',' + Math.floor(G.xz[i * 2 + 1] / this.cell); let l = this.grid.get(k); if (!l) this.grid.set(k, l = []); l.push(i); }
-    this.edges = new EdgeIndex(G, c => !DRIVE_SKIP.has(c)); this.banned = new Set(); this.penalty = G.classes.map(c => c === 'residential' ? 1.7 : c === 'tertiary' ? 1.15 : 1); this.dist = new Float64Array(N); this.prev = new Int32Array(N); this.prevE = new Int32Array(N); this.stamp = new Int32Array(N); this.gen = 0;
+    this.edges = new EdgeIndex(G, c => !DRIVE_SKIP.has(c)); this.banned = new Set(); this.penalty = G.classes.map(c => c === 'residential' ? 1.7 : c === 'tertiary' ? 1.15 : 1); this.pool = [];                                   // scratch arrays for searches (one per search running at once, so sliced searches never trample each other)
   }
+  acquire() { return this.pool.pop() || { dist: new Float64Array(this.G.nodes), prev: new Int32Array(this.G.nodes), prevE: new Int32Array(this.G.nodes), stamp: new Int32Array(this.G.nodes), gen: 0 }; }
+  release(S) { this.pool.push(S); }
   /* the routable node nearest to (x, z), or -1 */
   nearest(x, z) {
     const G = this.G, c = this.cell, ci = Math.floor(x / c), cj = Math.floor(z / c); let best = -1, bd = Infinity;
     for (let r = 0; r < 24 && (best < 0 || r * c < Math.sqrt(bd)); r++) for (let i = ci - r; i <= ci + r; i++) for (let j = cj - r; j <= cj + r; j++) { if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== r) continue; const l = this.grid.get(i + ',' + j); if (l) for (const id of l) { const d = (G.xz[id * 2] - x) ** 2 + (G.xz[id * 2 + 1] - z) ** 2; if (d < bd) { bd = d; best = id; } } }
     return best;
   }
-  /* A* between two nodes: { nodes, edges (ids, in travel order), metres, seconds } or null */
-  routeNodes(a, b, maxPops = 3e6) {
-    const G = this.G, { start, to, ed, dist, prev, prevE, stamp } = this, g = ++this.gen, xz = G.xz, bx = xz[b * 2], bz = xz[b * 2 + 1], h = n => Math.hypot(xz[n * 2] - bx, xz[n * 2 + 1] - bz) / VMAX, heap = new Heap();
-    stamp[a] = g; dist[a] = 0; prev[a] = -1; heap.push(h(a), a); let pops = 0; const done = new Uint8Array(0); void done;
-    while (heap.size && pops++ < maxPops) {
-      const u = heap.pop(); if (u === b) break; const du = dist[u], pu = prev[u], ux = xz[u * 2], uz = xz[u * 2 + 1], px = pu >= 0 ? ux - xz[pu * 2] : 0, pz = pu >= 0 ? uz - xz[pu * 2 + 1] : 0, pl = Math.hypot(px, pz);
-      for (let k = start[u]; k < start[u + 1]; k++) { const e = ed[k], v = to[k], sp = Math.max(10, G.speed[e] || 30) / 3.6 * SLOW, cost = G.len[e] / sp * this.penalty[G.cls[e]] + (G.nodeFlags[v] & 1 ? 8 : 0) + (this.banned.has(e) ? 1e5 : 0) + (pl > 0.5 && (px * (xz[v * 2] - ux) + pz * (xz[v * 2 + 1] - uz)) < -0.8 * pl * Math.hypot(xz[v * 2] - ux, xz[v * 2 + 1] - uz) ? 150 : 0), nd = du + cost; if (stamp[v] !== g || nd < dist[v]) { stamp[v] = g; dist[v] = nd; prev[v] = u; prevE[v] = e; heap.push(nd + h(v), v); } }
-    }
-    if (stamp[b] !== g) return null; const nodes = [], edges = []; let m = 0;
-    for (let v = b; v !== -1; v = prev[v]) { nodes.push(v); if (prev[v] !== -1) { edges.push(prevE[v]); m += G.len[prevE[v]]; } }
-    nodes.reverse(); edges.reverse(); return { nodes, edges, metres: m, seconds: dist[b] };
+  /* A* between two nodes: { nodes, edges (ids, in travel order), metres, seconds } or null. routeNodes runs it in one go; routeNodesGen is the same search as a generator that
+     yields every `slice` node expansions (about a millisecond), so a caller can spread one long route over several frames (planSliced). Same code, so the same answer. */
+  routeNodes(a, b, maxPops = 3e6) { return drain(this.routeNodesGen(a, b, maxPops)); }
+  *routeNodesGen(a, b, maxPops = 3e6, slice = SLICE_POPS) {
+    const S = this.acquire();
+    try {
+      const G = this.G, { start, to, ed } = this, { dist, prev, prevE, stamp } = S, g = ++S.gen, xz = G.xz, bx = xz[b * 2], bz = xz[b * 2 + 1], h = n => Math.hypot(xz[n * 2] - bx, xz[n * 2 + 1] - bz) / VMAX, heap = new Heap();
+      stamp[a] = g; dist[a] = 0; prev[a] = -1; heap.push(h(a), a); let pops = 0, sl = 0;
+      while (heap.size && pops++ < maxPops) {
+        const u = heap.pop(); if (u === b) break; const du = dist[u], pu = prev[u], ux = xz[u * 2], uz = xz[u * 2 + 1], px = pu >= 0 ? ux - xz[pu * 2] : 0, pz = pu >= 0 ? uz - xz[pu * 2 + 1] : 0, pl = Math.hypot(px, pz);
+        for (let k = start[u]; k < start[u + 1]; k++) { const e = ed[k], v = to[k], sp = Math.max(10, G.speed[e] || 30) / 3.6 * SLOW, cost = G.len[e] / sp * this.penalty[G.cls[e]] + (G.nodeFlags[v] & 1 ? 8 : 0) + (this.banned.has(e) ? 1e5 : 0) + (pl > 0.5 && (px * (xz[v * 2] - ux) + pz * (xz[v * 2 + 1] - uz)) < -0.8 * pl * Math.hypot(xz[v * 2] - ux, xz[v * 2 + 1] - uz) ? 150 : 0), nd = du + cost; if (stamp[v] !== g || nd < dist[v]) { stamp[v] = g; dist[v] = nd; prev[v] = u; prevE[v] = e; heap.push(nd + h(v), v); } }
+        if (++sl >= slice) { sl = 0; yield; }
+      }
+      if (stamp[b] !== g) return null; const nodes = [], edges = []; let m = 0;
+      for (let v = b; v !== -1; v = prev[v]) { nodes.push(v); if (prev[v] !== -1) { edges.push(prevE[v]); m += G.len[prevE[v]]; } }
+      nodes.reverse(); edges.reverse(); return { nodes, edges, metres: m, seconds: dist[b] };
+    } finally { this.release(S); }
   }
   /* the routable edge nearest to (x, z): { e, f (0..1 along the chord a -> b), d (m), x, z } or null */
   nearestEdge(x, z) {
@@ -63,20 +73,35 @@ export class CityRouter {
   }
   /* A route between two world points that starts and ends on the street where the points are, not at the nearest crossing (edges run 1 km and more): { nodes, edges, metres, seconds, poly, pre, mid, steps } or null.
      yaw: the car's heading (a start against it costs a U-turn). geom(edgeId): the street's geometry a -> b or null. */
-  plan(x0, z0, yaw, x1, z1, geom = null) {
-    const G = this.G, S = this.nearestEdge(x0, z0), T = this.nearestEdge(x1, z1); if (!S || !T) return null;
+  plan(x0, z0, yaw, x1, z1, geom = null) { return drain(this.planGen(x0, z0, yaw, x1, z1, geom)); }
+  /* the same as a generator: it yields about every millisecond of work (the street index is built in slices, each search every `slice` expansions, then the polyline and the turn steps), so planSliced can run it a few ms per frame */
+  *planGen(x0, z0, yaw, x1, z1, geom = null) {
+    while (!this.edges.done) { this.edges.step(EDGE_SLICE); yield; }
+    const G = this.G, S = this.nearestEdge(x0, z0), T = this.nearestEdge(x1, z1); if (!S || !T) return null; yield;
     const sp = e => Math.max(10, G.speed[e] || 30) / 3.6 * SLOW; let best = null;
     const hd = Math.atan2(G.xz[G.b[S.e] * 2 + 1] - G.xz[G.a[S.e] * 2 + 1], G.xz[G.b[S.e] * 2] - G.xz[G.a[S.e] * 2]), oS = G.oneway[S.e], oT = G.oneway[T.e], sEnds = [], tEnds = [];
     if (oS >= 0) sEnds.push({ node: G.b[S.e], toB: true }); if (oS <= 0) sEnds.push({ node: G.a[S.e], toB: false });
     if (oT >= 0) tEnds.push({ node: G.a[T.e], fromA: true }); if (oT <= 0) tEnds.push({ node: G.b[T.e], fromA: false });       // you enter the target street at the end traffic can come from
     for (const s of sEnds) { const dS = G.len[S.e] * (s.toB ? 1 - S.f : S.f), turn = Math.cos((s.toB ? hd : hd + Math.PI) - yaw) < -0.3 ? 40 : 0, cS = dS / sp(S.e) + turn;
-      for (const t of tEnds) { const dT = G.len[T.e] * (t.fromA ? T.f : 1 - T.f), cT = dT / sp(T.e); const r = s.node === t.node ? { nodes: [s.node], edges: [], metres: 0, seconds: 0 } : this.routeNodes(s.node, t.node); if (!r) continue; const tot = cS + r.seconds + cT; if (!best || tot < best.tot) best = { tot, r, s, t, dS, dT }; } }
+      for (const t of tEnds) { const dT = G.len[T.e] * (t.fromA ? T.f : 1 - T.f), cT = dT / sp(T.e); const r = s.node === t.node ? { nodes: [s.node], edges: [], metres: 0, seconds: 0 } : yield* this.routeNodesGen(s.node, t.node); if (!r) continue; const tot = cS + r.seconds + cT; if (!best || tot < best.tot) best = { tot, r, s, t, dS, dT }; } }
     if (!best) return null; const { r, s, t } = best;
     const g = e => { const p = geom ? geom(e) : null; return p && p.length >= 4 ? p : [G.xz[G.a[e] * 2], G.xz[G.a[e] * 2 + 1], G.xz[G.b[e] * 2], G.xz[G.b[e] * 2 + 1]]; };
-    const pre = clipFrom(g(S.e), x0, z0, s.toB), post = clipTo(g(T.e), x1, z1, t.fromA), mid = routePolyline(G, r, geom);
-    const out = { nodes: r.nodes, edges: r.edges, metres: best.dS + r.metres + best.dT, seconds: best.tot, preP: pre, postP: post, poly: pre.concat(mid, post), pre: polyLen(pre), mid: polyLen(mid), startEdge: S.e, endEdge: T.e }; out.steps = this.steps(out, S.e); return out;
+    yield; const pre = clipFrom(g(S.e), x0, z0, s.toB), post = clipTo(g(T.e), x1, z1, t.fromA), mid = routePolyline(G, r, geom);
+    const out = { nodes: r.nodes, edges: r.edges, metres: best.dS + r.metres + best.dT, seconds: best.tot, preP: pre, postP: post, poly: pre.concat(mid, post), pre: polyLen(pre), mid: polyLen(mid), startEdge: S.e, endEdge: T.e }; yield; out.steps = this.steps(out, S.e); return out;
   }
   route(x0, z0, x1, z1) { const a = this.nearest(x0, z0), b = this.nearest(x1, z1); if (a < 0 || b < 0) return null; if (a === b) return { nodes: [a], edges: [], metres: 0, seconds: 0 }; return this.routeNodes(a, b); }
+  /* plan() spread over frames: a Promise of the same route, computed a few milliseconds at a time (budgetMs of work, then wait for the next frame), so no frame is blocked by routing.
+     opt: { signal (AbortSignal: stop and reject with AbortError), budgetMs (default 3), later (fn(callback), default requestAnimationFrame or setTimeout), now (default performance.now) } */
+  planSliced(x0, z0, yaw, x1, z1, geom = null, opt = {}) {
+    const it = this.planGen(x0, z0, yaw, x1, z1, geom), signal = opt.signal, budget = opt.budgetMs ?? 3, now = opt.now || (() => performance.now()), later = opt.later || (typeof requestAnimationFrame === 'function' ? f => requestAnimationFrame(f) : f => setTimeout(f, 0));
+    return new Promise((ok, no) => {
+      const pump = () => {
+        if (signal && signal.aborted) { it.return(); no(Object.assign(new Error('route cancelled'), { name: 'AbortError' })); return; }
+        const t0 = now(); try { for (;;) { const r = it.next(); if (r.done) { ok(r.value); return; } if (now() - t0 >= budget) break; } } catch (e) { no(e); return; }
+        later(pump);
+      }; pump();
+    });
+  }
   /* the street name of an edge ('' when unnamed): the English name, else the ref */
   nameOf(e) { const n = this.G.names[this.G.name[e]]; return n ? n.en || n.ref || '' : ''; }
   /* turn-by-turn steps of a route: [{ dist (m to the next step), at (node), text }] */
