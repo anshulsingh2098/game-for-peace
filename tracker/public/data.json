@@ -175,8 +175,8 @@
     {
      "id": "aa91e9e5",
      "t": "P1: Fill the voids",
-     "d": "Remaining: interiors, forecourts, parking and plazas inside large blocks (paving, trees, parked cars, a few stalls), area styles tuned from identity.json (Old Delhi dense and tall, Lutyens low). Done when no 100 m by 100 m grey void is left inside an urban block in the 5 sample areas, coverage numbers are in the PR, and the frame is within budget (infill instanced or merged, windows by shader).",
-     "s": "todo",
+     "d": "19 Nov 2026: interiors added, 100 m voids 19 to 10 (tools/measure_voids.mjs); forecourts, parking, plazas and the coverage targets still open. Remaining: interiors, forecourts, parking and plazas inside large blocks (paving, trees, parked cars, a few stalls), area styles tuned from identity.json (Old Delhi dense and tall, Lutyens low). Done when no 100 m by 100 m grey void is left inside an urban block in the 5 samp…",
+     "s": "doing",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
     },
@@ -1749,5 +1749,5 @@
    "115 checks passing"
   ]
  ],
- "generated": "2026-11-18T19:28:49.398Z"
+ "generated": "2026-11-18T19:36:35.491Z"
 }

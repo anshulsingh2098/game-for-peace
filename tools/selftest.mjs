@@ -1266,10 +1266,10 @@ test('Delhi infill (P1): lots are inside blocks, clear of streets, mapped buildi
   const area = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return Math.abs(a) / 2; }, pip = (r, x, z) => { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { if ((r[i + 1] > z) !== (r[j + 1] > z) && x < (r[j] - r[i]) * (z - r[i + 1]) / (r[j + 1] - r[i + 1]) + r[i]) c = !c; } return c; };
   for (const [tx, tz] of [[0, -2], [0, -4]]) {
     const tile = cityPack.decodeTile(JSON.parse(readFileSync(dir + `tiles/${tx}_${tz}.json`, 'utf8')), M.tileSize), o = { size: M.tileSize, G, widthOf: s => cityPack.pieceWidth(G, s), styleAt: () => 'default' };
-    const a = infillBuildings(tile, o), b = infillBuildings(tile, o); assert.deepEqual(a.map(x => x.ring), b.map(x => x.ring), 'deterministic'); assert.ok(a.length > 50 && a.length <= 2200, 'infill count ' + a.length);
+    const a = infillBuildings(tile, o), b = infillBuildings(tile, o); assert.deepEqual(a.map(x => x.ring), b.map(x => x.ring), 'deterministic'); assert.ok(a.length > 50 && a.length <= 4000, 'infill count ' + a.length); assert.ok(a.some(x => x.interior) && a.filter(x => x.interior).length <= 1800, 'interior lots exist and stay under their cap');
     const before = tile.buildings.reduce((q, x) => q + area(x.ring), 0), add = a.reduce((q, x) => q + area(x.ring), 0); assert.ok(add > before * 0.15, 'adds at least 15 percent to the mapped building area: ' + (add / before).toFixed(2));
     const ids = new Set(a.map(x => x.id)); assert.equal(ids.size, a.length, 'unique ids');
-    for (const x of a.slice(0, 400)) {
+    for (const x of [...a.slice(0, 400), ...a.filter(q => q.interior).slice(0, 200)]) {
       const r = x.ring, cx = (r[0] + r[4]) / 2, cz = (r[1] + r[5]) / 2; assert.ok(x.infill && x.height >= 3.2 && x.hsrc === 'tag');
       assert.ok(tile.blocks.some(bl => pip(bl.ring, cx, cz)), 'lot centre inside a block');
       assert.ok(!tile.buildings.some(bl => pip(bl.ring, cx, cz)), 'not on a mapped building');

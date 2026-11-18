@@ -17,7 +17,7 @@ export const STYLE = {
   lutyens: { rows: 1, fill: 0.1, floors: [1, 2], w: [14, 24], d: [16, 24], use: 'residential' },
   business: { rows: 1, fill: 0.45, floors: [5, 10], w: [18, 36], d: [18, 30], use: 'office' },
 };
-const MAX_PER_TILE = 2200, EDGE_MARGIN = 25, STREET_CLEAR = 0.9, FLOOR = 3.2;
+const MAX_PER_TILE = 4000, INTERIOR_MAX = 1800, LANE = 3.2, INTERIOR_FILL = 0.8, EDGE_MARGIN = 25, STREET_CLEAR = 0.9, FLOOR = 3.2;
 
 const area2 = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return a / 2; };
 function pip(r, x, z) { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { const xi = r[i], zi = r[i + 1], xj = r[j], zj = r[j + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; }
@@ -80,6 +80,35 @@ export function* infillSteps(tile, o) {
         }
         s += step;
       }
+      }
+    }
+  }
+  /* P1 part 2: the interiors. The frontage rows above leave the middle of a big block open (the map data has no buildings there either). Here the block is cut into back-to-back rows of lots in the direction of its longest edge, with a 3 m lane between rows, and the same acceptance test as the frontage lots (inside the block, clear of every street, park, mapped building, earlier lot and hole). */
+  const interior = []; let nIn = 0;
+  for (let bi = 0; bi < blocks.length && nIn < INTERIOR_MAX && out.length < MAX_PER_TILE; bi++) {
+    if (o.yieldNow && o.yieldNow()) yield;
+    const B = blocks[bi], r = B.ring, n = r.length / 2; if (n < 3) continue;
+    let bl = 0, ux = 1, uz = 0; for (let e = 0; e < n; e++) { const dx = r[((e + 1) % n) * 2] - r[e * 2], dz = r[((e + 1) % n) * 2 + 1] - r[e * 2 + 1], L = Math.hypot(dx, dz); if (L > bl) { bl = L; ux = dx / L; uz = dz / L; } }
+    const vx = -uz, vz = ux; let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9; for (let i = 0; i < r.length; i += 2) { const u = r[i] * ux + r[i + 1] * uz, v = r[i] * vx + r[i + 1] * vz; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
+    if (u1 - u0 < 36 || v1 - v0 < 36) continue;
+    const cu = (u0 + u1) / 2, cv = (v0 + v1) / 2, style = STYLE[o.styleAt(cu * ux + cv * vx, cu * uz + cv * vz)] || STYLE.default, dep = (style.d[0] + style.d[1]) / 2, pitch = dep + LANE, fill = style.fill * INTERIOR_FILL;
+    let k = bi * 1009 + 7, rowN = 0;
+    for (let v = v0 + 2 + hash(bi * 61 + tile.tx * 5 + tile.tz * 3) * pitch; v + dep < v1 && nIn < INTERIOR_MAX; v += pitch + (rowN++ % 2 ? 0 : 0)) {
+      for (let u = u0 + 2 + hash(bi * 67 + rowN * 13) * 6; u < u1 - 2 && nIn < INTERIOR_MAX; ) {
+        const rn = hash(k++ * 17 + tile.tx * 3 + tile.tz * 5 + bi), w = style.w[0] + (style.w[1] - style.w[0]) * rn, step = w + (rn < 0.1 ? 3 + rn * 15 : 0.4 * rn);
+        if (hash(k * 29 + bi * 53 + tile.tx * 11 + tile.tz * 23) > fill) { u += step; continue; }
+        const W = (a, b) => [a * ux + b * vx, a * uz + b * vz], p0 = W(u, v), p1 = W(u + w, v), p2 = W(u + w, v + dep), p3 = W(u, v + dep), pts = [p0, p1, p2, p3], ccx = (p0[0] + p2[0]) / 2, ccz = (p0[1] + p2[1]) / 2;
+        u += step;
+        const probe = [...pts, [ccx, ccz], [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2], [(p2[0] + p3[0]) / 2, (p2[1] + p3[1]) / 2], [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2], [(p3[0] + p0[0]) / 2, (p3[1] + p0[1]) / 2]];
+        st.iTry = (st.iTry || 0) + 1; if (probe.some(q => q[0] < ox + EDGE_MARGIN || q[0] > ox + size - EDGE_MARGIN || q[1] < oz + EDGE_MARGIN || q[1] > oz + size - EDGE_MARGIN)) { st.iMargin = (st.iMargin || 0) + 1; continue; }
+        if (probe.some(q => !pip(r, q[0], q[1]))) { st.iOut = (st.iOut || 0) + 1; continue; } if (probe.some(q => !streetClear(q[0], q[1], STREET_CLEAR) || inPoly(q[0], q[1]))) { st.iStreet = (st.iStreet || 0) + 1; continue; } if (B.holes.some(h => probe.some(q => pip(h, q[0], q[1])))) { st.iHole = (st.iHole || 0) + 1; continue; }
+        let hit = false; for (let a = 0; a <= 4 && !hit; a++) for (let b = 0; b <= 3 && !hit; b++) { const qx = p0[0] + (p1[0] - p0[0]) * a / 4 + (p3[0] - p0[0]) * b / 3, qz = p0[1] + (p1[1] - p0[1]) * a / 4 + (p3[1] - p0[1]) * b / 3; if (inBuilding(qx, qz)) hit = true; }
+        if (hit) { st.iBld = (st.iBld || 0) + 1; continue; }
+        const x0 = Math.min(...pts.map(q => q[0])) - 0.5, x1 = Math.max(...pts.map(q => q[0])) + 0.5, z0 = Math.min(...pts.map(q => q[1])) - 0.5, z1 = Math.max(...pts.map(q => q[1])) + 0.5;
+        for (let i = Math.floor(x0 / CELL); i <= Math.floor(x1 / CELL) && !hit; i++) for (let j = Math.floor(z0 / CELL); j <= Math.floor(z1 / CELL) && !hit; j++) { const l = bgrid.get(i + ',' + j); if (l) for (const b of l) { for (let q = 0; q < b.r.length; q += 2) { const qx = b.r[q], qz = b.r[q + 1]; if (qx < x0 || qx > x1 || qz < z0 || qz > z1) continue; const rx = qx - p0[0], rz = qz - p0[1], uu = rx * ux + rz * uz, vv = rx * vx + rz * vz; if (uu > -0.5 && uu < w + 0.5 && vv > -0.5 && vv < dep + 0.5) { hit = true; break; } } if (hit) break; } }
+        if (hit) continue;
+        const ring = [p0[0], p0[1], p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]], fl = Math.round(style.floors[0] + (style.floors[1] - style.floors[0]) * hash(k * 41 + bi * 211 + 9)), lv = Math.max(1, fl); addB(ring); nIn++; st.interior = (st.interior || 0) + 1;
+        out.push({ id: baseId + (seq++ % 4000), ring, levels: lv, height: lv * FLOOR, use: style.use, hsrc: 'tag', infill: true, interior: true });
       }
     }
   }
