@@ -94,7 +94,7 @@ function junctionShapes(J, M, X, Z, gy, out) {
       if (g >= Math.PI - 0.05 || g < 0.35) continue;
       const rx = -nbx * hwb - nax * hwa, rz = -nbz * hwb - naz * hwa, det = -a.dx * b.dz + b.dx * a.dz; if (Math.abs(det) < 1e-6) continue;
       const t = (-rx * b.dz + b.dx * rz) / det, u = (a.dx * rz - a.dz * rx) / det; if (!(t > 0.2 && u > 0.2)) continue;
-      const px = a.x + nax * hwa + a.dx * t, pz = a.z + naz * hwa + a.dz * t; let r = Math.min(7, Math.max(3, 1.1 * Math.max(hwa, hwb) + 1.2)), q = r / Math.tan(g / 2);
+      const px = a.x + nax * hwa + a.dx * t, pz = a.z + naz * hwa + a.dz * t; let r = Math.min(12, Math.max(3, 1.6 * Math.max(hwa, hwb) + 1.5)), q = r / Math.tan(g / 2);       /* CP match: kerb radius grows with the road width (a 9 m road 9 m, a 13 m road 12 m; it was 3 to 7 m, which gave square corners on wide roads); the limit by piece length just below still applies */
       const qmax = Math.min(a.len * 0.9 - t, b.len * 0.9 - u); if (q > qmax) { if (qmax < 1.0) continue; q = qmax; r = q * Math.tan(g / 2); }
       const tax = px + a.dx * q, taz = pz + a.dz * q, tbx = px + b.dx * q, tbz = pz + b.dz * q; let bx = a.dx + b.dx, bz = a.dz + b.dz; const bl = Math.hypot(bx, bz); if (bl < 1e-6) continue; bx /= bl; bz /= bl;
       const cx = px + bx * (r / Math.sin(g / 2)), cz = pz + bz * (r / Math.sin(g / 2)), A0 = Math.atan2(taz - cz, tax - cx); let d = Math.atan2(tbz - cz, tbx - cx) - A0; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;

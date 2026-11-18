@@ -2,6 +2,12 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-19  Road: junction corner radius (element 2 of the road section)
+Reference: the plan and the owner's report that the corners are boxy; real CP kerb radii are about 10 m or more (to be confirmed on photos R1 and R3 and the map; not measured here).
+Built: `src/world/city/tilemesh.js` fillet radius `min(12, max(3, 1.6 * halfWidth + 1.5))` (was `min(7, max(3, 1.1 * halfWidth + 1.2))`): a 9 m road about 9 m (was 6), a 13 m road 12 m (was 7), a 6 m street about 6 m (was 4.5). The existing limit by piece length still applies, so short pieces keep smaller corners. Applies to the whole city, not only CP.
+Comparison: **not yet compared by eye**. I could not get a clear overhead view of a junction in the tools this session (the car cameras show only the road ahead; no overhead camera is reachable from outside the game), so the verdict is **unverified**. Self-test: 116 checks pass. To check: an overhead screenshot of the Inner Circle with Radial Road 7 (x 1149.7, z -2032) before and after, and a scripted drive round the circle and out and back along each radial.
+Open: the same radii now apply across all of Delhi, where corners near buildings could clip; the audit tool (`tools/audit_city.mjs`) should be re-run for buildings on roads before this is merged.
+
 ## 2026-11-19  Road: circle geometry (element 1 of the road section)
 Reference: the plan (a true circle), photo R3 (the circle seen from the park side, smooth kerb line).
 Built: `src/world/city/smooth.js`, applied to each tile after decoding (`src/world/city/pack.js`): Inner Circle pieces laid on the fitted circle every 2.5 degrees (no piece end moves; radius blended back over 25 m at each end); Middle and Outer Circle smoothed by corner cutting.
