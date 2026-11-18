@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18  P1 and P2 seen in a browser (built-in pane, desktop, q=low); parked cars redrawn; ?fillers=0 and ?paint=0
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed: the built-in browser could reach a local server this time (`python tools/serve.py 8765`, `http://localhost:8765/?play&city=delhi&q=low`), so P1 and P2 were looked at. Seen (screenshots in the session, not saved in the repo): (1) P1 plaza: a stone-paved square ringed by trees beside Connaught Place, and a forecourt with about 36 parked cars and trees near Bangla Sahib: both read as places, the big grey void is gone there. (2) P2: a signalled junction near CP shows one lane arrow per approach lane and the zebra crossing; a dual road near Jantar Mantar shows a kerbed green strip between the carriageways (it takes the pavement's cobble texture, so it reads as green cobbles, not grass). I did NOT see a separate stop line in that shot (the zebra is 7 m ahead; a stop line is in the geometry and the self-test but I could not tell it from the stripes at that angle). Found and fixed by looking: the parked cars were white slabs with a black block on top and no wheels; they now have a dark underbody, a lower body and a smaller cabin (`fillerview.js`, 3 boxes a car). New URL options in `cityworld.js` (Stream A's file, 2 lines): `?fillers=0` switches the P1 fillers off and `?paint=0` the P2 road paint off, to measure them.
+NOT done: no frame measurement. The pane was reported hidden by the app, the page's frame counter stopped (a hidden pane does not draw), and `?bench=30` did not start on the city page; a number from that would be false. To measure: show the Browser pane (or open the address in a normal window), load `?play&city=delhi&q=med` and the same with `&fillers=0&paint=0`, and compare draw calls and triangles from `__next.renderer.info.render` at the start position. Computed cost (headless) is in the two entries below this one.
+For the other stream: nothing needed.
+Status: open
+
 ## 2026-11-18  P2 second part built, not seen in a browser: stop lines, lane arrows, speed breakers, wear, medians
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed (Stream A's world files, edited under the owner's override): new `src/world/city/roadmarks.js` (pure, no three.js) and a few lines in `tilemesh.js` (import; paint calls at the end of the street loop; medians after it; `ctx.paint === false` turns all of it off, an object such as `{ wear: false }` switches parts off). Everything goes into the tile's EXISTING merged meshes (mark and walk), so 0 new draw calls.

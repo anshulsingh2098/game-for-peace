@@ -239,7 +239,7 @@ export function* buildTileSteps(tile, ctx) {
     }
     out.claims.push({ shape: { t: 'line', pts: s.pts, hw: hw + (walk ? 1.8 : 0) }, layer: lay, owner: 'street' }); out.nStreets++;
   }
-  if (medPieces.length) out.nMedians = medians(medPieces, { walk: M.walk, X, Z, gy });
+  if (medPieces.length) { out.medianSpots = []; out.nMedians = medians(medPieces, { walk: M.walk, X, Z, gy, spots: out.medianSpots }); }
   /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */
   const B = M.bldg;
   junctionShapes(J, M, X, Z, gy, out); yield;

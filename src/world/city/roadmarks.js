@@ -100,6 +100,7 @@ export function medians(pieces, o) {
         const a = [c.x + rx * inner, c.z + rz * inner], b = [c.x + rx * outer, c.z + rz * outer];
         if (prev) {
           const q = (p0, p1, p2, p3) => { const v0 = m.v(X(p0[0]), top, Z(p0[1]), 0, 1, 0, SOIL, p0[0] / 6, p0[1] / 6), v1 = m.v(X(p1[0]), top, Z(p1[1]), 0, 1, 0, SOIL, p1[0] / 6, p1[1] / 6), v2 = m.v(X(p2[0]), top, Z(p2[1]), 0, 1, 0, SOIL, p2[0] / 6, p2[1] / 6), v3 = m.v(X(p3[0]), top, Z(p3[1]), 0, 1, 0, SOIL, p3[0] / 6, p3[1] / 6); m.tri(v0, v1, v2, 0, 1, 0); m.tri(v0, v2, v3, 0, 1, 0); };
+          if (o.spots && o.spots.length < 40 && sd % 100 < 5) o.spots.push([Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]);       // where medians are, for looking at them
           q(prev.a, a, b, prev.b); face(prev.a[0], prev.a[1], a[0], a[1], -rx, -rz); face(prev.b[0], prev.b[1], b[0], b[1], rx, rz); drawn++;
         }
         prev = { a, b };

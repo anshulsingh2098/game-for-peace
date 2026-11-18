@@ -6,7 +6,7 @@ import { tree, box } from './streetlife.js';
 const PAVE = { courtyard: [0x8f8777, 0x9a9282, 0x857e70], forecourt: [0x9b968a, 0xa29c90, 0x8e897e], plaza: [0xb9b3a3, 0xc2bcad, 0xaaa496], parking: [0x4c4c4f, 0x545457, 0x444447], garden: [0x6f9a48, 0x66903f, 0x78a04f] };
 const CAR = [0xf2f2f0, 0xf2f2f0, 0xc9ccd1, 0x2b2e36, 0x9c1f24, 0x2f4f8a, 0x7b7f86, 0xd8c9a0];
 const col = new Map(), C = hex => { let c = col.get(hex); if (!c) col.set(hex, c = new THREE.Color(hex)); return c; };
-const LIFT = 0.02;                                                   // under the roads (0.05) and the pavements (0.03), over the block ground (0)
+const UNDER = new THREE.Color(0x17181a), LIFT = 0.02;                                                   // under the roads (0.05) and the pavements (0.03), over the block ground (0)
 
 /* recs: from fillerRects; ctx: { M (the tile's meshers; prop is optional), X, Z (world to tile-local), gy, identity, rnd (optional) } */
 export function addFillers(recs, ctx) {
@@ -21,8 +21,8 @@ export function addFillers(recs, ctx) {
       for (const [x, z, k] of r.trees) { const sp = ids.length ? ID.species.get(ids[Math.floor(k * ids.length) % ids.length]) : null; if (!sp || sp.id === 'bougainvillea') continue; tree(M.prop, X(x), gy + LIFT, Z(z), sp, k, false); nt++; }
     }
     for (const [x, z, yaw, ci] of r.cars) {                                                           // a lower body and a cabin, the long side along (cos yaw, sin yaw)
-      const ux = Math.cos(yaw), uz = Math.sin(yaw), body = C(CAR[ci % CAR.length]), glass = C(0x20262e), lx = X(x), lz = Z(z);
-      box(M.prop, lx, gy + LIFT + 0.25, lz, 4.2, 0.62, 1.8, ux, uz, body); box(M.prop, lx - ux * 0.15, gy + LIFT + 0.87, lz - uz * 0.15, 2.1, 0.5, 1.6, ux, uz, glass, body); nc++;
+      const ux = Math.cos(yaw), uz = Math.sin(yaw), body = C(CAR[ci % CAR.length]), glass = C(0x3a4652), lx = X(x), lz = Z(z);
+      box(M.prop, lx, gy + LIFT, lz, 3.5, 0.4, 1.5, ux, uz, UNDER); box(M.prop, lx, gy + LIFT + 0.32, lz, 4.2, 0.5, 1.75, ux, uz, body); box(M.prop, lx - ux * 0.25, gy + LIFT + 0.82, lz - uz * 0.25, 2.0, 0.48, 1.5, ux, uz, glass, body); nc++;       // dark underbody (the wheels), the body, a smaller cabin
     }
   }
   return { trees: nt, cars: nc };
