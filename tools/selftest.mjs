@@ -1343,6 +1343,12 @@ test('gzfetch: the gzip copy is used and unpacked, a host that already unpacked 
   same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': gz })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': data })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin': data })), data);
   await assert.rejects(() => G.fetchGrid('x.bin', mk({})));
 });
+test('roundabout islands: round parks are found, dressed by size, with a painted kerb', async () => {
+  const R = await import('../src/world/city/roundabout.js'), ring = r => { const o = []; for (let i = 0; i < 24; i++) { const t = i / 24 * Math.PI * 2; o.push(100 + r * Math.cos(t), 50 + r * Math.sin(t)); } return o; };
+  assert.equal(R.islandInfo(ring(8)).size, 'small'); assert.equal(R.islandInfo(ring(25)).size, 'medium'); assert.equal(R.islandInfo(ring(60)).size, 'big'); assert.equal(R.islandInfo([0, 0, 50, 0, 50, 5, 0, 5, 0, 0, 10, 10]), null); assert.equal(R.islandInfo(ring(2)), null);
+  const n = {}; for (const r of [8, 25, 60]) { const cols = new Set(); n[r] = R.dress((cx, y0, cz, sx, sy, sz, yaw, c) => { assert.ok(Number.isFinite(cx + cz + sx + sy + sz + yaw)); cols.add(c); }, R.islandInfo(ring(r)), 0); assert.ok(cols.has(0xe0ae1e) && cols.has(0x1b1b1d), 'yellow and black kerb'); }
+  assert.ok(n[8] < n[25] && n[25] < n[60] && n[60] <= R.CAP);
+});
 test('place banner: bracketed names are shortened and every place type has a reach', async () => {
   const P = await import('../src/ui/placebanner.js');
   assert.equal(P.shortName('Karol Bagh (Ajmal Khan Road)'), 'Karol Bagh'); assert.equal(P.shortName('Connaught Place (Rajiv Chowk)'), 'Connaught Place'); assert.equal(P.shortName('Khan Market'), 'Khan Market');
