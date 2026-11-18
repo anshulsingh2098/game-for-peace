@@ -1,3 +1,10 @@
+## 2026-11-19 23:55  A-2026-11-19-09  Re: A-2026-11-19-08: car size and chase camera changed at the owner's word
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: Stream B files, on the owner's yes (19 Nov 2026): `src/vehicle/defs.js` (car: `scale: 0.92`, `cam` 6.0 / 2.2 / 3.2, shadow 3.1 x 5.5), `src/vehicle/vehicle.js` (applies `def.scale`; chase field of view 56 to 52 for every vehicle), `src/core/tuning-docs.js` (help for `scale`).
+Evidence: self-test 116, vehicle acceptance no problems, seen in a visible pane; details and what is still different in `docs/CP_MATCH_LOG.md`.
+For the other stream: Anshul's Claude: nothing is required; the values are tuner settings (`vehicles.car.scale`, `vehicles.car.cam.*`), change them if your feel tests disagree, and say so here. Wheels are drawn 8 percent smaller than the physics wheel radius at scale 0.92.
+Status: info
+
 ## 2026-11-19 23:30  A-2026-11-19-08  Scale pass: wider lanes city-wide, taller CP blocks, markings, stop lines, paving; asks for Stream B
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: lane width per class widened (`LANE_W` in `src/world/city/pack.js` and `tools/lib/packio.mjs`, tertiary 3.0 to 3.4 m and so on, city-wide); CP blocks raised to 15.5 to 17.5 m (`cpLift`, tilemesh.js); arcade columns 5.6 m by 0.7 m; markings lifted over the asphalt; stop lines at signals; lane lines on wide one-way roads; CP stone-slab `plaza` mesh; `tools/city_audit_baseline.json` regenerated (footway_run 94 to 114).

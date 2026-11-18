@@ -2,6 +2,13 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-19  Car size and chase camera (owner said yes to changing Stream B's values)
+Reference: GTA frames G1 to G4 (the car sits low and close, the buildings loom, the car is about half a lane wide); real coupe about 4.5 x 1.95 x 1.35 m.
+Measured in the game: the Dusk GT model is 4.84 x 2.42 x 1.59 m (mirrors included); the chase camera was 7.5 m back, 3.0 m up, looking 2.5 m ahead, field of view 56 degrees.
+Changed: `src/vehicle/defs.js` car: new `scale: 0.92` (drawn at about 4.45 x 2.23 x 1.46 m), shadow plane 3.1 x 5.5, `cam` 6.0 back, 2.2 up, look 3.2; `src/vehicle/vehicle.js`: applies `def.scale` to the model, chase field of view base 56 to 52 degrees (every vehicle); `src/core/tuning-docs.js`: tuner help for `scale`. Physics sizes (wheel base, track, wheel radius 0.35, collision circles) are untouched, so the wheels are drawn 8 percent smaller than the physics wheel radius: a small mismatch in wheel spin against speed. Only the car (Dusk GT) was resized; the other vehicles keep their size, but they too get the lower field of view.
+Comparison (Inner Circle, visible pane): the camera now sits low behind the car with the blocks towering over the road, much closer to G1 and G3. Verdict: **close**. Still different: the car is still a little wide (2.23 m with mirrors, about 66 percent of a lane, G1 about 54), the GTA roads are wider than CP's 9 to 13 m, and GTA frames carry far more road detail (patches, cracks, tyre marks, manholes, signs on poles).
+Checks: self-test 116 checks; `tools/vehicle_acceptance.mjs --check` no problems found (it does not cover the camera or the picture size). Not tested: driving feel, a phone, the other vehicles' camera.
+
 ## 2026-11-19  Scale and proportion: measured against the owner's GTA frames and CP photos
 Report: car, buildings, people, trees and roads do not look right together; roads are narrow, buildings low (GTA V frames G1 to G5 attached by the owner: G1 sunset street with a GT-R, G2 red supercar on arrows, G3 night street with a cabriolet, G4 black coupe on a palm street, G5 mountain road).
 Method: no image tools were available, so pixel positions were read by eye on the images (error about +-15 percent; each ratio below is an estimate) and a known size set the scale (car width 1.9 m, person 1.7 m).
