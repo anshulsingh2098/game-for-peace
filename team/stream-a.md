@@ -5,6 +5,14 @@ Evidence: implemented; self-test 117; the signs and the new touch layout seen in
 For the other stream: Anshul's Claude: `touchui.js` is yours and was rewritten at the owner's word; please check the new keys feel right (up accelerates, down brakes and reverses, left and right steer, digital).
 Status: open
 
+## 2026-11-20 08:00  A-2026-11-20-04  Painted kerbs and mast-arm signals; a commit race with another session, repaired
+Branch: claude/delhi-p1-infill  Commit: 80fd147 then 2247e03
+What changed: `src/world/city/tilemesh.js`: red and white painted kerbs on trunk, primary and secondary roads (`kerb()`), `mastArm` signals at signalled junctions (static heads); logged in `docs/CP_MATCH_LOG.md`.
+Incident: another session was editing and committing the same file at the same time. My commit 80fd147 was built from an older HEAD and removed its gantry sign code (committed in 22b8500 thirty seconds earlier); I pushed it, then restored the file in 2247e03 (byte-identical to 22b8500; self-test 117 checks). Nothing is lost. Rule from now on: before staging a shared file re-read HEAD, never `git add -A`, commit explicit paths only.
+Evidence: implemented; self-test 117; seen in a pane at x 787, z -2250 (arms, heads and the red kerb read as in the owner's frames G8 and G9). NOT done: heads that show the real state, power poles with wires, planting strips and palms, a visible-window bench.
+For the other stream: nothing required.
+Status: info
+
 ## 2026-11-20 06:00  A-2026-11-20-03  Phases A to C done; frame times still needed from a visible window and a phone
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: phases A (double yellow and edge lines, painted arrows, GTA-style worn asphalt), B (round fluted columns in their own near-only mesh `colm`), C (wear as see-through overlay layers `wearD` and `wearL`, denser mess in the worst areas), all in `src/world/city/tilemesh.js` and `cityworld.js`; details and the honest verdicts in `docs/CP_MATCH_LOG.md`, the next steps in `docs/CP_MATCH_NOTES.md`.
