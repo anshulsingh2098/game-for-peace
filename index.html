@@ -116,7 +116,11 @@
   body:not(.dev) .devonly { display: none !important; }
   body[data-menu] #stationboard, body[data-menu] #toast, body[data-menu] #routehud { display: none !important; }          /* nothing from the road shows through a menu */
   body[data-menu] #hud, body[data-menu] #pads, body[data-menu] #buff, body[data-menu] #bar, body[data-menu] #now, body[data-menu] #stats, body[data-menu] #minimap { display: none !important; }
-  body.touch #minimap { bottom: 168px !important; }
+  /* phone HUD (owner, 20 Nov 2026; after racing-game practice: thumbs own the bottom corners, the middle of the picture stays free, information sits in the top corners, touch targets 44 px) */
+  body.touch #hud { padding: 3px 12px; gap: 6px; border-radius: 14px; } body.touch #hud #spd { font-size: 30px; line-height: 1.1; } body.touch #hud #sky, body.touch #hud #surface { display: none; }
+  body.touch #bar { top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); max-width: none; flex-wrap: nowrap; } body.touch #bar button { min-width: 44px; min-height: 44px; padding: 8px 12px; font-size: 13px; border-radius: 12px; }
+  body.touch #minimap { width: 96px !important; height: 96px !important; left: max(12px, env(safe-area-inset-left)) !important; top: 64px !important; bottom: auto !important; }
+  body.touch #now { top: 10px; bottom: auto; padding: 4px 12px 4px 4px; transform: translateX(-50%) scale(.88); } body.touch #toast { top: 30%; }
   /* a phone held sideways is about 360 px tall: a compact menu, the hint and kicker lines dropped, the position line small and in one row */
   @media (max-height: 460px) {
     body.touch #minimap { width: 96px !important; height: 96px !important; left: 12px !important; top: 66px !important; bottom: auto !important; }          /* the round map under the speed readout, not on top of it */
