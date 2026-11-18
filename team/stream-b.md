@@ -2,6 +2,20 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-18  P2 second part built, not seen in a browser: stop lines, lane arrows, speed breakers, wear, medians
+Branch: vehicle/cars-and-gears  Commit: see `git log`
+What changed (Stream A's world files, edited under the owner's override): new `src/world/city/roadmarks.js` (pure, no three.js) and a few lines in `tilemesh.js` (import; paint calls at the end of the street loop; medians after it; `ctx.paint === false` turns all of it off, an object such as `{ wear: false }` switches parts off). Everything goes into the tile's EXISTING merged meshes (mark and walk), so 0 new draw calls.
+- Stop line 7.6 m before each real signalled junction (just before the zebra), across the approach lanes only, on the LEFT of the direction of travel (the traffic keeps left); an arrow in each approach lane 16 m back; none on narrow lanes (< 5.5 m wide), none where nobody arrives (one-way leaving the node).
+- Speed breakers: yellow and black bands across residential streets, every 70 to 110 m, 22 m from any junction. Painted only: the car physics has flat ground, so there is no hump to feel.
+- Wear: patches of repair (lighter or darker asphalt) on every drivable street, oil stains where cars wait at a signal, grit along the edges of secondary and tertiary streets (12 m pieces).
+- Medians: the pack draws a dual road as two one-way streets with a grey void between; where an opposite one-way piece runs 1.6 to 22 m beyond a carriageway's edge, the strip between is a kerbed (0.12 m) planted-soil median. Visual only: no collision circles, like all kerbs here (a car can cross it). No shrubs or lamp poles on it yet.
+- `tools/selftest.mjs` (shared): one new test (stop line on the left half and near the node, no stop line without a signal or on a narrow lane or where nobody arrives, arrows per lane, breakers only on residential, wear within its caps, median only between opposite carriageways with a sensible gap); passes.
+Cost on 8 real tiles (headless; built with the game's mesher; no fillers): mark mesh 3006 to 5708 triangles per tile, walk mesh 36,495 to 38,302 (301 median segments per tile), road mesh unchanged; build time unchanged within noise (72 to 66 ms). That is about +4.5k triangles per tile in meshes that are already one draw call per tile cell. First version had 12k mark triangles (edge grit on every street every 6 m, 8.4k alone); I cut it to what is above.
+`node tools/drive_streets.mjs` after the change: 150 trips, 146 done, 4 stalled, 0 real blockers (the same as before: the paint adds no obstacles).
+NOT done and NOT checked: not seen in a browser (the built-in browser could not reach a local server), no frame measurement, no look at 8 junctions, no person has looked. Left of P2: pavement variety, street furniture (auto and e-rickshaw stands, police booths, petrol pumps, toilets, telecom boxes, two-lamp signal heads, sodium lights), flyover and underpass finishing (parapets, pier art, lights, signs), shrubs and lamps on medians, zebra crossings at every signal (only node-flagged ones exist), turn arrows, edge lines. P2 stays `[~]`.
+For the other stream: nothing needed.
+Status: open
+
 ## 2026-11-18  P2 first part: scripted street-driving test in tools/, and two fixes it found
 Branch: vehicle/cars-and-gears  Commit: see `git log`
 What changed (Stream A's world files, edited under the owner's override):

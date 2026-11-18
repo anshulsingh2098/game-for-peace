@@ -844,6 +844,23 @@ test('city rules (P2): a mapped building whose facade is within 1.3 m of a stree
   const skip = buildingsToSkip({ buildings: [on, near, corner, lm, through], parks: [], streets: [{ id: 0, pts: [0, 0, 200, 0] }] }, G);
   assert.ok(skip.has(on), 'a facade 1.0 m from the centre line goes'); assert.ok(!skip.has(near), 'a facade 2.5 m away stays'); assert.ok(!skip.has(corner), 'a 3 m corner stays'); assert.ok(!skip.has(lm), 'a landmark stays'); assert.ok(skip.has(through), 'a building the street runs through still goes');
 });
+test('road marks (P2): stop line and lane arrows on the left-hand approach lanes of a signal, speed breakers only on residential streets, wear within its caps, a median only between opposite one-way carriageways', async () => {
+  const RM = await import('../src/world/city/roadmarks.js'), mk = () => { const m = { p: [], i: [], v(x, y, z) { this.p.push(x, y, z); return this.p.length / 3 - 1; }, tri(a, b, c) { this.i.push(a, b, c); } }; return m; }, id = v => v;
+  const piece = (over = {}) => ({ id: 1, pts: [0, 0, 100, 0], hw: 3.6, w: 7.2, cls: 'secondary', oneway: 0, lanes: 2, clip: 0, endFlags: [0, 1], realEnds: [true, true], ...over });
+  const run = (s, f) => { const m = mk(), o = { m, walk: m, X: id, Z: id, gy: 0, counts: { arrows: 0, breakers: 0, patches: 0, oil: 0, dirt: 0 } }; f(s, o); return { m, o }; };
+  /* a signal at the end of a two-way street: the stop line is 7.6 m back, across the LEFT half (travelling toward the node at +x, left is -z) */
+  const sig = run(piece(), RM.approachMarks); const zs = []; for (let k = 0; k < sig.m.p.length; k += 3) zs.push(sig.m.p[k + 2]); assert.ok(sig.m.i.length >= 6, 'marks drawn'); assert.ok(zs.every(z => z <= 0.01), 'two-way: all paint on the left of the travel direction (z <= 0)'); const xs = sig.m.p.filter((_, k) => k % 3 === 0); assert.ok(Math.min(...xs) > 70 && Math.max(...xs) <= 100, 'paint near the node end');
+  assert.equal(run(piece({ endFlags: [0, 0] }), RM.approachMarks).m.i.length, 0, 'no signal, no stop line'); assert.equal(run(piece({ w: 4.5, hw: 2.25 }), RM.approachMarks).m.i.length, 0, 'a narrow lane gets no stop line'); assert.equal(run(piece({ oneway: -1 }), RM.approachMarks).m.i.length, 0, 'nobody arrives at the node end of a one-way that leaves it');
+  const one = run(piece({ oneway: 1, lanes: 2 }), RM.approachMarks); assert.ok(one.o.counts.arrows === 2, 'a two-lane one-way gets two arrows: ' + one.o.counts.arrows);
+  /* speed breakers: residential only */
+  assert.ok(run(piece({ cls: 'residential', pts: [0, 0, 300, 0] }), RM.speedBreakers).o.counts.breakers >= 2, 'residential gets breakers'); assert.equal(run(piece({ cls: 'secondary', pts: [0, 0, 300, 0] }), RM.speedBreakers).o.counts.breakers, 0, 'a main street gets none');
+  /* wear stays within its caps */
+  const w = run(piece({ cls: 'tertiary', pts: [0, 0, 20000, 0] }), (s, o) => RM.wear(s, o, { r: 0.2, g: 0.2, b: 0.2 })); assert.ok(w.o.counts.patches > 0 && w.o.counts.patches <= RM.CAPS.patches && w.o.counts.dirt <= RM.CAPS.dirt, 'wear is bounded: ' + JSON.stringify(w.o.counts));
+  /* medians: two opposite one-way carriageways 12 m apart; none for the same direction or for a gap too wide */
+  const pair = (gap, dirB) => [{ id: 1, pts: [0, 0, 200, 0], hw: 3.5, oneway: 1, cls: 'primary' }, { id: 2, pts: dirB > 0 ? [0, gap, 200, gap] : [200, gap, 0, gap], hw: 3.5, oneway: 1, cls: 'primary' }];
+  const med = (ps) => { const m = mk(); const n = RM.medians(ps, { walk: m, X: id, Z: id, gy: 0 }); return { n, tris: m.i.length / 3 }; };
+  const a = med(pair(12, -1)); assert.ok(a.n > 20 && a.tris > 100, 'a median between opposite carriageways: ' + a.n); assert.equal(med(pair(12, 1)).n, 0, 'same direction: no median'); assert.equal(med(pair(60, -1)).n, 0, 'too far apart: no median'); assert.equal(med(pair(10, -1)).n > 0, true, 'a 3 m gap still gets one'); assert.equal(med(pair(8, -1)).n, 0, 'a gap under 1.6 m gets none'); assert.equal(med([pair(12, -1)[0]]).n, 0, 'a single carriageway: none');
+});
 test('audit R05: a handle only resolves in the registry or pool that made it; a long stall is counted as dropped time (R16)', () => {
   const A = new Registry({ car: 4 }), B = new Registry({ car: 4 }), ha = A.create('car', { n: 'a' }), hb = B.create('car', { n: 'b' });
   assert.notEqual(ha, hb, 'two registries never hand out the same number'); assert.equal(B.get(ha), null, 'a foreign handle does not resolve'); assert.equal(B.destroy(ha), null); assert.equal(A.get(ha).n, 'a'); assert.equal(B.get(hb).n, 'b');

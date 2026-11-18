@@ -7,6 +7,7 @@ import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './p
 import { infillSteps } from './infill.js';
 import { fillerSteps } from './fillers.js';
 import { addFillers } from './fillerview.js';
+import { approachMarks, speedBreakers, wear, medians } from './roadmarks.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
 
@@ -168,6 +169,8 @@ export function* buildTileSteps(tile, ctx) {
   const J = new Map(), ROADJ = new Set(['primary', 'secondary', 'tertiary', 'residential']);
   const addJ = (p, hw, rc, cls) => { const n2 = p.length / 2; let len = 0; for (let i = 0; i + 3 < p.length; i += 2) len += Math.hypot(p[i + 2] - p[i], p[i + 3] - p[i + 1]); if (len < 6) return; for (const [i0, i1] of [[0, 1], [n2 - 1, n2 - 2]]) { const x = p[i0 * 2], z = p[i0 * 2 + 1]; let j = i1; while (j >= 0 && j < n2 && Math.hypot(p[j * 2] - x, p[j * 2 + 1] - z) < 0.5) j += i1 > i0 ? 1 : -1; if (j < 0 || j >= n2) continue; const dx = p[j * 2] - x, dz = p[j * 2 + 1] - z, L = Math.hypot(dx, dz), k = Math.round(x * 10) + ',' + Math.round(z * 10); let l = J.get(k); if (!l) J.set(k, l = []); l.push({ x, z, dx: dx / L, dz: dz / L, hw, rc, len, cls }); } };
   /* the list of streets sorted so that small roads are drawn first (their order only matters for z fighting at junctions, which the offsets below settle) */
+  const PF = ctx.paint === false ? { on: false } : { on: true, stop: true, breakers: true, wear: true, medians: true, ...(ctx.paint && typeof ctx.paint === 'object' ? ctx.paint : {}) };       // ctx.paint: false turns all road paint off; an object switches parts off (stop, breakers, wear, medians)
+  const paint = { m: M.mark, X, Z, gy, counts: { arrows: 0, breakers: 0, patches: 0, oil: 0, dirt: 0 } }, medPieces = [];
   for (const s of tile.streets) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     const id = s.id, cls = G.classes[G.cls[id]], lay = G.layer[id]; if (s.pts.length < 4 || (lay < 0 && !['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential'].includes(cls))) continue;                 // sunken footways and service lanes are not drawn
@@ -228,8 +231,15 @@ export function* buildTileSteps(tile, ctx) {
           const va = m.v(X(q.x + q.nx * (off - e)), y, Z(q.z + q.nz * (off - e)), 0, 1, 0, MARK), vb = m.v(X(q.x + q.nx * (off + e)), y, Z(q.z + q.nz * (off + e)), 0, 1, 0, MARK); if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va; }
       }
     }
+    /* P2 (roadmarks.js): stop lines and lane arrows at signals, speed breakers, wear, and the pieces a median is looked for between */
+    if (!deck && !sunk && PF.on && ['primary', 'secondary', 'tertiary', 'residential'].includes(cls) && w >= 4) {
+      const ends = [0, 1].map(end => { const node = end ? G.b[id] : G.a[id], e0 = end ? s.pts.length - 2 : 0; return !(clip & (end ? 2 : 1)) && Math.hypot(s.pts[e0] - G.xz[node * 2], s.pts[e0 + 1] - G.xz[node * 2 + 1]) <= 3; });
+      const sp = { id, pts: s.pts, hw, w, cls, oneway: G.oneway[id], lanes, clip, endFlags: [G.nodeFlags[G.a[id]], G.nodeFlags[G.b[id]]], realEnds: ends };
+      if (PF.stop) approachMarks(sp, paint); if (PF.breakers) speedBreakers(sp, paint); if (PF.wear) wear(sp, paint, rc); if (PF.medians && sp.oneway !== 0 && cls !== 'residential') medPieces.push(sp);
+    }
     out.claims.push({ shape: { t: 'line', pts: s.pts, hw: hw + (walk ? 1.8 : 0) }, layer: lay, owner: 'street' }); out.nStreets++;
   }
+  if (medPieces.length) out.nMedians = medians(medPieces, { walk: M.walk, X, Z, gy });
   /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */
   const B = M.bldg;
   junctionShapes(J, M, X, Z, gy, out); yield;
