@@ -91,3 +91,5 @@ Drive a Delhi flyover and underpass with traffic on (`CHECKLIST.md`, v4); try a 
 
 ## Rules that always apply
 Only edit your own stream's files; shared files in small logged steps and reserve them first; run `node tools/selftest.mjs` and `python tools/daily_check.py` before every push; keep line endings (the repo mixes LF and CRLF: `index.html` and `src/audio/engine.js` are CRLF); never deploy or merge unless the owner says so.
+
+- **Signs (Stream A, 20 Nov 2026): done** (A-2026-11-20-06). Left: real destinations on boards (needs a place-to-road list), a Hindi reader's check of the made names, a phone check, STOP signs.
