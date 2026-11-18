@@ -141,6 +141,9 @@ for (const url of ['api/settings', 'settings.json']) {             // the publis
   try { const r = await fetch(url); if (r.ok) { const j = await r.json(); if (j && j.overrides) { setOverrides(j.overrides); break; } } } catch (e) { /* not there: carry on */ }
 }
 registerRoot('world', () => config); applyWorld(config);
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });       // iOS pinch zoom
+document.addEventListener('selectstart', e => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) e.preventDefault(); });
+document.addEventListener('contextmenu', e => { if (document.body.classList.contains('touch')) e.preventDefault(); });       // no long-press menu in the game
 if (q.get('road')) config.road.style = roadStyleById(q.get('road')).id;                  // ?road=highway|boulevard|dirt|gravel
 config.view = { ...config.view, ...VIEW_PRESETS[quality] };
 if (cityMode) config.view = { ...config.view, rings: [{ r: 1, res: 8 }, { r: 2, res: 4 }, { r: 4, res: 4 }], far: { ...config.view.far, r: Math.min(config.view.far.r, 6), res: 4 } };      // a city stands on flat land and draws its own ground over the engine's: the terrain under it needs few vertices (it was 284k triangles of hidden ground)
@@ -325,7 +328,7 @@ canvas.addEventListener('pointerdown', e => { if (mode !== 'foot' || frozen()) r
 addEventListener('pointermove', e => { if (document.pointerLockElement === canvas) { lookBy(e.movementX, e.movementY); return; } if (lookDrag && lookDrag.id === e.pointerId) { lookBy(e.clientX - lookDrag.x, e.clientY - lookDrag.y); lookDrag.x = e.clientX; lookDrag.y = e.clientY; } });
 for (const n of ['pointerup', 'pointercancel']) addEventListener(n, e => { if (lookDrag && lookDrag.id === e.pointerId) lookDrag = null; });
 const actBtn = document.createElement('button'); actBtn.type = 'button'; actBtn.id = 'interact'; actBtn.style.cssText = 'position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:20;display:none;padding:8px 18px;border-radius:999px'; document.body.appendChild(actBtn); actBtn.addEventListener('pointerdown', e => { e.preventDefault(); useNearby(); });
-function updatePrompt() { let t = ''; if (!frozen()) { if (mode === 'foot' && foot) { const it = interactions.nearest(foot.x, foot.z); if (it) t = it.prompt; } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && !autodrive.enabled) t = (phys && interactions.nearest(phys.x, phys.z, 'activity:') || {}).prompt || 'Get out (G)'; } if (t !== actBtn.textContent) actBtn.textContent = t; actBtn.style.display = t ? 'block' : 'none'; }
+function updatePrompt() { let t = ''; if (!frozen()) { if (mode === 'foot' && foot) { const it = interactions.nearest(foot.x, foot.z); if (it) t = it.prompt; } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && !autodrive.enabled) t = (phys && interactions.nearest(phys.x, phys.z, 'activity:') || {}).prompt || (document.body.classList.contains('touch') ? 'Get out' : 'Get out (G)'); } if (t !== actBtn.textContent) actBtn.textContent = t; actBtn.style.display = t ? 'block' : 'none'; }
 function setMode(m) {
   if (m !== mode) bus.emit('mode:changed', { from: mode, to: m });
   if (m !== 'drive' && autodrive.enabled) { autodrive.toggle(false); $('#autoBtn').classList.remove('on'); }
