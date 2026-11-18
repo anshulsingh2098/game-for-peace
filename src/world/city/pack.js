@@ -1,6 +1,7 @@
 /* The city pack as the game reads it (docs/CITY_PACK.md section 5 and 5a). Pure JavaScript (no three.js, no DOM), so tools/selftest.mjs can test it.
    `dec` and the width tables are copies of tools/lib/packio.mjs (the game must not import from tools/, which is not deployed); the selftest compares the two.
    A CityPack loads the manifest, the graph (columnar, kept as typed arrays: 406,000 edges in Delhi) and the landmarks once, and tiles one at a time on request. */
+import { smoothCircles } from './smooth.js';
 
 export const LANE_W = { motorway: 3.5, trunk: 3.5, primary: 3.4, secondary: 3.2, tertiary: 3.0, residential: 2.8, service: 2.8, cycleway: 1.5, busway: 3.4, footway: 1.2 };
 export const DEFAULT_SIDEWALK = { motorway: 0, trunk: 0, primary: 2, secondary: 2, tertiary: 2, residential: 1, service: 0, footway: 0, cycleway: 0, busway: 0 };
@@ -67,7 +68,7 @@ export class CityPack {
   /* how many streets meet at each node (a node whose streets are all raised, deg <= up, is on a flyover) */
   degrees() { if (this.deg) return this.deg; const G = this.G, d = new Uint16Array(G.nodes); for (let i = 0; i < G.n; i++) { d[G.a[i]]++; d[G.b[i]]++; } return (this.deg = d); }
   hasTile(tx, tz) { return this.have.has(tx + '_' + tz); }
-  async tile(tx, tz) { if (!this.hasTile(tx, tz)) return null; const u = this.base + '/tiles/' + tx + '_' + tz + '.json', c = this.raw || (this.raw = new Map()); let p = c.get(u); if (p) { c.delete(u); } else { p = this.get(u); p.catch(() => c.delete(u)); } c.set(u, p); if (c.size > 64) c.delete(c.keys().next().value); return decodeTile(await p, this.size); }       /* the near city and the far skyline both ask for a tile: the raw JSON is fetched and parsed once (decodeTile copies, it never changes it), the last 64 are kept */
+  async tile(tx, tz) { if (!this.hasTile(tx, tz)) return null; const u = this.base + '/tiles/' + tx + '_' + tz + '.json', c = this.raw || (this.raw = new Map()); let p = c.get(u); if (p) { c.delete(u); } else { p = this.get(u); p.catch(() => c.delete(u)); } c.set(u, p); if (c.size > 64) c.delete(c.keys().next().value); return smoothCircles(decodeTile(await p, this.size), this.G); }       /* the near city and the far skyline both ask for a tile: the raw JSON is fetched and parsed once (decodeTile copies, it never changes it), the last 64 are kept */
   /* where to start: ?at=<spawn, landmark or gate id>, default the centre spawn. Returns { x, z, yaw (game), name } */
   start(id) {
     const M = this.M, sp = M.spawns.find(s => s.id === id) || M.spawns.find(s => s.id === 'centre') || M.spawns[0];

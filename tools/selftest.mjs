@@ -1261,6 +1261,16 @@ test('Delhi landmark models (D8): every plan id is a landmark with a footprint, 
   const F = frame(3, 4, Math.PI / 2), p = F.loc(10, 2); assert.ok(Math.abs(p[0] - 1) < 1e-9 && Math.abs(p[1] - 14) < 1e-9, 'u runs along the frame angle, v to its left');
 });
 
+test('CP smooth circles: the Inner Circle is laid on its fitted circle in steps of 2.5 degrees or less, no piece end moves, other streets are untouched, a piece that is not an arc is left alone', async () => {
+  const { smoothCircles, arcPiece, chaikin, CP_CIRCLE: C } = await import('../src/world/city/smooth.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
+  const nm = id => { const n = G.names[G.name[id]]; return n ? (typeof n === 'string' ? n : n.en || n.ref || '') : ''; }; let pieces = 0, other = 0;
+  for (const k of ['0_-3', '1_-3', '0_-2', '1_-2']) { const t = cityPack.decodeTile(JSON.parse(readFileSync(dir + 'tiles/' + k + '.json', 'utf8')), M.tileSize), u = smoothCircles(t, G); assert.equal(u.streets.length, t.streets.length);
+    u.streets.forEach((s, i) => { const o = t.streets[i], n = nm(s.id); if (s === o) return; assert.ok(['Inner Circle', 'Middle Circle', 'Outer Circle'].includes(n), 'only the circles change: ' + n); assert.equal(s.pts[0], o.pts[0]); assert.equal(s.pts[1], o.pts[1]); assert.equal(s.pts[s.pts.length - 2], o.pts[o.pts.length - 2]); assert.equal(s.pts[s.pts.length - 1], o.pts[o.pts.length - 1]); assert.equal(s.id, o.id);
+      if (n === 'Inner Circle') { pieces++; const P = s.pts; for (let j = 2; j < P.length; j += 2) { let d = Math.abs(Math.atan2(P[j + 1] - C.cz, P[j] - C.cx) - Math.atan2(P[j - 1] - C.cz, P[j - 2] - C.cx)); if (d > Math.PI) d = 2 * Math.PI - d; assert.ok(d <= 2.6 * Math.PI / 180, 'step ' + (d * 180 / Math.PI)); } for (let j = 2; j < P.length - 2; j += 2) assert.ok(Math.abs(Math.hypot(P[j] - C.cx, P[j + 1] - C.cz) - C.R) < 4, 'on the circle'); } else other++; }); }
+  assert.ok(pieces >= 8, 'inner circle pieces smoothed: ' + pieces); assert.ok(other >= 1, 'the middle or outer circle smoothed');
+  assert.equal(arcPiece([C.cx + C.R, C.cz, C.cx + C.R, C.cz + 30, C.cx + C.R, C.cz]), null, 'a back and forth piece is left alone'); assert.equal(chaikin([0, 0, 10, 0, 10, 10], 1).length > 6, true);
+  const hand = [0, 0, 5, 0, 5, 5, 0, 5]; const c2 = chaikin(hand, 2); assert.deepEqual([c2[0], c2[1], c2[c2.length - 2], c2[c2.length - 1]], [0, 0, 0, 5], 'ends stay');
+});
 test('Delhi infill (P1): lots are inside blocks, clear of streets, mapped buildings, parks and each other; deterministic; adds coverage; stays under the cap', async () => {
   const { infillBuildings, STYLE } = await import('../src/world/city/infill.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
   const area = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return Math.abs(a) / 2; }, pip = (r, x, z) => { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { if ((r[i + 1] > z) !== (r[j + 1] > z) && x < (r[j] - r[i]) * (z - r[i + 1]) / (r[j + 1] - r[i + 1]) + r[i]) c = !c; } return c; };

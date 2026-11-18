@@ -2,6 +2,12 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-19  Road: circle geometry (element 1 of the road section)
+Reference: the plan (a true circle), photo R3 (the circle seen from the park side, smooth kerb line).
+Built: `src/world/city/smooth.js`, applied to each tile after decoding (`src/world/city/pack.js`): Inner Circle pieces laid on the fitted circle every 2.5 degrees (no piece end moves; radius blended back over 25 m at each end); Middle and Outer Circle smoothed by corner cutting.
+Comparison: before, 8.3 degree steps (18 m chords); after, at most 2.5 degrees (by script over 15 pieces, ends moved 0, interior points within 2.9 m of the fitted circle, which is the data's own scatter at piece ends). Seen in the game at cp6 (x 1169.9, z -2100.4): the kerb and lane lines bend as one curve. Verdict: **matches** for the Inner Circle line. **Close, not done:** the Middle and Outer Circle were smoothed but not looked at; the radial road corners are still tight (radius 3 to 7 m, next step); the Outer Circle data is itself off a circle by up to 10 m, so it is smooth but not exactly round; not driven yet (the scripted lap comes after the corner radii).
+Self-test: 116 checks (`CP smooth circles`).
+
 ## 2026-11-19  Step 1: CP measured from the pack (`node tools/measure_cp.mjs`)
 Source: the Delhi pack (OpenStreetMap derived, `assets/cities/delhi`). Evidence level: computed from data, not surveyed.
 - **Inner Circle:** fitted circle centre (1044.2, -2100.4), radius 125.7 m, RMS error 0.96 m, worst 3.2 m. Built from 72 points: segments median 18.1 m, longest 28 m, about 8.3 degrees a step. This is why it looks faceted. Carriageway width in the pack 9 m (tertiary).
