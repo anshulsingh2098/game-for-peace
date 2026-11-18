@@ -51,7 +51,8 @@ export class CityLandmarks {
     const fit = (t, px, y, col, bold) => { let f = px; g.font = (bold ? 'bold ' : '') + f + 'px system-ui, "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif'; while (g.measureText(t).width > 700 && f > 14) { f -= 2; g.font = (bold ? 'bold ' : '') + f + 'px system-ui, "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif'; } g.fillStyle = col; g.fillText(t, 384, y); };
     fit(l.name.en, 66, 66, '#ffffff', true); fit(l.name.hi || '', 62, 140, '#f0d98c', false);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; const sc = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true, transparent: true, fog: false })); const w = Math.max(36, Math.min(80, 20 + sp.R * 0.5)); sc.scale.set(w, w / 4, 1);
-    sc.position.set(0, (sp.plan.boardY ? sp.plan.boardY(sp) : Math.max(sp.h, 12)) + w / 8 + 6, 0); sc.userData.board = true; sc.renderOrder = 5; return sc;
+    sc.position.set(0, (sp.plan.boardY ? sp.plan.boardY(sp) : Math.max(sp.h, 12)) + w / 8 + 6, 0); sc.userData.board = true; sc.renderOrder = 5; if (typeof document !== 'undefined' && document.body && document.body.classList.contains('touch')) sc.visible = false;       // phones: the place name comes as a banner on arrival instead (src/ui/placebanner.js)
+    return sc;
   }
   drop(id) {
     const o = this.live.get(id); if (!o) return; this.group.remove(o.grp); for (const m of o.meshes) { m.geometry.dispose(); if (m.userData.sign) { m.material.map.dispose(); m.material.dispose(); } } o.board.material.map.dispose(); o.board.material.dispose(); this.live.delete(id); this.refresh();

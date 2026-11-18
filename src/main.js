@@ -52,6 +52,7 @@ import { applyPaint } from './vehicle/paint.js';
 import { Controls } from './input/controls.js';
 import { Autodrive } from './input/autodrive.js';
 import { TouchUI } from './input/touchui.js';
+import { PlaceBanner } from './ui/placebanner.js';
 import { registerServiceWorker } from './ui/install.js';
 import { LITE } from './core/build.js';
 import { Backdrop } from './env/backdrop.js';
@@ -367,7 +368,8 @@ $('#viewBtn').addEventListener('click', cycleCam); $('#reset').addEventListener(
 $('#fly').addEventListener('click', () => setMode(mode === 'fly' ? 'drive' : 'fly')); $('#ride').addEventListener('click', () => setMode(mode === 'ride' ? 'drive' : 'ride'));
 controls.on('auto', cycleAuto); $('#autoBtn').addEventListener('click', cycleAuto); controls.on('view', toggleView); controls.on('cam', cycleCam); controls.on('reset', backToRoad); controls.on('interact', useNearby); controls.on('buff', useBuff); $('#buff').addEventListener('pointerdown', e => { e.preventDefault(); useBuff(); }); controls.on('fly', () => setMode(mode === 'fly' ? 'drive' : 'fly'));
 controls.bindPads($$('.pad'));
-let touchUI = null; if (document.body.classList.contains('touch')) { touchUI = new TouchUI(controls); touchUI.onHorn = on => { if (on && mode !== 'drive') return; sound.horn(on); }; view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
+const TOUCH_UI = document.body.classList.contains('touch'), placeBanner = TOUCH_UI ? new PlaceBanner(() => city && city.pack && city.pack.landmarks) : null;       // phones: the place name on arrival instead of floating labels
+let touchUI = null; if (TOUCH_UI) { touchUI = new TouchUI(controls); touchUI.onHorn = on => { if (on && mode !== 'drive') return; sound.horn(on); }; view.camMul = { back: 0.72, up: 0.72, look: 1.3, fov: 6 }; }       // phones: slowroads-style controls, and a lower, closer, wider chase camera
 $('#time').value = S.time; $('#weather').value = S.weather;
 $('#time').addEventListener('change', e => { S.time = e.target.value; save(); env.setTime(S.time); e.target.blur(); });
 $('#weather').addEventListener('change', e => { S.weather = e.target.value; save(); env.setWeather(S.weather); e.target.blur(); });
@@ -713,6 +715,7 @@ function update(dt, now) {
   if (rail) { rail.update(dt, px, pz); updateRailLife(dt, px, pz); }
   if (grid.rebase(px, pz)) { if (city) city.reposition(); if (rail) rail.reposition(); far.reposition(); roadMesh.reposition(); for (const b of branches) b.mesh.reposition(); scatter.reposition(); }
   if (city && city.identity && city.identity.month) { try { const mo = city.identity.month(city.month || 11); env.haze = 0.3 + 0.55 * (mo && mo.smog !== undefined ? mo.smog : 0.4); } catch (e) { env.haze = 0.5; } }          // Delhi's haze follows the month's smog (the winter months are the hazy ones)
+  if (placeBanner && city && phys && mode !== 'fly') placeBanner.update(phys.x, phys.z, dt);
   if (city) { city.transit.footY = mode === 'foot' && foot ? foot.y : city.gy; city.update(px, pz, dt, mode === 'foot' && foot ? foot.y : phys ? phys.y : undefined); city.setNight(!!env.lightsOn); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);

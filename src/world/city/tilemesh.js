@@ -179,9 +179,11 @@ function makeSignAtlas() {
     name(en, hi) { const key = en + '|' + (hi || ''); if (names.has(key)) return names.get(key); const k = next++ % 40, x = (k % 5) * SIGN_W, y = SIGN_Y0 + Math.floor(k / 5) * SIGN_H, W = SIGN_W, H = SIGN_H - 6; g.clearRect(x, y, SIGN_W, SIGN_H);
       g.fillStyle = SIGN_GREEN; hexPath(g, x + 1, y + 1, W - 2, H, 46); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 4; hexPath(g, x + 14, y + 12, W - 28, H - 22, 36); g.stroke();
       g.fillStyle = '#fff'; arrow(g, x + 38, y + 1 + H / 2, H, -1); arrow(g, x + W - 38, y + 1 + H / 2, H, 1); g.textAlign = 'center'; g.textBaseline = 'middle';
-      const cx = x + W / 2, tw = W - 150; let ys = hi ? [y + H * 0.33, y + H * 0.68] : [y + H * 0.5];
-      if (hi) { const fs = fit(g, hi, f => 'bold ' + f + 'px "Noto Sans Devanagari","Kohinoor Devanagari","Devanagari Sangam MN",sans-serif', tw, 46); g.fillText(hi, cx, ys[0]); }
-      const fe = fit(g, en, f => 'bold ' + f + 'px Arial,Helvetica,sans-serif', tw, hi ? 42 : 56); g.fillText(en, cx, ys[hi ? 1 : 0]);
+      const cx = x + W / 2, tw = W - 150, EN = f => 'bold ' + f + 'px Arial,Helvetica,sans-serif', HI = f => 'bold ' + f + 'px "Noto Sans Devanagari","Kohinoor Devanagari","Devanagari Sangam MN",sans-serif';
+      g.font = EN(40); const two = g.measureText(en).width > tw * 1.05 && en.includes(' '); let lines = [en]; if (two) { const w = en.split(' '); let best = 1, bd = 1e9; for (let i = 1; i < w.length; i++) { const d = Math.abs(w.slice(0, i).join(' ').length - w.slice(i).join(' ').length); if (d < bd) { bd = d; best = i; } } lines = [w.slice(0, best).join(' '), w.slice(best).join(' ')]; }
+      const rows = (hi ? 1 : 0) + lines.length, ys = rows === 1 ? [0.5] : rows === 2 ? [0.32, 0.68] : [0.25, 0.54, 0.8]; let r = 0;
+      if (hi) { fit(g, hi, HI, tw, rows === 3 ? 36 : 46); g.fillText(hi, cx, y + H * ys[r++]); }
+      for (const ln of lines) { fit(g, ln, EN, tw, rows === 3 ? 34 : hi ? 42 : 56); g.fillText(ln, cx, y + H * ys[r++]); }
       tex.needsUpdate = true; const uv = uvOf(x, y, W, H); names.set(key, uv); return uv; },
     /* a blue direction board (NDMC): white border, the destination in Hindi over English, an arrow (dir 'left', 'up' or 'right') at the end it points to */
     blue(en, hi, dir) { const key = 'B|' + en + '|' + (hi || '') + '|' + dir; if (names.has(key)) return names.get(key); const k = next++ % 40, x = (k % 5) * SIGN_W, y = SIGN_Y0 + Math.floor(k / 5) * SIGN_H, W = SIGN_W, H = SIGN_H - 6; g.clearRect(x, y, SIGN_W, SIGN_H);
@@ -202,10 +204,10 @@ const RANK = { motorway: 5, trunk: 5, primary: 4, secondary: 3, tertiary: 2, res
 function destsAt(G, node, id, tx, tz, nx, nz) {
   if (!G.__adj) { const head = new Int32Array(G.nodes).fill(-1), nxt = new Int32Array(G.n * 2); for (let e = 0; e < G.n; e++) { nxt[e * 2] = head[G.a[e]]; head[G.a[e]] = e * 2; nxt[e * 2 + 1] = head[G.b[e]]; head[G.b[e]] = e * 2 + 1; } G.__adj = { head, nxt }; }
   const { head, nxt } = G.__adj, own = G.names[G.name[id]], ownEn = own && own.en, found = new Map();
-  for (let h = head[node]; h >= 0; h = nxt[h]) { const e = h >> 1; if (e === id) continue; const other = (h & 1) ? G.a[e] : G.b[e], nm = G.names[G.name[e]], en = nm && nm.en, r = RANK[G.classes[G.cls[e]]] || 0; if (!en || en === ownEn || !r) continue;
+  for (let h = head[node]; h >= 0; h = nxt[h]) { const e = h >> 1; if (e === id) continue; const other = (h & 1) ? G.a[e] : G.b[e], nm = G.names[G.name[e]], en = nm && nm.en, r = RANK[G.classes[G.cls[e]]] || 0; if (!en || !r) continue; const one = G.oneway[e]; if (one !== 0 && one !== (G.a[e] === node ? 1 : -1)) continue;
     const ux = G.xz[other * 2] - G.xz[node * 2], uz = G.xz[other * 2 + 1] - G.xz[node * 2 + 1], L = Math.hypot(ux, uz); if (L < 8) continue; const fx = ux / L, fz = uz / L, ahead = -(fx * tx + fz * tz); if (ahead < -0.5) continue;
-    const dir = ahead > 0.6 ? 'up' : (fx * nx + fz * nz) > 0 ? 'left' : 'right', sc = r * 10 + Math.min(L, 400) / 100; const old = found.get(en); if (!old || old.sc < sc) found.set(en, { en, hi: nm.hi || '', dir, sc }); }
-  return [...found.values()].sort((a, b) => b.sc - a.sc).slice(0, 2);
+    const dir = ahead > 0.6 ? 'up' : (fx * nx + fz * nz) > 0 ? 'left' : 'right'; if (en === ownEn && dir !== 'up') continue; const sc = r * 10 + Math.min(L, 400) / 100; const old = found.get(en); if (!old || old.sc < sc) found.set(en, { en, hi: nm.hi || '', dir, sc }); }
+  const ORD = { left: 0, up: 1, right: 2 }; return [...found.values()].sort((a, b) => b.sc - a.sc).slice(0, 2).sort((a, b) => ORD[a.dir] - ORD[b.dir]);
 }
 /* The boards face the traffic that ARRIVES at the junction: the normal is the road direction (tx, tz) pointing away from the node, the board is spread along the sideways axis (nx, nz) and its left edge (seen by the driver) is on the +n side, the driver's kerb side (traffic keeps left). The back is a plain grey plate, so no text is ever seen mirrored. */
 function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant) {
@@ -213,9 +215,9 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant) {
   const V = (x, y, z, nxn, nzn, u, v) => m.v(X(x), y, Z(z), nxn, 0, nzn, WHITE_C, u, v);
   const at = (ox, dt) => [bx + nx * ox + tx * dt, bz + nz * ox + tz * dt];
   /* a flat board centred at (ox along n, dt along t), cy high, w wide, h tall; front uv, plain back 4 cm behind */
-  const board = (ox, dt, cy0, w, h, uv) => { const cy = gy + cy0, [cx, cz] = at(ox, dt);
+  const board = (ox, dt, cy0, w, h, uv, uvB) => { const cy = gy + cy0, [cx, cz] = at(ox, dt);
     const side = (dt2, sgn, u) => { const px = cx + tx * dt2, pz = cz + tz * dt2, L = [px + nx * w / 2, pz + nz * w / 2], R = [px - nx * w / 2, pz - nz * w / 2]; const a = V(L[0], cy - h / 2, L[1], tx * sgn, tz * sgn, sgn > 0 ? u[0] : u[2], u[1]), b = V(R[0], cy - h / 2, R[1], tx * sgn, tz * sgn, sgn > 0 ? u[2] : u[0], u[1]), c2 = V(R[0], cy + h / 2, R[1], tx * sgn, tz * sgn, sgn > 0 ? u[2] : u[0], u[3]), d = V(L[0], cy + h / 2, L[1], tx * sgn, tz * sgn, sgn > 0 ? u[0] : u[2], u[3]); m.tri(a, b, c2, tx * sgn, 0, tz * sgn); m.tri(a, c2, d, tx * sgn, 0, tz * sgn); };
-    side(0.05, 1, uv); side(0, -1, [pu[0], pu[1], pu[2], pu[3]]); };
+    side(0.04, 1, uv); side(-0.04, -1, uvB || uv); };      /* text on both sides, the right way round from either (the back is the same picture, with left and right arrows swapped for the opposing traffic) */
   const post = (ox, dt, hgt) => { const [px, pz] = at(ox, dt); for (const [dx, dz] of [[tx, tz], [nx, nz]]) { const a = V(px - dx * pw, gy, pz - dz * pw, nz, -nx, pu[0], pu[1]), b = V(px + dx * pw, gy, pz + dz * pw, nz, -nx, pu[2], pu[1]), c2 = V(px + dx * pw, gy + hgt, pz + dz * pw, nz, -nx, pu[2], pu[3]), d = V(px - dx * pw, gy + hgt, pz - dz * pw, nz, -nx, pu[0], pu[3]); m.tri(a, b, c2, nz, 0, -nx); m.tri(a, c2, d, nz, 0, -nx); } };
   /* a horizontal bar from ox0 to ox1 along n at height y, thickness th (a front face and a top face) */
   const beam = (ox0, ox1, dt, y0, th) => { const y = gy + y0, [x0, z0] = at(ox0, dt), [x1, z1] = at(ox1, dt); let a = V(x0, y - th, z0, tx, tz, pu[0], pu[1]), b = V(x1, y - th, z1, tx, tz, pu[2], pu[1]), c2 = V(x1, y + th, z1, tx, tz, pu[2], pu[3]), d = V(x0, y + th, z0, tx, tz, pu[0], pu[3]); m.tri(a, b, c2, tx, 0, tz); m.tri(a, c2, d, tx, 0, tz);
@@ -224,9 +226,28 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant) {
   if (name) { post(-0.9, 0, 3.55); post(0.9, 0, 3.55); board(0, 0, 2.98, 2.0, 0.95, A.name(name, hi)); }
   /* the speed limit: yellow plate, 0.8 m, 12 m further back so it is read from afar */
   if (speed) { post(0, 12, 2.9); board(0, 12, 2.4, 0.8, 0.8, A.speed(speed)); }
-  /* the direction gantry (blue boards over the road, NDMC): a column on the kerb, an arm across the carriageway, up to two boards 2.8 x 1.33 m at 4.3 m clear */
-  if (gant && gant.dests.length) { const dt = 22, L = Math.min(gant.w + 0.5, gant.dests.length * 2.95 + 0.4), n = gant.dests.length; post(0, dt, 6.0); beam(0, -L, dt, 5.8, 0.11);
-    for (let k = 0; k < n; k++) { const d = gant.dests[k], ox = -(1.5 + k * 2.95); board(ox, dt, 4.95, 2.8, 1.33, A.blue(d.en, d.hi, d.dir)); } }
+  /* the direction gantry, after the owner's GTA frames (13, 15, 16, 17): a thick round concrete column on the kerb with a footing, a lattice truss (two chords and zig-zag braces) across the carriageway, big boards hung under it on small brackets with a row of lamps below, board 4.2 x 2.0 m, lower edge 5.3 m above the road (a real gantry clears 5.5 m; the GTA boards are about 1.3 lanes wide) */
+  if (gant && gant.dests.length) { const dt = 22, n = gant.dests.length, BW = 4.2, BH = 2.0, GAP = 0.5, span = n * BW + (n - 1) * GAP + 1.4, L = Math.max(span, Math.min(gant.w + 3.6, 17)), CON = new THREE.Color(0x9b9a95), STL = new THREE.Color(0x7d8185), DRK = new THREE.Color(0x2b2c2e);
+    const Vc = (x, y, z, nxn, nyn, nzn, C) => m.v(X(x), gy + y, Z(z), nxn, nyn, nzn, C, pu[0], pu[1]);
+    const quadC = (P, N, C) => { const q = P.map(v => Vc(v[0], v[1], v[2], N[0], N[1], N[2], C)); m.tri(q[0], q[1], q[2], N[0], N[1], N[2]); m.tri(q[0], q[2], q[3], N[0], N[1], N[2]); };
+    /* an upright box with its centre (ox along n, dt along t), half sizes hn along n, ht along t, from y0 to y1 */
+    const box = (ox, dtc, hn, ht, y0, y1, C, top = true) => { const [cx, cz] = at(ox, dtc), P = (a, b, y) => [cx + nx * a * hn + tx * b * ht, y, cz + nz * a * hn + tz * b * ht];
+      for (const [a0, b0, a1, b1, N] of [[-1, -1, 1, -1, [-tx, 0, -tz]], [1, -1, 1, 1, [nx, 0, nz]], [1, 1, -1, 1, [tx, 0, tz]], [-1, 1, -1, -1, [-nx, 0, -nz]]]) quadC([P(a0, b0, y0), P(a1, b1, y0), P(a1, b1, y1), P(a0, b0, y1)], N, C);
+      if (top) quadC([P(-1, -1, y1), P(1, -1, y1), P(1, 1, y1), P(-1, 1, y1)], [0, 1, 0], C); };
+    /* a round column: an 8-sided prism */
+    const prism = (ox, dtc, r, y0, y1, C) => { const [cx, cz] = at(ox, dtc); for (let k = 0; k < 8; k++) { const a0 = k * Math.PI / 4, a1 = (k + 1) * Math.PI / 4, am = (a0 + a1) / 2, N = [Math.cos(am), 0, Math.sin(am)], p0 = [cx + Math.cos(a0) * r, cz + Math.sin(a0) * r], p1 = [cx + Math.cos(a1) * r, cz + Math.sin(a1) * r]; quadC([[p0[0], y0, p0[1]], [p1[0], y0, p1[1]], [p1[0], y1, p1[1]], [p0[0], y1, p0[1]]], N, C); } };
+    const ox0 = 0.9;                                     // the column stands 0.9 m beyond the kerb post line, ox = +n
+    box(ox0, dt, 0.75, 0.75, 0, 0.55, CON); prism(ox0, dt, 0.34, 0.55, 8.9, CON); box(ox0, dt, 0.46, 0.46, 8.9, 9.05, CON);
+    const yb = 7.55, yt = 8.55, x0 = ox0 - 0.34, x1 = ox0 - L;      // the truss runs from the column toward -n (over the road)
+    box((x0 + x1) / 2, dt, Math.abs(x1 - x0) / 2, 0.09, yb - 0.09, yb + 0.09, STL); box((x0 + x1) / 2, dt, Math.abs(x1 - x0) / 2, 0.09, yt - 0.09, yt + 0.09, STL);      // the two chords
+    const nb = Math.round(Math.abs(x1 - x0) / 1.1); for (let k = 0; k < nb; k++) { const a = x0 + (x1 - x0) * k / nb, b = x0 + (x1 - x0) * (k + 1) / nb, up = k % 2 === 0, ya = up ? yb : yt, yb2 = up ? yt : yb, ax = at(a, dt), bx2 = at(b, dt); for (const off of [-0.07, 0.07]) { const A = [ax[0] + tx * off, ax[1] + tz * off], B = [bx2[0] + tx * off, bx2[1] + tz * off], d = 0.05; quadC([[A[0], ya - d, A[1]], [B[0], yb2 - d, B[1]], [B[0], yb2 + d, B[1]], [A[0], ya + d, A[1]]], [tx, 0, tz], STL); quadC([[A[0], ya - d, A[1]], [A[0], ya + d, A[1]], [B[0], yb2 + d, B[1]], [B[0], yb2 - d, B[1]]], [-tx, 0, -tz], STL); } }
+    box(x1 + 0.34, dt, 0.75, 0.75, 0, 0.55, CON); prism(x1 + 0.34, dt, 0.34, 0.55, 8.9, CON); box(x1 + 0.34, dt, 0.46, 0.46, 8.9, 9.05, CON);       // the second column, on the far kerb
+    const cm = (x0 + x1) / 2, half = Math.abs(x1 - x0) / 2; box(cm, dt + 0.55, half, 0.5, 4.93, 5.0, STL);                                   // the catwalk (a grating plate) under the boards
+    box(cm, dt + 1.05, half, 0.025, 5.95, 6.02, STL); box(cm, dt + 1.05, half, 0.02, 5.45, 5.5, STL);                                          // the rail and the knee rail along its outer edge
+    for (let q = 0, nq = Math.floor(half * 2 / 1.5); q <= nq; q++) box(x0 - q * (half * 2) / nq, dt + 1.05, 0.03, 0.03, 5.0, 6.02, STL);        // rail posts
+    for (let k = 0; k < n; k++) { const ox = ox0 - 0.34 - 0.5 - BW / 2 - k * (BW + GAP), bcy = 6.3; const d = gant.dests[k]; board(ox, dt + 0.12, bcy, BW, BH, A.blue(d.en, d.hi, d.dir), A.blue(d.en, d.hi, d.dir === 'left' ? 'right' : d.dir === 'right' ? 'left' : 'up'));
+      for (const e of [-1, 1]) box(ox + e * BW * 0.32, dt, 0.05, 0.05, bcy + BH / 2, yb, STL);            // brackets from the board to the lower chord
+      for (let q = 0; q < 4; q++) box(ox + (q - 1.5) * BW * 0.24, dt + 0.5, 0.12, 0.1, 5.0, 5.25, DRK); } }
 }
 const WHITE_C = new THREE.Color(0xffffff);
 
@@ -237,6 +258,14 @@ function roundColumn(J, X, Z, cx, y0, cz, h, C) {
   for (let k = 0; k < N; k++) { const a0 = k * Math.PI * 2 / N, a1 = (k + 1) * Math.PI * 2 / N, am = (a0 + a1) / 2, nx = Math.cos(am), nz = Math.sin(am), cc = k % 2 ? C : C.clone().multiplyScalar(0.9), p0 = [cx + Math.cos(a0) * R, cz + Math.sin(a0) * R], p1 = [cx + Math.cos(a1) * R, cz + Math.sin(a1) * R]; const v0 = J.v(X(p0[0]), ys, Z(p0[1]), nx, 0, nz, cc), v1 = J.v(X(p1[0]), ys, Z(p1[1]), nx, 0, nz, cc), v2 = J.v(X(p1[0]), yt, Z(p1[1]), nx, 0, nz, cc), v3 = J.v(X(p0[0]), yt, Z(p0[1]), nx, 0, nz, cc); J.tri(v0, v1, v2, nx, 0, nz); J.tri(v0, v2, v3, nx, 0, nz); }
   for (let k = 0; k < N; k++) { const a0 = k * Math.PI * 2 / N, a1 = (k + 1) * Math.PI * 2 / N, am = (a0 + a1) / 2, nx = Math.cos(am), nz = Math.sin(am), R2 = 0.54; const v0 = J.v(X(cx + Math.cos(a0) * R), yt, Z(cz + Math.sin(a0) * R), nx, 0.4, nz, C), v1 = J.v(X(cx + Math.cos(a1) * R), yt, Z(cz + Math.sin(a1) * R), nx, 0.4, nz, C), v2 = J.v(X(cx + Math.cos(a1) * R2), yt + 0.25, Z(cz + Math.sin(a1) * R2), nx, 0.4, nz, C), v3 = J.v(X(cx + Math.cos(a0) * R2), yt + 0.25, Z(cz + Math.sin(a0) * R2), nx, 0.4, nz, C); J.tri(v0, v1, v2, nx, 0.4, nz); J.tri(v0, v2, v3, nx, 0.4, nz); }
   junkBox(J, X, Z, cx, yt + 0.25, cz, 1.05, 0.3, 1.05, 0, C);                                // abacus
+}
+/* a traffic signal on a mast arm (owner's GTA frames G8 and G9): a grey pole at the kerb, an arm over the arriving lanes, and signal heads hanging from it facing the driver, each a dark housing with a dull red, amber and green lens. Static: the heads do not animate (the cars obey the real signal state in citytraffic.js). In the `junk` mesh, drawn within 240 m; about 100 triangles a mast. */
+function mastArm(J, X, Z, gy, bx, bz, tx, tz, nx, nz, armLen, headOs) {
+  const yaw = Math.atan2(nz, nx), GREY = col(0x6b6f73), DARK = col(0x1b1d1f), LR = col(0x8a2a2a), LA = col(0x9a7a20), LG = col(0x2a7a46), y0 = gy + 0.12;
+  junkBox(J, X, Z, bx, y0, bz, 0.22, 7.0, 0.22, yaw, GREY);                                              // pole
+  const mx = bx + nx * armLen / 2, mz = bz + nz * armLen / 2; junkBox(J, X, Z, mx, y0 + 6.3, mz, Math.abs(armLen), 0.16, 0.16, yaw, GREY);       // the arm along the sideways axis (negative = toward the road)
+  for (const o of headOs) { const cx = bx + nx * o, cz = bz + nz * o; junkBox(J, X, Z, cx, y0 + 5.2, cz, 0.42, 1.1, 0.3, yaw, DARK);
+    [[LR, 0.82], [LA, 0.55], [LG, 0.28]].forEach(([C, h]) => junkBox(J, X, Z, cx + tx * 0.17, y0 + 5.2 + h, cz + tz * 0.17, 0.2, 0.2, 0.05, yaw, C)); }
 }
 /* a painted road arrow (straight or turning) in the marking layer: tail at (cx, cz), pointing along (dx, dz), (nx, nz) the sideways unit vector; turn: -1 turns toward -n, +1 toward +n, 0 straight. Shaft 0.24 m wide, head 0.9 m wide. */
 function roadArrow(m, X, Z, y, cx, cz, dx, dz, nx, nz, turn) {
@@ -279,16 +308,16 @@ export function* buildTileSteps(tile, ctx) {
   const mouthFree = (x, z, id) => { const l = groundSeg.get(Math.floor(x / CELLQ) + ',' + Math.floor(z / CELLQ)); if (!l) return true; for (const [x0, z0, x1, z1, hw, sid] of l) { if (sid === id) continue; const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)) : 0; if (Math.hypot(x - (x0 + dx * t), z - (z0 + dz * t)) < hw - 0.3) return false; } return true; };
   /* the direction (unit dx, dz) of the nearest OTHER ground street's segment whose carriageway covers (x, z), or null: what a footway is crossing */
   const roadAt = (x, z, id) => { const l = groundSeg.get(Math.floor(x / CELLQ) + ',' + Math.floor(z / CELLQ)); if (!l) return null; let best = null, bd = 1e9; for (const [x0, z0, x1, z1, hw, sid] of l) { if (sid === id || hw < 3.0) continue; const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz, t = L2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)) : 0, d = Math.hypot(x - (x0 + dx * t), z - (z0 + dz * t)); if (d < hw - 0.3 && d < bd) { bd = d; const Ls = Math.sqrt(L2) || 1; best = { dx: dx / Ls, dz: dz / Ls }; } } return best; };
-  const KERB_H = 0.12, KERB_W = 0.3, KERBC = col(0xb4b0a6);
+  const KERB_H = 0.12, KERB_W = 0.3, KERBC = col(0xb4b0a6), KRED = col(0xb23a32), KWHT = col(0xd6d2c6), PAINTED = new Set(['trunk', 'primary', 'secondary']);      /* painted kerbs (owner's GTA frame G8): red and white in 3 m pieces on the main roads */
   /* a kerb along one side of a street: a raised stone (0.12 m, the car physics gets wall circles of negative radius = mountable at walking pace) in 3 m pieces, none where a side street joins */
   const kerb = (pts, F, hw, side, id) => {
     const at = (i, f, off) => { const x = pts[i * 2] + (pts[i * 2 + 2] - pts[i * 2]) * f, z = pts[i * 2 + 1] + (pts[i * 2 + 3] - pts[i * 2 + 1]) * f, nx = F.nx[i] + (F.nx[i + 1] - F.nx[i]) * f, nz = F.nz[i] + (F.nz[i + 1] - F.nz[i]) * f, k = F.sc[i] + (F.sc[i + 1] - F.sc[i]) * f; return [x + nx * off * k * side, z + nz * off * k * side, nx * side, nz * side]; };
-    const m = M.walk, y1 = gy + KERB_H;
+    const m = M.walk, y1 = gy + KERB_H, paint = PAINTED.has(G.classes[G.cls[id]]);
     for (let i = 0; i + 1 < F.n; i++) { const L = Math.hypot(pts[i * 2 + 2] - pts[i * 2], pts[i * 2 + 3] - pts[i * 2 + 1]), n = Math.max(1, Math.round(L / 3));
       for (let q = 0; q < n; q++) { const f0 = q / n, f1 = (q + 1) / n, mid = at(i, (f0 + f1) / 2, hw + KERB_W / 2); if (!mouthFree(mid[0], mid[1], id)) continue;
-        const a0 = at(i, f0, hw), a1 = at(i, f1, hw), b0 = at(i, f0, hw + KERB_W), b1 = at(i, f1, hw + KERB_W), nxv = -a0[2], nzv = -a0[3];       // the inner face looks at the road
-        const va = m.v(X(a0[0]), gy, Z(a0[1]), nxv, 0, nzv, KERBC), vb = m.v(X(a1[0]), gy, Z(a1[1]), nxv, 0, nzv, KERBC), vc = m.v(X(a1[0]), y1, Z(a1[1]), nxv, 0, nzv, KERBC), vd = m.v(X(a0[0]), y1, Z(a0[1]), nxv, 0, nzv, KERBC); m.tri(va, vb, vc, nxv, 0, nzv); m.tri(va, vc, vd, nxv, 0, nzv);
-        const ta = m.v(X(a0[0]), y1, Z(a0[1]), 0, 1, 0, KERBC), tb = m.v(X(a1[0]), y1, Z(a1[1]), 0, 1, 0, KERBC), tc = m.v(X(b1[0]), y1, Z(b1[1]), 0, 1, 0, KERBC), td = m.v(X(b0[0]), y1, Z(b0[1]), 0, 1, 0, KERBC); m.tri(ta, tb, tc, 0, 1, 0); m.tri(ta, tc, td, 0, 1, 0);
+        const KC = paint ? ((i + q) % 2 ? KRED : KWHT) : KERBC, a0 = at(i, f0, hw), a1 = at(i, f1, hw), b0 = at(i, f0, hw + KERB_W), b1 = at(i, f1, hw + KERB_W), nxv = -a0[2], nzv = -a0[3];       // the inner face looks at the road
+        const va = m.v(X(a0[0]), gy, Z(a0[1]), nxv, 0, nzv, KC), vb = m.v(X(a1[0]), gy, Z(a1[1]), nxv, 0, nzv, KC), vc = m.v(X(a1[0]), y1, Z(a1[1]), nxv, 0, nzv, KC), vd = m.v(X(a0[0]), y1, Z(a0[1]), nxv, 0, nzv, KC); m.tri(va, vb, vc, nxv, 0, nzv); m.tri(va, vc, vd, nxv, 0, nzv);
+        const ta = m.v(X(a0[0]), y1, Z(a0[1]), 0, 1, 0, KC), tb = m.v(X(a1[0]), y1, Z(a1[1]), 0, 1, 0, KC), tc = m.v(X(b1[0]), y1, Z(b1[1]), 0, 1, 0, KC), td = m.v(X(b0[0]), y1, Z(b0[1]), 0, 1, 0, KC); m.tri(ta, tb, tc, 0, 1, 0); m.tri(ta, tc, td, 0, 1, 0);
         const c = at(i, (f0 + f1) / 2, hw + 1.6); out.circles.push(c[0], c[1], -1.6); } }
   };
   /* an underpass: the trench around the sunken carriageway (walls to the ground, a roof where the cut is deeper than OPEN_CUT), the strips the ground is lowered along for the physics, and the roof as a deck for cars crossing above */
@@ -364,7 +393,8 @@ export function* buildTileSteps(tile, ctx) {
       if (fl & 1) { const sx = pts[i0 * 2] + tx * 8.2, sz = pts[i0 * 2 + 1] + tz * 8.2, o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25, m = M.mark, y = gy + LIFT.mark, P = (o, d) => m.v(X(sx + nxv * o + tx * d), y, Z(sz + nzv * o + tz * d), 0, 1, 0, MARK); if (o1 - o0 > 1) { const q0 = P(o0, -0.25), q1 = P(o1, -0.25), q2 = P(o1, 0.25), q3 = P(o0, 0.25); m.tri(q0, q1, q2, 0, 1, 0); m.tri(q0, q2, q3, 0, 1, 0); out.nStop = (out.nStop || 0) + 1; }
         { const o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25, nl = Math.max(1, Math.round((o1 - o0) / 3.3)), lwid = (o1 - o0) / nl, ay = gy + LIFT.mark - 0.006;      // painted arrows in each arriving lane, 16.5 m back (the kerb lane turns left, the inside lane of three or more turns right, the others go straight)
           if (o1 - o0 > 2.2) for (let k = 0; k < nl; k++) { const o = o0 + (k + 0.5) * lwid, cx = pts[i0 * 2] + tx * 16.5 + nxv * o, cz = pts[i0 * 2 + 1] + tz * 16.5 + nzv * o, turn = nl >= 2 && k === nl - 1 ? 1 : nl >= 3 && k === 0 ? -1 : 0; roadArrow(M.mark, X, Z, ay, cx, cz, -tx, -tz, nxv, nzv, turn); out.nArrow = (out.nArrow || 0) + 1; } }
-        if (SIGNATLAS && (out.nPole || 0) < 40) { const nm = G.names && G.name ? G.names[G.name[id]] : null, en = nm && (typeof nm === 'string' ? nm : nm.en || nm.ref || ''), sp0 = G.speed ? G.speed[id] : 0, sp = sp0 >= 25 && sp0 <= 100 ? SPEEDS.reduce((b, v) => Math.abs(v - sp0) < Math.abs(b - v) ? v : b, 30) : ({ residential: 30, tertiary: 40, secondary: 50, primary: 60, trunk: 60 }[cls] || 40), off = hw + 0.9; signPole(M, X, Z, gy, sx + nxv * off, sz + nzv * off, tx, tz, nxv, nzv, en || null, sp, nm && nm.hi || '', w >= 6.5 ? { w, dests: destsAt(G, node, id, tx, tz, nxv, nzv) } : null); out.nPole = (out.nPole || 0) + 1; } }
+        if ((out.nMast || 0) < 40) { const o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25; if (o1 - o0 > 2.5) { const off = hw + 0.8, bxm = pts[i0 * 2] + tx * 11 + nxv * off, bzm = pts[i0 * 2 + 1] + tz * 11 + nzv * off, heads = (o1 - o0 > 6 ? [o0 + (o1 - o0) * 0.28, o0 + (o1 - o0) * 0.72] : [(o0 + o1) / 2]).map(o => o - off); mastArm(M.junk, X, Z, gy, bxm, bzm, tx, tz, nxv, nzv, (o0 + (o1 - o0) * 0.12) - off, heads); out.nMast = (out.nMast || 0) + 1; } }
+        if (SIGNATLAS && (out.nPole || 0) < 40 && (G.oneway[id] === 0 || G.oneway[id] === (end ? 1 : -1))) { const nm = G.names && G.name ? G.names[G.name[id]] : null, en = nm && (typeof nm === 'string' ? nm : nm.en || nm.ref || ''), sp0 = G.speed ? G.speed[id] : 0, sp = sp0 >= 25 && sp0 <= 100 ? SPEEDS.reduce((b, v) => Math.abs(v - sp0) < Math.abs(b - v) ? v : b, 30) : ({ residential: 30, tertiary: 40, secondary: 50, primary: 60, trunk: 60 }[cls] || 40), off = hw + 0.9; signPole(M, X, Z, gy, sx + nxv * off, sz + nzv * off, tx, tz, nxv, nzv, en || null, sp, nm && nm.hi || '', w >= 6.5 ? { w, dests: destsAt(G, node, id, tx, tz, nxv, nzv) } : null); out.nPole = (out.nPole || 0) + 1; } }
     }
     /* lane marks: a dashed line on the centre of a two-way street, between the lanes of a one-way street; none near a junction (the piece ends that are real nodes) */
     if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) {

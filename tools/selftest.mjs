@@ -1338,6 +1338,11 @@ test('gzfetch: the gzip copy is used and unpacked, a host that already unpacked 
   same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': gz })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': data })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin': data })), data);
   await assert.rejects(() => G.fetchGrid('x.bin', mk({})));
 });
+test('place banner: bracketed names are shortened and every place type has a reach', async () => {
+  const P = await import('../src/ui/placebanner.js');
+  assert.equal(P.shortName('Karol Bagh (Ajmal Khan Road)'), 'Karol Bagh'); assert.equal(P.shortName('Connaught Place (Rajiv Chowk)'), 'Connaught Place'); assert.equal(P.shortName('Khan Market'), 'Khan Market');
+  const fs = await import('node:fs'), lm = JSON.parse(fs.readFileSync(new URL('../assets/cities/delhi/landmarks.json', import.meta.url))).landmarks; for (const l of lm) { const r = P.reach(l); assert.ok(r >= 200 && r <= 400, l.name.en); assert.ok(P.shortName(l.name.en).length > 2); }
+});
 test('offline download: the list is split into core and Delhi, sizes add up, the label is readable, the state follows the stored version', async () => {
   const O = await import('../src/ui/offline.js'), m = { version: 'v2', files: [{ p: './', s: 0, g: 'core' }, { p: 'a.js', s: 3000000, g: 'core' }, { p: 'assets/cities/delhi/t.json', s: 70000000, g: 'delhi' }] };
   assert.equal(O.plan(m, 'core').files.length, 2); assert.equal(O.plan(m, 'delhi').bytes, 70000000); assert.equal(O.plan(null, 'core').bytes, 0);

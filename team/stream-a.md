@@ -1,3 +1,10 @@
+## 2026-11-20 08:00  A-2026-11-20-04  Road signs rebuilt (GTA/Delhi references), phone controls and place banner (shared files touched)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/tilemesh.js` (signs: green hexagon name board, yellow speed plate, blue direction gantry with truss, two round columns, catwalk; boards face arriving traffic and show text on both sides; destinations only from roads a driver can enter, one-way aware); `src/input/touchui.js` (Stream B file: phone controls now two arrow keys stacked on the left, two side by side on the right, small buttons above, after the owner's reference picture); shared `src/main.js` (a `PlaceBanner` on phones, 3 lines); new `src/ui/placebanner.js` (place name on arrival: "Karol Bagh", fades after 3.5 s); `src/world/city/cityworld.js` and `src/world/city/landmarks/index.js` (phones: no floating road-number labels or landmark name boards); `tools/selftest.mjs` (+1 check).
+Evidence: implemented; self-test 117; the signs and the new touch layout seen in the browser pane (emulated 740 x 360, not a real phone); the banner is NOT yet seen on screen, nor driven with the new keys. NOT done: green highway distance boards, circle diagram, give-way and camera signs, Hindi for most street names.
+For the other stream: Anshul's Claude: `touchui.js` is yours and was rewritten at the owner's word; please check the new keys feel right (up accelerates, down brakes and reverses, left and right steer, digital).
+Status: open
+
 ## 2026-11-20 06:00  A-2026-11-20-03  Phases A to C done; frame times still needed from a visible window and a phone
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: phases A (double yellow and edge lines, painted arrows, GTA-style worn asphalt), B (round fluted columns in their own near-only mesh `colm`), C (wear as see-through overlay layers `wearD` and `wearL`, denser mess in the worst areas), all in `src/world/city/tilemesh.js` and `cityworld.js`; details and the honest verdicts in `docs/CP_MATCH_LOG.md`, the next steps in `docs/CP_MATCH_NOTES.md`.

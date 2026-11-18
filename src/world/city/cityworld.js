@@ -104,6 +104,7 @@ export class CityWorld {
   treeMat(name) { this._tm = this._tm || {}; if (!this._tm[name]) { const t = new THREE.TextureLoader().load('assets/nature/' + name + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; this._tm[name] = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.45, side: THREE.FrontSide, roughness: 1, metalness: 0, envMapIntensity: 0.25 }); } return this._tm[name]; }
   ck(i, j) { return (i + 8192) * 16384 + (j + 8192); }
   label(grp, l, tile) {
+    if (typeof document !== 'undefined' && document.body && document.body.classList.contains('touch')) return null;       // phones: no floating road numbers (owner, 20 Nov 2026)
     if (this.labels.has(l.id) && this.labels.get(l.id).parent) return null; const c = document.createElement('canvas'); c.width = 512; c.height = 96; const g = c.getContext('2d'); g.fillStyle = 'rgba(10,14,22,0.72)'; g.fillRect(0, 0, 512, 96); g.fillStyle = '#fff'; g.font = 'bold 34px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     let t = l.text; while (g.measureText(t).width > 490 && t.length > 6) t = t.slice(0, -2); g.fillText(t === l.text ? t : t + '…', 256, 48);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true, transparent: true, fog: false })); sp.scale.set(36, 6.75, 1); sp.position.set(l.x - tile.tx * this.pack.size, l.y, l.z - tile.tz * this.pack.size); grp.add(sp); this.labels.set(l.id, sp); return sp;
