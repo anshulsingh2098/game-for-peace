@@ -8,6 +8,7 @@ import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './p
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
+import { hindiName } from './hindi.js';
 
 /* layers that lie in the ground plane are given real height steps (metres over the ground: it was 0 for all of them and only depth offsets told them apart, which shimmers with distance): ground 0, parks and water, pavement, road, markings */
 const ZEBRA_MAX = 16, TEX_ROAD = 5, TEX_WALK = 4;       // metres one tile of the road and pavement textures covers (a divisor of 1000, so tiles meet without a seam)
@@ -163,6 +164,11 @@ function makeSignAtlas() {
   icon(0, g2 => { disc(g2, '#c8202a', '#c8202a'); g2.fillStyle = '#fff'; g2.fillRect(24, 54, 80, 20); });                        // no entry
   icon(1, g2 => { g2.fillStyle = '#1c4f9c'; g2.fillRect(4, 4, 120, 120); g2.fillStyle = '#fff'; g2.fillRect(20, 52, 62, 24); g2.beginPath(); g2.moveTo(76, 30); g2.lineTo(110, 64); g2.lineTo(76, 98); g2.fill(); });      // one way
   icon(6, g2 => { g2.fillStyle = '#c8202a'; g2.beginPath(); for (let i = 0; i < 8; i++) { const a = Math.PI / 8 + i * Math.PI / 4; g2.lineTo(64 + 62 * Math.cos(a), 64 + 62 * Math.sin(a)); } g2.fill(); g2.fillStyle = '#fff'; g2.font = 'bold 34px sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText('STOP', 64, 66); });
+  /* yellow curve chevrons (2 points left, 3 right), the red-bordered give-way triangle (4), the speed-camera plate (5): after the owner's GTA frames 13 and 17 */
+  const chev = d => g2 => { g2.fillStyle = '#f2c10f'; g2.fillRect(0, 0, 128, 128); g2.strokeStyle = '#1b1b1b'; g2.lineWidth = 5; g2.strokeRect(4, 4, 120, 120); g2.lineWidth = 16; g2.lineJoin = 'miter'; g2.beginPath(); g2.moveTo(64 - d * 22, 24); g2.lineTo(64 + d * 22, 64); g2.lineTo(64 - d * 22, 104); g2.stroke(); };
+  icon(2, chev(-1)); icon(3, chev(1));
+  icon(4, g2 => { g2.fillStyle = '#d3202a'; g2.beginPath(); g2.moveTo(4, 10); g2.lineTo(124, 10); g2.lineTo(64, 118); g2.closePath(); g2.fill(); g2.fillStyle = '#fff'; g2.beginPath(); g2.moveTo(24, 21); g2.lineTo(104, 21); g2.lineTo(64, 90); g2.closePath(); g2.fill(); g2.fillStyle = '#111'; g2.font = 'bold 17px Arial, sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText('GIVE', 64, 36); g2.fillText('WAY', 64, 54); });
+  icon(5, g2 => { g2.fillStyle = '#fff'; g2.fillRect(0, 0, 128, 128); g2.strokeStyle = '#1b1b1b'; g2.lineWidth = 6; g2.strokeRect(5, 5, 118, 118); g2.fillStyle = '#111'; g2.fillRect(26, 44, 76, 46); g2.fillRect(40, 34, 28, 12); g2.fillStyle = '#fff'; g2.beginPath(); g2.arc(70, 67, 15, 0, 7); g2.fill(); g2.fillStyle = '#111'; g2.beginPath(); g2.arc(70, 67, 9, 0, 7); g2.fill(); });
   /* speed-limit plates: yellow square, black rim, a white disc with a red ring, a car with its limit and a truck with its limit, SPEED LIMIT underneath */
   const car = (g2, x, y, w) => { g2.fillStyle = '#222'; g2.beginPath(); g2.moveTo(x, y + w * 0.34); g2.lineTo(x + w * 0.2, y + w * 0.34); g2.lineTo(x + w * 0.32, y); g2.lineTo(x + w * 0.7, y); g2.lineTo(x + w * 0.84, y + w * 0.34); g2.lineTo(x + w, y + w * 0.4); g2.lineTo(x + w, y + w * 0.6); g2.lineTo(x, y + w * 0.6); g2.fill(); };
   const truck = (g2, x, y, w) => { g2.fillStyle = '#222'; g2.fillRect(x, y, w * 0.68, w * 0.56); g2.fillRect(x + w * 0.7, y + w * 0.16, w * 0.3, w * 0.4); };
@@ -186,31 +192,47 @@ function makeSignAtlas() {
       for (const ln of lines) { fit(g, ln, EN, tw, rows === 3 ? 34 : hi ? 42 : 56); g.fillText(ln, cx, y + H * ys[r++]); }
       tex.needsUpdate = true; const uv = uvOf(x, y, W, H); names.set(key, uv); return uv; },
     /* a blue direction board (NDMC): white border, the destination in Hindi over English, an arrow (dir 'left', 'up' or 'right') at the end it points to */
-    blue(en, hi, dir) { const key = 'B|' + en + '|' + (hi || '') + '|' + dir; if (names.has(key)) return names.get(key); const k = next++ % 40, x = (k % 5) * SIGN_W, y = SIGN_Y0 + Math.floor(k / 5) * SIGN_H, W = SIGN_W, H = SIGN_H - 6; g.clearRect(x, y, SIGN_W, SIGN_H);
+    blue(en, hi, dir, opt) { const key = 'B|' + en + '|' + (hi || '') + '|' + dir + '|' + (opt && opt.km || '') + (opt && opt.green ? 'g' : ''); if (names.has(key)) return names.get(key); const k = next++ % 40, x = (k % 5) * SIGN_W, y = SIGN_Y0 + Math.floor(k / 5) * SIGN_H, W = SIGN_W, H = SIGN_H - 6; g.clearRect(x, y, SIGN_W, SIGN_H);
       const rr = (x0, y0, w, h, r) => { g.beginPath(); g.moveTo(x0 + r, y0); g.arcTo(x0 + w, y0, x0 + w, y0 + h, r); g.arcTo(x0 + w, y0 + h, x0, y0 + h, r); g.arcTo(x0, y0 + h, x0, y0, r); g.arcTo(x0, y0, x0 + w, y0, r); g.closePath(); };
-      g.fillStyle = '#1259ad'; rr(x + 1, y + 1, W - 2, H, 12); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 5; rr(x + 10, y + 10, W - 20, H - 18, 8); g.stroke();
+      g.fillStyle = opt && opt.green ? SIGN_GREEN : '#1259ad'; rr(x + 1, y + 1, W - 2, H, 12); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 5; rr(x + 10, y + 10, W - 20, H - 18, 8); g.stroke();
       g.fillStyle = '#fff'; g.strokeStyle = '#fff'; const ay = y + 1 + H / 2, ax = dir === 'left' ? x + 52 : x + W - 52, sz = 58;
       g.lineWidth = 11; g.lineCap = 'butt'; g.beginPath(); if (dir === 'up') { g.moveTo(ax, ay + sz * 0.5); g.lineTo(ax, ay - sz * 0.15); } else { const d = dir === 'left' ? -1 : 1; g.moveTo(ax - d * sz * 0.5, ay); g.lineTo(ax + d * sz * 0.15, ay); } g.stroke();
       g.beginPath(); if (dir === 'up') { g.moveTo(ax, ay - sz * 0.62); g.lineTo(ax - sz * 0.36, ay - sz * 0.1); g.lineTo(ax + sz * 0.36, ay - sz * 0.1); } else { const d = dir === 'left' ? -1 : 1; g.moveTo(ax + d * sz * 0.62, ay); g.lineTo(ax + d * sz * 0.1, ay - sz * 0.36); g.lineTo(ax + d * sz * 0.1, ay + sz * 0.36); } g.closePath(); g.fill();
       g.textAlign = 'center'; g.textBaseline = 'middle'; const cx = dir === 'left' ? x + W / 2 + 34 : x + W / 2 - 34, tw = W - 150;
       if (hi) { fit(g, hi, f => 'bold ' + f + 'px "Noto Sans Devanagari","Kohinoor Devanagari","Devanagari Sangam MN",sans-serif', tw, 46); g.fillText(hi, cx, y + H * 0.33); }
       fit(g, en, f => 'bold ' + f + 'px Arial,Helvetica,sans-serif', tw, hi ? 42 : 56); g.fillText(en, cx, y + H * (hi ? 0.68 : 0.5));
+      if (opt && opt.km) { g.textAlign = 'right'; g.font = 'bold 28px Arial,Helvetica,sans-serif'; g.fillText(opt.km + ' km', x + W - 24, y + H - 26); }
+      tex.needsUpdate = true; const uv = uvOf(x, y, W, H); names.set(key, uv); return uv; },
+    /* the junction diagram board: a ring with an arrow out of it for each road, the road's name beside the arrow (like the owner's traffic-circle reference) */
+    diagram(items) { const key = 'D|' + items.map(d => d.dir + d.en).join('|'); if (names.has(key)) return names.get(key); const k = next++ % 40, x = (k % 5) * SIGN_W, y = SIGN_Y0 + Math.floor(k / 5) * SIGN_H, W = SIGN_W, H = SIGN_H - 6; g.clearRect(x, y, SIGN_W, SIGN_H);
+      const rr = (x0, y0, w, h, r) => { g.beginPath(); g.moveTo(x0 + r, y0); g.arcTo(x0 + w, y0, x0 + w, y0 + h, r); g.arcTo(x0 + w, y0 + h, x0, y0 + h, r); g.arcTo(x0, y0 + h, x0, y0, r); g.arcTo(x0, y0, x0 + w, y0, r); g.closePath(); };
+      g.fillStyle = '#1259ad'; rr(x + 1, y + 1, W - 2, H, 12); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 5; rr(x + 10, y + 10, W - 20, H - 18, 8); g.stroke();
+      const cx = x + W / 2, cy = y + H * 0.62, r = 20; g.lineWidth = 8; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.stroke(); g.fillStyle = '#fff'; g.font = 'bold 22px Arial,Helvetica,sans-serif'; g.textBaseline = 'middle';
+      for (const d of items) { const v = d.dir === 'left' ? [-1, 0] : d.dir === 'right' ? [1, 0] : [0, -1], x0 = cx + v[0] * r, y0 = cy + v[1] * r, x1 = cx + v[0] * (r + 52), y1 = cy + v[1] * (r + 52 * (v[1] ? 0.9 : 1)); g.lineWidth = 8; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.beginPath(); if (v[1]) { g.moveTo(x1, y1 - 14); g.lineTo(x1 - 12, y1 + 4); g.lineTo(x1 + 12, y1 + 4); } else { g.moveTo(x1 + v[0] * 14, y1); g.lineTo(x1 - v[0] * 4, y1 - 12); g.lineTo(x1 - v[0] * 4, y1 + 12); } g.closePath(); g.fill();
+        const t = d.en.length > 13 ? d.en.slice(0, 12) + '.' : d.en; g.textAlign = d.dir === 'left' ? 'right' : d.dir === 'right' ? 'left' : 'center'; g.fillText(t, d.dir === 'left' ? x1 - 18 : d.dir === 'right' ? x1 + 18 : x1 + 0, d.dir === 'up' ? y + 34 : y1 - 18); }
+      tex.needsUpdate = true; const uv = uvOf(x, y, W, H); names.set(key, uv); return uv; },
+    /* a blue route-number plate (NH 48, SH 26, ...) */
+    refPlate(ref) { const key = 'R|' + ref; if (names.has(key)) return names.get(key); const k = next++ % 40, x = (k % 5) * SIGN_W, y = SIGN_Y0 + Math.floor(k / 5) * SIGN_H, W = SIGN_W, H = SIGN_H - 6; g.clearRect(x, y, SIGN_W, SIGN_H);
+      const rr = (x0, y0, w, h, r) => { g.beginPath(); g.moveTo(x0 + r, y0); g.arcTo(x0 + w, y0, x0 + w, y0 + h, r); g.arcTo(x0 + w, y0 + h, x0, y0 + h, r); g.arcTo(x0, y0 + h, x0, y0, r); g.arcTo(x0, y0, x0 + w, y0, r); g.closePath(); };
+      g.fillStyle = '#1259ad'; rr(x + 1, y + 1, W - 2, H, 16); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 6; rr(x + 12, y + 12, W - 24, H - 22, 10); g.stroke(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 96px Arial,Helvetica,sans-serif'; g.fillText(ref.replace(/^([A-Z]+)\s*/, '$1 '), x + W / 2, y + H / 2 + 4, W - 60);
       tex.needsUpdate = true; const uv = uvOf(x, y, W, H); names.set(key, uv); return uv; } };
   return SIGNATLAS;
 }
 const SPEEDS = [30, 40, 50, 60];
 /* Where the arriving traffic can go: the named roads that meet the node, as { en, hi, dir } with dir 'up' (ahead), 'left' or 'right' relative to a driver coming along -t. Biggest road class first, one board a name, at most two. The node's edge lists are built once a graph. */
 const RANK = { motorway: 5, trunk: 5, primary: 4, secondary: 3, tertiary: 2, residential: 1 };
+function adjOf(G) { if (!G.__adj) { const head = new Int32Array(G.nodes).fill(-1), nxt = new Int32Array(G.n * 2); for (let e = 0; e < G.n; e++) { nxt[e * 2] = head[G.a[e]]; head[G.a[e]] = e * 2; nxt[e * 2 + 1] = head[G.b[e]]; head[G.b[e]] = e * 2 + 1; } G.__adj = { head, nxt }; } return G.__adj; }
 function destsAt(G, node, id, tx, tz, nx, nz) {
-  if (!G.__adj) { const head = new Int32Array(G.nodes).fill(-1), nxt = new Int32Array(G.n * 2); for (let e = 0; e < G.n; e++) { nxt[e * 2] = head[G.a[e]]; head[G.a[e]] = e * 2; nxt[e * 2 + 1] = head[G.b[e]]; head[G.b[e]] = e * 2 + 1; } G.__adj = { head, nxt }; }
-  const { head, nxt } = G.__adj, own = G.names[G.name[id]], ownEn = own && own.en, found = new Map();
+  const { head, nxt } = adjOf(G), own = G.names[G.name[id]], ownEn = own && own.en, found = new Map();
   for (let h = head[node]; h >= 0; h = nxt[h]) { const e = h >> 1; if (e === id) continue; const other = (h & 1) ? G.a[e] : G.b[e], nm = G.names[G.name[e]], en = nm && nm.en, r = RANK[G.classes[G.cls[e]]] || 0; if (!en || !r) continue; const one = G.oneway[e]; if (one !== 0 && one !== (G.a[e] === node ? 1 : -1)) continue;
     const ux = G.xz[other * 2] - G.xz[node * 2], uz = G.xz[other * 2 + 1] - G.xz[node * 2 + 1], L = Math.hypot(ux, uz); if (L < 8) continue; const fx = ux / L, fz = uz / L, ahead = -(fx * tx + fz * tz); if (ahead < -0.5) continue;
-    const dir = ahead > 0.6 ? 'up' : (fx * nx + fz * nz) > 0 ? 'left' : 'right'; if (en === ownEn && dir !== 'up') continue; const sc = r * 10 + Math.min(L, 400) / 100; const old = found.get(en); if (!old || old.sc < sc) found.set(en, { en, hi: nm.hi || '', dir, sc }); }
-  const ORD = { left: 0, up: 1, right: 2 }; return [...found.values()].sort((a, b) => b.sc - a.sc).slice(0, 2).sort((a, b) => ORD[a.dir] - ORD[b.dir]);
+    const dir = ahead > 0.6 ? 'up' : (fx * nx + fz * nz) > 0 ? 'left' : 'right'; if (en === ownEn && dir !== 'up') continue; const sc = r * 10 + Math.min(L, 400) / 100; const old = found.get(en); if (!old || old.sc < sc) found.set(en, { en, hi: hindiName(nm), dir, sc, r, km: Math.max(0.1, G.len[e] / 1000).toFixed(1) }); }
+  const ORD = { left: 0, up: 1, right: 2 }, all = [...found.values()].sort((a, b) => b.sc - a.sc), pick = all.slice(0, 2).sort((a, b) => ORD[a.dir] - ORD[b.dir]);
+  const dirs = new Set(all.map(d => d.dir)); pick.diag = all.length >= 3 && dirs.size >= 3 ? all.filter((d, i, ar) => ar.findIndex(q => q.dir === d.dir) === i).sort((a, b) => ORD[a.dir] - ORD[b.dir]) : null;     // three roads in three directions: a diagram board
+  return pick;
 }
 /* The boards face the traffic that ARRIVES at the junction: the normal is the road direction (tx, tz) pointing away from the node, the board is spread along the sideways axis (nx, nz) and its left edge (seen by the driver) is on the +n side, the driver's kerb side (traffic keeps left). The back is a plain grey plate, so no text is ever seen mirrored. */
-function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant) {
+function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, extra) {
   const m = M.rsign, A = SIGNATLAS, pw = 0.045, pu = A.plain;
   const V = (x, y, z, nxn, nzn, u, v) => m.v(X(x), y, Z(z), nxn, 0, nzn, WHITE_C, u, v);
   const at = (ox, dt) => [bx + nx * ox + tx * dt, bz + nz * ox + tz * dt];
@@ -222,12 +244,19 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant) {
   /* a horizontal bar from ox0 to ox1 along n at height y, thickness th (a front face and a top face) */
   const beam = (ox0, ox1, dt, y0, th) => { const y = gy + y0, [x0, z0] = at(ox0, dt), [x1, z1] = at(ox1, dt); let a = V(x0, y - th, z0, tx, tz, pu[0], pu[1]), b = V(x1, y - th, z1, tx, tz, pu[2], pu[1]), c2 = V(x1, y + th, z1, tx, tz, pu[2], pu[3]), d = V(x0, y + th, z0, tx, tz, pu[0], pu[3]); m.tri(a, b, c2, tx, 0, tz); m.tri(a, c2, d, tx, 0, tz);
     a = V(x0 + tx * th, y + th, z0 + tz * th, 0, 1, pu[0], pu[1]); b = V(x1 + tx * th, y + th, z1 + tz * th, 0, 1, pu[2], pu[1]); c2 = V(x1 - tx * th, y + th, z1 - tz * th, 0, 1, pu[2], pu[3]); d = V(x0 - tx * th, y + th, z0 - tz * th, 0, 1, pu[0], pu[3]); m.tri(a, b, c2, 0, 1, 0); m.tri(a, c2, d, 0, 1, 0); };
+  /* the small road signs on their own thin posts: curve chevrons (yellow, one each side so each direction sees its own), the give-way triangle, the speed-camera plate, the blue route-number plate */
+  if (extra) { const k = extra.kind;
+    if (k === 'chev') { post(0, 0, 2.3); board(0, 0, 1.75, 0.85, 1.15, A.icon(extra.dir === 'left' ? 2 : 3), A.icon(extra.dir === 'left' ? 3 : 2)); }
+    else if (k === 'give') { post(0, 0, 2.4); board(0, 0, 1.95, 0.95, 0.85, A.icon(4)); }
+    else if (k === 'cam') { post(0, 0, 2.7); board(0, 0, 2.2, 0.75, 0.75, A.icon(5)); }
+    else if (k === 'ref') { post(-0.5, 0, 2.5); post(0.5, 0, 2.5); board(0, 0, 2.05, 1.3, 0.62, A.refPlate(extra.ref)); }
+    return; }
   /* the street's own name: green hexagon (NDMC), 2.0 x 0.95 m, lower edge at 2.5 m, on two posts */
   if (name) { post(-0.9, 0, 3.55); post(0.9, 0, 3.55); board(0, 0, 2.98, 2.0, 0.95, A.name(name, hi)); }
   /* the speed limit: yellow plate, 0.8 m, 12 m further back so it is read from afar */
   if (speed) { post(0, 12, 2.9); board(0, 12, 2.4, 0.8, 0.8, A.speed(speed)); }
   /* the direction gantry, after the owner's GTA frames (13, 15, 16, 17): a thick round concrete column on the kerb with a footing, a lattice truss (two chords and zig-zag braces) across the carriageway, big boards hung under it on small brackets with a row of lamps below, board 4.2 x 2.0 m, lower edge 5.3 m above the road (a real gantry clears 5.5 m; the GTA boards are about 1.3 lanes wide) */
-  if (gant && gant.dests.length) { const dt = 22, n = gant.dests.length, BW = 4.2, BH = 2.0, GAP = 0.5, span = n * BW + (n - 1) * GAP + 1.4, L = Math.max(span, Math.min(gant.w + 3.6, 17)), CON = new THREE.Color(0x9b9a95), STL = new THREE.Color(0x7d8185), DRK = new THREE.Color(0x2b2c2e);
+  if (gant && gant.dests.length) { const list = gant.dests.diag && gant.w >= 9 ? [{ diag: gant.dests.diag }, gant.dests[0]] : gant.dests, dt = 22, n = list.length, BW = 4.2, BH = 2.0, GAP = 0.5, span = n * BW + (n - 1) * GAP + 1.4, L = Math.max(span, Math.min(gant.w + 3.6, 17)), CON = new THREE.Color(0x9b9a95), STL = new THREE.Color(0x7d8185), DRK = new THREE.Color(0x2b2c2e);
     const Vc = (x, y, z, nxn, nyn, nzn, C) => m.v(X(x), gy + y, Z(z), nxn, nyn, nzn, C, pu[0], pu[1]);
     const quadC = (P, N, C) => { const q = P.map(v => Vc(v[0], v[1], v[2], N[0], N[1], N[2], C)); m.tri(q[0], q[1], q[2], N[0], N[1], N[2]); m.tri(q[0], q[2], q[3], N[0], N[1], N[2]); };
     /* an upright box with its centre (ox along n, dt along t), half sizes hn along n, ht along t, from y0 to y1 */
@@ -245,7 +274,9 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant) {
     const cm = (x0 + x1) / 2, half = Math.abs(x1 - x0) / 2; box(cm, dt + 0.55, half, 0.5, 4.93, 5.0, STL);                                   // the catwalk (a grating plate) under the boards
     box(cm, dt + 1.05, half, 0.025, 5.95, 6.02, STL); box(cm, dt + 1.05, half, 0.02, 5.45, 5.5, STL);                                          // the rail and the knee rail along its outer edge
     for (let q = 0, nq = Math.floor(half * 2 / 1.5); q <= nq; q++) box(x0 - q * (half * 2) / nq, dt + 1.05, 0.03, 0.03, 5.0, 6.02, STL);        // rail posts
-    for (let k = 0; k < n; k++) { const ox = ox0 - 0.34 - 0.5 - BW / 2 - k * (BW + GAP), bcy = 6.3; const d = gant.dests[k]; board(ox, dt + 0.12, bcy, BW, BH, A.blue(d.en, d.hi, d.dir), A.blue(d.en, d.hi, d.dir === 'left' ? 'right' : d.dir === 'right' ? 'left' : 'up'));
+    for (let k = 0; k < n; k++) { const ox = ox0 - 0.34 - 0.5 - BW / 2 - k * (BW + GAP), bcy = 6.3; const d = list[k], flip = q => q === 'left' ? 'right' : q === 'right' ? 'left' : 'up', hw2 = d.r >= 4 ? { green: true, km: d.km } : null;
+      if (d.diag) board(ox, dt + 0.12, bcy, BW, BH, A.diagram(d.diag), A.diagram(d.diag.map(q => ({ ...q, dir: flip(q.dir) }))));
+      else board(ox, dt + 0.12, bcy, BW, BH, A.blue(d.en, d.hi, d.dir, hw2), A.blue(d.en, d.hi, flip(d.dir), hw2));      /* roads of class primary and up get the green highway board with the distance (km) */
       for (const e of [-1, 1]) box(ox + e * BW * 0.32, dt, 0.05, 0.05, bcy + BH / 2, yb, STL);            // brackets from the board to the lower chord
       for (let q = 0; q < 4; q++) box(ox + (q - 1.5) * BW * 0.24, dt + 0.5, 0.12, 0.1, 5.0, 5.25, DRK); } }
 }
@@ -394,7 +425,24 @@ export function* buildTileSteps(tile, ctx) {
         { const o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25, nl = Math.max(1, Math.round((o1 - o0) / 3.3)), lwid = (o1 - o0) / nl, ay = gy + LIFT.mark - 0.006;      // painted arrows in each arriving lane, 16.5 m back (the kerb lane turns left, the inside lane of three or more turns right, the others go straight)
           if (o1 - o0 > 2.2) for (let k = 0; k < nl; k++) { const o = o0 + (k + 0.5) * lwid, cx = pts[i0 * 2] + tx * 16.5 + nxv * o, cz = pts[i0 * 2 + 1] + tz * 16.5 + nzv * o, turn = nl >= 2 && k === nl - 1 ? 1 : nl >= 3 && k === 0 ? -1 : 0; roadArrow(M.mark, X, Z, ay, cx, cz, -tx, -tz, nxv, nzv, turn); out.nArrow = (out.nArrow || 0) + 1; } }
         if ((out.nMast || 0) < 40) { const o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25; if (o1 - o0 > 2.5) { const off = hw + 0.8, bxm = pts[i0 * 2] + tx * 11 + nxv * off, bzm = pts[i0 * 2 + 1] + tz * 11 + nzv * off, heads = (o1 - o0 > 6 ? [o0 + (o1 - o0) * 0.28, o0 + (o1 - o0) * 0.72] : [(o0 + o1) / 2]).map(o => o - off); mastArm(M.junk, X, Z, gy, bxm, bzm, tx, tz, nxv, nzv, (o0 + (o1 - o0) * 0.12) - off, heads); out.nMast = (out.nMast || 0) + 1; } }
-        if (SIGNATLAS && (out.nPole || 0) < 40 && (G.oneway[id] === 0 || G.oneway[id] === (end ? 1 : -1))) { const nm = G.names && G.name ? G.names[G.name[id]] : null, en = nm && (typeof nm === 'string' ? nm : nm.en || nm.ref || ''), sp0 = G.speed ? G.speed[id] : 0, sp = sp0 >= 25 && sp0 <= 100 ? SPEEDS.reduce((b, v) => Math.abs(v - sp0) < Math.abs(b - v) ? v : b, 30) : ({ residential: 30, tertiary: 40, secondary: 50, primary: 60, trunk: 60 }[cls] || 40), off = hw + 0.9; signPole(M, X, Z, gy, sx + nxv * off, sz + nzv * off, tx, tz, nxv, nzv, en || null, sp, nm && nm.hi || '', w >= 6.5 ? { w, dests: destsAt(G, node, id, tx, tz, nxv, nzv) } : null); out.nPole = (out.nPole || 0) + 1; } }
+        if (SIGNATLAS && (out.nPole || 0) < 40 && (G.oneway[id] === 0 || G.oneway[id] === (end ? 1 : -1))) { const nm = G.names && G.name ? G.names[G.name[id]] : null, en = nm && (typeof nm === 'string' ? nm : nm.en || nm.ref || ''), sp0 = G.speed ? G.speed[id] : 0, sp = sp0 >= 25 && sp0 <= 100 ? SPEEDS.reduce((b, v) => Math.abs(v - sp0) < Math.abs(b - v) ? v : b, 30) : ({ residential: 30, tertiary: 40, secondary: 50, primary: 60, trunk: 60 }[cls] || 40), off = hw + 0.9; signPole(M, X, Z, gy, sx + nxv * off, sz + nzv * off, tx, tz, nxv, nzv, en || null, sp, nm ? hindiName(nm) : '', w >= 6.5 ? { w, dests: destsAt(G, node, id, tx, tz, nxv, nzv) } : null); out.nPole = (out.nPole || 0) + 1; } }
+    }
+    /* small signs. Give way: where this road ends at an unsignalled node that a bigger road also meets, 4 m before the node on the kerb. Speed camera and route number plate: 28 to 34 m before a signalled node on a long straight run (a camera on a minority of roads, the plate where the road has a number, NH 48 and the like). */
+    if (SIGNATLAS && !deck && !sunk && lay === 0 && ['trunk', 'primary', 'secondary', 'tertiary', 'residential'].includes(cls) && w >= 4) for (const end of [0, 1]) {
+      if (clip & (end ? 2 : 1)) continue; if (!(G.oneway[id] === 0 || G.oneway[id] === (end ? 1 : -1))) continue; const node = end ? G.b[id] : G.a[id], fl = G.nodeFlags[node]; const nx0 = G.xz[node * 2], nz0 = G.xz[node * 2 + 1], e0 = end ? pts.length - 2 : 0; if (Math.hypot(pts[e0] - nx0, pts[e0 + 1] - nz0) > 3) continue;
+      const i0 = end ? F.n - 1 : 0, i1 = end ? F.n - 2 : 1, dx = pts[i1 * 2] - pts[i0 * 2], dz = pts[i1 * 2 + 1] - pts[i0 * 2 + 1], L = Math.hypot(dx, dz); if (L < 6) continue; const tx = dx / L, tz = dz / L, nxv = -tz, nzv = tx, off = hw + 0.8, put = (d, extra) => signPole(M, X, Z, gy, pts[i0 * 2] + tx * d + nxv * off, pts[i0 * 2 + 1] + tz * d + nzv * off, tx, tz, nxv, nzv, null, 0, '', null, extra);
+      if (!(fl & 1)) { if ((out.nGive || 0) < 30) { const { head, nxt } = adjOf(G); let deg = 0, bigger = false; for (let h = head[node]; h >= 0; h = nxt[h]) { const e = h >> 1; if (e === id) continue; deg++; if ((RANKOF[G.classes[G.cls[e]]] || 0) > rank) bigger = true; } if (deg >= 2 && bigger) { put(4, { kind: 'give' }); out.nGive = (out.nGive || 0) + 1; } } }
+      else if (L >= 36 && rank >= 3) { const nm = G.names && G.name ? G.names[G.name[id]] : null, rf = nm && nm.ref; if (rf && rank >= 4 && (out.nRef || 0) < 10 && hash(id * 31 + end) < 0.5) { put(26, { kind: 'ref', ref: rf }); out.nRef = (out.nRef || 0) + 1; } else if ((out.nCam || 0) < 6 && hash(id * 57 + end) < 0.25) { put(32, { kind: 'cam' }); out.nCam = (out.nCam || 0) + 1; } }
+    }
+    /* curve chevrons: where the road turns more than 29 degrees inside 24 m (not near its ends), a chevron board on the outside of the curve, 30 m apart at most; two-sided so each direction sees its own */
+    if (SIGNATLAS && !deck && !sunk && lay === 0 && ['trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 6 && F.n >= 4 && (out.nChev || 0) < 30) {
+      let lastArc = -99; const total = F.arc[F.n - 1];
+      for (let i = 1; i < F.n - 1 && (out.nChev || 0) < 30; i++) { const s0 = F.arc[i]; if (s0 < 14 || s0 > total - 14 || s0 - lastArc < 30) continue;
+        let j0 = i; while (j0 > 0 && s0 - F.arc[j0] < 12) j0--; let j1 = i; while (j1 < F.n - 1 && F.arc[j1] - s0 < 12) j1++;
+        const ax = pts[i * 2] - pts[j0 * 2], az = pts[i * 2 + 1] - pts[j0 * 2 + 1], bx = pts[j1 * 2] - pts[i * 2], bz = pts[j1 * 2 + 1] - pts[i * 2 + 1], la = Math.hypot(ax, az), lb = Math.hypot(bx, bz); if (la < 5 || lb < 5) continue;
+        const cr = (ax * bz - az * bx) / (la * lb), dt = (ax * bx + az * bz) / (la * lb), ang = Math.atan2(Math.abs(cr), dt); if (ang < 0.5) continue;
+        let hx = ax / la + bx / lb, hz = az / la + bz / lb; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl; const left = cr < 0, ox = left ? -hz : hz, oz = left ? hx : -hx;          // heading of travel; outside of the curve (a left turn bends away from the right-hand side)
+        signPole(M, X, Z, gy, pts[i * 2] + ox * (hw + 1.0), pts[i * 2 + 1] + oz * (hw + 1.0), -hx, -hz, hz, -hx, null, 0, '', null, { kind: 'chev', dir: left ? 'left' : 'right' }); out.nChev = (out.nChev || 0) + 1; lastArc = s0; }
     }
     /* lane marks: a dashed line on the centre of a two-way street, between the lanes of a one-way street; none near a junction (the piece ends that are real nodes) */
     if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) {
