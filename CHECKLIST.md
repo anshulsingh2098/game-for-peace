@@ -124,3 +124,4 @@ Open the browser console (F12): nothing red except known favicon 404s.
 - [ ] Add to Home Screen: Android Chrome shows the install box from the title menu button; iPhone Safari shows the Share steps. After adding, the icon opens full screen with no browser bars, landscape.
 - [ ] Phone layout at a station (Mumbai start): the departures board is a small strip at the top, the controls are not covered, the round map is under the speed readout, and the title menu fits without scrolling.
 - [ ] Tuner: open `tuner.html` on the live site, change a value, Publish with the password, reload the game: the value is used. A wrong password is refused.
+- [ ] Lite (Delhi only): open the site on a phone and a laptop; the title says Play: Delhi, no India map or city list; the Download buttons appear (not on iPhone), the progress reaches 100 percent, and the game then opens in airplane mode.

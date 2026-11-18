@@ -183,8 +183,9 @@
 (function () {
   try {
     var q = new URLSearchParams(location.search), saved = {}; try { saved = JSON.parse(localStorage.getItem('gfp-next') || '{}'); } catch (e) {}
-    var city = q.get('city') === 'delhi' || (!q.get('city') && !q.get('india') && !q.get('loc') && !q.get('c') && q.has('play') && saved.enclave === 'delhi');
-    var C = 'assets/cities/delhi/', I = 'assets/india/', files = city ? [I + 'skeleton.json', C + 'manifest.json', C + 'identity.json', C + 'landmarks.json', C + 'transit.json', C + 'graph.json'] : [I + 'skeleton.json', I + 'rails.json', I + 'trains.json', I + 'terrain.json', I + 'terrain.bin.gz'];
+    var lite = !/[?&]build=full(&|$)/.test(location.search);          // Lite (src/core/build.js): Delhi only, no India files
+    var city = lite || q.get('city') === 'delhi' || (!q.get('city') && !q.get('india') && !q.get('loc') && !q.get('c') && q.has('play') && saved.enclave === 'delhi');
+    var C = 'assets/cities/delhi/', I = 'assets/india/', files = city ? (lite ? [] : [I + 'skeleton.json']).concat([C + 'manifest.json', C + 'identity.json', C + 'landmarks.json', C + 'transit.json', C + 'graph.json']) : [I + 'skeleton.json', I + 'rails.json', I + 'trains.json', I + 'terrain.json', I + 'terrain.bin.gz'];
     files.forEach(function (u) { var l = document.createElement('link'); l.rel = 'preload'; l.as = 'fetch'; l.href = u; l.crossOrigin = 'anonymous'; document.head.appendChild(l); });
   } catch (e) { /* no preload, the game still loads */ }
 })();

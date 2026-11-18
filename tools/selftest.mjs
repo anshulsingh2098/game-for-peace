@@ -1327,4 +1327,19 @@ test('gzfetch: the gzip copy is used and unpacked, a host that already unpacked 
   same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': gz })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': data })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin': data })), data);
   await assert.rejects(() => G.fetchGrid('x.bin', mk({})));
 });
+test('offline download: the list is split into core and Delhi, sizes add up, the label is readable, the state follows the stored version', async () => {
+  const O = await import('../src/ui/offline.js'), m = { version: 'v2', files: [{ p: './', s: 0, g: 'core' }, { p: 'a.js', s: 3000000, g: 'core' }, { p: 'assets/cities/delhi/t.json', s: 70000000, g: 'delhi' }] };
+  assert.equal(O.plan(m, 'core').files.length, 2); assert.equal(O.plan(m, 'delhi').bytes, 70000000); assert.equal(O.plan(null, 'core').bytes, 0);
+  assert.equal(O.label(70000000), '70 MB'); assert.equal(O.label(3000000), '3 MB');
+  const store = {}; globalThis.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
+  try { assert.equal(O.stateOf('core', m), 'none'); store['gfp-offline'] = JSON.stringify({ core: 'v2', delhi: 'v1' }); assert.equal(O.stateOf('core', m), 'ready'); assert.equal(O.stateOf('delhi', m), 'old'); } finally { delete globalThis.localStorage; }
+  const sw = (await import('node:fs')).readFileSync(new URL('../sw.js', import.meta.url), 'utf8'); assert.ok(/k !== OFFLINE/.test(sw) && /offline-download/.test(sw), 'the service worker keeps the offline cache and answers the download message');
+});
+test('Lite build: Delhi only by default (no India files in the deploy list, none preloaded), the full game stays reachable with ?build=full', async () => {
+  const B = await import('../src/core/build.js'), fs = await import('node:fs'), rd = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  assert.equal(B.BUILD, 'lite'); assert.equal(B.LITE, true);
+  assert.ok(/LITE_SKIP = \('assets\/india\/',\)/.test(rd('tools/stage_cloudflare.py')) && /build == 'lite'/.test(rd('tools/stage_cloudflare.py')), 'the stage script leaves assets/india out of Lite');
+  assert.ok(/var lite = !\/\[\?&\]build=full/.test(rd('index.html')) && /lite \? \[\]/.test(rd('index.html')), 'the page preloads no India file in Lite');
+  const m = rd('src/main.js'); assert.ok(/const cityMode = LITE \|\|/.test(m) && /\(q\.get\('india'\) \|\| wantWorld\) && !LITE/.test(m) && /cityMode && !LITE\) Promise\.all/.test(m), 'main.js starts Delhi and reads no India file in Lite');
+});
 console.log(`\n${passed} checks passed`);

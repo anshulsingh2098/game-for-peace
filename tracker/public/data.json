@@ -1,5 +1,5 @@
 {
- "commit": "6c2de81",
+ "commit": "f303d6a",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -386,6 +386,14 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a0bba72f",
+     "t": "A-2026-11-19-01 Lite build (Delhi only in the browser) and the Download-for-offline button",
+     "d": "review the three shared-file edits; mark B14 as covered or tell me what is missing. Deploy the Lite build with python tools/stage_cloudflare.py --out <folder>/public (Lite is the default) then node tools/bundle.mjs <folder>/public as before.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-19, from Rajul's Claude"
+    },
+    {
      "id": "ad7ec071",
      "t": "A-2026-11-18-26: trees redone, Metro-through-buildings fix, asset cache, engine sound start",
      "d": "Anshul's Claude: T1 continues from part 1; C0 first for the remaining conflicts; do not re-add a synthesised engine start.",
@@ -576,14 +584,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-23, from Rajul's Claude"
-    },
-    {
-     "id": "ac78e522",
-     "t": "Railway realism: ground, trains, timetable, boards, announcements, sound",
-     "d": "terrain.height/drive now also ask the rail grader (a Set lookup first, so cheap). The multi-level road session must not break that order (road grade first, then rail where the road did not change the height).",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-22, from Rajul's Claude"
     }
    ]
   ],
@@ -643,6 +643,54 @@
   [
    "Anshul: on his branches, not in main yet",
    [
+    {
+     "id": "a9cbd8d8",
+     "t": "L1, L2: look at six junctions, thicker stop line, mark both in progress",
+     "d": "On his branch vehicle/cars-and-gears since 2026-11-18, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/cars-and-gears 80afcc1"
+    },
+    {
+     "id": "a5a6898a",
+     "t": "P3: balconies, wall AC units, cornice and the Connaught Place colonnade in the near-only detail mesh",
+     "d": "On his branch vehicle/cars-and-gears since 2026-11-18, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/cars-and-gears d676514"
+    },
+    {
+     "id": "a37561ad",
+     "t": "P3: roof parapets, water tanks, AC units and antennas in their own near-only mesh",
+     "d": "On his branch vehicle/cars-and-gears since 2026-11-18, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/cars-and-gears e8735b1"
+    },
+    {
+     "id": "a5c9e973",
+     "t": "P1 and P2 seen in the browser: redraw parked cars, add ?fillers=0 and ?paint=0, log",
+     "d": "On his branch vehicle/cars-and-gears since 2026-11-18, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/cars-and-gears b010daa"
+    },
+    {
+     "id": "a8c5c277",
+     "t": "P2: stop lines, lane arrows, speed breakers, road wear and medians in the existing tile meshes",
+     "d": "On his branch vehicle/cars-and-gears since 2026-11-18, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/cars-and-gears e392186"
+    },
+    {
+     "id": "af0134b6",
+     "t": "P2: scripted street-driving tool; fix unipoles in carriageways and buildings mapped onto roads",
+     "d": "On his branch vehicle/cars-and-gears since 2026-11-18, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/cars-and-gears 90d7744"
+    },
     {
      "id": "a33b166e",
      "t": "Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt models, ride height, moon, birds and crickets",
@@ -1462,11 +1510,24 @@
      "s": "todo",
      "w": "You",
      "r": "CHECKLIST.md"
+    },
+    {
+     "id": "ad972d5e",
+     "t": "Lite (Delhi only): open the site on a phone and a laptop; the title says Play: Delhi, no India map or city lis",
+     "d": "Lite (Delhi only): open the site on a phone and a laptop; the title says Play: Delhi, no India map or city list; the Download buttons appear (not on iPhone), the progress reaches 100 percent, and the game then opens in airplane mode.",
+     "s": "todo",
+     "w": "You",
+     "r": "CHECKLIST.md"
     }
    ]
   ]
  ],
  "prs": [
+  [
+   "100",
+   "Trees by species (clumps, shadows), Metro through buildings fixed, asset cache, engine sound start",
+   "merged"
+  ],
   [
    "99",
    "Docs: handoff, status, decisions, task T1 (trees), log after merging PRs 93-98",
@@ -1661,33 +1722,32 @@
    "61",
    "D6: Delhi Metro and railway stations in the city enclave",
    "merged"
-  ],
-  [
-   "60",
-   "D5b: traffic in the Delhi enclave; stage script includes the city pack",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-17: Smoother game: adaptive resolution keeps the frame rate up on weaker… (0 commits not in main, 351 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 39 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 88 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 90 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 86 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 88 behind main)"
   ]
  ],
- "tests": null,
+ "tests": "115",
  "facts": [
   [
    "Tracker data",
    "built from the repo files (phases, team logs, checklist, pull requests, branches); rebuild with node tools/build_tracker.mjs"
+  ],
+  [
+   "Self-test",
+   "115 checks passing"
   ]
  ],
- "generated": "2026-11-17T20:41:06.830Z"
+ "generated": "2026-11-18T19:28:49.398Z"
 }
