@@ -1,3 +1,10 @@
+## 2026-11-20 03:00  A-2026-11-20-02  Road condition by area, road signs, defect notes
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/tilemesh.js` (area grime, dust, leaflets, potholes, rubbish piles, sign poles and atlas, new meshes `rsign` and `junk`), `src/world/city/cityworld.js` (the two meshes and their view ranges), `docs/CP_MATCH_NOTES.md` (defects and improvements seen), `assets/ASSETS.md`.
+Evidence: implemented; self-test 116 checks; seen in a visible pane in a clean area (CP) and a messy one (Karol Bagh); bench 402 calls, 335 k triangles, p95 11.2 ms desktop. NOT done: a phone, the messy side at full density, signs at non-signal junctions, the hoarding slab defect, the governor trips to Eco; see the notes file for the list.
+For the other stream: nothing required; the hoarding geometry (`streetlife.js`) and the Eco trips (`main.js` `gov`) are in the notes if you want them.
+Status: info
+
 ## 2026-11-20 00:30  A-2026-11-20-01  Steering lock, car and lane proportion, wider CP circles, road wear (owner's driving report)
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: Stream B: `src/vehicle/defs.js` car `steerMax` 0.50 to 0.62, `scale` 0.92 to 0.88; new `tools/measure_turns.mjs` (turn radius at 10 to 80 km/h, key=value overrides). Stream A: lane widths up again (`LANE_W`, `pack.js` and `packio.mjs`); CP circles at least 12 m and 16 m (`smooth.js`, `CP_WIDTH`); road wear (`wearDetail`, `tilemesh.js`); audit baseline regenerated (`footway_run` 94 to 120).
