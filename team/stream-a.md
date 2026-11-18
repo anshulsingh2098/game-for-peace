@@ -12,13 +12,6 @@ Evidence: implemented; self-test 115 checks; frame cost MEASURED in a visible Br
 For the other stream: nothing.
 Status: info
 
-## 2026-11-19 17:00  A-2026-11-19-03  P1 third increment: paved forecourts
-Branch: claude/delhi-p1-infill  Commit: see the PR
-What changed: `src/world/city/infill.js` (Stream A): after the lots, open ground inside dense blocks (areas oldDelhi, market, default, cp, business) is cut into 8 m cells that are clear of streets (2.5 m), parks and buildings (1.2 m), merged along rows into rectangles (`tile`-level array `yards`, at most 700 a tile); `src/world/city/tilemesh.js` draws them as pavement quads (same material and height as the pavements, +3 cm); `tools/measure_voids.mjs` reports voids still bare after the yards; `tools/selftest.mjs` (yards inside blocks, not under buildings, deterministic); status lines in the two plan docs.
-Evidence: implemented; self-test 115 checks; by script: Chandni Chowk 1,116 yards (19 ha), Connaught Place 1,276, Lajpat Nagar 419, Karol Bagh 0, Khan Market 0; seen in a browser: a cobbled forecourt between buildings in Chandni Chowk (x 2124, z -4772). NOT done or measured: frame cost (the pane was hidden; run `?play&city=delhi&q=med&bench=30` visibly), trees, parked cars and stalls in the yards, plazas, phones, a person's judgement.
-For the other stream: nothing.
-Status: info
-
 ## 2026-11-19 15:00  A-2026-11-19-02  P1 second increment: interiors of big blocks, and a void measuring tool
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `src/world/city/infill.js` (Stream A file): a second pass cuts each block into back-to-back rows of lots along its longest edge with 3.2 m lanes, same acceptance test as the frontage lots (cap 1,800 interior lots a tile, 4,000 in all; `interior: true` on the record; stats `iTry`, `iOut`, `iStreet`, `iBld`, `iMargin`); new `tools/measure_voids.mjs` (100 m cells of the 5 sample areas); `tools/selftest.mjs` (interior lots checked by the existing validity test); status lines in `docs/DELHI_POLISH_PLAN.md` and `docs/NEXT_PHASES.md`.
