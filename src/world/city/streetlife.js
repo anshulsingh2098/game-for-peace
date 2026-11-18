@@ -129,7 +129,7 @@ export function* buildStreetLife(tile, ctx, out) {
   }
   /* ---- hoardings at signalled junctions: a unipole beside the street 12 m before the signal ---- */
   for (const f of tile.furniture || []) { if (f.kind !== 'signal') continue; const ns = nearest(f.x, f.z); if (!ns) continue; const A = ID.areaAt(f.x, f.z), k = Math.floor(f.x * 3 + f.z * 7); if (rnd(k, 50) > A.ads * 1.4) continue;
-    const dir = rnd(k, 51) < 0.5 ? 1 : -1, off = ns.hw + 3.2, side = rnd(k, 52) < 0.5 ? 1 : -1, px = f.x + ns.tx * 14 * dir + -ns.tz * off * side, pz = f.z + ns.tz * 14 * dir + ns.tx * off * side; if (insideBuilding(px, pz, 2)) continue;
+    const dir = rnd(k, 51) < 0.5 ? 1 : -1, off = ns.hw + 3.2, side = rnd(k, 52) < 0.5 ? 1 : -1, px = f.x + ns.tx * 14 * dir + -ns.tz * off * side, pz = f.z + ns.tz * 14 * dir + ns.tx * off * side; if (insideBuilding(px, pz, 2) || inRoad(px, pz, 0.9)) continue;      // 14 m along the street the pole can stand in a crossing street or on a bend: found by tools/drive_streets.mjs
     const [lx, lz] = L(px, pz); box(M.prop, lx, gy, lz, 0.6, 9.2, 0.6, 1, 0, C(PALE.steel)); box(M.prop, lx, gy + 7, lz, 0.3 + 8.2 * Math.abs(ns.tz), 0.2, 0.3 + 8.2 * Math.abs(ns.tx), 1, 0, C(0x4a4e52));
     for (const f2 of [1, -1]) { const c = art.adFor(rnd(k, 53 + f2)); board(M.ad, lx + ns.tx * 0.45 * f2, gy + 9.2, lz + ns.tz * 0.45 * f2, ns.tx * f2, ns.tz * f2, 8, 4, WHITE, [c.u0, c.v0, c.u1, c.v1]); } st.hoardings++; circle(px, pz, 0.5); }
   /* ---- bus shelters at the stops of the transit data ---- */

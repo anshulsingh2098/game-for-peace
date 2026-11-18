@@ -838,6 +838,12 @@ test('city fillers (P1): empty ground inside a block gets paving, trees and cars
   assert.ok(F.fillerRects(mk(), inf, o('dda')).some(r => r.cars.length) && !F.fillerRects(mk(), inf, o('cp')).some(r => r.cars.length), 'parking has cars, a plaza has none');
   const none = F.fillerRects({ ...mk(), blocks: [{ ring: sq(3000, -2000, 3990, -1010), holes: [], landuse: 'park' }] }, [], o('default')); assert.equal(none.length, 0, 'no fillers in a park block');
 });
+test('city rules (P2): a mapped building whose facade is within 1.3 m of a street centre line for 6 m or more is not drawn; one 2.5 m away, a short corner and a landmark are kept', async () => {
+  const { buildingsToSkip } = await import('../src/world/city/rules.js'), G = { classes: ['residential'], cls: new Uint8Array([0]), layer: new Int8Array([0]) }, sq = (x0, z0, x1, z1) => [x0, z0, x1, z0, x1, z1, x0, z1, x0, z0];
+  const on = { id: 1, ring: sq(10, 1.0, 40, 12) }, near = { id: 2, ring: sq(50, 2.5, 80, 12) }, corner = { id: 3, ring: sq(90, 1.0, 93, 12) }, lm = { id: 4, ring: sq(100, 1.0, 130, 12), landmark: 'x' }, through = { id: 5, ring: sq(140, -5, 170, 5) };
+  const skip = buildingsToSkip({ buildings: [on, near, corner, lm, through], parks: [], streets: [{ id: 0, pts: [0, 0, 200, 0] }] }, G);
+  assert.ok(skip.has(on), 'a facade 1.0 m from the centre line goes'); assert.ok(!skip.has(near), 'a facade 2.5 m away stays'); assert.ok(!skip.has(corner), 'a 3 m corner stays'); assert.ok(!skip.has(lm), 'a landmark stays'); assert.ok(skip.has(through), 'a building the street runs through still goes');
+});
 test('audit R05: a handle only resolves in the registry or pool that made it; a long stall is counted as dropped time (R16)', () => {
   const A = new Registry({ car: 4 }), B = new Registry({ car: 4 }), ha = A.create('car', { n: 'a' }), hb = B.create('car', { n: 'b' });
   assert.notEqual(ha, hb, 'two registries never hand out the same number'); assert.equal(B.get(ha), null, 'a foreign handle does not resolve'); assert.equal(B.destroy(ha), null); assert.equal(A.get(ha).n, 'a'); assert.equal(B.get(hb).n, 'b');
