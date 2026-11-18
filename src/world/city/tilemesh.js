@@ -224,7 +224,7 @@ export function* buildTileSteps(tile, ctx) {
     if (!deck && !sunk && ['primary', 'secondary', 'tertiary', 'residential'].includes(cls) && w >= 4) for (const end of [0, 1]) {
       if (clip & (end ? 2 : 1)) continue; const node = end ? G.b[id] : G.a[id], fl = G.nodeFlags[node]; if (!(fl & 3)) continue; const nx0 = G.xz[node * 2], nz0 = G.xz[node * 2 + 1], e0 = end ? pts.length - 2 : 0; if (Math.hypot(pts[e0] - nx0, pts[e0 + 1] - nz0) > 3) continue;
       const i0 = end ? F.n - 1 : 0, i1 = end ? F.n - 2 : 1, dx = pts[i1 * 2] - pts[i0 * 2], dz = pts[i1 * 2 + 1] - pts[i0 * 2 + 1], L = Math.hypot(dx, dz) || 1, tx = dx / L, tz = dz / L, cx = pts[i0 * 2] + tx * 5, cz = pts[i0 * 2 + 1] + tz * 5, nxv = -tz, nzv = tx;
-      for (let o = -hw + 0.5; o < hw - 0.3; o += 1.0) { const a = [cx + nxv * o - tx * 1.4, cz + nzv * o - tz * 1.4], b = [cx + nxv * (o + 0.5) - tx * 1.4, cz + nzv * (o + 0.5) - tz * 1.4], c2 = [cx + nxv * (o + 0.5) + tx * 1.4, cz + nzv * (o + 0.5) + tz * 1.4], d = [cx + nxv * o + tx * 1.4, cz + nzv * o + tz * 1.4]; const m = M.mark, y = gy; const v0 = m.v(X(a[0]), y, Z(a[1]), 0, 1, 0, MARK), v1 = m.v(X(b[0]), y, Z(b[1]), 0, 1, 0, MARK), v2 = m.v(X(c2[0]), y, Z(c2[1]), 0, 1, 0, MARK), v3 = m.v(X(d[0]), y, Z(d[1]), 0, 1, 0, MARK); m.tri(v0, v1, v2, 0, 1, 0); m.tri(v0, v2, v3, 0, 1, 0); }
+      for (let o = -hw + 0.5; o < hw - 0.3; o += 1.0) { const a = [cx + nxv * o - tx * 1.4, cz + nzv * o - tz * 1.4], b = [cx + nxv * (o + 0.5) - tx * 1.4, cz + nzv * (o + 0.5) - tz * 1.4], c2 = [cx + nxv * (o + 0.5) + tx * 1.4, cz + nzv * (o + 0.5) + tz * 1.4], d = [cx + nxv * o + tx * 1.4, cz + nzv * o + tz * 1.4]; const m = M.mark, y = gy + LIFT.mark; const v0 = m.v(X(a[0]), y, Z(a[1]), 0, 1, 0, MARK), v1 = m.v(X(b[0]), y, Z(b[1]), 0, 1, 0, MARK), v2 = m.v(X(c2[0]), y, Z(c2[1]), 0, 1, 0, MARK), v3 = m.v(X(d[0]), y, Z(d[1]), 0, 1, 0, MARK); m.tri(v0, v1, v2, 0, 1, 0); m.tri(v0, v2, v3, 0, 1, 0); }
     }
     /* lane marks: a dashed line on the centre of a two-way street, between the lanes of a one-way street; none near a junction (the piece ends that are real nodes) */
     if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) {
@@ -232,7 +232,7 @@ export function* buildTileSteps(tile, ctx) {
       const total = F.arc[F.n - 1], lo = clip & 1 ? 0 : 9, hi = total - (clip & 2 ? 0 : 9);
       const at = sa => { let i = 0; while (i + 2 < F.n && F.arc[i + 1] < sa) i++; const f = Math.max(0, Math.min(1, (sa - F.arc[i]) / Math.max(0.01, F.arc[i + 1] - F.arc[i]))), j = i + 1; return { x: pts[i * 2] + (pts[j * 2] - pts[i * 2]) * f, z: pts[i * 2 + 1] + (pts[j * 2 + 1] - pts[i * 2 + 1]) * f, nx: F.nx[i] + (F.nx[j] - F.nx[i]) * f, nz: F.nz[i] + (F.nz[j] - F.nz[i]) * f, y: H[i] + (H[j] - H[i]) * f }; };
       for (const off of divs) for (let s0 = lo; s0 + 3 < hi; s0 += 9) {
-        const m = M.mark; let prev = -1; for (let k = 0; k <= 2; k++) { const q = at(s0 + k * 1.5), y = gy + q.y, e = 0.08;
+        const m = M.mark; let prev = -1; for (let k = 0; k <= 2; k++) { const q = at(s0 + k * 1.5), y = gy + q.y + LIFT.mark, e = 0.08;
           const va = m.v(X(q.x + q.nx * (off - e)), y, Z(q.z + q.nz * (off - e)), 0, 1, 0, MARK), vb = m.v(X(q.x + q.nx * (off + e)), y, Z(q.z + q.nz * (off + e)), 0, 1, 0, MARK); if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va; }
       }
     }
