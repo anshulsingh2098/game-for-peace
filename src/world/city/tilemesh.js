@@ -195,6 +195,14 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, oneway, hi) 
 }
 const WHITE_C = new THREE.Color(0xffffff);
 
+/* a round fluted column for the CP colonnade (owner's photo R1: a shaft about 0.8 to 1 m across on a stepped base under a capital with a square top): 8-sided shaft, alternate sides a shade darker to read as flutes, a plinth, an echinus ring and a square abacus; about 52 triangles, so it goes in its own mesh `colm` that is drawn only within 170 m (the thin posts in the building mesh are the far fallback and stay hidden inside the shaft) */
+function roundColumn(J, X, Z, cx, y0, cz, h, C) {
+  junkBox(J, X, Z, cx, y0, cz, 1.0, 0.4, 1.0, 0, C);                                         // plinth
+  const ys = y0 + 0.4, yt = y0 + h - 0.55, R = 0.40, N = 8;
+  for (let k = 0; k < N; k++) { const a0 = k * Math.PI * 2 / N, a1 = (k + 1) * Math.PI * 2 / N, am = (a0 + a1) / 2, nx = Math.cos(am), nz = Math.sin(am), cc = k % 2 ? C : C.clone().multiplyScalar(0.9), p0 = [cx + Math.cos(a0) * R, cz + Math.sin(a0) * R], p1 = [cx + Math.cos(a1) * R, cz + Math.sin(a1) * R]; const v0 = J.v(X(p0[0]), ys, Z(p0[1]), nx, 0, nz, cc), v1 = J.v(X(p1[0]), ys, Z(p1[1]), nx, 0, nz, cc), v2 = J.v(X(p1[0]), yt, Z(p1[1]), nx, 0, nz, cc), v3 = J.v(X(p0[0]), yt, Z(p0[1]), nx, 0, nz, cc); J.tri(v0, v1, v2, nx, 0, nz); J.tri(v0, v2, v3, nx, 0, nz); }
+  for (let k = 0; k < N; k++) { const a0 = k * Math.PI * 2 / N, a1 = (k + 1) * Math.PI * 2 / N, am = (a0 + a1) / 2, nx = Math.cos(am), nz = Math.sin(am), R2 = 0.54; const v0 = J.v(X(cx + Math.cos(a0) * R), yt, Z(cz + Math.sin(a0) * R), nx, 0.4, nz, C), v1 = J.v(X(cx + Math.cos(a1) * R), yt, Z(cz + Math.sin(a1) * R), nx, 0.4, nz, C), v2 = J.v(X(cx + Math.cos(a1) * R2), yt + 0.25, Z(cz + Math.sin(a1) * R2), nx, 0.4, nz, C), v3 = J.v(X(cx + Math.cos(a0) * R2), yt + 0.25, Z(cz + Math.sin(a0) * R2), nx, 0.4, nz, C); J.tri(v0, v1, v2, nx, 0.4, nz); J.tri(v0, v2, v3, nx, 0.4, nz); }
+  junkBox(J, X, Z, cx, yt + 0.25, cz, 1.05, 0.3, 1.05, 0, C);                                // abacus
+}
 /* a painted road arrow (straight or turning) in the marking layer: tail at (cx, cz), pointing along (dx, dz), (nx, nz) the sideways unit vector; turn: -1 turns toward -n, +1 toward +n, 0 straight. Shaft 0.24 m wide, head 0.9 m wide. */
 function roadArrow(m, X, Z, y, cx, cz, dx, dz, nx, nz, turn) {
   const tri = (p, q, r) => { const a = m.v(X(p[0]), y, Z(p[1]), 0, 1, 0, MARK), b = m.v(X(q[0]), y, Z(q[1]), 0, 1, 0, MARK), c = m.v(X(r[0]), y, Z(r[1]), 0, 1, 0, MARK); m.tri(a, b, c, 0, 1, 0); }, quad = (p0, p1, p2, p3) => { tri(p0, p1, p2); tri(p0, p2, p3); };
@@ -204,7 +212,7 @@ function roadArrow(m, X, Z, y, cx, cz, dx, dz, nx, nz, turn) {
   const k = Math.SQRT1_2, ex = dx * k + nx * turn * k, ez = dz * k + nz * turn * k, e1 = shaft(cx, cz, dx, dz, 1.5, 0.12), e2 = shaft(e1[0], e1[1], ex, ez, 1.1, 0.12); head(e2[0], e2[1], ex, ez);
 }
 export function* buildTileSteps(tile, ctx) {
-  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), rsign: new Mesher(), junk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), rsign: new Mesher(), junk: new Mesher(), colm: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y, uvs = 11) => {                                           // a polygon (ring and holes in metres) lying at height y; uvs: metres one texture repeat covers
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
@@ -351,14 +359,15 @@ export function* buildTileSteps(tile, ctx) {
   let cornN = 0, arcN = 0, nArc = 0;
   /* the CP colonnade (reference N19: white columns, a continuous shaded walk, shop bays behind): a paved walk D m deep along the wall, square columns every ~3.6 m at its outer edge, and a slab over it at 5.6 m (the photos R2 and R4: columns about 3 persons high, about 0.7 m across; an estimate) whose underside is darker; one wall is about 20 triangles per bay */
   const arcade = (B, ax, az, bx, bz, nx, nz, l, y0, D, k) => {
-    const wc = shade(0xf1ede2, 0.94 + 0.08 * k), sc = wc.clone().multiplyScalar(0.62), pc = shade(0x9c978c, 0.9 + 0.2 * k), H = 5.6, T = 0.7, TH = 0.5, tx = (bx - ax) / l, tz = (bz - az) / l, nb = Math.max(2, Math.round(l / 3.6)), P = (u, d) => [ax + tx * u + nx * d, az + tz * u + nz * d];
+    const wc = shade(0xf1ede2, 0.94 + 0.08 * k), sc = wc.clone().multiplyScalar(0.62), pc = shade(0x9c978c, 0.9 + 0.2 * k), H = 5.6, T = 0.5, TH = 0.5, tx = (bx - ax) / l, tz = (bz - az) / l, nb = Math.max(2, Math.round(l / 3.6)), P = (u, d) => [ax + tx * u + nx * d, az + tz * u + nz * d];
     const face = (p, q, ya, yb, c, wx, wz) => { let a = p, b = q; if ((-(q[1] - p[1])) * wx + (q[0] - p[0]) * wz < 0) { a = q; b = p; } const v = (pt, y) => B.v(X(pt[0]), y, Z(pt[1]), wx, 0, wz, c, 0.06, 0.06); const q0 = v(a, ya), q1 = v(b, ya), q2 = v(b, yb), q3 = v(a, yb); B.tri(q0, q1, q2, wx, 0, wz); B.tri(q0, q2, q3, wx, 0, wz); };
     const flat = (pts, y, c, up) => { const idx = pts.map(pt => B.v(X(pt[0]), y, Z(pt[1]), 0, up, 0, c, 0.06, 0.06)); const cr = (pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[1][1] - pts[0][1]) * (pts[2][0] - pts[0][0]); const o = (cr < 0) === (up > 0) ? 0 : 1; B.tri(idx[0], idx[o ? 2 : 1], idx[o ? 1 : 2], 0, up, 0); B.tri(idx[0], idx[o ? 3 : 2], idx[o ? 2 : 3], 0, up, 0); };
     const A0 = P(0, 0), A1 = P(l, 0), A2 = P(l, D), A3 = P(0, D), ye = y0 + H;
     const wv = (pt) => M.walk.v(X(pt[0]), gy + LIFT.walk + 0.012, Z(pt[1]), 0, 1, 0, pc, X(pt[0]) / TEX_WALK, Z(pt[1]) / TEX_WALK), w = [wv(A0), wv(A1), wv(A2), wv(A3)]; M.walk.tri(w[0], w[3], w[2], 0, 1, 0); M.walk.tri(w[0], w[2], w[1], 0, 1, 0);   // paved walk
     flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz);                                           // soffit, top of the slab and its front fascia
     face(A0, A3, ye, ye + TH, wc, tx, tz); face(A1, A2, ye, ye + TH, wc, -tx, -tz);
-    for (let q = 0; q <= nb; q++) { const u = q === 0 ? T * 0.5 : q === nb ? l - T * 0.5 : l * q / nb, c0 = P(u - T / 2, D - T), c1 = P(u + T / 2, D - T), c2 = P(u + T / 2, D), c3 = P(u - T / 2, D);                // columns
+    for (let q = 0; q <= nb; q++) { const u = q === 0 ? 0.5 : q === nb ? l - 0.5 : l * q / nb, rc = P(u, D - 0.55); roundColumn(M.colm, X, Z, rc[0], y0, rc[1], H, wc);       // the round column (near view)
+      const c0 = P(u - T / 2, D - 0.8), c1 = P(u + T / 2, D - 0.8), c2 = P(u + T / 2, D - 0.3), c3 = P(u - T / 2, D - 0.3);                // columns
       face(c3, c2, y0, ye, wc, nx, nz); face(c0, c3, y0, ye, sc, -tx, -tz); face(c1, c2, y0, ye, wc, tx, tz); }
     nArc++;
   };
@@ -445,7 +454,7 @@ export function makeMaterials() {
     g.strokeStyle = '#a79f8c'; g.lineWidth = 3; for (let k = 0; k <= 4; k++) { g.beginPath(); g.moveTo(k * S, 0); g.lineTo(k * S, 512); g.stroke(); g.beginPath(); g.moveTo(0, k * S); g.lineTo(512, k * S); g.stroke(); } return c; })();
   const plaza = (() => { const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex(plazaTex), roughness: 0.6, metalness: 0, envMapIntensity: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); return m; })();
 const rsign = (() => { const A = makeSignAtlas(); const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: A.tex, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide, envMapIntensity: 0.4, alphaTest: 0.5 }); return m; })(), junk = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.2 });
-  const mats = { ground: dirt, plaza, rsign, junk, park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
+  const mats = { ground: dirt, plaza, rsign, junk, colm: junk, park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
   mats.setNight = on => { for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
   return mats;
 }
