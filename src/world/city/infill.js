@@ -123,5 +123,6 @@ export function* infillSteps(tile, o) {
       for (const [dx, dz] of [[-1.2, 0], [1.2, 0], [0, -1.2], [0, 1.2]]) { if (inBuilding(x - dx, z + YC / 2 + dz) || inBuilding(x + YC + dx, z + YC / 2 + dz) || inBuilding(x + YC / 2 + dx, z - dz) || inBuilding(x + YC / 2 + dx, z + YC + dz)) return false; } return true; };
     for (let gz = gz0; gz <= gz1 && yards.length < YARD_MAX; gz++) { let run = -1; for (let gx = gx0; gx <= gx1 + 1; gx++) { const f = gx <= gx1 && free(gx, gz); if (f && run < 0) run = gx; if (!f && run >= 0) { if (gx - run >= 2) yards.push([run * YC, gz * YC, gx * YC, (gz + 1) * YC]); run = -1; } } }
   }
+  out.streetClear = streetClear;                                                                // for the arcades of tilemesh.js (a colonnade is built only where it stays off the carriageway)
   void placed; return out;
 }

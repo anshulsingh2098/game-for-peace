@@ -244,7 +244,20 @@ export function* buildTileSteps(tile, ctx) {
   let infill = []; if (ctx.infill !== false) infill = yield* infillSteps(tile, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nInfill = infill.length; tile.buildings = tile.buildings.concat(infill); yield;
   /* P1 part 3 (infill.js `yards`): open ground left inside the dense blocks is paved, so a forecourt reads as one; own cells of the pavement mesh, same height and texture as the pavements */
   if (infill.yards) { for (const y of infill.yards) { const v = hash(y[0] * 7 + y[1] * 13), c = shade(0x8a867c, 0.85 + 0.3 * v), q = (x, z) => M.walk.v(X(x), gy + LIFT.walk, Z(z), 0, 1, 0, c, X(x) / TEX_WALK, Z(z) / TEX_WALK), a0 = q(y[0], y[1]), a1 = q(y[2], y[1]), a2 = q(y[2], y[3]), a3 = q(y[0], y[3]); M.walk.tri(a0, a3, a2, 0, 1, 0); M.walk.tri(a0, a2, a1, 0, 1, 0); } out.nYards = infill.yards.length; }
-  let cornN = 0;
+  let cornN = 0, arcN = 0, nArc = 0;
+  /* the CP colonnade (reference N19: white columns, a continuous shaded walk, shop bays behind): a paved walk D m deep along the wall, square columns every ~3.6 m at its outer edge, and a slab over it at 4.4 m whose underside is darker; one wall is about 20 triangles per bay */
+  const arcade = (B, ax, az, bx, bz, nx, nz, l, y0, D, k) => {
+    const wc = shade(0xf1ede2, 0.94 + 0.08 * k), sc = wc.clone().multiplyScalar(0.62), pc = shade(0x9c978c, 0.9 + 0.2 * k), H = 4.4, T = 0.5, TH = 0.45, tx = (bx - ax) / l, tz = (bz - az) / l, nb = Math.max(2, Math.round(l / 3.6)), P = (u, d) => [ax + tx * u + nx * d, az + tz * u + nz * d];
+    const face = (p, q, ya, yb, c, wx, wz) => { let a = p, b = q; if ((-(q[1] - p[1])) * wx + (q[0] - p[0]) * wz < 0) { a = q; b = p; } const v = (pt, y) => B.v(X(pt[0]), y, Z(pt[1]), wx, 0, wz, c, 0.06, 0.06); const q0 = v(a, ya), q1 = v(b, ya), q2 = v(b, yb), q3 = v(a, yb); B.tri(q0, q1, q2, wx, 0, wz); B.tri(q0, q2, q3, wx, 0, wz); };
+    const flat = (pts, y, c, up) => { const idx = pts.map(pt => B.v(X(pt[0]), y, Z(pt[1]), 0, up, 0, c, 0.06, 0.06)); const cr = (pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[1][1] - pts[0][1]) * (pts[2][0] - pts[0][0]); const o = (cr < 0) === (up > 0) ? 0 : 1; B.tri(idx[0], idx[o ? 2 : 1], idx[o ? 1 : 2], 0, up, 0); B.tri(idx[0], idx[o ? 3 : 2], idx[o ? 2 : 3], 0, up, 0); };
+    const A0 = P(0, 0), A1 = P(l, 0), A2 = P(l, D), A3 = P(0, D), ye = y0 + H;
+    const wv = (pt) => M.walk.v(X(pt[0]), gy + LIFT.walk + 0.012, Z(pt[1]), 0, 1, 0, pc, X(pt[0]) / TEX_WALK, Z(pt[1]) / TEX_WALK), w = [wv(A0), wv(A1), wv(A2), wv(A3)]; M.walk.tri(w[0], w[3], w[2], 0, 1, 0); M.walk.tri(w[0], w[2], w[1], 0, 1, 0);   // paved walk
+    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz);                                           // soffit, top of the slab and its front fascia
+    face(A0, A3, ye, ye + TH, wc, tx, tz); face(A1, A2, ye, ye + TH, wc, -tx, -tz);
+    for (let q = 0; q <= nb; q++) { const u = q === 0 ? T * 0.5 : q === nb ? l - T * 0.5 : l * q / nb, c0 = P(u - T / 2, D - T), c1 = P(u + T / 2, D - T), c2 = P(u + T / 2, D), c3 = P(u - T / 2, D);                // columns
+      face(c3, c2, y0, ye, wc, nx, nz); face(c0, c3, y0, ye, sc, -tx, -tz); face(c1, c2, y0, ye, wc, tx, tz); }
+    nArc++;
+  };
   for (const b of tile.buildings) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     if (ruled.has(b)) continue;
@@ -257,6 +270,7 @@ export function* buildTileSteps(tile, ctx) {
     for (let i = 0; i < n; i++) { const j = (i + 1) % n, xi = r[i * 2], zi = r[i * 2 + 1], xj = r[j * 2], zj = r[j * 2 + 1]; area += xi * zj - xj * zi; cx += xi; cz += zi; x0 = Math.min(x0, xi); x1b = Math.max(x1b, xi); z0 = Math.min(z0, zi); z1b = Math.max(z1b, zi); }
     const ccw = area > 0;                                                                // the pack says counter-clockwise; walls are built for either
     const anB = ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(r[0], r[1]) : '', corn = !b.infill && !L && hgt >= 9 && (anB === 'cp' || anB === 'lutyens' || anB === 'oldDelhi') && cornN < 140 && (cornN++, true);          // a cornice on the taller buildings of Connaught Place, Lutyens' Delhi and Old Delhi (140 a tile at most: a lip along the roof edge, 6 triangles a wall)
+    const arc = !b.infill && (!L || L.type === 'district') && hgt >= 9 && anB === 'cp';                         // Connaught Place: the colonnade (arcade) in front of the shops, on walls that face a street (200 walls a tile at most)
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n, ax = r[i * 2], az = r[i * 2 + 1], bx = r[j * 2], bz = r[j * 2 + 1], dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 0.05) continue;
       let nx = dz / l, nz = -dx / l; if (!ccw) { nx = -nx; nz = -nz; } const u1 = l / 14.4, v0 = (y0 - gy) / 12.8, v1 = (y1 - gy) / 12.8, y2 = Math.min(y1, y0 + 2.4), AO = 0.6;
@@ -269,6 +283,8 @@ export function* buildTileSteps(tile, ctx) {
       if (corn && l > 2.5) { const cc = shade(wall, 1.12 + 0.1 * hash(b.id * 13 + i)), cd = cc.clone().multiplyScalar(0.78), ox = nx * 0.4, oz = nz * 0.4, yb = y1 - 0.35, yt = y1 + 0.25;
         const f0 = B.v(X(ax + ox), yb, Z(az + oz), nx, 0, nz, cd, 0.06, 0.06), f1 = B.v(X(bx + ox), yb, Z(bz + oz), nx, 0, nz, cd, 0.06, 0.06), f2 = B.v(X(bx + ox), yt, Z(bz + oz), nx, 0, nz, cc, 0.06, 0.06), f3 = B.v(X(ax + ox), yt, Z(az + oz), nx, 0, nz, cc, 0.06, 0.06); B.tri(f0, f1, f2, nx, 0, nz); B.tri(f0, f2, f3, nx, 0, nz);
         const t0 = B.v(X(ax + ox), yt, Z(az + oz), 0, 1, 0, cc, 0.06, 0.06), t1 = B.v(X(bx + ox), yt, Z(bz + oz), 0, 1, 0, cc, 0.06, 0.06), t2 = B.v(X(bx), yt, Z(bz), 0, 1, 0, cc, 0.06, 0.06), t3 = B.v(X(ax), yt, Z(az), 0, 1, 0, cc, 0.06, 0.06); B.tri(t0, t1, t2, 0, 1, 0); B.tri(t0, t2, t3, 0, 1, 0); B.tri(t0, t2, t1, 0, 1, 0); B.tri(t0, t3, t2, 0, 1, 0); }
+      if (arc && l >= 8 && arcN < 200 && infill.streetClear) { const D = 3.4, ok = [0.08, 0.5, 0.92].every(t => infill.streetClear(ax + dx * t + nx * (D + 0.6), az + dz * t + nz * (D + 0.6), 0.6) && infill.streetClear(ax + dx * t + nx * (D * 0.5), az + dz * t + nz * (D * 0.5), 0.4));
+        if (ok) { arcN++; arcade(B, ax, az, bx, bz, nx, nz, l, y0, D, hash(b.id * 29 + i)); } }
       if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
     }
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
@@ -278,7 +294,7 @@ export function* buildTileSteps(tile, ctx) {
       const bx0 = B.p.length / 3; for (const [dx, dz] of [[-hs, -hs], [hs, -hs], [hs, hs], [-hs, hs]]) { B.v(X(rx + dx), y1, Z(rz + dz), 0, 1, 0, tank, 0.06, 0.06); B.v(X(rx + dx), y1 + hh, Z(rz + dz), 0, 1, 0, tank, 0.06, 0.06); }
       for (let k = 0; k < 4; k++) { const k2 = (k + 1) % 4, a = bx0 + k * 2, b2 = bx0 + k2 * 2, mx = (k < 2 ? 0 : 0); void mx; const ex = k === 0 ? 0 : k === 1 ? 1 : k === 2 ? 0 : -1, ez = k === 0 ? -1 : k === 1 ? 0 : k === 2 ? 1 : 0; B.tri(a, b2, b2 + 1, ex, 0, ez); B.tri(a, b2 + 1, a + 1, ex, 0, ez); }
       B.tri(bx0 + 1, bx0 + 3, bx0 + 5, 0, 1, 0); B.tri(bx0 + 1, bx0 + 5, bx0 + 7, 0, 1, 0); }
-    out.nBuildings++; if (x1b - x0 > 2 && z1b - z0 > 2) out.claims.push({ shape: { t: 'rect', x: (x0 + x1b) / 2, z: (z0 + z1b) / 2, hx: (x1b - x0) / 2, hz: (z1b - z0) / 2, yaw: 0 }, kind: 'building', owner: 'building' });
+    out.nArc = nArc; out.nBuildings++; if (x1b - x0 > 2 && z1b - z0 > 2) out.claims.push({ shape: { t: 'rect', x: (x0 + x1b) / 2, z: (z0 + z1b) / 2, hx: (x1b - x0) / 2, hz: (z1b - z0) / 2, yaw: 0 }, kind: 'building', owner: 'building' });
     if (L && (L.importance >= 3 || (L.type || '').includes('station'))) out.labels.push({ id: L.id, text: L.name.en, x: cx / n, z: cz / n, y: y1 + 10 });
   }
   void SAND;
