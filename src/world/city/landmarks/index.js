@@ -51,7 +51,8 @@ export class CityLandmarks {
     const fit = (t, px, y, col, bold) => { let f = px; g.font = (bold ? 'bold ' : '') + f + 'px system-ui, "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif'; while (g.measureText(t).width > 700 && f > 14) { f -= 2; g.font = (bold ? 'bold ' : '') + f + 'px system-ui, "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif'; } g.fillStyle = col; g.fillText(t, 384, y); };
     fit(l.name.en, 66, 66, '#ffffff', true); fit(l.name.hi || '', 62, 140, '#f0d98c', false);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; const sc = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true, transparent: true, fog: false })); const w = Math.max(36, Math.min(80, 20 + sp.R * 0.5)); sc.scale.set(w, w / 4, 1);
-    sc.position.set(0, (sp.plan.boardY ? sp.plan.boardY(sp) : Math.max(sp.h, 12)) + w / 8 + 6, 0); sc.userData.board = true; sc.renderOrder = 5; return sc;
+    sc.position.set(0, (sp.plan.boardY ? sp.plan.boardY(sp) : Math.max(sp.h, 12)) + w / 8 + 6, 0); sc.userData.board = true; sc.renderOrder = 5; if (typeof document !== 'undefined' && document.body && document.body.classList.contains('touch')) sc.visible = false;       // phones: the place name comes as a banner on arrival instead (src/ui/placebanner.js)
+    return sc;
   }
   drop(id) {
     const o = this.live.get(id); if (!o) return; this.group.remove(o.grp); for (const m of o.meshes) { m.geometry.dispose(); if (m.userData.sign) { m.material.map.dispose(); m.material.dispose(); } } o.board.material.map.dispose(); o.board.material.dispose(); this.live.delete(id); this.refresh();
@@ -75,6 +76,7 @@ export class CityLandmarks {
     if (this.cardId === near.id) return; this.cardId = near.id; this.showCard(near.l);
   }
   showCard(l) {
+    return;                                                                  // owner, 19 Nov 2026: no info card in the game (the name boards above the landmarks stay)
     if (!this.cardEl) { const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:16px;top:84px;width:min(360px,calc(100vw - 32px));padding:12px 14px;border-radius:12px;background:rgba(12,18,28,0.82);color:#f2f2ee;font:13px/1.45 system-ui,sans-serif;z-index:40;pointer-events:none;opacity:0;transition:opacity .4s ease;box-shadow:0 4px 18px rgba(0,0,0,.35);border-left:4px solid #e8c978'; document.body.appendChild(d); this.cardEl = d; }
     const e = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])), card = l.card || {};
     this.cardEl.innerHTML = '<div style="font-weight:700;font-size:15px">' + e(l.name.en) + (l.name.hi ? ' <span style="font-weight:400;color:#f0d98c">' + e(l.name.hi) + '</span>' : '') + '</div>' + '<div style="margin-top:6px">' + e(card.text || l.look || '') + '</div>' + (card.built || l.height ? '<div style="margin-top:6px;opacity:.7;font-size:12px">' + (card.built ? 'Built ' + e(card.built) : '') + (card.built && l.height ? ' · ' : '') + (l.height ? e(l.height) + ' m' : '') + '</div>' : '');

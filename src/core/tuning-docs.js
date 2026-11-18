@@ -71,6 +71,7 @@ export const DOCS = {
   'vehicles.*.body.lean': ['How far the vehicle leans into corners (0 = not at all, 1 = a bike\'s full lean). Mostly looks, with a small effect on feel.', 'Car 0.03 to 0.1, truck 0.02 to 0.05, bike 0.8 to 1'],
   'vehicles.*.body.cg': ['Height of the centre of gravity, in metres. Higher tips and rolls more, and noses down harder under braking; lower is planted and stable.', 'Car 0.4 to 0.6, bike 0.55 to 0.7, truck 1 to 1.5'],
   'vehicles.*.body.radius': ['Size of the collision circle used for trees, rocks and landmarks, in metres. Larger = you hit things sooner.', 'Car 0.8 to 1.1, bike 0.4 to 0.6, truck 1.2 to 1.5'],
+  'vehicles.*.scale': ['How big the vehicle model is drawn compared with the model file (1 = as made). Only the picture changes: the physics sizes stay in metres. The Dusk GT model is 4.84 m long, a real coupe about 4.5 m, so it is drawn at 0.88 (GTA frames: the car is about half a lane wide).', '0.85 to 1.1'],
   'vehicles.*.cam.back': ['How far behind the vehicle the chase camera sits, in metres.', 'Car 6 to 9, bike 4 to 6, truck 14 to 20'],
   'vehicles.*.cam.up': ['How high the chase camera sits above the vehicle, in metres. Higher shows more of the road ahead.', 'Car 2 to 4, bike 1.5 to 3, truck 5 to 8'],
   'vehicles.*.cam.look': ['How far in front of the vehicle the camera aims, in metres. Larger looks further down the road.', '2 to 5 (truck up to 8)'],

@@ -1,3 +1,116 @@
+## 2026-11-20 12:00  A-2026-11-20-06  Road signs finished and applied Delhi-wide: Hindi for every name, green highway boards, diagram board, chevrons, give way, camera, route plates
+Branch: claude/delhi-p1-infill  Commit: see the PR (2514c92 and after)
+What changed: `src/world/city/tilemesh.js` (signs only where traffic arrives; boards only list roads a driver can enter; gantry with two round columns, truss, catwalk, boards 4.2 x 2.0 m on both sides; green boards with km for primary roads and up; a diagram board at a three-way junction; yellow chevrons on bends of 29 degrees or more; give-way triangles at minor roads; camera and route-number plates; name board, speed plate and gantry now also at unsignalled junctions of tertiary roads and up, because only 1,017 of the 38,913 main-road junction ends in the data are signals), new `src/world/city/hindi.js` (Hindi for the 2,800 names the pack has none for: a dictionary of Delhi street words plus a plain transliteration; the pack's own Hindi is always used first), `tools/selftest.mjs` (118 checks: Hindi is Devanagari for all names, the sign rules exist). `window.__signs` counts signs built (debug).
+Evidence: implemented; self-test 118; seen in a visible pane: the gantry at a junction near CP, chevron, give-way and camera signs near CP, give-way and junction signs in Lajpat Nagar; bench at the CP spawn, q=med, window visible, desktop: avg 11.9 ms, p95 27.7 ms, 444 calls, 394 k triangles (was 400 calls, 335 k before the new signs). NOT done: a phone, a person driving past them, Hindi spelling checked by a Hindi reader (the made names are plain transliteration), real destinations (Karol Bagh) on boards: the map has road names only, not place-to-road lists.
+For the other stream: nothing required. `put`/`signPole` in tilemesh.js are the places if you change signs.
+Status: info
+
+## 2026-11-20 10:00  A-2026-11-20-05  Phone: full-screen home-screen app, HUD, resolution no longer dropped (shared files touched)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `index.html` (phone HUD: compact speed card, round map under it, 44 px top buttons; the canvas is `100lvh` so no dark strip at the top), `manifest.webmanifest` (`display` fullscreen to standalone: iOS does not know `fullscreen` and opened the app with a browser strip; `display_override` keeps fullscreen on Android), shared `src/main.js` (governor: on a phone the resolution never goes below 70 percent, a frame over 120 ms, such as a tile being built, no longer counts, and it drops only at 36 ms; no toast on a phone), `src/world/city/cityworld.js` (phone detail radius 950 m instead of 1300, keep 1450 instead of 1900: fewer tiles to build and draw).
+Evidence: implemented; self-test passes; the owner's phone screenshot showed the strip and the lowered resolution; NOT yet seen on a phone after this change (the strip may need the icon removed and added again, iOS keeps the old setting), no frame times measured on a phone.
+For the other stream: Anshul's Claude: a phone measurement is still wanted (`?play&city=delhi&q=low&bench=30` on a real phone, results in PERFORMANCE.md); the radius and governor numbers above are guesses until then.
+Status: open
+
+## 2026-11-20 08:00  A-2026-11-20-04  Road signs rebuilt (GTA/Delhi references), phone controls and place banner (shared files touched)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/tilemesh.js` (signs: green hexagon name board, yellow speed plate, blue direction gantry with truss, two round columns, catwalk; boards face arriving traffic and show text on both sides; destinations only from roads a driver can enter, one-way aware); `src/input/touchui.js` (Stream B file: phone controls now two arrow keys stacked on the left, two side by side on the right, small buttons above, after the owner's reference picture); shared `src/main.js` (a `PlaceBanner` on phones, 3 lines); new `src/ui/placebanner.js` (place name on arrival: "Karol Bagh", fades after 3.5 s); `src/world/city/cityworld.js` and `src/world/city/landmarks/index.js` (phones: no floating road-number labels or landmark name boards); `tools/selftest.mjs` (+1 check).
+Evidence: implemented; self-test 117; the signs and the new touch layout seen in the browser pane (emulated 740 x 360, not a real phone); the banner is NOT yet seen on screen, nor driven with the new keys. NOT done: green highway distance boards, circle diagram, give-way and camera signs, Hindi for most street names.
+For the other stream: Anshul's Claude: `touchui.js` is yours and was rewritten at the owner's word; please check the new keys feel right (up accelerates, down brakes and reverses, left and right steer, digital).
+Status: open
+
+## 2026-11-20 08:00  A-2026-11-20-04  Painted kerbs and mast-arm signals; a commit race with another session, repaired
+Branch: claude/delhi-p1-infill  Commit: 80fd147 then 2247e03
+What changed: `src/world/city/tilemesh.js`: red and white painted kerbs on trunk, primary and secondary roads (`kerb()`), `mastArm` signals at signalled junctions (static heads); logged in `docs/CP_MATCH_LOG.md`.
+Incident: another session was editing and committing the same file at the same time. My commit 80fd147 was built from an older HEAD and removed its gantry sign code (committed in 22b8500 thirty seconds earlier); I pushed it, then restored the file in 2247e03 (byte-identical to 22b8500; self-test 117 checks). Nothing is lost. Rule from now on: before staging a shared file re-read HEAD, never `git add -A`, commit explicit paths only.
+Evidence: implemented; self-test 117; seen in a pane at x 787, z -2250 (arms, heads and the red kerb read as in the owner's frames G8 and G9). NOT done: heads that show the real state, power poles with wires, planting strips and palms, a visible-window bench.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-20 06:00  A-2026-11-20-03  Phases A to C done; frame times still needed from a visible window and a phone
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: phases A (double yellow and edge lines, painted arrows, GTA-style worn asphalt), B (round fluted columns in their own near-only mesh `colm`), C (wear as see-through overlay layers `wearD` and `wearL`, denser mess in the worst areas), all in `src/world/city/tilemesh.js` and `cityworld.js`; details and the honest verdicts in `docs/CP_MATCH_LOG.md`, the next steps in `docs/CP_MATCH_NOTES.md`.
+Evidence: implemented; self-test 116; seen in the game in daylight; draw calls 346 and triangles 312 k and heap 332 MB (valid counts). Frame times NOT measured: the only run was in a hidden pane (16.7 fps, invalid). Needs: a person with a visible window and a phone, commands in the log entry "Measurement attempt".
+For the other stream: Anshul's Claude: if you have a visible window and a phone, please run the bench (commands in the log) and record p95 and p99 here; plus the review items of A-2026-11-20-01.
+Status: open
+
+## 2026-11-20 03:00  A-2026-11-20-02  Road condition by area, road signs, defect notes
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/tilemesh.js` (area grime, dust, leaflets, potholes, rubbish piles, sign poles and atlas, new meshes `rsign` and `junk`), `src/world/city/cityworld.js` (the two meshes and their view ranges), `docs/CP_MATCH_NOTES.md` (defects and improvements seen), `assets/ASSETS.md`.
+Evidence: implemented; self-test 116 checks; seen in a visible pane in a clean area (CP) and a messy one (Karol Bagh); bench 402 calls, 335 k triangles, p95 11.2 ms desktop. NOT done: a phone, the messy side at full density, signs at non-signal junctions, the hoarding slab defect, the governor trips to Eco; see the notes file for the list.
+For the other stream: nothing required; the hoarding geometry (`streetlife.js`) and the Eco trips (`main.js` `gov`) are in the notes if you want them.
+Status: info
+
+## 2026-11-20 00:30  A-2026-11-20-01  Steering lock, car and lane proportion, wider CP circles, road wear (owner's driving report)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: Stream B: `src/vehicle/defs.js` car `steerMax` 0.50 to 0.62, `scale` 0.92 to 0.88; new `tools/measure_turns.mjs` (turn radius at 10 to 80 km/h, key=value overrides). Stream A: lane widths up again (`LANE_W`, `pack.js` and `packio.mjs`); CP circles at least 12 m and 16 m (`smooth.js`, `CP_WIDTH`); road wear (`wearDetail`, `tilemesh.js`); audit baseline regenerated (`footway_run` 94 to 120).
+Evidence: self-test 116, vehicle acceptance no problems, `measure_turns` before and after (smallest circle 6.4 to 4.5 m radius), seen in a visible pane; bench 400 calls, 321 k triangles, p95 11.2 ms desktop. NOT done: a person driving it, a phone, the yaw cap (left at 1.2: raising it made full-lock turns spin out in the headless test).
+For the other stream: Anshul's Claude: please drive a lap of the Inner Circle and a U-turn on the Inner Circle in each vehicle and say whether `steerMax` 0.62 feels right (tuner: `vehicles.car.body.steerMax`); the bike and truck were not changed; and review the `footway_run` baseline (94 to 120) with the wider lanes.
+Status: open
+
+## 2026-11-19 23:55  A-2026-11-19-09  Re: A-2026-11-19-08: car size and chase camera changed at the owner's word
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: Stream B files, on the owner's yes (19 Nov 2026): `src/vehicle/defs.js` (car: `scale: 0.92`, `cam` 6.0 / 2.2 / 3.2, shadow 3.1 x 5.5), `src/vehicle/vehicle.js` (applies `def.scale`; chase field of view 56 to 52 for every vehicle), `src/core/tuning-docs.js` (help for `scale`).
+Evidence: self-test 116, vehicle acceptance no problems, seen in a visible pane; details and what is still different in `docs/CP_MATCH_LOG.md`.
+For the other stream: Anshul's Claude: nothing is required; the values are tuner settings (`vehicles.car.scale`, `vehicles.car.cam.*`), change them if your feel tests disagree, and say so here. Wheels are drawn 8 percent smaller than the physics wheel radius at scale 0.92.
+Status: info
+
+## 2026-11-19 23:30  A-2026-11-19-08  Scale pass: wider lanes city-wide, taller CP blocks, markings, stop lines, paving; asks for Stream B
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: lane width per class widened (`LANE_W` in `src/world/city/pack.js` and `tools/lib/packio.mjs`, tertiary 3.0 to 3.4 m and so on, city-wide); CP blocks raised to 15.5 to 17.5 m (`cpLift`, tilemesh.js); arcade columns 5.6 m by 0.7 m; markings lifted over the asphalt; stop lines at signals; lane lines on wide one-way roads; CP stone-slab `plaza` mesh; `tools/city_audit_baseline.json` regenerated (footway_run 94 to 114).
+Evidence: self-test 116 checks; seen in a visible browser pane; the measurements and their error (+-15 percent, by eye) are in `docs/CP_MATCH_LOG.md`. NOT done: a phone, a scripted drive, the C2 conflict check of the wider roads beyond the audit counts.
+For the other stream: Anshul's Claude: (1) please review the wider lanes against C2 and the raised `footway_run` baseline (94 to 114: sidewalks mapped along a road that now overlap the wider carriageway; a rule for it is yours if you want it); (2) the car looks too big in its lane: `assets/car_01_gt.glb` measures about 4.8 x 2.1 x 1.56 m against a real coupe's 4.5 x 1.9 x 1.3, and the chase camera (`cam` in `src/vehicle/defs.js`: 7.5 back, 3.0 up) sits higher and farther than the GTA references (about 5.5 back, 1.8 up, field of view 50); I did not touch Stream B files. Status: open
+Status: open
+
+## 2026-11-19 22:00  A-2026-11-19-07  CP roads: smooth circles, wider junction corners, hedge ends, overhead debug camera
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: (1) new `src/world/city/smooth.js`, called from `src/world/city/pack.js` `tile()`: the Inner Circle is laid on its fitted circle (2.5 degree steps), the Middle and Outer Circle are smoothed by corner cutting; piece ends never move. (2) `src/world/city/tilemesh.js`: junction kerb radius `min(12, max(3, 1.6 * halfWidth + 1.5))` for the WHOLE city (was `min(7, ...)`). (3) `src/world/city/streetlife.js`: hedge boxes are tested at both ends against roads and buildings. (4) `src/main.js` (shared, 2 lines after `window.__next`): `window.__cam(x, y, z, yaw, pitch)` puts the game in fly mode with the camera placed exactly (overhead: pitch -1.5); nothing in the game calls it.
+Evidence: implemented; self-test 116 checks (new: CP smooth circles); seen in a visible browser pane from above at the Inner Circle and Radial Road 7 (rounded corner, hedges off the road mouth). NOT done: a scripted drive round the circle, the Outer and Middle Circle looked at, a re-run of `tools/audit_city.mjs` after the wider corners (buildings near corners across Delhi), a phone, a person's judgement.
+For the other stream: Anshul's Claude: `smooth.js` runs on tile decode, so graph edge geometry (`edgeGeom`) sees the smoothed Inner Circle; tell me if routing or autodrive misbehaves round Connaught Place. The wider corners are city-wide: say if they clash with C2 (buildings against roads).
+Status: info
+
+## 2026-11-19 20:00  A-2026-11-19-06  CP match: plan, measurements, six camera spots
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `docs/CP_MATCH_PLAN.md` (plan: per-element check against references, exact to CP, smooth roads), `docs/CP_MATCH_LOG.md` (measurements and an element table), `tools/measure_cp.mjs` (fits circles to the pack's Inner and Outer Circle), `tools/cp_views.json` (six camera spots).
+Evidence: computed from the pack by script (Inner Circle radius 125.7 m, RMS 0.96 m, built from 18 m segments; Outer Circle RMS 3.4 m); nothing seen yet against the photos in this step.
+For the other stream: heads-up only: road changes for CP's tiles come next in Stream A (smooth circles, larger corner radii); they touch the same street geometry as C1 to C4. Say here if you would rather I wait.
+Status: info
+
+## 2026-11-19 19:00  A-2026-11-19-05  Connaught Place colonnade (first greybox-to-reference step, reference N19)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/tilemesh.js`: on street-facing walls (8 m and longer) of Connaught Place buildings of 9 m and more (`area: cp`, including those the pack tags with the district landmark), `arcade()` builds a 3.4 m paved walk, square white columns about every 3.6 m at its outer edge, and a slab at 4.4 m with a darker underside (200 walls a tile at most; a wall is skipped where the strip would reach the carriageway); `src/world/city/infill.js` hands `streetClear` to the mesher (`out.streetClear`). No assets: all geometry is own work in code, matched by eye to the described view in the register entry N19 (white colonnade, continuous shaded walk, shop bays behind); the photograph itself is not used.
+Evidence: implemented; self-test 115 checks (none cover the arcade); seen in a browser (visible pane) at the Inner Circle, x 970 z -2225: columns, slab and dark shop bays read as a colonnade. Cost, same route as A-2026-11-19-03 (Connaught Place start, q=med, bench 30, visible pane, desktop Mac): triangles 281 k to 318 k (+13 %), draw calls 382 to 383, p95 11.4 ms (the earlier run 16.7 ms: run-to-run noise is large, do not read it as faster). NOT done: column spacing and bay width are from a description, not a surveyed footprint (N19 itself says to get another camera and a footprint); the apron between the carriageway and the arcade is still bare earth; shop signs; the Outer Circle's different frontage; no phone run; no person has judged it. Note: the service worker serves old files in a browser tab that has run the game before; clear it (DevTools, Application) or you will not see this.
+For the other stream: nothing.
+Status: info
+
+## 2026-11-19 18:00  A-2026-11-19-04  Delhi reference pack mapped onto C/P/L/B tasks; licence register
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `docs/DELHI_REFERENCES.md` (pack steps R0 to R11 mapped to existing tasks, no new phase names; licence rules), `docs/delhi_reference_register.json` (every photo and source page, no image bytes), a "Reference photographs" section in `assets/ASSETS.md`. All pack photos are study only, permission not confirmed; no GTA code or data is used.
+Evidence: documents only; nothing implemented or measured here.
+For the other stream: Anshul's Claude: C0 to C4 are yours under the 17 Nov override; the pack asks for source-id diagnostics first (C0). The Connaught Place greybox comparison (my side, Stream A) comes next and will be logged separately.
+Status: info
+
+## 2026-11-19 17:00  A-2026-11-19-03  P1 part 3: paved forecourts, and the first visible frame measurement
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/infill.js`: open ground left inside dense blocks (oldDelhi, market, default, cp, business) is returned as `yards` (8 m grid cells merged to rectangles, 700 a tile at most, clear of streets by 2.5 m and of buildings by 1.2 m); `src/world/city/tilemesh.js` paves them in the pavement mesh (same height and texture as the pavements); `tools/selftest.mjs`: yards are inside a block, not under a building, deterministic.
+Evidence: implemented; self-test 115 checks; frame cost MEASURED in a visible Browser pane (Claude desktop app, Chrome 156, MacBook-class Mac, `?play&city=delhi&q=med&bench=30`, Connaught Place start): 3,034 frames, average 9.9 ms, p95 16.7 ms, p99 22.3 ms, worst 55.4 ms, 382 draw calls, 281 k triangles, heap 270 MB. This is a desktop figure, NOT a phone figure. Not done: a person's check of the forecourts, a phone run.
+For the other stream: nothing.
+Status: info
+
+## 2026-11-19 15:00  A-2026-11-19-02  P1 second increment: interiors of big blocks, and a void measuring tool
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/infill.js` (Stream A file): a second pass cuts each block into back-to-back rows of lots along its longest edge with 3.2 m lanes, same acceptance test as the frontage lots (cap 1,800 interior lots a tile, 4,000 in all; `interior: true` on the record; stats `iTry`, `iOut`, `iStreet`, `iBld`, `iMargin`); new `tools/measure_voids.mjs` (100 m cells of the 5 sample areas); `tools/selftest.mjs` (interior lots checked by the existing validity test); status lines in `docs/DELHI_POLISH_PLAN.md` and `docs/NEXT_PHASES.md`.
+Evidence: implemented; self-test 115 checks; measured by script: void cells in the sample areas 19 to 10, block coverage up 1 to 2 points (Chandni Chowk 24.3 to 27.5 %, Khan Market 15.5 to 16.4 %); infill time per tile +10 ms (44 to 53, 24 to 34, 30 to 35 ms); seen in a browser at Karol Bagh (street looks right). NOT measured: frame cost (the browser pane was hidden, so no valid frame numbers; run `?play&city=delhi&q=med&bench=30` in a visible window), forecourts, parking and plazas are not built, the coverage targets (50 to 60 %) are not met: most of the missing ground is in no block face or under mapped buildings.
+For the other stream: nothing.
+Status: info
+
+## 2026-11-19 12:00  A-2026-11-19-01  Lite build (Delhi only in the browser) and the Download-for-offline button
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: (1) new `src/core/build.js`: `BUILD`/`LITE`, Lite by default, `?build=full` for the full game from a full source tree. (2) `src/main.js` (shared, small): Lite always starts Delhi (`cityMode`), skips the India world, the roads-out fetch and the highway gates (`leaveCity`, `updateGateExit`). (3) `src/ui/menu.js` (shared): Lite shows "Play: Delhi", hides Explore cities, Travel and New world; adds the Download rows. (4) `index.html`: the early preload skips India files in Lite. (5) `tools/stage_cloudflare.py` (shared): `--build lite|full` (default lite leaves `assets/india/` out of the deploy; nothing is deleted from the repo) and writes `offline.json`; `tools/bundle.mjs` updates it for the bundle. (6) `sw.js` + new `src/ui/offline.js`: a "Download" button per group (game core about 45 MB, Delhi 78 MB) fills a never-trimmed cache with progress; the service worker keeps it across updates. This overlaps your task B14 (build switch, Lite boots into Delhi) and part of B16: please review instead of redoing it.
+Evidence: implemented; self-test 115 checks (two new); seen in a browser on a staged, bundled build: a plain `?play` opens Delhi with no India file requested, the pause menu has no city or travel entries, the core download cached 256 files and the game opened with the server stopped. NOT tested: the Delhi download, a real phone (iPhone has no service worker by design), driving to the edge of the city data (the gates are off, so nothing turns the car back), a real deploy, a person's acceptance.
+For the other stream: review the three shared-file edits; mark B14 as covered or tell me what is missing. Deploy the Lite build with `python tools/stage_cloudflare.py --out <folder>/public` (Lite is the default) then `node tools/bundle.mjs <folder>/public` as before.
+Status: open
+
 ## 2026-11-18 10:00  Delhi stuck on loading screen: builder boost while loading
 Branch: claude/delhi-loading-fix  Commit: see PR
 What changed: src/main.js whenCityReady() sets city.boost (22 ms/frame builder budget instead of 3 ms) while waiting, wait up to 45 s, shows 'Building Delhi... N of 5 tiles'; cityworld.js stepJob honours boost (?noboost turns it off). Cause: on slow frames the 3 ms budget built 0 tiles in 20 s, so the game started on bare plains / looked stuck.

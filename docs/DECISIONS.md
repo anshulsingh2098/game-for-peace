@@ -2,6 +2,8 @@
 
 Newest first. A decision here is the owner's word; an agent follows it and does not ask again. To change one, the owner says so and the line is edited with a date.
 
+## 19 Nov 2026: Connaught Place (and Delhi) look: match the owner's reference photos element by element and exactly (architecture, colours, light, boards, trees, paving, benches, famous places), photoreal and GTA-like in scale; CP first, the rest of Delhi after. Real place and shop names may be used as plain map labels and plain lettering on boards; **no copied logos, brand artwork or trade dress** (draw a simple original board in the same colours and layout). Reference photos are study only and stay out of the repository. Plan: `docs/CP_MATCH_PLAN.md`, log: `docs/CP_MATCH_LOG.md`.
+
 ## 17 Nov 2026 (end of session): Delhi phases P1 to P8, look steps L1 to L6 and N17 to N20 are assigned to Anshul's Claude (`docs/NEXT_PHASES.md`, "Assigned to Anshul: Delhi phases ..."), to be worked in blocks, one phase at a time, after B1 to B3. This is an ownership override: for these tasks Anshul's Claude may edit Stream A (world) files, in small logged PRs; the owner merges. N17 to N20 start only after P8 is judged and the owner says go.
 
 ## 17 Nov 2026 (last): phone check and optimisation, sound, Add to Home Screen (full screen, landscape), tuner storage and password, handoff, plan and tracker updated. The owner reported the phone screenshot (board covering the controls); fixed. The tuner password was generated and given to the owner in chat; it is not in the repo.

@@ -39,6 +39,7 @@ export class VehicleView {
       if (/^Rider/.test(o.name)) this.riders.push(o);
       if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) m.envMapIntensity = m.userData.env ?? 0.7; }); }
     });
+    if (def.scale && def.scale !== 1) this.model.scale.setScalar(def.scale);                              // def.scale: draw the model smaller or larger than it was made (physics sizes in defs.js stay in metres)
     const lift = { car: 0.08, sport: 0.07, rally: 0.05 }[def.id] || 0;                                    // ride height: the body sits higher over the wheels, so the tyres no longer look half buried in the arches
     if (lift) { let top = this.model; while (top.children.length === 1 && !top.children.some(c => /^Wheel_/.test(c.name))) top = top.children[0]; if (!top.children.some(c => /^Wheel_/.test(c.name))) top = this.model.children[0]; for (const c of top.children) if (!/^Wheel_/.test(c.name)) c.position.y += lift; }
     this.buildCockpit(def.id, def); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
@@ -146,7 +147,7 @@ export class VehicleView {
       const cx = Math.cos(this.camYaw), cz = Math.sin(this.camYaw), back = d.cam.back * cm.back * m.back, wx = ph.x - cx * back, wz = ph.z - cz * back;
       const y = Math.max(ph.y + d.cam.up * cm.up * m.up, floor(wx, wz) + 1.2);
       camera.position.set(wx - origin.x, y, wz - origin.z); camera.lookAt(ph.x + cx * d.cam.look * cm.look * m.look - origin.x, ph.y + d.cam.up * 0.45, ph.z + cz * d.cam.look * cm.look * m.look - origin.z);
-      this.shake(camera, speed, boost); camera.fov = 56 + cm.fov + (mode === 'far' ? 4 : mode === 'close' ? 6 : 0) + Math.min(14, speed * CAMFX.fovSpeed) + boost * 4 + this.kickFov(dt, boost, ph);
+      this.shake(camera, speed, boost); camera.fov = 52 + cm.fov + (mode === 'far' ? 4 : mode === 'close' ? 6 : 0) + Math.min(14, speed * CAMFX.fovSpeed) + boost * 4 + this.kickFov(dt, boost, ph);
     }
     camera.updateProjectionMatrix();
   }
