@@ -40,10 +40,10 @@ export function approachMarks(s, o) {
     if (!s.realEnds[end] || !(s.endFlags[end] & 1)) continue;                                      // only at a real, signalled junction
     if (end === 1 ? s.oneway < 0 : s.oneway > 0) continue;                                         // no traffic arrives here
     const two = s.oneway === 0, hw = s.hw, e = along(s.pts, !!end, 0); if (!e) continue;
-    const q = along(s.pts, !!end, 7.6); if (!q) continue;                                          // the stop line: 7.6 m back from the node, just before the zebra crossing (5 m back, 1.4 m either side)
+    const q = along(s.pts, !!end, 8.4); if (!q) continue;                                          // the stop line: 8.4 m back from the node, 1.5 m before the zebra crossing (5 m back, 1.4 m either side); seen in the browser the first version (7.6 m, 0.4 m thick) could not be told from the stripes
     const tx = -q.tx, tz = -q.tz, lx = tz, lz = -tx, y = gy + MARK_Y;                              // travel direction toward the node, and its left
     const nApp = Math.max(1, two ? Math.floor((s.lanes || 2) / 2) : (s.lanes || 1)), a0 = two ? 0.2 : -hw + 0.15, a1 = hw - 0.15, laneW = (a1 - a0) / nApp;
-    rect(m, X, Z, y, WHITE, q.x, q.z, tx, tz, lx, lz, -0.2, 0.2, a0, a1);                          // the stop line across the approach lanes (offsets are measured to the left of the travel direction; for one-way the range starts at the right edge)
+    rect(m, X, Z, y, WHITE, q.x, q.z, tx, tz, lx, lz, -0.3, 0.3, a0, a1);                          // the stop line across the approach lanes (offsets are measured to the left of the travel direction; for one-way the range starts at the right edge)
     if (L > 34 && counts.arrows < CAPS.arrows) for (let k = 0; k < nApp; k++) {
       const c = along(s.pts, !!end, 16); if (!c) break; const off = two ? a0 + laneW * (k + 0.5) : -hw + 0.15 + laneW * (k + 0.5), px = c.x, pz = c.z;   // an arrow 16 m back in each approach lane: a stem and a head
       rect(m, X, Z, y, WHITE, px, pz, tx, tz, lx, lz, -1.2, 0.5, off - 0.12, off + 0.12); tri3(m, X, Z, y, WHITE, [px + tx * 1.9 + lx * off, pz + tz * 1.9 + lz * off], [px + tx * 0.4 + lx * (off - 0.5), pz + tz * 0.4 + lz * (off - 0.5)], [px + tx * 0.4 + lx * (off + 0.5), pz + tz * 0.4 + lz * (off + 0.5)]); counts.arrows++;
