@@ -75,6 +75,7 @@ export class CityLandmarks {
     if (this.cardId === near.id) return; this.cardId = near.id; this.showCard(near.l);
   }
   showCard(l) {
+    return;                                                                  // owner, 19 Nov 2026: no info card in the game (the name boards above the landmarks stay)
     if (!this.cardEl) { const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:16px;top:84px;width:min(360px,calc(100vw - 32px));padding:12px 14px;border-radius:12px;background:rgba(12,18,28,0.82);color:#f2f2ee;font:13px/1.45 system-ui,sans-serif;z-index:40;pointer-events:none;opacity:0;transition:opacity .4s ease;box-shadow:0 4px 18px rgba(0,0,0,.35);border-left:4px solid #e8c978'; document.body.appendChild(d); this.cardEl = d; }
     const e = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])), card = l.card || {};
     this.cardEl.innerHTML = '<div style="font-weight:700;font-size:15px">' + e(l.name.en) + (l.name.hi ? ' <span style="font-weight:400;color:#f0d98c">' + e(l.name.hi) + '</span>' : '') + '</div>' + '<div style="margin-top:6px">' + e(card.text || l.look || '') + '</div>' + (card.built || l.height ? '<div style="margin-top:6px;opacity:.7;font-size:12px">' + (card.built ? 'Built ' + e(card.built) : '') + (card.built && l.height ? ' · ' : '') + (l.height ? e(l.height) + ' m' : '') + '</div>' : '');

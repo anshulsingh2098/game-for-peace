@@ -2,6 +2,13 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-19  Ground: stone slab paving (element: paving)
+References: R2, R3, R4 (and R1 for the kerb edge): wide, flat, warm grey-cream stone slabs, thin joints, a slightly polished sheen, a tactile strip along the walk, a clean kerb edge; no bare earth. What the photos do NOT settle: exact slab size (R2 and R4 suggest larger than 1.2 m, perhaps 1.5 to 2 m) and the pattern of the inlay lines.
+Built: new `plaza` mesh and material in `src/world/city/tilemesh.js` (`makeMaterials`), listed in `cityworld.js`: a procedural canvas texture, 4 by 4 slabs of 1.2 m (one repeat is 4.8 m), cream with per-slab tone, speckle, hairline cracks and a dark joint, roughness 0.6 (a faint sheen); used for the ground of every block whose centre is within 345 m of the CP centre (`CP_CIRCLE.PLAZA_R` in `smooth.js`) and whose area is `cp`; before, those blocks were drawn with the sand texture. The yard paving of P1 part 3 is switched off for `cp` (the blocks are paved already).
+Comparison (overhead at x 1150, z -2030 and street level at x 970, z -2225, visible pane): the bare orange earth is gone; the first version was nearly white (too bright against R2 and R4), tinted down to a warm grey-cream (`0xc9c0aa`). Verdict: **close**. Still different: no tactile strip along the walk, no real reflection (the photos show wet-look polished stone; here only a faint sheen), slab size is a guess, no inlay lines, the kerb at the plaza edge is the plain pavement kerb, the same texture also covers the arcade walk under the columns (the columns' own walk is the old pavers and should be changed to match).
+Cost (Connaught Place start, q=med, bench 30, visible pane, desktop Mac): draw calls 383 to 385, triangles about 315 k (the plaza adds ground polygons only), p95 16.3 ms. JS heap read 958 MB in that run against 270 to 372 MB earlier: the tab had been reloaded many times, so this is NOT yet a finding; to be re-measured in a fresh tab.
+Licence: the texture is drawn in code, own work, no outside image. Recorded in `assets/ASSETS.md`.
+
 ## 2026-11-19  Road: junction corner radius (element 2 of the road section)
 Reference: the plan and the owner's report that the corners are boxy; real CP kerb radii are about 10 m or more (to be confirmed on photos R1 and R3 and the map; not measured here).
 Built: `src/world/city/tilemesh.js` fillet radius `min(12, max(3, 1.6 * halfWidth + 1.5))` (was `min(7, max(3, 1.1 * halfWidth + 1.2))`): a 9 m road about 9 m (was 6), a 13 m road 12 m (was 7), a 6 m street about 6 m (was 4.5). The existing limit by piece length still applies, so short pieces keep smaller corners. Applies to the whole city, not only CP.
@@ -28,7 +35,8 @@ Source: the Delhi pack (OpenStreetMap derived, `assets/cities/delhi`). Evidence 
 |---|---|---|---|
 | Colonnade (square posts, slab) | R1, R2, R4 | wrong | thin square posts, no capital, no base; to be redone |
 | Circle geometry | plan | wrong | faceted; next |
-| Paving, kerb, hedge | R2, R3, R4 | wrong | bare earth apron |
+| Paving (slabs) | R2, R3, R4 | close | slabs in, warm grey-cream; no tactile strip, no polish, kerb plain |
+| Hedge, planters | R3 | wrong | boxy green boxes |
 | Facade, corner drums | R1, R3 | wrong | flat box |
 | Brand boards, shop light | R2, R4 | wrong | almost none |
 | Lighting, colour | R1 to R4 | wrong | flat, cool |

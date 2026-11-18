@@ -3,6 +3,7 @@
    and z and absolute in y; the flat layers lie exactly in the ground plane and are ordered by polygon offset (the terrain here is flat), so a car's wheels sit on the paint. 97 % of the building heights in
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
+import { CP_CIRCLE } from './smooth.js';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
@@ -112,13 +113,13 @@ function junctionShapes(J, M, X, Z, gy, out) {
   out.nFillets = nf; out.nNotches = nn;
 }
 export function* buildTileSteps(tile, ctx) {
-  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
-  const flat = (m, ring, holes, c, y) => {                                           // a polygon (ring and holes in metres) lying at height y
+  const flat = (m, ring, holes, c, y, uvs = 11) => {                                           // a polygon (ring and holes in metres) lying at height y; uvs: metres one texture repeat covers
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
     const R = clean(ring), contour = []; for (let i = 0; i < R.length; i += 2) contour.push(new THREE.Vector2(R[i], R[i + 1])); const H = (holes || []).map(h => { const c2 = clean(h), a = []; for (let i = 0; i < c2.length; i += 2) a.push(new THREE.Vector2(c2[i], c2[i + 1])); return a; });
     if (contour.length < 3) return; let tris; try { tris = THREE.ShapeUtils.triangulateShape(contour, H); } catch (e) { return; }
-    const all = contour.concat(...H), base = m.p.length / 3; for (const q of all) m.v(X(q.x), gy + y, Z(q.y), 0, 1, 0, c, q.x / 11, q.y / 11);
+    const all = contour.concat(...H), base = m.p.length / 3; for (const q of all) m.v(X(q.x), gy + y, Z(q.y), 0, 1, 0, c, q.x / uvs, q.y / uvs);
     for (const t of tris) m.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0);
   };
   /* ---- ground: land use first, then blocks, parks and water ---- */
@@ -128,6 +129,7 @@ export function* buildTileSteps(tile, ctx) {
   for (const b of tile.blocks) { let cx = 0, cz = 0; const n = b.ring.length / 2; for (let i = 0; i < n; i++) { cx += b.ring[i * 2]; cz += b.ring[i * 2 + 1]; } cx /= n || 1; cz /= n || 1;
     const an = IDN && IDN.areaNameAt ? IDN.areaNameAt(cx, cz) : '', h = ((Math.floor(cx * 0.37) * 73856093) ^ (Math.floor(cz * 0.37) * 19349663)) >>> 0, v = (h % 1000) / 1000;
     if (GREEN_USE.has(b.landuse) || (GREEN_AREAS.has(an) && v < 0.8)) flat(M.lawn, b.ring, b.holes, shade(0xcfe69a, 0.82 + 0.3 * v), LIFT.park * 0.5);
+    else if (an === 'cp' && Math.hypot(cx - CP_CIRCLE.cx, cz - CP_CIRCLE.cz) < CP_CIRCLE.PLAZA_R) flat(M.plaza, b.ring, b.holes, shade(0xc9c0aa, 0.94 + 0.1 * v), 0, 4.8);       // CP match (photos R2 to R4): the ground between the roads and the colonnades is stone slabs, not earth; 1.2 m slabs, 4 by 4 to a texture repeat
     else flat(M.ground, b.ring, b.holes, shade(0xb9a888, 0.85 + 0.25 * v), 0); }
   const PARKC = { forest: shade(0xb4cf86, 0.72), scrub: col(0xd6c98e), sports: shade(0xe2f6aa, 1.0), golf: shade(0xe2f6aa, 1.05), garden: shade(0xd3ec9e, 0.95) };
   for (const p of tile.parks) flat(M.lawn, p.ring, p.holes, PARKC[p.class] || PARK, LIFT.park);          // by class: forest deeper green, scrub dry olive, sports and golf bright
@@ -334,7 +336,13 @@ export function makeMaterials() {
   const pbr = (name, tint, dir = 'roads') => { const L = new THREE.TextureLoader(), ld = (f, srgb) => { const t = L.load('assets/' + dir + '/' + name + '_' + f + '.jpg'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }; const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: ld('color', true), normalMap: ld('normal', false), roughnessMap: ld('rough', false), roughness: 1, metalness: 0, envMapIntensity: 0.3, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -5 }); m.normalScale.set(0.8, 0.8); m.color.setScalar(tint); return m; };
   const lawn = (() => { const m = pbr('grass', 1.85, 'ground'); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -3; return m; })();
   const dirt = (() => { const m = pbr('sand', 1.7, 'ground'); m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; return m; })();
-  const mats = { ground: dirt, park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 2.6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
+    const plazaTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'), S = 128; g.fillStyle = '#d9d2c0'; g.fillRect(0, 0, 512, 512);        // 4 by 4 stone slabs: cream, each its own tone, speckle and a hairline joint
+    for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) { const t = 0.9 + rnd() * 0.16, x = q * S, y = r * S; g.fillStyle = 'rgb(' + Math.round(236 * t) + ',' + Math.round(230 * t) + ',' + Math.round(214 * t) + ')'; g.fillRect(x + 2, y + 2, S - 4, S - 4);
+      for (let k = 0; k < 90; k++) { const v = 150 + Math.floor(rnd() * 100); g.fillStyle = 'rgba(' + v + ',' + (v - 4) + ',' + (v - 14) + ',0.22)'; g.fillRect(x + 3 + rnd() * (S - 8), y + 3 + rnd() * (S - 8), 1 + rnd() * 3, 1 + rnd() * 3); }
+      g.strokeStyle = 'rgba(120,112,96,0.35)'; g.lineWidth = 1; for (let k = 0; k < 2; k++) { g.beginPath(); g.moveTo(x + rnd() * S, y + rnd() * S); g.lineTo(x + rnd() * S, y + rnd() * S); g.stroke(); } }
+    g.strokeStyle = '#a79f8c'; g.lineWidth = 3; for (let k = 0; k <= 4; k++) { g.beginPath(); g.moveTo(k * S, 0); g.lineTo(k * S, 512); g.stroke(); g.beginPath(); g.moveTo(0, k * S); g.lineTo(512, k * S); g.stroke(); } return c; })();
+  const plaza = (() => { const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex(plazaTex), roughness: 0.6, metalness: 0, envMapIntensity: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); return m; })();
+const mats = { ground: dirt, plaza, park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 2.6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
   mats.setNight = on => { for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
   return mats;
 }

@@ -113,7 +113,7 @@ export function* infillSteps(tile, o) {
     }
   }
   /* P1 part 3: forecourts. Ground inside a built-up block that is still open after the lots (the yards, the lanes and the plots between buildings) is paved in the dense areas, so it reads as a courtyard or a forecourt and not as bare earth: an 8 m grid, a cell is paved when all its corners and centre lie in the block, clear of streets by 2.5 m, of parks and of buildings (1.2 m), and it has a free neighbour on its row; the cells of a row are merged into rectangles [x0, z0, x1, z1]. Lawn areas, villages, DDA and Lutyens keep their earth and grass. */
-  const yards = []; out.yards = yards; const YC = 8, YARD_AREAS = new Set(['oldDelhi', 'market', 'default', 'cp', 'business']);
+  const yards = []; out.yards = yards; const YC = 8, YARD_AREAS = new Set(['oldDelhi', 'market', 'default', 'business']);
   for (let bi = 0; bi < blocks.length && yards.length < YARD_MAX; bi++) {
     if (o.yieldNow && o.yieldNow()) yield;
     const B = blocks[bi], r = B.ring; if (r.length < 6) continue; let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9; for (let i = 0; i < r.length; i += 2) { bx0 = Math.min(bx0, r[i]); bx1 = Math.max(bx1, r[i]); bz0 = Math.min(bz0, r[i + 1]); bz1 = Math.max(bz1, r[i + 1]); }
