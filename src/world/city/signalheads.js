@@ -1,15 +1,8 @@
 /* Live signal heads (owner, 20 Nov 2026: "live signal heads"). The mast-arm signals of tilemesh.js (`mastArm`) are built with dark housings; their three lenses are NOT meshed there but handed over as lamp records, and drawn here as ONE instanced mesh of small round lamps whose colours are updated every 0.2 s from the same rule the cars obey (citytraffic.js `green`): a signal is green for one axis (0 = east-west, 1 = north-south) for 14 s, then the other axis has it, offset per junction by `node * 7 % 28` seconds. The cars know no amber; the heads show amber for the last 2.5 s of a green slot (the cars still treat it as green), so a head never shows green while the cars are stopped.
-   A lamp record is [x, y, z, node, tx, tz, kind]: world metres, the node id, (tx, tz) the road direction pointing away from the node (the lamp faces that way, toward the arriving driver), kind 0 red, 1 amber, 2 green. Pure state logic is exported (`signalPhase`, `lampLit`) so tools/selftest.mjs checks it without three.js. */
+   A lamp record is [x, y, z, node, tx, tz, kind]: world metres, the node id, (tx, tz) the road direction pointing away from the node (the lamp faces that way, toward the arriving driver), kind 0 red, 1 amber, 2 green. The pure state logic is in signalphase.js (`signalPhase`, `lampLit`) so tools/selftest.mjs checks it without three.js. */
 import * as THREE from 'three';
 
-export const SLOT = 14, AMBER = 2.5;
-/* what a signal shows to the traffic of an axis at `time`: 'green', 'amber' or 'red' (same slots as citytraffic.js green()) */
-export function signalPhase(time, node, tx, tz) {
-  const axis = Math.abs(tx) > Math.abs(tz) ? 0 : 1, u = time + (node * 7 % 28), slot = Math.floor(u / SLOT), within = u - slot * SLOT;
-  if (slot % 2 !== axis) return 'red';
-  return within >= SLOT - AMBER ? 'amber' : 'green';
-}
-export const lampLit = (state, kind) => (kind === 0 && state === 'red') || (kind === 1 && state === 'amber') || (kind === 2 && state === 'green');
+import { signalPhase, lampLit } from './signalphase.js';
 
 const BRIGHT = [new THREE.Color(0xff2a18), new THREE.Color(0xffb41a), new THREE.Color(0x22ff66)], DIM = [new THREE.Color(0x2c1210), new THREE.Color(0x2e2410), new THREE.Color(0x0f2a18)];
 const CAP = 8192;

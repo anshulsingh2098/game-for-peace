@@ -1261,6 +1261,11 @@ test('Delhi landmark models (D8): every plan id is a landmark with a footprint, 
   const F = frame(3, 4, Math.PI / 2), p = F.loc(10, 2); assert.ok(Math.abs(p[0] - 1) < 1e-9 && Math.abs(p[1] - 14) < 1e-9, 'u runs along the frame angle, v to its left');
 });
 
+test('signal heads: the phase of a head is the rule the cars obey (green for one axis 14 s, then the other), never green both ways, amber only at the end of a green slot, exactly one lamp lit', async () => {
+  const { signalPhase, lampLit, SLOT, AMBER } = await import('../src/world/city/signalphase.js'), green = (time, node, tx, tz) => { const axis = Math.abs(tx) > Math.abs(tz) ? 0 : 1; return Math.floor((time + (node * 7 % 28)) / 14) % 2 === axis; };     // citytraffic.js green(), copied
+  let amber = 0, all = 0; for (const node of [0, 1, 5, 99, 12345, 406000]) for (const [tx, tz] of [[1, 0], [0, 1], [-0.7, 0.2], [0.1, -0.9]]) for (let time = 0; time < 120; time += 0.25) { all++; const st = signalPhase(time, node, tx, tz); assert.equal(st !== 'red', green(time, node, tx, tz), 'a head is lit non-red exactly when the cars see green'); assert.ok(!(st === 'green' && signalPhase(time, node, tz, tx) === 'green'), 'never green both ways'); assert.equal([0, 1, 2].filter(k => lampLit(st, k)).length, 1, 'exactly one lamp lit'); if (st === 'amber') { amber++; assert.ok(((time + (node * 7 % 28)) % SLOT) >= SLOT - AMBER, 'amber only at the end of the slot'); } }
+  assert.ok(amber / all > 0.05 && amber / all < 0.15, 'amber share ' + amber / all);
+});
 test('CP smooth circles: the Inner Circle is laid on its fitted circle in steps of 2.5 degrees or less, no piece end moves, other streets are untouched, a piece that is not an arc is left alone', async () => {
   const { smoothCircles, arcPiece, chaikin, CP_CIRCLE: C } = await import('../src/world/city/smooth.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
   const nm = id => { const n = G.names[G.name[id]]; return n ? (typeof n === 'string' ? n : n.en || n.ref || '') : ''; }; let pieces = 0, other = 0;
