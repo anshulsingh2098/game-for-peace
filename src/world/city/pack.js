@@ -3,7 +3,7 @@
    A CityPack loads the manifest, the graph (columnar, kept as typed arrays: 406,000 edges in Delhi) and the landmarks once, and tiles one at a time on request. */
 import { smoothCircles } from './smooth.js';
 
-export const LANE_W = { motorway: 3.5, trunk: 3.5, primary: 3.4, secondary: 3.2, tertiary: 3.0, residential: 2.8, service: 2.8, cycleway: 1.5, busway: 3.4, footway: 1.2 };
+export const LANE_W = { motorway: 3.5, trunk: 3.6, primary: 3.6, secondary: 3.5, tertiary: 3.4, residential: 3.0, service: 2.8, cycleway: 1.5, busway: 3.4, footway: 1.2 };
 export const DEFAULT_SIDEWALK = { motorway: 0, trunk: 0, primary: 2, secondary: 2, tertiary: 2, residential: 1, service: 0, footway: 0, cycleway: 0, busway: 0 };
 export const defaultWidth = (cls, lanes) => Math.max(1, Math.round(lanes * LANE_W[cls] * 10) / 10);
 /* decimetre, delta coded coordinate list -> metres (the same as packio.dec) */

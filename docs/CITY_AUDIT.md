@@ -8,7 +8,7 @@ Every hit has its real latitude and longitude. In the game, open the menu: the b
 | street_building | 119 | a ground street running through a mapped building for 15 m or more (data) |
 | void_block | 4684 | a built-up block of 15,000 m2 and up with under 5 % built (a flat grey void) |
 | landmark_offset | 3 | a landmark more than 150 m from the centre of its footprint (label in the wrong place) |
-| footway_run | 94 | a footway inside a carriageway for over 16 m (drawn grey; the zebra rule only takes short crossings) |
+| footway_run | 114 | a footway inside a carriageway for over 16 m (drawn grey; the zebra rule only takes short crossings) |
 
 ## park_building (30, first 25)
 
@@ -108,32 +108,32 @@ Every hit has its real latitude and longitude. In the game, open the menu: the b
 | 28.58285, 77.23359 | 2401, 3453 | jln-stadium listed 158 m from its footprint centre |
 | 28.64602, 77.31489 | 10336, -3571 | anand-vihar-isbt listed 214 m from its footprint centre |
 
-## footway_run (94, first 25)
+## footway_run (114, first 25)
 
 | lat, lon | x, z | what |
 |---|---|---|
-| 28.62618, 77.22272 | 1340, -1365 | footway #235606: 30 m inside a carriageway |
-| 28.64167, 77.23364 | 2405, -3088 | footway #241643: 24 m inside a carriageway |
+| 28.62617, 77.2226 | 1328, -1364 | footway #235606: 44 m inside a carriageway |
+| 28.64167, 77.23364 | 2405, -3088 | footway #241643: 32 m inside a carriageway |
 | 28.61441, 77.21231 | 323, -57 | footway #247425: 34 m inside a carriageway |
 | 28.61392, 77.21228 | 320, -2 | footway #247426: 58 m inside a carriageway |
-| 28.61367, 77.21229 | 322, 26 | footway #247402: 96 m inside a carriageway |
-| 28.66002, 77.23569 | 2606, -5128 | footway #251840: 18 m inside a carriageway |
+| 28.61367, 77.21229 | 322, 26 | footway #247402: 98 m inside a carriageway |
+| 28.61204, 77.21216 | 308, 207 | footway #389166: 50 m inside a carriageway |
+| 28.6116, 77.21213 | 305, 256 | footway #389165: 60 m inside a carriageway |
+| 28.66002, 77.23567 | 2604, -5128 | footway #251840: 20 m inside a carriageway |
 | 28.63775, 77.17898 | -2930, -2652 | footway #336686: 18 m inside a carriageway |
-| 28.67152, 77.19667 | -1203, -6407 | footway #203788: 20 m inside a carriageway |
-| 28.67176, 77.19674 | -1197, -6434 | footway #203789: 18 m inside a carriageway |
-| 28.68123, 77.20869 | -31, -7486 | footway #399471: 42 m inside a carriageway |
-| 28.62627, 77.27596 | 6536, -1376 | footway #96423: 118 m inside a carriageway |
+| 28.67152, 77.19667 | -1203, -6407 | footway #203788: 22 m inside a carriageway |
+| 28.67176, 77.19674 | -1197, -6434 | footway #203789: 20 m inside a carriageway |
+| 28.68144, 77.20872 | -28, -7510 | footway #399471: 66 m inside a carriageway |
 | 28.68198, 77.20871 | -28, -7570 | footway #399472: 60 m inside a carriageway |
-| 28.62679, 77.27713 | 6650, -1433 | footway #96424: 26 m inside a carriageway |
+| 28.68204, 77.20886 | -13, -7577 | footway #399464: 42 m inside a carriageway |
+| 28.62652, 77.27657 | 6596, -1403 | footway #96423: 186 m inside a carriageway |
+| 28.6268, 77.27715 | 6652, -1435 | footway #96424: 32 m inside a carriageway |
 | 28.68299, 77.20866 | -33, -7682 | footway #399455: 92 m inside a carriageway |
-| 28.68479, 77.21167 | 261, -7883 | footway #399478: 28 m inside a carriageway |
-| 28.68434, 77.20755 | -142, -7832 | footway #399460: 22 m inside a carriageway |
+| 28.68376, 77.20794 | -103, -7768 | footway #399461: 20 m inside a carriageway |
+| 28.68459, 77.2122 | 313, -7860 | footway #399477: 28 m inside a carriageway |
+| 28.68479, 77.21167 | 261, -7883 | footway #399478: 58 m inside a carriageway |
+| 28.68434, 77.20755 | -142, -7832 | footway #399460: 66 m inside a carriageway |
 | 28.68507, 77.21095 | 190, -7913 | footway #399479: 78 m inside a carriageway |
 | 28.6853, 77.21034 | 131, -7939 | footway #399480: 66 m inside a carriageway |
 | 28.68541, 77.21003 | 101, -7952 | footway #399481: 34 m inside a carriageway |
-| 28.6858, 77.20901 | 1, -7995 | footway #399482: 110 m inside a carriageway |
-| 28.68568, 77.20822 | -76, -7982 | footway #399459: 20 m inside a carriageway |
-| 28.68583, 77.20815 | -83, -7999 | footway #399458: 48 m inside a carriageway |
-| 28.68601, 77.20847 | -52, -8018 | footway #399482: 48 m inside a carriageway |
-| 28.68599, 77.20823 | -75, -8016 | footway #399458: 20 m inside a carriageway |
-| 28.68638, 77.20854 | -44, -8059 | footway #398917: 18 m inside a carriageway |
+| 28.68514, 77.20795 | -102, -7921 | footway #399459: 88 m inside a carriageway |
