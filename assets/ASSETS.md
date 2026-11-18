@@ -29,3 +29,7 @@ Every outside asset: where it came from, who made it, under what licence. "Proje
 | `nature/delhi_*.png` | Six Delhi tree pictures (neem, peepal, jamun, gulmohar, amaltas, kikar) drawn by `tools/make_tree_cards.py` | own work (Pillow script) | us | project licence |
 | `icons/*.png` | The home-screen app icon: a road in a ring, drawn by script (Python Pillow) | own work | us | project licence |
 | `npc/npc_*.glb`, `npc/npc_*_lod1.glb` | Cartoon pedestrians (commuter, vendor, tourist), skinned, walk and idle animation; the game loads the small `_lod1` versions | own work, made in Blender by Stream B (script `dev/build_npc_stylised.py`; **the script is not in the repository yet and the models' base mesh is not recorded: Anshul to confirm**) | us | project licence |
+
+## Reference photographs and research sources (study only, nothing shipped)
+
+The Delhi work is compared against 60 web photographs, 3 official forest-department landscape photographs and 16 earlier plates (see `docs/delhi_reference_register.json`, one row per picture with its source page). None is stored in the repository or used as a texture or model; permission to reuse them is not confirmed, so they are used only to judge proportions and street composition. Models and textures made from them are own work and are listed in the table above with the register ids they were matched to. Source code of GTA community projects (reVC, gta-reversed, Vice City browser ports) was read for architecture only; no code or data was taken. See `docs/DELHI_REFERENCES.md`.

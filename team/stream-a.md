@@ -1,7 +1,21 @@
+## 2026-11-19 18:00  A-2026-11-19-04  Delhi reference pack mapped onto C/P/L/B tasks; licence register
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `docs/DELHI_REFERENCES.md` (pack steps R0 to R11 mapped to existing tasks, no new phase names; licence rules), `docs/delhi_reference_register.json` (every photo and source page, no image bytes), a "Reference photographs" section in `assets/ASSETS.md`. All pack photos are study only, permission not confirmed; no GTA code or data is used.
+Evidence: documents only; nothing implemented or measured here.
+For the other stream: Anshul's Claude: C0 to C4 are yours under the 17 Nov override; the pack asks for source-id diagnostics first (C0). The Connaught Place greybox comparison (my side, Stream A) comes next and will be logged separately.
+Status: info
+
 ## 2026-11-19 17:00  A-2026-11-19-03  P1 part 3: paved forecourts, and the first visible frame measurement
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `src/world/city/infill.js`: open ground left inside dense blocks (oldDelhi, market, default, cp, business) is returned as `yards` (8 m grid cells merged to rectangles, 700 a tile at most, clear of streets by 2.5 m and of buildings by 1.2 m); `src/world/city/tilemesh.js` paves them in the pavement mesh (same height and texture as the pavements); `tools/selftest.mjs`: yards are inside a block, not under a building, deterministic.
 Evidence: implemented; self-test 115 checks; frame cost MEASURED in a visible Browser pane (Claude desktop app, Chrome 156, MacBook-class Mac, `?play&city=delhi&q=med&bench=30`, Connaught Place start): 3,034 frames, average 9.9 ms, p95 16.7 ms, p99 22.3 ms, worst 55.4 ms, 382 draw calls, 281 k triangles, heap 270 MB. This is a desktop figure, NOT a phone figure. Not done: a person's check of the forecourts, a phone run.
+For the other stream: nothing.
+Status: info
+
+## 2026-11-19 17:00  A-2026-11-19-03  P1 third increment: paved forecourts
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/infill.js` (Stream A): after the lots, open ground inside dense blocks (areas oldDelhi, market, default, cp, business) is cut into 8 m cells that are clear of streets (2.5 m), parks and buildings (1.2 m), merged along rows into rectangles (`tile`-level array `yards`, at most 700 a tile); `src/world/city/tilemesh.js` draws them as pavement quads (same material and height as the pavements, +3 cm); `tools/measure_voids.mjs` reports voids still bare after the yards; `tools/selftest.mjs` (yards inside blocks, not under buildings, deterministic); status lines in the two plan docs.
+Evidence: implemented; self-test 115 checks; by script: Chandni Chowk 1,116 yards (19 ha), Connaught Place 1,276, Lajpat Nagar 419, Karol Bagh 0, Khan Market 0; seen in a browser: a cobbled forecourt between buildings in Chandni Chowk (x 2124, z -4772). NOT done or measured: frame cost (the pane was hidden; run `?play&city=delhi&q=med&bench=30` visibly), trees, parked cars and stalls in the yards, plazas, phones, a person's judgement.
 For the other stream: nothing.
 Status: info
 

@@ -175,7 +175,7 @@
     {
      "id": "aa91e9e5",
      "t": "P1: Fill the voids",
-     "d": "19 Nov 2026: interiors added, 100 m voids 19 to 10 (tools/measure_voids.mjs); forecourts, parking, plazas and the coverage targets still open. Remaining: interiors, forecourts, parking and plazas inside large blocks (paving, trees, parked cars, a few stalls), area styles tuned from identity.json (Old Delhi dense and tall, Lutyens low). Done when no 100 m by 100 m grey void is left inside an urban block in the 5 samp…",
+     "d": "19 Nov 2026: interiors added, 100 m voids 19 to 10 (tools/measure_voids.mjs); paved forecourts added the same day; trees, parked cars, stalls, plazas and the coverage targets still open. Remaining: interiors, forecourts, parking and plazas inside large blocks (paving, trees, parked cars, a few stalls), area styles tuned from identity.json (Old Delhi dense and tall, Lutyens low). Done when no 100 m by 100 m grey void…",
      "s": "doing",
      "w": "Anshul",
      "r": "docs/NEXT_PHASES.md"
@@ -637,6 +637,19 @@
      "s": "todo",
      "w": "Rajul",
      "r": "stream-b.md 2026-11-17, from Anshul's Claude"
+    }
+   ]
+  ],
+  [
+   "Open pull requests",
+   [
+    {
+     "id": "a54d6dd4",
+     "t": "PR 101: Delhi P1: infill interiors, paved forecourts, void measuring tool",
+     "d": "Open pull request on branch claude/delhi-p1-infill. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 101"
     }
    ]
   ],
@@ -1524,6 +1537,11 @@
  ],
  "prs": [
   [
+   "101",
+   "Delhi P1: infill interiors, paved forecourts, void measuring tool",
+   "open"
+  ],
+  [
    "100",
    "Trees by species (clumps, shadows), Metro through buildings fixed, asset cache, engine sound start",
    "merged"
@@ -1717,11 +1735,6 @@
    "62",
    "Delhi renderer fixes: city GPS, gate fade, underpasses, kerbs, performance, people, look (12.2 to 12.8)",
    "merged"
-  ],
-  [
-   "61",
-   "D6: Delhi Metro and railway stations in the city enclave",
-   "merged"
   ]
  ],
  "branches": [
@@ -1749,5 +1762,5 @@
    "115 checks passing"
   ]
  ],
- "generated": "2026-11-18T19:36:35.491Z"
+ "generated": "2026-11-18T19:45:26.192Z"
 }
