@@ -3,7 +3,7 @@
 Collected while taking screenshots and reading the browser console (visible pane, desktop Mac, `q=med`). Each line says what was seen and where; nothing here is fixed unless marked. Severity: A = looks wrong or breaks play, B = clearly short of the GTA and CP references, C = tidy-up.
 
 ## Seen and probably wrong
-- **A. Hoardings (billboards on poles) draw a huge dark slab under or over the board**, like a floating black table (seen at the signalled junction near x 794, z -2263 and in the sign screenshots). `streetlife.js` hoarding geometry; needs a real frame and a thin back.
+- **A. [FIXED 20 Nov 2026, phase 1: the catwalk box was sized per axis and never turned, so a diagonal street got a 6 m by 6 m slab; now 8.2 m long along the board and thin; seen at x 787, z -2258] Hoardings (billboards on poles) draw a huge dark slab under or over the board**, like a floating black table (seen at the signalled junction near x 794, z -2263 and in the sign screenshots). `streetlife.js` hoarding geometry; needs a real frame and a thin back.
 - **A. Quality governor drops to Eco on a desktop** (HUD showed ECO during several runs); it trips on tile-building hitches. Check `gov` in `main.js`.
 - **A. Frame hitches while tiles build**: worst frame 167 ms in one run, 1,033 ms in another (p99 66 ms) in a tab that had been reloaded many times; clean tabs gave worst 39 to 45 ms. Needs a build-time budget check with the new wear and signs.
 - **A. Memory grows**: JS heap 270 to 531 MB in fresh tabs, up to 958 MB after many reloads. Look for tiles, canvases and textures that are not disposed (the new sign atlas and plaza texture are created once, but check tile disposal of `rsign` and `junk`).
