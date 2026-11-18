@@ -1,3 +1,10 @@
+## 2026-11-19 22:00  A-2026-11-19-07  CP roads: smooth circles, wider junction corners, hedge ends, overhead debug camera
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: (1) new `src/world/city/smooth.js`, called from `src/world/city/pack.js` `tile()`: the Inner Circle is laid on its fitted circle (2.5 degree steps), the Middle and Outer Circle are smoothed by corner cutting; piece ends never move. (2) `src/world/city/tilemesh.js`: junction kerb radius `min(12, max(3, 1.6 * halfWidth + 1.5))` for the WHOLE city (was `min(7, ...)`). (3) `src/world/city/streetlife.js`: hedge boxes are tested at both ends against roads and buildings. (4) `src/main.js` (shared, 2 lines after `window.__next`): `window.__cam(x, y, z, yaw, pitch)` puts the game in fly mode with the camera placed exactly (overhead: pitch -1.5); nothing in the game calls it.
+Evidence: implemented; self-test 116 checks (new: CP smooth circles); seen in a visible browser pane from above at the Inner Circle and Radial Road 7 (rounded corner, hedges off the road mouth). NOT done: a scripted drive round the circle, the Outer and Middle Circle looked at, a re-run of `tools/audit_city.mjs` after the wider corners (buildings near corners across Delhi), a phone, a person's judgement.
+For the other stream: Anshul's Claude: `smooth.js` runs on tile decode, so graph edge geometry (`edgeGeom`) sees the smoothed Inner Circle; tell me if routing or autodrive misbehaves round Connaught Place. The wider corners are city-wide: say if they clash with C2 (buildings against roads).
+Status: info
+
 ## 2026-11-19 20:00  A-2026-11-19-06  CP match: plan, measurements, six camera spots
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `docs/CP_MATCH_PLAN.md` (plan: per-element check against references, exact to CP, smooth roads), `docs/CP_MATCH_LOG.md` (measurements and an element table), `tools/measure_cp.mjs` (fits circles to the pack's Inner and Outer Circle), `tools/cp_views.json` (six camera spots).
