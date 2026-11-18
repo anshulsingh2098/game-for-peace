@@ -9,6 +9,7 @@ import { fillerSteps } from './fillers.js';
 import { addFillers } from './fillerview.js';
 import { approachMarks, speedBreakers, wear, medians } from './roadmarks.js';
 import { roofDetail } from './rooftops.js';
+import { facadeDetail, streetIndex } from './facades.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
 
@@ -171,7 +172,7 @@ export function* buildTileSteps(tile, ctx) {
   const addJ = (p, hw, rc, cls) => { const n2 = p.length / 2; let len = 0; for (let i = 0; i + 3 < p.length; i += 2) len += Math.hypot(p[i + 2] - p[i], p[i + 3] - p[i + 1]); if (len < 6) return; for (const [i0, i1] of [[0, 1], [n2 - 1, n2 - 2]]) { const x = p[i0 * 2], z = p[i0 * 2 + 1]; let j = i1; while (j >= 0 && j < n2 && Math.hypot(p[j * 2] - x, p[j * 2 + 1] - z) < 0.5) j += i1 > i0 ? 1 : -1; if (j < 0 || j >= n2) continue; const dx = p[j * 2] - x, dz = p[j * 2 + 1] - z, L = Math.hypot(dx, dz), k = Math.round(x * 10) + ',' + Math.round(z * 10); let l = J.get(k); if (!l) J.set(k, l = []); l.push({ x, z, dx: dx / L, dz: dz / L, hw, rc, len, cls }); } };
   /* the list of streets sorted so that small roads are drawn first (their order only matters for z fighting at junctions, which the offsets below settle) */
   const PF = ctx.paint === false ? { on: false } : { on: true, stop: true, breakers: true, wear: true, medians: true, ...(ctx.paint && typeof ctx.paint === 'object' ? ctx.paint : {}) };       // ctx.paint: false turns all road paint off; an object switches parts off (stop, breakers, wear, medians)
-  const roofCounts = { items: 0, tris: 0 };
+  const roofCounts = { items: 0, tris: 0 }, facadeCounts = { items: 0, tris: 0, colonnade: 0 }; let sidx = null;
   const paint = { m: M.mark, X, Z, gy, counts: { arrows: 0, breakers: 0, patches: 0, oil: 0, dirt: 0 } }, medPieces = [];
   for (const s of tile.streets) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
@@ -274,6 +275,7 @@ export function* buildTileSteps(tile, ctx) {
     let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }
     if (tris) { const all = contour.concat(...holes), base = B.p.length / 3; for (const q of all) B.v(X(q.x), y1, Z(q.y), 0, 1, 0, rc, 0.06, 0.06); for (const t of tris) B.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0); }
     if (!L && ctx.roofs !== false && hgt >= 5) { const an = ctx.life && ctx.life.identity ? ctx.life.identity.areaOfBuilding(b, cx / n, cz / n) : 'default'; out.roofTris = (out.roofTris || 0) + roofDetail(M.roof, b, { X, Z, y1, wall: wc, area: an, counts: roofCounts, light: !!b.infill }); }       // P3 (rooftops.js): parapet, water tanks, AC units, antennas; its own mesher, shown only near
+    if (!L && !b.infill && ctx.facades !== false && hgt >= 6) { if (!sidx) sidx = streetIndex(tile, G); const an2 = ctx.life && ctx.life.identity ? ctx.life.identity.areaOfBuilding(b, cx / n, cz / n) : 'default'; out.facadeTris = (out.facadeTris || 0) + facadeDetail(M.roof, b, { X, Z, y0, y1, wall: wc, area: an2, dist: sidx, counts: facadeCounts, circles: out.circles }); }       // P3 (facades.js): balconies, wall ACs, cornice, the CP colonnade; same near-only mesher
     out.nBuildings++; if (x1b - x0 > 2 && z1b - z0 > 2) out.claims.push({ shape: { t: 'rect', x: (x0 + x1b) / 2, z: (z0 + z1b) / 2, hx: (x1b - x0) / 2, hz: (z1b - z0) / 2, yaw: 0 }, kind: 'building', owner: 'building' });
     if (L && (L.importance >= 3 || (L.type || '').includes('station'))) out.labels.push({ id: L.id, text: L.name.en, x: cx / n, z: cz / n, y: y1 + 10 });
   }
