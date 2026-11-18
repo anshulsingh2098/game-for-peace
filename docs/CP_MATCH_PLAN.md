@@ -1,0 +1,26 @@
+# Connaught Place: match the references, then the rest of Delhi
+
+Owner decision (19 Nov 2026): do Connaught Place (CP) first, to a photoreal, GTA-like look and scale. Other parts of Delhi follow only after CP is accepted, and reuse the same kits. Stream A (Rajul's Claude). Reference photos: the owner's four CP photos of 19 Nov (daylight corner block, arcade with brand boards, wide street view with hedge, dusk arcade) plus N19 in `docs/delhi_reference_register.json`. All references are study only; nothing is copied or traced (`docs/DELHI_REFERENCES.md`).
+
+## What "matched" means (acceptance, decided before building)
+Six fixed camera spots, each a side-by-side with the matching photo, scored by a person (Rajul) on a 1 to 5 sheet: shape and proportion, colour, brand boards, lighting, ground, scale (a person next to a column). CP is accepted when every spot is 4 or more and nobody can name a major difference. Spots: (1) street corner looking at a corner block (photo 1), (2) walking under the arcade with boards (photo 2), (3) across the circle at the hedge and facade (photo 3), (4) arcade at dusk (photo 4), (5) a radial street mouth, (6) driving the Inner Circle at 50 km/h. Each spot has a fixed x, z, yaw and time of day, in `tools/cp_views.json`, so before and after are repeatable. Also measured at each step: triangles, draw calls, p95 on a named device with a visible window; the current CP budget is 320 k triangles and 383 calls at `q=med` (desktop only so far).
+
+## Gaps found (19 Nov 2026, current build against the four photos)
+Pillars are thin square posts, not tall round fluted columns with base and capital; the facade is a flat box, not layered stucco with a deep cornice, arched first-floor windows and a drum corner block; brand boards are almost absent and do not glow; the lighting is flat and cool, not warm sun with hard shadow and warm shop light; the apron in front is bare earth, not large polished stone slabs with a kerb; the circle has no clipped hedge, no planters; trees are lollipops, not big dark canopies over the walk.
+
+## Order of work (each step: build, view at the six spots, measure, log, small commit)
+1. **Measure first.** From the pack geometry (not guesses): CP's two circles, radii, block count and frontage lengths, street widths, building heights. From the photos: person height as the scale cue gives column height and diameter, bay width, arcade depth. Write the numbers and their evidence into this file. Where a number comes only from a photo, say so.
+2. **Ground and street.** Large light stone slabs (CC0 PBR textures from ambientCG or Poly Haven, credited in `assets/ASSETS.md`), a tactile strip, a kerb, the clipped hedge and planters on the circle, the asphalt kept. Remove the bare earth apron around both circles.
+3. **Columns and arcade.** Round fluted columns with base and capital, paired at corners, at the measured spacing and height; an arcade ceiling with a deep cornice. 16-sided shaft, shared instanced mesh per tile so draw calls stay flat.
+4. **Facade kit.** A small set of modules built from the photos: arcade bay, first-floor arched window with balustrade, plain window bay, corner drum with pediment, roof parapet. Placed along each frontage by rule (frontage length divided into bays), so every block is different and none is copied from a photo.
+5. **Brand boards and shopfronts.** Original board designs (invented brand names and colours, no real logos or trademarks), red, blue, black and white, long fascia boards plus vertical blades; shop fronts with glass, shutters and warm interior light; at dusk and night the boards and shops glow (emissive map).
+6. **Light and colour.** Warm cream stucco, sun and long shadow cascaded to the arcade, bounce from the paving, ambient occlusion baked into the vertex colours under the arcade and cornice, tone mapping and a light bloom for night. A day, golden hour and night look, checked at the six spots.
+7. **Life.** Trees with big canopies over the walk (needs the T1 pictures; ties into the open tree task), benches and bins, people at scale on the walk, auto-rickshaws, taxis and buses on the circle at the right density.
+8. **Phones.** The same spots on a named phone with the quality tier set; anything that costs more than the budget gets a lower detail tier, not removed (the arcade and boards are distance-limited).
+9. **Acceptance and handoff.** The owner scores the six spots. Then the kits are applied to the other Delhi areas by area rules (`identity.js`), starting with the nearest.
+
+## Rules we keep
+No third-party photographs or logos in the game; textures only from CC0 or listed licences; every addition recorded in `assets/ASSETS.md`. Stream A edits `src/world/city/*`; shared files get a log entry. Nothing is merged or deployed without the owner's yes. Performance is measured in a visible window; a hidden-tab frame rate is never quoted.
+
+## Honest limits
+A browser at phone budgets cannot match a console game's geometry density. "GTA-like" here means GTA San Andreas to GTA IV era composition and lighting at 2026 display resolution: believable at street height, not film quality. Close inspection of a column or a sign will show its low polygon count; the photographs' reflective wet-look paving and fine facade relief are approximated by textures and normal maps, not geometry.
