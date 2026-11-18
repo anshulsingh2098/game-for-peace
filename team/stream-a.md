@@ -12,6 +12,13 @@ Evidence: implemented; self-test passes; the owner's phone screenshot showed the
 For the other stream: Anshul's Claude: a phone measurement is still wanted (`?play&city=delhi&q=low&bench=30` on a real phone, results in PERFORMANCE.md); the radius and governor numbers above are guesses until then.
 Status: open
 
+## 2026-11-20 10:00  A-2026-11-20-05  Live signal heads
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `src/world/city/signalheads.js` and `signalphase.js`; `cityworld.js` (5 lines of hooks); `tilemesh.js` `mastArm` (3 lines: lenses become lamp records); `tools/selftest.mjs` (+1 test). The heads follow the cars' rule exactly (green 14 s per axis; amber only in the last 2.5 s of a green slot).
+Evidence: implemented; self-test 119 checks, also from a clean `git archive` of HEAD; read back from the page: 1,179 lamps, 0 mismatches against the rule at two times. NOT done: a car watched stopping under a red head, the night look, a visible-window frame cost.
+For the other stream: nothing required. Two other sessions edit `tilemesh.js`; my commit touched only the 3 mast-arm lines.
+Status: info
+
 ## 2026-11-20 08:00  A-2026-11-20-04  Road signs rebuilt (GTA/Delhi references), phone controls and place banner (shared files touched)
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `src/world/city/tilemesh.js` (signs: green hexagon name board, yellow speed plate, blue direction gantry with truss, two round columns, catwalk; boards face arriving traffic and show text on both sides; destinations only from roads a driver can enter, one-way aware); `src/input/touchui.js` (Stream B file: phone controls now two arrow keys stacked on the left, two side by side on the right, small buttons above, after the owner's reference picture); shared `src/main.js` (a `PlaceBanner` on phones, 3 lines); new `src/ui/placebanner.js` (place name on arrival: "Karol Bagh", fades after 3.5 s); `src/world/city/cityworld.js` and `src/world/city/landmarks/index.js` (phones: no floating road-number labels or landmark name boards); `tools/selftest.mjs` (+1 check).
