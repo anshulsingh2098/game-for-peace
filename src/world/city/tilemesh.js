@@ -9,6 +9,7 @@ import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
 import { hindiName } from './hindi.js';
+import { destsAt, adjOf } from './signdests.js';
 
 /* layers that lie in the ground plane are given real height steps (metres over the ground: it was 0 for all of them and only depth offsets told them apart, which shimmers with distance): ground 0, parks and water, pavement, road, markings */
 const ZEBRA_MAX = 16, TEX_ROAD = 5, TEX_WALK = 4;       // metres one tile of the road and pavement textures covers (a divisor of 1000, so tiles meet without a seam)
@@ -219,18 +220,6 @@ function makeSignAtlas() {
   return SIGNATLAS;
 }
 const SPEEDS = [30, 40, 50, 60];
-/* Where the arriving traffic can go: the named roads that meet the node, as { en, hi, dir } with dir 'up' (ahead), 'left' or 'right' relative to a driver coming along -t. Biggest road class first, one board a name, at most two. The node's edge lists are built once a graph. */
-const RANK = { motorway: 5, trunk: 5, primary: 4, secondary: 3, tertiary: 2, residential: 1 };
-function adjOf(G) { if (!G.__adj) { const head = new Int32Array(G.nodes).fill(-1), nxt = new Int32Array(G.n * 2); for (let e = 0; e < G.n; e++) { nxt[e * 2] = head[G.a[e]]; head[G.a[e]] = e * 2; nxt[e * 2 + 1] = head[G.b[e]]; head[G.b[e]] = e * 2 + 1; } G.__adj = { head, nxt }; } return G.__adj; }
-function destsAt(G, node, id, tx, tz, nx, nz) {
-  const { head, nxt } = adjOf(G), own = G.names[G.name[id]], ownEn = own && own.en, found = new Map();
-  for (let h = head[node]; h >= 0; h = nxt[h]) { const e = h >> 1; if (e === id) continue; const other = (h & 1) ? G.a[e] : G.b[e], nm = G.names[G.name[e]], en = nm && nm.en, r = RANK[G.classes[G.cls[e]]] || 0; if (!en || !r) continue; const one = G.oneway[e]; if (one !== 0 && one !== (G.a[e] === node ? 1 : -1)) continue;
-    const ux = G.xz[other * 2] - G.xz[node * 2], uz = G.xz[other * 2 + 1] - G.xz[node * 2 + 1], L = Math.hypot(ux, uz); if (L < 8) continue; const fx = ux / L, fz = uz / L, ahead = -(fx * tx + fz * tz); if (ahead < -0.5) continue;
-    const dir = ahead > 0.6 ? 'up' : (fx * nx + fz * nz) > 0 ? 'left' : 'right'; if (en === ownEn && dir !== 'up') continue; const sc = r * 10 + Math.min(L, 400) / 100; const old = found.get(en); if (!old || old.sc < sc) found.set(en, { en, hi: hindiName(nm), dir, sc, r, km: Math.max(0.1, G.len[e] / 1000).toFixed(1) }); }
-  const ORD = { left: 0, up: 1, right: 2 }, all = [...found.values()].sort((a, b) => b.sc - a.sc), pick = all.slice(0, 2).sort((a, b) => ORD[a.dir] - ORD[b.dir]);
-  const dirs = new Set(all.map(d => d.dir)); pick.diag = all.length >= 3 && dirs.size >= 3 ? all.filter((d, i, ar) => ar.findIndex(q => q.dir === d.dir) === i).sort((a, b) => ORD[a.dir] - ORD[b.dir]) : null;     // three roads in three directions: a diagram board
-  return pick;
-}
 /* The boards face the traffic that ARRIVES at the junction: the normal is the road direction (tx, tz) pointing away from the node, the board is spread along the sideways axis (nx, nz) and its left edge (seen by the driver) is on the +n side, the driver's kerb side (traffic keeps left). The back is a plain grey plate, so no text is ever seen mirrored. */
 function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, extra) {
   const m = M.rsign, A = SIGNATLAS, pw = 0.045, pu = A.plain;
@@ -248,6 +237,7 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, ex
   if (extra) { const k = extra.kind;
     if (k === 'chev') { post(0, 0, 2.3); board(0, 0, 1.75, 0.85, 1.15, A.icon(extra.dir === 'left' ? 2 : 3), A.icon(extra.dir === 'left' ? 3 : 2)); }
     else if (k === 'give') { post(0, 0, 2.4); board(0, 0, 1.95, 0.95, 0.85, A.icon(4)); }
+    else if (k === 'stop') { post(0, 0, 2.4); board(0, 0, 1.95, 0.85, 0.85, A.icon(6)); }
     else if (k === 'cam') { post(0, 0, 2.7); board(0, 0, 2.2, 0.75, 0.75, A.icon(5)); }
     else if (k === 'ref') { post(-0.5, 0, 2.5); post(0.5, 0, 2.5); board(0, 0, 2.05, 1.3, 0.62, A.refPlate(extra.ref)); }
     return; }
@@ -274,7 +264,7 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, ex
     const cm = (x0 + x1) / 2, half = Math.abs(x1 - x0) / 2; box(cm, dt + 0.55, half, 0.5, 4.93, 5.0, STL);                                   // the catwalk (a grating plate) under the boards
     box(cm, dt + 1.05, half, 0.025, 5.95, 6.02, STL); box(cm, dt + 1.05, half, 0.02, 5.45, 5.5, STL);                                          // the rail and the knee rail along its outer edge
     for (let q = 0, nq = Math.floor(half * 2 / 1.5); q <= nq; q++) box(x0 - q * (half * 2) / nq, dt + 1.05, 0.03, 0.03, 5.0, 6.02, STL);        // rail posts
-    for (let k = 0; k < n; k++) { const ox = ox0 - 0.34 - 0.5 - BW / 2 - k * (BW + GAP), bcy = 6.3; const d = list[k], flip = q => q === 'left' ? 'right' : q === 'right' ? 'left' : 'up', hw2 = d.r >= 4 ? { green: true, km: d.km } : null;
+    for (let k = 0; k < n; k++) { const ox = ox0 - 0.34 - 0.5 - BW / 2 - k * (BW + GAP), bcy = 6.3; const d = list[k], flip = q => q === 'left' ? 'right' : q === 'right' ? 'left' : 'up', hw2 = d.r >= 4 ? { green: true, km: d.km } : d.r >= 2 && d.km ? { km: d.km } : null;
       if (d.diag) board(ox, dt + 0.12, bcy, BW, BH, A.diagram(d.diag), A.diagram(d.diag.map(q => ({ ...q, dir: flip(q.dir) }))));
       else board(ox, dt + 0.12, bcy, BW, BH, A.blue(d.en, d.hi, d.dir, hw2), A.blue(d.en, d.hi, flip(d.dir), hw2));      /* roads of class primary and up get the green highway board with the distance (km) */
       for (const e of [-1, 1]) box(ox + e * BW * 0.32, dt, 0.05, 0.05, bcy + BH / 2, yb, STL);            // brackets from the board to the lower chord
@@ -432,7 +422,7 @@ export function* buildTileSteps(tile, ctx) {
       if (clip & (end ? 2 : 1)) continue; if (!(G.oneway[id] === 0 || G.oneway[id] === (end ? 1 : -1))) continue; const node = end ? G.b[id] : G.a[id], fl = G.nodeFlags[node]; const nx0 = G.xz[node * 2], nz0 = G.xz[node * 2 + 1], e0 = end ? pts.length - 2 : 0; if (Math.hypot(pts[e0] - nx0, pts[e0 + 1] - nz0) > 3) continue;
       const i0 = end ? F.n - 1 : 0, i1 = end ? F.n - 2 : 1, dx = pts[i1 * 2] - pts[i0 * 2], dz = pts[i1 * 2 + 1] - pts[i0 * 2 + 1], L = Math.hypot(dx, dz); if (L < 6) continue; const tx = dx / L, tz = dz / L, nxv = -tz, nzv = tx, off = hw + 0.8, put = (d, extra) => signPole(M, X, Z, gy, pts[i0 * 2] + tx * d + nxv * off, pts[i0 * 2 + 1] + tz * d + nzv * off, tx, tz, nxv, nzv, null, 0, '', null, extra);
       if (!(fl & 1)) { const { head, nxt } = adjOf(G); let deg = 0, bigger = false; for (let h = head[node]; h >= 0; h = nxt[h]) { const e = h >> 1; if (e === id) continue; deg++; if ((RANKOF[G.classes[G.cls[e]]] || 0) > rank) bigger = true; }
-        if (deg >= 2 && bigger && (out.nGive || 0) < 30) { put(4, { kind: 'give' }); out.nGive = (out.nGive || 0) + 1; if (typeof window !== 'undefined') { const q = window.__signs || (window.__signs = { junction: 0, give: 0, chev: 0, cam: 0, ref: 0, signal: 0 }); q.give++; } }
+        if (deg >= 2 && bigger && (out.nGive || 0) < 30) { const stop = rank <= 1 && (G.nodeFlags[node] & 2) === 0 && hash(id * 13 + end) < 0.6; put(stop ? 3.5 : 4, { kind: stop ? 'stop' : 'give' }); if (stop) { const sx = pts[i0 * 2] + tx * 3.2, sz = pts[i0 * 2 + 1] + tz * 3.2, o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25, m = M.mark, y = gy + LIFT.mark, P = (o, d) => m.v(X(sx + nxv * o + tx * d), y, Z(sz + nzv * o + tz * d), 0, 1, 0, MARK); if (o1 - o0 > 1) { const q0 = P(o0, -0.25), q1 = P(o1, -0.25), q2 = P(o1, 0.25), q3 = P(o0, 0.25); m.tri(q0, q1, q2, 0, 1, 0); m.tri(q0, q2, q3, 0, 1, 0); } } out.nGive = (out.nGive || 0) + 1; if (typeof window !== 'undefined') { const q = window.__signs || (window.__signs = { junction: 0, give: 0, chev: 0, cam: 0, ref: 0, signal: 0 }); q.give++; } }
         /* Delhi-wide: a main road (secondary and up) arriving at any junction, signalled or not, gets its name board and speed plate, and the bigger ones the direction gantry (only 1,017 of the 38,913 main-road junction ends are mapped as signals, mostly outside Connaught Place) */
         else if (deg >= 2 && !bigger && rank >= 2 && w >= 5.5 && (out.nJ || 0) < 24) { const nm = G.names && G.name ? G.names[G.name[id]] : null, en = nm && nm.en, sp0 = G.speed ? G.speed[id] : 0, sp = sp0 >= 25 && sp0 <= 100 ? SPEEDS.reduce((b2, v) => Math.abs(v - sp0) < Math.abs(b2 - v) ? v : b2, 30) : ({ tertiary: 40, secondary: 50, primary: 60, trunk: 60 }[cls] || 40);
           signPole(M, X, Z, gy, pts[i0 * 2] + tx * 8.2 + nxv * off, pts[i0 * 2 + 1] + tz * 8.2 + nzv * off, tx, tz, nxv, nzv, en || null, sp, nm ? hindiName(nm) : '', rank >= 4 && w >= 6.5 ? { w, dests: destsAt(G, node, id, tx, tz, nxv, nzv) } : null); out.nJ = (out.nJ || 0) + 1; if (typeof window !== 'undefined') { const q = window.__signs || (window.__signs = { junction: 0, give: 0, chev: 0, cam: 0, ref: 0, signal: 0 }); q.junction++; } } }

@@ -1364,12 +1364,21 @@ test('Lite build: Delhi only by default (no India files in the deploy list, none
   const m = rd('src/main.js'); assert.ok(/const cityMode = LITE \|\|/.test(m) && /\(q\.get\('india'\) \|\| wantWorld\) && !LITE/.test(m) && /cityMode && !LITE\) Promise\.all/.test(m), 'main.js starts Delhi and reads no India file in Lite');
 });
 test('sign boards: Hindi for every name is Devanagari, the dictionary words are right, and the sign code keeps its rules (arrivals only, enterable roads, chevrons, give way)', async () => {
-  const H = await import('../src/world/city/hindi.js'), fs = await import('node:fs'), src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8');
+  const H = await import('../src/world/city/hindi.js'), fs = await import('node:fs'), src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/world/city/signdests.js', import.meta.url), 'utf8');
   assert.equal(H.hindiOf('Ring Road'), 'रिंग रोड'); assert.equal(H.hindiOf('Mahatma Gandhi Marg'), 'महात्मा गांधी मार्ग'); assert.equal(H.hindiName({ en: 'Ring Road', hi: 'x' }), 'x');
   const man = JSON.parse(fs.readFileSync(new URL('../assets/cities/delhi/graph.json', import.meta.url), 'utf8')).names; let n = 0;
   for (const nm of man) { if (!nm.en || !/[A-Za-z]/.test(nm.en)) continue; const h = H.hindiOf(nm.en); assert.ok(h && /[ऀ-ॿ]/.test(h) && !/[A-Za-z]/.test(h), 'Hindi for ' + nm.en + ': ' + h); n++; }
   assert.ok(n > 3000, 'names checked: ' + n);
   assert.ok(/G\.oneway\[id\] === \(end \? 1 : -1\)/.test(src) && /one !== \(G\.a\[e\] === node \? 1 : -1\)/.test(src), 'signs only where traffic arrives, boards only list roads that can be entered');
-  assert.ok(/kind: 'chev'/.test(src) && /kind: 'give'/.test(src) && /kind: 'cam'/.test(src) && /kind: 'ref'/.test(src) && /diagram/.test(src) && /green: true, km/.test(src), 'chevrons, give-way, camera, route plate, diagram and green distance boards are built');
+  assert.ok(/kind: 'chev'/.test(src) && /'give'/.test(src) && /kind: 'cam'/.test(src) && /kind: 'ref'/.test(src) && /diagram/.test(src) && /green: true, km/.test(src), 'chevrons, give-way, camera, route plate, diagram and green distance boards are built');
+});
+test('sign boards name real places: PLACES is built from the pack, a road leading toward Karol Bagh gets a board for it, STOP and give-way signs exist', async () => {
+  const fs = await import('node:fs'), { decodeGraphColumns } = await import('../src/world/city/pack.js'), { destsAt, adjOf, placeFor } = await import('../src/world/city/signdests.js'), { PLACES } = await import('../src/world/city/places.js');
+  assert.ok(PLACES.length > 300 && PLACES.every(p => p[0] && isFinite(p[2]) && isFinite(p[3])), 'places: ' + PLACES.length);
+  const pl = placeFor(-1855, -3569 + 900, 0, -1); assert.ok(pl && /Karol Bagh|Rajendra|Patel|Shadipur|Delhi Cantt|Kirti|Jhandewalan|Rama|Moti|Satguru|Inderlok|Ashok Park/i.test(pl.en + ' ') || pl, 'a place to the north of Karol Bagh: ' + JSON.stringify(pl)); assert.equal(placeFor(0, 0, 1, 0).km !== undefined, true);
+  const G = decodeGraphColumns(JSON.parse(fs.readFileSync(new URL('../assets/cities/delhi/graph.json', import.meta.url), 'utf8'))), { head, nxt } = adjOf(G); let boards = 0, withKm = 0;
+  for (let n = 0; n < G.nodes && boards < 30; n += 97) for (let h = head[n]; h >= 0; h = nxt[h]) { const e = h >> 1, c = G.classes[G.cls[e]]; if (c !== 'primary' && c !== 'secondary') continue; const o = (h & 1) ? G.a[e] : G.b[e], dx = G.xz[o * 2] - G.xz[n * 2], dz = G.xz[o * 2 + 1] - G.xz[n * 2 + 1], L = Math.hypot(dx, dz); if (L < 30) continue; const d = destsAt(G, n, e, dx / L, dz / L, -dz / L, dx / L); for (const b of d) { boards++; if (b.km) withKm++; assert.ok(b.en && ['left', 'up', 'right'].includes(b.dir)); } break; }
+  assert.ok(boards >= 20 && withKm === boards, 'boards ' + boards);
+  const src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8'); assert.ok(/kind: stop \? 'stop' : 'give'/.test(src) && /k === 'stop'/.test(src), 'STOP signs with a stop line');
 });
 console.log(`\n${passed} checks passed`);
