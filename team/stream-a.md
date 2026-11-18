@@ -1,3 +1,10 @@
+## 2026-11-19 17:00  A-2026-11-19-03  P1 part 3: paved forecourts, and the first visible frame measurement
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/infill.js`: open ground left inside dense blocks (oldDelhi, market, default, cp, business) is returned as `yards` (8 m grid cells merged to rectangles, 700 a tile at most, clear of streets by 2.5 m and of buildings by 1.2 m); `src/world/city/tilemesh.js` paves them in the pavement mesh (same height and texture as the pavements); `tools/selftest.mjs`: yards are inside a block, not under a building, deterministic.
+Evidence: implemented; self-test 115 checks; frame cost MEASURED in a visible Browser pane (Claude desktop app, Chrome 156, MacBook-class Mac, `?play&city=delhi&q=med&bench=30`, Connaught Place start): 3,034 frames, average 9.9 ms, p95 16.7 ms, p99 22.3 ms, worst 55.4 ms, 382 draw calls, 281 k triangles, heap 270 MB. This is a desktop figure, NOT a phone figure. Not done: a person's check of the forecourts, a phone run.
+For the other stream: nothing.
+Status: info
+
 ## 2026-11-19 15:00  A-2026-11-19-02  P1 second increment: interiors of big blocks, and a void measuring tool
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `src/world/city/infill.js` (Stream A file): a second pass cuts each block into back-to-back rows of lots along its longest edge with 3.2 m lanes, same acceptance test as the frontage lots (cap 1,800 interior lots a tile, 4,000 in all; `interior: true` on the record; stats `iTry`, `iOut`, `iStreet`, `iBld`, `iMargin`); new `tools/measure_voids.mjs` (100 m cells of the 5 sample areas); `tools/selftest.mjs` (interior lots checked by the existing validity test); status lines in `docs/DELHI_POLISH_PLAN.md` and `docs/NEXT_PHASES.md`.

@@ -17,7 +17,7 @@ export const STYLE = {
   lutyens: { rows: 1, fill: 0.1, floors: [1, 2], w: [14, 24], d: [16, 24], use: 'residential' },
   business: { rows: 1, fill: 0.45, floors: [5, 10], w: [18, 36], d: [18, 30], use: 'office' },
 };
-const MAX_PER_TILE = 4000, INTERIOR_MAX = 1800, LANE = 3.2, INTERIOR_FILL = 0.8, EDGE_MARGIN = 25, STREET_CLEAR = 0.9, FLOOR = 3.2;
+const MAX_PER_TILE = 4000, INTERIOR_MAX = 1800, YARD_MAX = 700, YARD_STREET = 2.5, LANE = 3.2, INTERIOR_FILL = 0.8, EDGE_MARGIN = 25, STREET_CLEAR = 0.9, FLOOR = 3.2;
 
 const area2 = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return a / 2; };
 function pip(r, x, z) { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { const xi = r[i], zi = r[i + 1], xj = r[j], zj = r[j + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; }
@@ -111,6 +111,17 @@ export function* infillSteps(tile, o) {
         out.push({ id: baseId + (seq++ % 4000), ring, levels: lv, height: lv * FLOOR, use: style.use, hsrc: 'tag', infill: true, interior: true });
       }
     }
+  }
+  /* P1 part 3: forecourts. Ground inside a built-up block that is still open after the lots (the yards, the lanes and the plots between buildings) is paved in the dense areas, so it reads as a courtyard or a forecourt and not as bare earth: an 8 m grid, a cell is paved when all its corners and centre lie in the block, clear of streets by 2.5 m, of parks and of buildings (1.2 m), and it has a free neighbour on its row; the cells of a row are merged into rectangles [x0, z0, x1, z1]. Lawn areas, villages, DDA and Lutyens keep their earth and grass. */
+  const yards = []; out.yards = yards; const YC = 8, YARD_AREAS = new Set(['oldDelhi', 'market', 'default', 'cp', 'business']);
+  for (let bi = 0; bi < blocks.length && yards.length < YARD_MAX; bi++) {
+    if (o.yieldNow && o.yieldNow()) yield;
+    const B = blocks[bi], r = B.ring; if (r.length < 6) continue; let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9; for (let i = 0; i < r.length; i += 2) { bx0 = Math.min(bx0, r[i]); bx1 = Math.max(bx1, r[i]); bz0 = Math.min(bz0, r[i + 1]); bz1 = Math.max(bz1, r[i + 1]); }
+    if ((bx1 - bx0) < 3 * YC || (bz1 - bz0) < 3 * YC || !YARD_AREAS.has(o.styleAt((bx0 + bx1) / 2, (bz0 + bz1) / 2))) continue;
+    const gx0 = Math.max(Math.floor(bx0 / YC), Math.ceil((ox + EDGE_MARGIN) / YC)), gx1 = Math.min(Math.floor(bx1 / YC), Math.floor((ox + size - EDGE_MARGIN) / YC) - 1), gz0 = Math.max(Math.floor(bz0 / YC), Math.ceil((oz + EDGE_MARGIN) / YC)), gz1 = Math.min(Math.floor(bz1 / YC), Math.floor((oz + size - EDGE_MARGIN) / YC) - 1);
+    const free = (gx, gz) => { const x = gx * YC, z = gz * YC, P = [[x, z], [x + YC, z], [x + YC, z + YC], [x, z + YC], [x + YC / 2, z + YC / 2]]; for (const q of P) { if (!pip(r, q[0], q[1]) || !streetClear(q[0], q[1], YARD_STREET) || inPoly(q[0], q[1]) || inBuilding(q[0], q[1])) return false; } if (B.holes.some(h => P.some(q => pip(h, q[0], q[1])))) return false;
+      for (const [dx, dz] of [[-1.2, 0], [1.2, 0], [0, -1.2], [0, 1.2]]) { if (inBuilding(x - dx, z + YC / 2 + dz) || inBuilding(x + YC + dx, z + YC / 2 + dz) || inBuilding(x + YC / 2 + dx, z - dz) || inBuilding(x + YC / 2 + dx, z + YC + dz)) return false; } return true; };
+    for (let gz = gz0; gz <= gz1 && yards.length < YARD_MAX; gz++) { let run = -1; for (let gx = gx0; gx <= gx1 + 1; gx++) { const f = gx <= gx1 && free(gx, gz); if (f && run < 0) run = gx; if (!f && run >= 0) { if (gx - run >= 2) yards.push([run * YC, gz * YC, gx * YC, (gz + 1) * YC]); run = -1; } } }
   }
   void placed; return out;
 }
