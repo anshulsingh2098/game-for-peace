@@ -1,6 +1,8 @@
 /* Smooth circles (CP match, docs/CP_MATCH_PLAN.md "Roads"): the map draws Connaught Place's circles as straight chords (the Inner Circle: 18 m segments, 8 degrees a step), which look faceted and make the car turn in steps. Applied to each tile's streets after decoding, so the road mesh, kerbs, collision, traffic, the route line and autodrive all see the same smooth line.
    The first and the last point of every piece stay exactly where they are (the graph's nodes and the cuts at tile edges do not move). The Inner Circle is a true circle in the real plan: its points are re-laid on the fitted circle (centre 1044.2, -2100.4, radius 125.7 m, RMS 0.96 m, tools/measure_cp.mjs) every 2.5 degrees, with the radius blended back to the original over the first and last 25 m of a piece. The Middle and Outer Circles fit worse (Outer: RMS 3.4 m, worst 10 m), so they are smoothed by corner cutting (Chaikin) through their own points instead of being forced onto a circle. */
 export const CP_CIRCLE = { cx: 1044.2, cz: -2100.4, R: 125.7, STEP: 2.5 * Math.PI / 180, BLEND: 25, PLAZA_R: 345 };
+/* carriageway widths of the CP circles (m): the pack has 9 and 13 (guessed from lane counts); the owner's GTA frames show roads of 4 to 6 lanes and CP's circles carry several lanes each way, so they are drawn at least this wide. An estimate, not a survey: replace with measured widths when someone has them. */
+export const CP_WIDTH = { 'Inner Circle': 12, 'Outer Circle': 16 };
 const nameOf = (G, id) => { const n = G.names && G.name ? G.names[G.name[id]] : null; return n ? (typeof n === 'string' ? n : n.en || n.ref || '') : ''; };
 
 export function chaikin(p, rounds = 2) {
@@ -21,7 +23,7 @@ export function arcPiece(p, c = CP_CIRCLE) {
 export function smoothCircles(tile, G) {
   if (!tile || !tile.streets || !G) return tile; let any = false; const streets = tile.streets.map(s => {
     if (!s.pts || s.pts.length < 6) return s; const nm = nameOf(G, s.id); if (nm !== 'Inner Circle' && nm !== 'Middle Circle' && nm !== 'Outer Circle') return s;
-    let p = null; if (nm === 'Inner Circle') p = arcPiece(s.pts); if (!p && nm !== 'Inner Circle') p = chaikin(s.pts, 2); if (!p) return s; any = true; return { ...s, pts: p };
+    let p = null; if (nm === 'Inner Circle') p = arcPiece(s.pts); if (!p && nm !== 'Inner Circle') p = chaikin(s.pts, 2); if (!p) p = s.pts; any = true; const mw = CP_WIDTH[nm], cur = s.width !== undefined ? s.width : (G.lanes ? Math.max(1, Math.round(G.lanes[s.id] * 3.4 * 10) / 10) : 0); return { ...s, pts: p, ...(mw && cur < mw ? { width: mw } : {}) };
   });
   return any ? { ...tile, streets } : tile;
 }

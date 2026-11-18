@@ -114,6 +114,20 @@ function junctionShapes(J, M, X, Z, gy, out) {
   }
   out.nFillets = nf; out.nNotches = nn;
 }
+/* Road wear (the owner's GTA reference frames G1 to G5 show worn wheel tracks, patches, cracks and manholes on every road; ours was one flat colour). All in the marking layer, dark shades of asphalt, deterministic, with a budget a tile so it stays cheap: wheel tracks in each lane (two 0.45 m strips 1.6 m apart, a 6 m step), tar patches (dark or lighter, 1.2 to 4 m), manhole covers (8-sided, 0.38 m) and hairline cracks. Set ?nowear to turn it off. */
+const WEAR = !(typeof location !== 'undefined' && new URLSearchParams(location.search).has('nowear')), W_BUDGET = { tr: 7000, pa: 500, mh: 260, cr: 360 };
+function wearDetail(m, F, pts, H, w, hw, id, gy, X, Z, two, B) {
+  const total = F.arc[F.n - 1], lo = 7, hi = total - 7; if (hi - lo < 10) return;
+  const at = sa => { let i = 0; while (i + 2 < F.n && F.arc[i + 1] < sa) i++; const f = Math.max(0, Math.min(1, (sa - F.arc[i]) / Math.max(0.01, F.arc[i + 1] - F.arc[i]))), j = i + 1; return { x: pts[i * 2] + (pts[j * 2] - pts[i * 2]) * f, z: pts[i * 2 + 1] + (pts[j * 2 + 1] - pts[i * 2 + 1]) * f, nx: F.nx[i] + (F.nx[j] - F.nx[i]) * f, nz: F.nz[i] + (F.nz[j] - F.nz[i]) * f, y: H[i] + (H[j] - H[i]) * f }; };
+  const y = q => gy + q.y + LIFT.mark - 0.012, V = (q, off, C) => m.v(X(q.x + q.nx * off), y(q), Z(q.z + q.nz * off), 0, 1, 0, C);
+  const TRK = col(0x1b1b1e), PD = col(0x17171a), PL = col(0x3d3d43), MH = col(0x26262a), RIM = col(0x4a4a50), CRK = col(0x111113);
+  const lanes = Math.max(two ? 2 : 1, Math.round(w / 3.4)), lw = w / lanes;
+  if (B.tr < W_BUDGET.tr) for (let k = 0; k < lanes; k++) { const c = -hw + (k + 0.5) * lw; for (const side of [-0.8, 0.8]) { let prev = -1; for (let s0 = lo; s0 <= hi; s0 += 6) { const q = at(s0), a = V(q, c + side - 0.22, TRK), b = V(q, c + side + 0.22, TRK); if (prev >= 0) { m.tri(prev, prev + 1, a, 0, 1, 0); m.tri(prev + 1, b, a, 0, 1, 0); B.tr += 2; } prev = a; } } }
+  const len = hi - lo, rnd = k => hash(id * 977 + k * 131);
+  for (let k = 0, n = Math.floor(len / 38 + rnd(1) * 1.5); k < n && B.pa < W_BUDGET.pa; k++) { const s0 = lo + rnd(10 + k) * len, q = at(s0), lat = (rnd(20 + k) - 0.5) * (w - 2.4), lx = 1.2 + rnd(30 + k) * 2.8, lz = 0.8 + rnd(40 + k) * 1.4, C = rnd(50 + k) < 0.6 ? PD : PL, q2 = at(Math.min(hi, s0 + lx)), a = V(q, lat - lz / 2, C), b = V(q, lat + lz / 2, C), c2 = V(q2, lat + lz / 2, C), d = V(q2, lat - lz / 2, C); m.tri(a, b, c2, 0, 1, 0); m.tri(a, c2, d, 0, 1, 0); B.pa++; }
+  for (let k = 0, n = Math.floor(len / 55 + rnd(2)); k < n && B.mh < W_BUDGET.mh; k++) { const s0 = lo + rnd(60 + k) * len, q = at(s0), lat = -hw + (Math.floor(rnd(70 + k) * lanes) + 0.5) * lw + (rnd(80 + k) - 0.5) * 0.8, cx = q.x + q.nx * lat, cz = q.z + q.nz * lat, yy = y(q) + 0.004; let first = -1; for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4; const v = m.v(X(cx + Math.cos(an) * 0.4), yy, Z(cz + Math.sin(an) * 0.4), 0, 1, 0, i % 2 ? RIM : MH); if (first < 0) first = v; } const ctr = m.v(X(cx), yy, Z(cz), 0, 1, 0, MH); for (let i = 0; i < 8; i++) m.tri(ctr, first + i, first + (i + 1) % 8, 0, 1, 0); B.mh++; }
+  for (let k = 0, n = Math.floor(len / 45 + rnd(3)); k < n && B.cr < W_BUDGET.cr; k++) { let s0 = lo + rnd(90 + k) * len, lat = (rnd(100 + k) - 0.5) * (w - 2); let prev = -1; for (let j = 0; j < 4; j++) { const q = at(Math.min(hi, s0 + j * 1.6)), l2 = lat + (rnd(110 + k * 7 + j) - 0.5) * 0.9, a = V(q, l2 - 0.03, CRK), b = V(q, l2 + 0.03, CRK); if (prev >= 0) { m.tri(prev, prev + 1, a, 0, 1, 0); m.tri(prev + 1, b, a, 0, 1, 0); } prev = a; } B.cr++; }
+}
 export function* buildTileSteps(tile, ctx) {
   const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
@@ -240,6 +254,7 @@ export function* buildTileSteps(tile, ctx) {
           const va = m.v(X(q.x + q.nx * (off - e)), y, Z(q.z + q.nz * (off - e)), 0, 1, 0, MARK), vb = m.v(X(q.x + q.nx * (off + e)), y, Z(q.z + q.nz * (off + e)), 0, 1, 0, MARK); if (prev >= 0) { m.tri(prev, prev + 1, va, 0, 1, 0); m.tri(prev + 1, vb, va, 0, 1, 0); } prev = va; }
       }
     }
+    if (!deck && !sunk && lay === 0 && ['trunk', 'primary', 'secondary', 'tertiary', 'residential'].includes(cls) && w >= 5.5 && WEAR) wearDetail(M.mark, F, pts, H, w, hw, id, gy, X, Z, two, out.wear || (out.wear = { tr: 0, pa: 0, mh: 0, cr: 0 }));      // GTA-style road wear (reference G1 to G5)
     out.claims.push({ shape: { t: 'line', pts: s.pts, hw: hw + (walk ? 1.8 : 0) }, layer: lay, owner: 'street' }); out.nStreets++;
   }
   /* ---- buildings: walls with a facade texture (u along the wall in 3.6 m bays, v in 3.2 m storeys), a flat roof ---- */

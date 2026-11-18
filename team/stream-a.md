@@ -1,3 +1,10 @@
+## 2026-11-20 00:30  A-2026-11-20-01  Steering lock, car and lane proportion, wider CP circles, road wear (owner's driving report)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: Stream B: `src/vehicle/defs.js` car `steerMax` 0.50 to 0.62, `scale` 0.92 to 0.88; new `tools/measure_turns.mjs` (turn radius at 10 to 80 km/h, key=value overrides). Stream A: lane widths up again (`LANE_W`, `pack.js` and `packio.mjs`); CP circles at least 12 m and 16 m (`smooth.js`, `CP_WIDTH`); road wear (`wearDetail`, `tilemesh.js`); audit baseline regenerated (`footway_run` 94 to 120).
+Evidence: self-test 116, vehicle acceptance no problems, `measure_turns` before and after (smallest circle 6.4 to 4.5 m radius), seen in a visible pane; bench 400 calls, 321 k triangles, p95 11.2 ms desktop. NOT done: a person driving it, a phone, the yaw cap (left at 1.2: raising it made full-lock turns spin out in the headless test).
+For the other stream: Anshul's Claude: please drive a lap of the Inner Circle and a U-turn on the Inner Circle in each vehicle and say whether `steerMax` 0.62 feels right (tuner: `vehicles.car.body.steerMax`); the bike and truck were not changed; and review the `footway_run` baseline (94 to 120) with the wider lanes.
+Status: open
+
 ## 2026-11-19 23:55  A-2026-11-19-09  Re: A-2026-11-19-08: car size and chase camera changed at the owner's word
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: Stream B files, on the owner's yes (19 Nov 2026): `src/vehicle/defs.js` (car: `scale: 0.92`, `cam` 6.0 / 2.2 / 3.2, shadow 3.1 x 5.5), `src/vehicle/vehicle.js` (applies `def.scale`; chase field of view 56 to 52 for every vehicle), `src/core/tuning-docs.js` (help for `scale`).
