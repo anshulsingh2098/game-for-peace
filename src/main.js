@@ -482,13 +482,13 @@ const bus = new EventBus(), runtime = new GameRuntime({ maxFrame: 0.05, bus });
 function frame(now) { requestAnimationFrame(frame); runtime.frame(now); }
 function step(dt, now) { update(dt, now); draw(now); if (gateFade.carry && gateFade.frames < 9 && ++gateFade.frames === 4) { gateFade.d.style.transition = 'opacity .5s ease'; gateFade.d.style.opacity = '0'; } }                                    // one whole frame (also used by the headless checks through __next.step)
 /* adaptive resolution: when frames take too long the game lowers its render resolution step by step (and the shadows at the last steps), and raises it again when there is room; ?gov=off turns it off */
-const gov = { ema: 16.7, last: 0, level: 0, t: 0, on: q.get('gov') !== 'off', base: Math.min(devicePixelRatio, phone ? 1 : 1.5), mul: [1, 0.8, 0.65, 0.52, 0.42], told: false };
+const gov = { ema: 16.7, last: 0, level: 0, t: 0, on: q.get('gov') !== 'off', base: Math.min(devicePixelRatio, phone ? 1 : 1.5), mul: phone ? [1, 0.9, 0.82, 0.76, 0.7] : [1, 0.8, 0.65, 0.52, 0.42], told: false };      // a phone never goes below 70 % of its resolution: below that the picture is a blur and, when the load is draw calls and not pixels, it does not help
 function governor(now) {
-  if (!gov.on) return; const dt = now - gov.last; gov.last = now; if (dt <= 0 || dt > 250 || document.hidden) return;                  // a stall or a hidden tab says nothing about the load
+  if (!gov.on) return; const dt = now - gov.last; gov.last = now; if (dt <= 0 || dt > (phone ? 120 : 250) || document.hidden) return;                  // a stall or a hidden tab says nothing about the load
   gov.ema += (dt - gov.ema) * 0.06; gov.t += dt; if (gov.t < 2000) return;
-  const up = gov.ema < 15 && gov.level > 0 && gov.t > 9000, down = gov.ema > 30 && gov.level < gov.mul.length - 1; if (!up && !down) return;
+  const up = gov.ema < 15 && gov.level > 0 && gov.t > 9000, down = gov.ema > (phone ? 36 : 30) && gov.level < gov.mul.length - 1; if (!up && !down) return;
   gov.level += down ? 1 : -1; gov.t = 0; renderer.setPixelRatio(Math.max(0.4, gov.base * gov.mul[gov.level])); resize(); if (shadowsOn) env.setShadows(gov.level >= 3 ? 0 : (quality === 'high' ? 4096 : 2048), quality === 'high' ? 90 : 70);
-  if (down && !gov.told) { gov.told = true; toast('Resolution lowered to keep the game smooth (see Settings for a lower quality tier)'); }
+  if (down && !gov.told && !phone) { gov.told = true; toast('Resolution lowered to keep the game smooth (see Settings for a lower quality tier)'); }
 }
 /* in a city the near plane is 1 m unless the camera is inside or on the car (cockpit, hood, bumper: 0.3 m): depth precision at 300 m to 1 km is three times better, which stops the ground layers shimmering */
 function setNear() { if (!cityMode) return; const nn = phys && Math.hypot(camera.position.x + grid.origin.x - phys.x, camera.position.z + grid.origin.z - phys.z) < 3.4 ? 0.3 : 1.0; if (camera.near !== nn) { camera.near = nn; camera.updateProjectionMatrix(); } }
