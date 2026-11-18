@@ -21,14 +21,14 @@ function quad(m, A, B, Cc, D, nx, ny, nz, c, uv) {
 /* a board centred at (cx, cy, cz) facing outwards along (nx, nz): reads left to right for a viewer in front */
 function board(m, cx, cy, cz, nx, nz, w, h, c, uv) { const ux = nz * w / 2, uz = -nx * w / 2; quad(m, [cx - ux, cy - h / 2, cz - uz], [cx + ux, cy - h / 2, cz + uz], [cx + ux, cy + h / 2, cz + uz], [cx - ux, cy + h / 2, cz - uz], nx, 0, nz, c, uv); }
 /* a box standing on y0 with its width along (ux, uz) */
-function box(m, cx, y0, cz, sx, sy, sz, ux, uz, c, cTop) {
+export function box(m, cx, y0, cz, sx, sy, sz, ux, uz, c, cTop) {
   const hx = sx / 2, hz = sz / 2, fx = -uz, fz = ux, y1 = y0 + sy, P = (i, j, y) => [cx + ux * hx * i + fx * hz * j, y, cz + uz * hx * i + fz * hz * j];
   quad(m, P(-1, 1, y0), P(1, 1, y0), P(1, 1, y1), P(-1, 1, y1), fx, 0, fz, c); quad(m, P(1, -1, y0), P(-1, -1, y0), P(-1, -1, y1), P(1, -1, y1), -fx, 0, -fz, c);
   quad(m, P(1, 1, y0), P(1, -1, y0), P(1, -1, y1), P(1, 1, y1), ux, 0, uz, c); quad(m, P(-1, -1, y0), P(-1, 1, y0), P(-1, 1, y1), P(-1, -1, y1), -ux, 0, -uz, c);
   quad(m, P(-1, -1, y1), P(1, -1, y1), P(1, 1, y1), P(-1, 1, y1), 0, 1, 0, cTop || c);
 }
 /* a tree: a trunk box and a lathed crown from a profile (sides of 6) */
-function tree(m, x, y0, z, sp, k, bloom) {
+export function tree(m, x, y0, z, sp, k, bloom) {
   const h = sp.h * (0.8 + 0.4 * k), r = sp.r * (0.8 + 0.4 * ((k * 7) % 1)), th = h * 0.42, prof = PROFILE[sp.shape] || PROFILE.round, base = C(bloom && sp.bloom ? sp.bloom : sp.canopy), N = 6;
   if (sp.id !== 'bougainvillea') box(m, x, y0, z, 0.3, th + 0.6, 0.3, 1, 0, C(PALE.wood));
   const y1 = y0 + th * (sp.id === 'bougainvillea' ? 0 : 1), ch = h - th * (sp.id === 'bougainvillea' ? 0 : 1);

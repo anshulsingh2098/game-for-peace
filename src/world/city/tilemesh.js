@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { infillSteps } from './infill.js';
+import { fillerSteps } from './fillers.js';
+import { addFillers } from './fillerview.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
 
@@ -233,7 +235,7 @@ export function* buildTileSteps(tile, ctx) {
   junctionShapes(J, M, X, Z, gy, out); yield;
   const ruled = buildingsToSkip(tile, G); out.nRuled = ruled.size;                      // rules.js: a class of map error left out everywhere
   /* P1 (infill.js): buildings where the map data is silent, in their own meshes (a distance limit, no shadows) */
-  let infill = []; if (ctx.infill !== false) infill = yield* infillSteps(tile, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nInfill = infill.length; tile.buildings = tile.buildings.concat(infill); yield;
+  let infill = []; if (ctx.infill !== false) infill = yield* infillSteps(tile, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nInfill = infill.length; let fills = []; if (ctx.infill !== false && ctx.fillers !== false) fills = yield* fillerSteps(tile, infill, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nFillers = fills.length; tile.buildings = tile.buildings.concat(infill); yield;
   for (const b of tile.buildings) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     if (ruled.has(b)) continue;
@@ -268,7 +270,8 @@ export function* buildTileSteps(tile, ctx) {
   }
   void SAND;
   /* ---- street life (D7, streetlife.js): shop boards, ads, poles and wires, stalls, shelters, trees ---- */
-  if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow }, out); Object.assign(M, r.M); out.life = r.stats; }
+  if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow }, out); Object.assign(M, r.M); out.life = r.stats; if (fills.length) { const f = addFillers(fills, { M, X, Z, gy, identity: ctx.life.identity }); out.fillTrees = f.trees; out.fillCars = f.cars; } }
+  else if (fills.length) addFillers(fills, { M, X, Z, gy, identity: null });
   /* ---- the meshes ---- */
   return { M, out };
 }
