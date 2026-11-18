@@ -8,6 +8,7 @@ import { infillSteps } from './infill.js';
 import { fillerSteps } from './fillers.js';
 import { addFillers } from './fillerview.js';
 import { approachMarks, speedBreakers, wear, medians } from './roadmarks.js';
+import { roofDetail } from './rooftops.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
 
@@ -115,7 +116,7 @@ function junctionShapes(J, M, X, Z, gy, out) {
   out.nFillets = nf; out.nNotches = nn;
 }
 export function* buildTileSteps(tile, ctx) {
-  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), walk: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher(), roof: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y) => {                                           // a polygon (ring and holes in metres) lying at height y
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
@@ -170,6 +171,7 @@ export function* buildTileSteps(tile, ctx) {
   const addJ = (p, hw, rc, cls) => { const n2 = p.length / 2; let len = 0; for (let i = 0; i + 3 < p.length; i += 2) len += Math.hypot(p[i + 2] - p[i], p[i + 3] - p[i + 1]); if (len < 6) return; for (const [i0, i1] of [[0, 1], [n2 - 1, n2 - 2]]) { const x = p[i0 * 2], z = p[i0 * 2 + 1]; let j = i1; while (j >= 0 && j < n2 && Math.hypot(p[j * 2] - x, p[j * 2 + 1] - z) < 0.5) j += i1 > i0 ? 1 : -1; if (j < 0 || j >= n2) continue; const dx = p[j * 2] - x, dz = p[j * 2 + 1] - z, L = Math.hypot(dx, dz), k = Math.round(x * 10) + ',' + Math.round(z * 10); let l = J.get(k); if (!l) J.set(k, l = []); l.push({ x, z, dx: dx / L, dz: dz / L, hw, rc, len, cls }); } };
   /* the list of streets sorted so that small roads are drawn first (their order only matters for z fighting at junctions, which the offsets below settle) */
   const PF = ctx.paint === false ? { on: false } : { on: true, stop: true, breakers: true, wear: true, medians: true, ...(ctx.paint && typeof ctx.paint === 'object' ? ctx.paint : {}) };       // ctx.paint: false turns all road paint off; an object switches parts off (stop, breakers, wear, medians)
+  const roofCounts = { items: 0, tris: 0 };
   const paint = { m: M.mark, X, Z, gy, counts: { arrows: 0, breakers: 0, patches: 0, oil: 0, dirt: 0 } }, medPieces = [];
   for (const s of tile.streets) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
@@ -271,10 +273,7 @@ export function* buildTileSteps(tile, ctx) {
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
     let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }
     if (tris) { const all = contour.concat(...holes), base = B.p.length / 3; for (const q of all) B.v(X(q.x), y1, Z(q.y), 0, 1, 0, rc, 0.06, 0.06); for (const t of tris) B.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0); }
-    if (!L && !b.infill && hgt >= 6 && hgt < 40 && (x1b - x0) > 8 && (z1b - z0) > 8 && hash(b.id * 5 + 3) < 0.4) { const rx = (x0 + x1b) / 2 + (hash(b.id) - 0.5) * (x1b - x0) * 0.3, rz = (z0 + z1b) / 2 + (hash(b.id + 9) - 0.5) * (z1b - z0) * 0.3, hs = 1.2 + hash(b.id * 3) * 0.8, hh = 1.6 + hash(b.id * 13) * 1.2, tank = hash(b.id * 17) < 0.5 ? shade(0x3a5a78, 1) : shade(0x9a9890, 1);       // a water tank or a stair head on the roof
-      const bx0 = B.p.length / 3; for (const [dx, dz] of [[-hs, -hs], [hs, -hs], [hs, hs], [-hs, hs]]) { B.v(X(rx + dx), y1, Z(rz + dz), 0, 1, 0, tank, 0.06, 0.06); B.v(X(rx + dx), y1 + hh, Z(rz + dz), 0, 1, 0, tank, 0.06, 0.06); }
-      for (let k = 0; k < 4; k++) { const k2 = (k + 1) % 4, a = bx0 + k * 2, b2 = bx0 + k2 * 2, mx = (k < 2 ? 0 : 0); void mx; const ex = k === 0 ? 0 : k === 1 ? 1 : k === 2 ? 0 : -1, ez = k === 0 ? -1 : k === 1 ? 0 : k === 2 ? 1 : 0; B.tri(a, b2, b2 + 1, ex, 0, ez); B.tri(a, b2 + 1, a + 1, ex, 0, ez); }
-      B.tri(bx0 + 1, bx0 + 3, bx0 + 5, 0, 1, 0); B.tri(bx0 + 1, bx0 + 5, bx0 + 7, 0, 1, 0); }
+    if (!L && ctx.roofs !== false && hgt >= 5) { const an = ctx.life && ctx.life.identity ? ctx.life.identity.areaOfBuilding(b, cx / n, cz / n) : 'default'; out.roofTris = (out.roofTris || 0) + roofDetail(M.roof, b, { X, Z, y1, wall: wc, area: an, counts: roofCounts, light: !!b.infill }); }       // P3 (rooftops.js): parapet, water tanks, AC units, antennas; its own mesher, shown only near
     out.nBuildings++; if (x1b - x0 > 2 && z1b - z0 > 2) out.claims.push({ shape: { t: 'rect', x: (x0 + x1b) / 2, z: (z0 + z1b) / 2, hx: (x1b - x0) / 2, hz: (z1b - z0) / 2, yaw: 0 }, kind: 'building', owner: 'building' });
     if (L && (L.importance >= 3 || (L.type || '').includes('station'))) out.labels.push({ id: L.id, text: L.name.en, x: cx / n, z: cz / n, y: y1 + 10 });
   }

@@ -861,6 +861,18 @@ test('road marks (P2): stop line and lane arrows on the left-hand approach lanes
   const med = (ps) => { const m = mk(); const n = RM.medians(ps, { walk: m, X: id, Z: id, gy: 0 }); return { n, tris: m.i.length / 3 }; };
   const a = med(pair(12, -1)); assert.ok(a.n > 20 && a.tris > 100, 'a median between opposite carriageways: ' + a.n); assert.equal(med(pair(12, 1)).n, 0, 'same direction: no median'); assert.equal(med(pair(60, -1)).n, 0, 'too far apart: no median'); assert.equal(med(pair(10, -1)).n > 0, true, 'a 3 m gap still gets one'); assert.equal(med(pair(8, -1)).n, 0, 'a gap under 1.6 m gets none'); assert.equal(med([pair(12, -1)[0]]).n, 0, 'a single carriageway: none');
 });
+test('roofs (P3): a parapet runs round the roof edge, tanks and plant stand inside the footprint, area styles differ, infill gets the parapet only, small or odd buildings and a full tile get nothing', async () => {
+  const RT = await import('../src/world/city/rooftops.js'), mk = () => ({ p: [], i: [], v(x, y, z) { this.p.push(x, y, z); return this.p.length / 3 - 1; }, tri(a, b, c) { this.i.push(a, b, c); } }), id = v => v;
+  const sq = (x0, z0, x1, z1) => [x0, z0, x1, z0, x1, z1, x0, z1, x0, z0], bld = (idn, w = 24, d = 16) => ({ id: idn, ring: sq(100, 200, 100 + w, 200 + d) });
+  const run = (b, area, extra = {}) => { const m = mk(), counts = { items: 0, tris: 0 }, n = RT.roofDetail(m, b, { X: id, Z: id, y1: 12, wall: { r: .5, g: .5, b: .5 }, area, counts, ...extra }); return { m, n, counts }; };
+  const a = run(bld(7), 'oldDelhi'), b2 = run(bld(7), 'oldDelhi'); assert.ok(a.n >= 16, 'at least the parapet: 4 edges x 4 triangles: ' + a.n); assert.deepEqual(a.m.p, b2.m.p, 'deterministic');
+  const ys = []; for (let k = 1; k < a.m.p.length; k += 3) ys.push(a.m.p[k]); assert.ok(Math.min(...ys) >= 12 - 1e-9 && Math.max(...ys) > 12.5, 'everything stands on or above the roof (y >= 12), the parapet rises about a metre');
+  for (let k = 0; k < a.m.p.length; k += 3) { const x = a.m.p[k], z = a.m.p[k + 2]; assert.ok(x >= 99.7 && x <= 124.3 && z >= 199.7 && z <= 216.3, 'inside the footprint (+0.3 m): ' + x + ',' + z); }
+  let tanksOld = 0, tanksLut = 0; for (let k = 1; k <= 40; k++) { tanksOld += run(bld(k), 'oldDelhi').n; tanksLut += run(bld(k), 'lutyens').n; } assert.ok(tanksOld > tanksLut * 1.5, 'the old city roof carries more than a Lutyens bungalow: ' + tanksOld + ' vs ' + tanksLut);
+  const light = run(bld(9), 'oldDelhi', { light: true }), full = run(bld(9), 'oldDelhi'); assert.ok(light.n <= 16 && light.n <= full.n, 'infill: parapet only (or nothing): ' + light.n);
+  assert.equal(run({ id: 3, ring: sq(0, 0, 4, 4) }, 'default').n, 0, 'a 16 m2 building gets nothing'); const many = []; for (let k = 0; k < 41; k++) many.push(Math.cos(k) * 20 + 100, Math.sin(k) * 20 + 100); assert.equal(run({ id: 4, ring: many }, 'default').n, 0, 'a building with more than 40 corners gets nothing');
+  const full2 = mk(), c2 = { items: RT.CAPS.items, tris: 0 }; assert.equal(RT.roofDetail(full2, bld(5), { X: id, Z: id, y1: 5, wall: { r: 1, g: 1, b: 1 }, area: 'default', counts: c2 }), 0, 'a full tile gets nothing more');
+});
 test('audit R05: a handle only resolves in the registry or pool that made it; a long stall is counted as dropped time (R16)', () => {
   const A = new Registry({ car: 4 }), B = new Registry({ car: 4 }), ha = A.create('car', { n: 'a' }), hb = B.create('car', { n: 'b' });
   assert.notEqual(ha, hb, 'two registries never hand out the same number'); assert.equal(B.get(ha), null, 'a foreign handle does not resolve'); assert.equal(B.destroy(ha), null); assert.equal(A.get(ha).n, 'a'); assert.equal(B.get(hb).n, 'b');
