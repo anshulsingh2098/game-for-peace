@@ -1,5 +1,5 @@
 {
- "commit": "f303d6a",
+ "commit": "a0062a8",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -637,19 +637,6 @@
      "s": "todo",
      "w": "Rajul",
      "r": "stream-b.md 2026-11-17, from Anshul's Claude"
-    }
-   ]
-  ],
-  [
-   "Open pull requests",
-   [
-    {
-     "id": "a54d6dd4",
-     "t": "PR 101: Delhi: Lite (Delhi only) build and Download button, P1 interiors and paved forecourts",
-     "d": "Open pull request on branch claude/delhi-p1-infill. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 101"
     }
    ]
   ],
@@ -1539,7 +1526,7 @@
   [
    "101",
    "Delhi: Lite (Delhi only) build and Download button, P1 interiors and paved forecourts",
-   "open"
+   "merged"
   ],
   [
    "100",
@@ -1740,18 +1727,18 @@
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 39 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 81 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 90 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 132 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 88 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 130 behind main)"
   ]
  ],
- "tests": "118",
+ "tests": "120",
  "facts": [
   [
    "Tracker data",
@@ -1759,8 +1746,8 @@
   ],
   [
    "Self-test",
-   "118 checks passing"
+   "120 checks passing"
   ]
  ],
- "generated": "2026-11-18T22:28:14.555Z"
+ "generated": "2026-11-18T22:38:41.041Z"
 }
