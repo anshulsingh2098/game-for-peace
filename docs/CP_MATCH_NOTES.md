@@ -29,3 +29,15 @@ Collected while taking screenshots and reading the browser console (visible pane
 6. Replace the placeholder cars, people and trees (needs assets with a licence recorded in `assets/ASSETS.md`).
 7. Per-area wear: a measured grime map instead of my area guesses; tyre marks near junctions; drain grates; broken kerbs; bins and sweepers in the clean areas.
 8. A driven lap and U-turn by a person in each vehicle; a scripted lap for regression.
+
+## What is next (20 Nov 2026, after phases A to C), in order
+1. **Measure on a visible window, then a phone.** Every frame number since the wear overlays, columns and signs is missing (the window was not visible); bench `?play&city=delhi&q=med&bench=30` on the desktop and a named phone; check triangles and heap. Gate for everything below.
+2. **A person drives it** (lap, U-turn, a junction turn) in each vehicle: `steerMax` 0.62, the car at 0.88 scale and the lower camera were set from numbers, never felt.
+3. **Delhi markings decision**: the double yellow centre lines and white edge lines follow the owner's GTA frames; Delhi's own roads vary (white centre lines are common): say which to use where.
+4. **Pavements and surroundings** (frames G8, G9): wide pavements, planting strips with clipped hedges and palms, painted red and white kerbs, power poles with wires, traffic lights on mast arms.
+5. **CP facade**: drum corner blocks with pediment and arched window, paired corner columns, a deep entablature, big lit brand boards (original designs, names only) and warm shop light, then the day, golden-hour and night grade.
+6. **Road surface finish**: oil stains and soft irregular blotches (the bands are still regular strips), tyre marks near junctions, drain grates, red and white painted kerbs, real flutes on the columns.
+7. **Placeholders**: traffic cars, people, trees, hedge boxes, plaza kiosks (needs licensed assets recorded in `assets/ASSETS.md`).
+8. **Anshul's Claude to review** the lane widening (audit `footway_run` 94 to 120), the steering lock and the car scale (A-2026-11-20-01).
+9. **Merge PR 101** (the owner's word; it is large: P1 infill, CP colonnade, roads, markings, signs, wear, physics values, car size): consider splitting if a reviewer wants smaller pieces.
+10. **Other parts of Delhi** get the same kits only after CP is accepted by the owner at the six camera spots.
