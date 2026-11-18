@@ -1,0 +1,22 @@
+# CP match log
+
+One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
+
+## 2026-11-19  Step 1: CP measured from the pack (`node tools/measure_cp.mjs`)
+Source: the Delhi pack (OpenStreetMap derived, `assets/cities/delhi`). Evidence level: computed from data, not surveyed.
+- **Inner Circle:** fitted circle centre (1044.2, -2100.4), radius 125.7 m, RMS error 0.96 m, worst 3.2 m. Built from 72 points: segments median 18.1 m, longest 28 m, about 8.3 degrees a step. This is why it looks faceted. Carriageway width in the pack 9 m (tertiary).
+- **Outer Circle:** fitted radius 320.3 m, centre (1046.0, -2099.3), RMS error 3.4 m and worst 10.0 m (the data is rough here: one street named Outer Circle spans pieces that do not lie on one circle). 127 points, median segment 24.7 m, longest 91.8 m. Width 13 m (secondary).
+- **Middle Circle** exists in the data (width 3 m, residential): the lane between the two rings of blocks. Seven radial roads are named Radial Road 1 to 7 (only some have pieces near the centre); angles where they leave the Inner Circle: Radial Road 2 at 152 degrees, Radial Road 7 at 33, Radial Road 4 at -86 (game x/z plane, 0 = +x).
+- **Buildings:** 66 within 330 m. Heights: min 3.2, median 9.6, max 19.2 m (the pack uses 3.2 m a level). The inner ring blocks sit at 182 to 196 m from the centre (3 to 5 levels, footprints 4,000 to 6,300 m2), the outer ring blocks at 263 to 279 m (3 to 4 levels, 8,000 to 11,000 m2). So each block of the real plan is one polygon with a continuous frontage, as in the real plan.
+- **Differences against the photos to resolve:** (1) heights: R1 to R4 show an arcade of about two storeys' height under two or three upper floors, so a real block is likely 15 to 20 m, against 9.6 m in the data; check against N19 and satellite before changing; (2) the faceted circles (fix next); (3) the data's block polygons have no arcades, drum corners or cornices: those are ours to add (done in part: A-2026-11-19-05).
+- **Camera spots:** `tools/cp_views.json`, six spots from this geometry (first guesses; adjust after looking and note changes here).
+
+## Elements: status
+| Element | Reference | Verdict | Notes |
+|---|---|---|---|
+| Colonnade (square posts, slab) | R1, R2, R4 | wrong | thin square posts, no capital, no base; to be redone |
+| Circle geometry | plan | wrong | faceted; next |
+| Paving, kerb, hedge | R2, R3, R4 | wrong | bare earth apron |
+| Facade, corner drums | R1, R3 | wrong | flat box |
+| Brand boards, shop light | R2, R4 | wrong | almost none |
+| Lighting, colour | R1 to R4 | wrong | flat, cool |

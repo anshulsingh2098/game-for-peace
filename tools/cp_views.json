@@ -1,0 +1,65 @@
+{
+ "about": "Six fixed camera spots for the Connaught Place match (docs/CP_MATCH_PLAN.md). x, z in game metres, yaw as the game uses it (atan2 of the look direction in x, z). Centre of the Inner Circle (fitted, tools/measure_cp.mjs): 1044.2, -2100.4, radius 125.7. Spots are first guesses from geometry; adjust after looking and record the change in docs/CP_MATCH_LOG.md. Move the car with window.__next.city.transit.onTeleport(x, z, yaw).",
+ "spots": [
+  {
+   "id": "cp1-corner",
+   "photo": 1,
+   "what": "corner block at a radial road mouth (Radial Road 2), seen from the Inner Circle road",
+   "x": 947.8,
+   "z": -2013.6,
+   "yaw": -3.062,
+   "time": "day",
+   "note": ""
+  },
+  {
+   "id": "cp2-arcade",
+   "photo": 2,
+   "what": "inside the arcade walk looking along the colonnade, inner ring",
+   "x": 1020.3,
+   "z": -1964.8,
+   "yaw": -2.845,
+   "time": "day",
+   "note": ""
+  },
+  {
+   "id": "cp3-across",
+   "photo": 3,
+   "what": "from the central park side across the road at the hedge and the facade",
+   "x": 1116.1,
+   "z": -2028.5,
+   "yaw": 0.785,
+   "time": "day",
+   "note": ""
+  },
+  {
+   "id": "cp4-dusk",
+   "photo": 4,
+   "what": "the arcade at dusk, looking along the walk",
+   "x": 997.1,
+   "z": -2229.8,
+   "yaw": 2.67,
+   "time": "dusk",
+   "note": ""
+  },
+  {
+   "id": "cp5-radial",
+   "photo": 5,
+   "what": "down Radial Road 7 from the circle, looking inward",
+   "x": 1170.0,
+   "z": -2018.7,
+   "yaw": -2.566,
+   "time": "day",
+   "note": ""
+  },
+  {
+   "id": "cp6-drive",
+   "photo": 6,
+   "what": "driving the Inner Circle at 50 km/h (start of the scripted lap)",
+   "x": 1169.9,
+   "z": -2100.4,
+   "yaw": 1.676,
+   "time": "day",
+   "note": "lap: auto drive"
+  }
+ ]
+}

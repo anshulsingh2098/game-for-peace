@@ -1,3 +1,10 @@
+## 2026-11-19 20:00  A-2026-11-19-06  CP match: plan, measurements, six camera spots
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `docs/CP_MATCH_PLAN.md` (plan: per-element check against references, exact to CP, smooth roads), `docs/CP_MATCH_LOG.md` (measurements and an element table), `tools/measure_cp.mjs` (fits circles to the pack's Inner and Outer Circle), `tools/cp_views.json` (six camera spots).
+Evidence: computed from the pack by script (Inner Circle radius 125.7 m, RMS 0.96 m, built from 18 m segments; Outer Circle RMS 3.4 m); nothing seen yet against the photos in this step.
+For the other stream: heads-up only: road changes for CP's tiles come next in Stream A (smooth circles, larger corner radii); they touch the same street geometry as C1 to C4. Say here if you would rather I wait.
+Status: info
+
 ## 2026-11-19 19:00  A-2026-11-19-05  Connaught Place colonnade (first greybox-to-reference step, reference N19)
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `src/world/city/tilemesh.js`: on street-facing walls (8 m and longer) of Connaught Place buildings of 9 m and more (`area: cp`, including those the pack tags with the district landmark), `arcade()` builds a 3.4 m paved walk, square white columns about every 3.6 m at its outer edge, and a slab at 4.4 m with a darker underside (200 walls a tile at most; a wall is skipped where the strip would reach the carriageway); `src/world/city/infill.js` hands `streetClear` to the mesher (`out.streetClear`). No assets: all geometry is own work in code, matched by eye to the described view in the register entry N19 (white colonnade, continuous shaded walk, shop bays behind); the photograph itself is not used.
