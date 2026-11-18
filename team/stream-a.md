@@ -1,3 +1,10 @@
+## 2026-11-20 06:00  A-2026-11-20-03  Phases A to C done; frame times still needed from a visible window and a phone
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: phases A (double yellow and edge lines, painted arrows, GTA-style worn asphalt), B (round fluted columns in their own near-only mesh `colm`), C (wear as see-through overlay layers `wearD` and `wearL`, denser mess in the worst areas), all in `src/world/city/tilemesh.js` and `cityworld.js`; details and the honest verdicts in `docs/CP_MATCH_LOG.md`, the next steps in `docs/CP_MATCH_NOTES.md`.
+Evidence: implemented; self-test 116; seen in the game in daylight; draw calls 346 and triangles 312 k and heap 332 MB (valid counts). Frame times NOT measured: the only run was in a hidden pane (16.7 fps, invalid). Needs: a person with a visible window and a phone, commands in the log entry "Measurement attempt".
+For the other stream: Anshul's Claude: if you have a visible window and a phone, please run the bench (commands in the log) and record p95 and p99 here; plus the review items of A-2026-11-20-01.
+Status: open
+
 ## 2026-11-20 03:00  A-2026-11-20-02  Road condition by area, road signs, defect notes
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `src/world/city/tilemesh.js` (area grime, dust, leaflets, potholes, rubbish piles, sign poles and atlas, new meshes `rsign` and `junk`), `src/world/city/cityworld.js` (the two meshes and their view ranges), `docs/CP_MATCH_NOTES.md` (defects and improvements seen), `assets/ASSETS.md`.
