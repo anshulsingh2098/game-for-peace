@@ -12,6 +12,13 @@ Evidence: implemented; self-test 118; seen in a visible pane: the gantry at a ju
 For the other stream: nothing required. `put`/`signPole` in tilemesh.js are the places if you change signs.
 Status: info
 
+## 2026-11-20 16:00  A-2026-11-20-08  CP facade: brand boards and drum corners
+Branch: claude/delhi-p1-infill  Commit: 63eeddc (on origin under d7126f1)
+What changed: new `src/world/city/cpfacade.js`; `tilemesh.js` (an import, the `cpbrand` mesh and material, the board band call in `arcade()`, the drum corner loop in the building loop); `cityworld.js` (mesh name, view range). Details and the honest verdict in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121 checks from a clean archive of origin; seen in the game (a block with a round tower and the board band). NOT done: arched windows and pediment on the drum, night and dusk look, a visible-window frame cost.
+For the other stream: nothing required. The invented board names are in `BRANDS` in cpfacade.js; change them freely (names only, no logos).
+Status: info
+
 ## 2026-11-20 10:00  A-2026-11-20-05  Phone: full-screen home-screen app, HUD, resolution no longer dropped (shared files touched)
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `index.html` (phone HUD: compact speed card, round map under it, 44 px top buttons; the canvas is `100lvh` so no dark strip at the top), `manifest.webmanifest` (`display` fullscreen to standalone: iOS does not know `fullscreen` and opened the app with a browser strip; `display_override` keeps fullscreen on Android), shared `src/main.js` (governor: on a phone the resolution never goes below 70 percent, a frame over 120 ms, such as a tile being built, no longer counts, and it drops only at 36 ms; no toast on a phone), `src/world/city/cityworld.js` (phone detail radius 950 m instead of 1300, keep 1450 instead of 1900: fewer tiles to build and draw).
