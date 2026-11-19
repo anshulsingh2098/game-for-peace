@@ -40,3 +40,4 @@ The Delhi work is compared against 60 web photographs, 3 official forest-departm
 
 | (none) | Road signs, 20 Nov 2026 (own work, drawn in code): green NDMC hexagon name boards, yellow speed plate, blue and green direction boards (4.2 x 2.0 m) on a gantry with a lattice truss and catwalk, junction diagram board, curve chevrons, give-way triangle, camera plate, route-number plate; Hindi from the pack or made by `src/world/city/hindi.js`. | own | n/a |
 | (none) | Delhi palm tree card, 21 Nov 2026 (own work, drawn in code by `makePalmCanvas`, `src/world/city/cpfacade.js`; no outside image, no licence needed) | own |
+| (none) | Named places of Connaught Place (`assets/cities/delhi/cp_places.json`), 22 Nov 2026: names and points read from OpenStreetMap through Overpass; OpenStreetMap data is ODbL, credit as in `assets/cities/delhi/ATTRIBUTION.txt`; the game names are changed, no logos | ODbL |

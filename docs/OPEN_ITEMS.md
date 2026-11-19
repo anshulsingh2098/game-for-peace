@@ -28,6 +28,7 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 27 | Phase 11c | The truck and the cycle-rickshaw were not looked at; the tempo only from behind; the far people are still blocky; the Old Delhi sign board with Hindi text at the top left of one frame looked mirrored from one angle (not confirmed) | Old Delhi look 22 Nov | Look at the truck, the cycle-rickshaw and the Hindi boards |
 | 28 | Phase 11 | CP busier traffic and the spawn tournament change the whole city's spawning (3 candidates elsewhere) | Seen only at CP | Look at another area; Anshul's Claude owns `citytraffic.js` (C-tasks) |
 | 29 | Phase 11c | Frame time depends on machine load: back to back main and branch both 14.2 ms (70.3 fps), 502 against 531 draw calls, 385,974 against 537,047 triangles; earlier runs read 11.9 and 12.7 to 13.3 ms; both runs look bounded by the display or machine, so small costs are hidden | Other sessions load the machine | Run on a quiet machine or a phone |
+| 30 | CP landmarks | The whole CP landmarks and showrooms programme L2 to L7 (`docs/CP_LANDMARKS.md`): boards from data, the cinema, the pavilion block, granite pavements, petrol pump, street life | Plan and data only so far | Owner confirms the decisions at the end of that file |
 
 ## Closed
 | Item | Evidence |
