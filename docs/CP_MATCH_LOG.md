@@ -2,6 +2,12 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-22  Phase 11b: far people and the other vehicles
+Built: (1) `pedestrians.js`: the box figures beyond the 18 animated actors got swinging arms, trousers in their own colour (7), hair (6 colours), three more instanced meshes (arms and hair do not cast shadows). (2) `vehicles.js`: a sloped cowl or cab on the auto, tempo and truck.
+Seen (game, day, CP, second camera 4 m from two far walkers): two figures with sleeves, swinging arms, dark trousers and hair caps instead of a torso on two legs; still blocky. The hatch seen from 6 m: sloped cabin, round wheels (a sedan shape). The auto, tempo and truck were NOT seen (none near CP).
+Frame cost, desktop, visible pane, q=high, day, 30 s, three runs: 13.5 ms (p99 22.2, a spike), 13.4 ms (p99 17.3), then after the arms stopped casting shadows 13.3 ms (75.4 fps), p95 16.8, p99 17.2, 531 calls, 536,559 triangles. Phase 11 measured 12.7 ms and main 11.9 ms earlier, so this is +0.6 ms against phase 11 but the machine was also busier (OPEN_ITEMS 29). Phone not measured.
+Self-test 121 checks.
+
 ## 2026-11-22  Phase 11: cars and traffic density (GTA gap list items 5 and 6)
 Built: (1) `vehicles.js`: wheels are 10-sided cylinders (all kinds and the bus), and the cabin of the hatch, suv and taxi has a sloped top (the top of the box is 80 percent as wide, 58 percent as long and set back, glass too). (2) `citytraffic.js` (Anshul's area under the 17 Nov override, smallest change): in CP (`areaNameAt` = cp at the player) 1.7 times the cars, spawn from 40 m instead of 90 m, a spawn takes the nearest of 6 random places (3 elsewhere), and cars beyond 330 m (700 elsewhere) are respawned.
 Seen (game, day, CP): the white car at the kerb has round wheels and a sloped cabin instead of a box on box wheels. Measured with the game's own list: 17 cars, all within 303 m after 35 s (4 within 120 m); before, none within 150 m and one at 610 m. Verdict: close for those three cars; not compared with a photo. The traffic mode (10, 22, 34) is the player's setting and is still the base.

@@ -9,15 +9,16 @@ import { PedSim, POOL } from './sim.js';
 const ACTORS = 18, NEAR = 60, VARIANTS = ['commuter', 'vendor', 'tourist'];
 const CLOTHES = [0xc94f3a, 0x2f6fa8, 0xf0b429, 0x3f9d6a, 0x8e4f9e, 0xe9e2d2, 0x2b3a67, 0xd9772f, 0x555b61, 0xb23a6a, 0x6fa8a0, 0xf2ece0].flatMap(c => [c, c]);
 const SKIN = [0xf0c8a0, 0xd9a273, 0xc58a5a, 0xa8714a, 0x8d5a3a, 0x6f4429, 0xe0b48c, 0xb98058];
+const TROUSERS = [0x2a3550, 0x3b3b40, 0x6b5a42, 0x23262c, 0x4a4f58, 0x1f2a44, 0x7a6a50], HAIR = [0x16120e, 0x1e1710, 0x2a1d12, 0x111111, 0x3a2a1a, 0x4a4a4a];
 const SHOW = 150;                                                                                          // metres: farther walkers are not drawn
 export class Pedestrians {
   constructor(scene, nav, seed, origin, { density = 0.5, archetypes = ['commuter'], level = 'mid', traffic = null } = {}) {
     this.scene = scene; this.origin = origin; this.sim = new PedSim(nav, { seed, density, archetypes, level, traffic }); this.group = new THREE.Group(); scene.add(this.group);
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, envMapIntensity: 0.4 }), dark = new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.9, metalness: 0 });
-    const torso = new THREE.BoxGeometry(0.28, 0.62, 0.5), head = new THREE.BoxGeometry(0.22, 0.26, 0.22), leg = new THREE.BoxGeometry(0.16, 0.8, 0.16); leg.translate(0, -0.4, 0);
-    this.mats = [mat, dark]; this.geos = [torso, head, leg];
+    const torso = new THREE.BoxGeometry(0.28, 0.62, 0.5), head = new THREE.BoxGeometry(0.22, 0.26, 0.22), leg = new THREE.BoxGeometry(0.16, 0.8, 0.16), arm = new THREE.BoxGeometry(0.1, 0.58, 0.1), hair = new THREE.BoxGeometry(0.245, 0.11, 0.245); leg.translate(0, -0.4, 0); arm.translate(0, -0.29, 0);      /* phase 11b (GTA gap list item 5): far figures got swinging arms, coloured trousers and hair */
+    this.mats = [mat, dark]; this.geos = [torso, head, leg, arm, hair];
     const mk = (g, m, tint) => { const im = new THREE.InstancedMesh(g, m, POOL); im.count = 0; im.frustumCulled = false; im.castShadow = true; if (tint) im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(POOL * 3), 3); this.group.add(im); return im; };
-    this.torso = mk(torso, mat, true); this.head = mk(head, mat, true); this.legL = mk(leg, dark, false); this.legR = mk(leg, dark, false);
+    this.torso = mk(torso, mat, true); this.head = mk(head, mat, true); this.legL = mk(leg, mat, true); this.legR = mk(leg, mat, true); this.armL = mk(arm, mat, true); this.armR = mk(arm, mat, true); this.hair = mk(hair, mat, true); this.all = [this.torso, this.head, this.legL, this.legR, this.armL, this.armR, this.hair]; for (const im of [this.armL, this.armR, this.hair]) im.castShadow = false;      /* too small to matter in the shadow map: saves three shadow-pass draws */
     this.actors = []; this.models = new Array(VARIANTS.length).fill(null); this.loadModels();
     this.m = new THREE.Matrix4(); this.q = new THREE.Quaternion(); this.q2 = new THREE.Quaternion(); this.v = new THREE.Vector3(); this.one = new THREE.Vector3(1, 1, 1); this.c = new THREE.Color(); this.axisY = new THREE.Vector3(0, 1, 0); this.axisZ = new THREE.Vector3(0, 0, 1);
   }
@@ -60,9 +61,11 @@ export class Pedestrians {
       const at = (side, up) => [X + sx * side, y + up + bob, Z + sz * side];
       let a = at(0, 1.12); put(this.torso, a[0], a[1], a[2], 0); a = at(0, 1.58); put(this.head, a[0], a[1], a[2], 0);
       a = at(-0.1, 0.8); put(this.legL, a[0], a[1], a[2], sw); a = at(0.1, 0.8); put(this.legR, a[0], a[1], a[2], -sw);
-      this.torso.setColorAt(n, this.c.setHex(p.cloth !== undefined ? p.cloth : CLOTHES[p.colour % CLOTHES.length])); this.head.setColorAt(n, this.c.setHex(SKIN[p.skin % SKIN.length])); n++;
+      a = at(-0.3, 1.4); put(this.armL, a[0], a[1], a[2], -sw * 0.9); a = at(0.3, 1.4); put(this.armR, a[0], a[1], a[2], sw * 0.9); a = at(0, 1.74); put(this.hair, a[0], a[1], a[2], 0);
+      const cl = p.cloth !== undefined ? p.cloth : CLOTHES[p.colour % CLOTHES.length], tr = TROUSERS[((p.colour | 0) * 7 + (p.skin | 0)) % TROUSERS.length], sk = SKIN[p.skin % SKIN.length];
+      this.torso.setColorAt(n, this.c.setHex(cl)); this.head.setColorAt(n, this.c.setHex(sk)); this.legL.setColorAt(n, this.c.setHex(tr)); this.legR.setColorAt(n, this.c.setHex(tr)); this.armL.setColorAt(n, this.c.setHex(cl)); this.armR.setColorAt(n, this.c.setHex(cl)); this.hair.setColorAt(n, this.c.setHex(HAIR[((p.skin | 0) * 3 + (p.colour | 0)) % HAIR.length])); n++;
     }
-    for (const im of [this.torso, this.head, this.legL, this.legR]) { im.count = n; im.visible = n > 0; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
+    for (const im of this.all) { im.count = n; im.visible = n > 0; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
   }
-  dispose() { this.sim.clear(); this.scene.remove(this.group); for (const a of this.actors) a.mixer.stopAllAction(); for (const im of [this.torso, this.head, this.legL, this.legR]) im.dispose(); for (const g of this.geos) g.dispose(); for (const m of this.mats) m.dispose(); }
+  dispose() { this.sim.clear(); this.scene.remove(this.group); for (const a of this.actors) a.mixer.stopAllAction(); for (const im of this.all) im.dispose(); for (const g of this.geos) g.dispose(); for (const m of this.mats) m.dispose(); }
 }

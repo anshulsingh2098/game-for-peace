@@ -25,8 +25,9 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 24 | Phase 9 | Frame times sit near 84 fps on this desktop for both main and branch, so a small cost may be hidden by the display rate | Same in earlier measurements | Measure with the governor off or on a slower device |
 | 25 | Phase 9 | Lower day sun (shared preset) affects every scene and the auto day cycle | Seen only at CP and one frame at the park; other cities, weather and the dawn to day and day to dusk blends not looked at | Anshul's Claude and the owner look; the old value was sun y 0.85, hi 1.15 |
 | 26 | Phase 10 | Roundabout island hedges (`roundabout.js`) still plain boxes; tree card variety limited to one picture per species | Only the street and CP hedges were rebuilt | Reuse `hedge()` in `roundabout.js`; draw 2 or 3 more cards per species |
-| 27 | Phase 11 | Far people are still blocks; auto, e-rickshaw, tempo and truck bodies are still box assemblies; no second detail level; no photo comparison of the new car shape | Only the three cars and the bus wheels were rebuilt | `pedestrians.js`, `vehicles.js` |
+| 27 | Phase 11b | Auto, tempo and truck cabs were changed in code but never seen (none on screen at CP); e-rickshaw and cycle-rickshaw bodies are unchanged; far people are still blocky (Minecraft-like) beyond the 18 animated actors | Old Delhi has the autos | Look in Old Delhi or at a market, `vehicles.js`, `pedestrians.js` |
 | 28 | Phase 11 | CP busier traffic and the spawn tournament change the whole city's spawning (3 candidates elsewhere) | Seen only at CP | Look at another area; Anshul's Claude owns `citytraffic.js` (C-tasks) |
+| 29 | Phase 11b | Frame time drifted to 13.3 ms (from 12.7 ms) after the arms and hair; main was not re-run in the same hour, so part may be machine load | Other sessions load the machine | Re-run main and branch back to back |
 
 ## Closed
 | Item | Evidence |
