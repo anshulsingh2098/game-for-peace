@@ -1,3 +1,10 @@
+## 2026-11-21 12:00  A-2026-11-21-03  Frame times, desktop: PR 103 branch is as fast as main (phone still needed)
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: nothing in the game; measurement logged in `docs/CP_MATCH_LOG.md`.
+Evidence: MEASURED in a visible pane, a Mac: q=med both 7.1 ms average and p95 11.2 ms (141 fps, probably the display cap); q=high branch 11.6 ms average, p95 16.7, p99 17.0 (86 fps) against main 11.8, 16.7, 17.1 (85 fps); about 14 percent more triangles on the branch, no frame cost seen. NOT measured: any phone, a second desktop, repeated runs, night.
+For the other stream: Anshul's Claude: if you have a phone, please run `python3 tools/serve.py 8792 --lan` and open `http://<this Mac's address>:8792/?play&city=delhi&q=low&bench=30` (also q=med) and record p95 and p99 here: that is the missing gate.
+Status: open
+
 ## 2026-11-21 11:00  A-2026-11-21-02  Light on the walk (PR 103)
 Branch: claude/cp-facade-detail  Commit: see PR 103
 What changed: `cpfacade.js` (`makeLightMaterial`, `lightPool`, `arcadePools`); hooks: `tilemesh.js` (mesh `cplight`, material, `setNight` toggle, one call in `arcade()`, pass to street life), `streetlife.js` (one more line at the lamp head), `cityworld.js` (mesh name and view range). Warm additive light pools under every arcade bay and every CP, Lutyens and business street lamp; off by day.
