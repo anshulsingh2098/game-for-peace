@@ -10,6 +10,8 @@ import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
 import { cpProps } from './cpprops.js';
+import { cpPark } from './cppark.js';
+import { isStatesman, statesmanDetail, STATESMAN } from './cplandmarks.js';
 import { islandInfo, dress as dressIsland } from './roundabout.js';
 import { hindiName } from './hindi.js';
 import { destsAt, adjOf } from './signdests.js';
@@ -494,17 +496,19 @@ export function* buildTileSteps(tile, ctx) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     if (ruled.has(b)) continue;
     const r = b.ring, n = r.length / 2; if (n < 3) continue; let L = b.landmark ? lm.get(b.landmark) : null, kit = L && L.type ? 'gov' : { office: 'off', hotel: 'off', civic: 'gov', religious: 'gov', transit: 'gov' }[b.use] || 'res', B = b.infill ? M.infill : kit === 'off' ? M.bldgO : kit === 'gov' ? M.bldgG : M.bldg, shopB = !L && (b.use === 'commercial' || b.use === 'retail') && (b.height || 9) >= 5, hgt = Math.max(3, (L && L.height) || cpLift(b, guessHeight(b, hash), hash)), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
-    const cpF = !b.infill && (!L || L.type === 'district') && hgt >= 9 && !!(ctx.life && ctx.life.identity) && ctx.life.identity.areaNameAt(r[0], r[1]) === 'cp'; if (cpF) B = M.bldgCP;       /* a CP block: its own facade texture (cpFacadeTextures): arched and shuttered windows on 4.0 m storeys counted from the top of the arcade band, 7.3 m up */
+    const stm = isStatesman(r); if (stm) { hgt = STATESMAN.h; y1 = gy + hgt; B = M.bldg; }      /* STATESMAN HOUSE: a tall tower on the map's outline (cplandmarks.js) */
+    const cpF = !stm && !b.infill && (!L || L.type === 'district') && hgt >= 9 && !!(ctx.life && ctx.life.identity) && ctx.life.identity.areaNameAt(r[0], r[1]) === 'cp'; if (cpF) B = M.bldgCP;       /* a CP block: its own facade texture (cpFacadeTextures): arched and shuttered windows on 4.0 m storeys counted from the top of the arcade band, 7.3 m up */
     const vv = yy => cpF ? (yy - gy - 7.3) / 16 : (yy - gy) / 12.8;
     if (L && ctx.skip && ctx.skip.has(L.id)) continue;                                    // a landmark with its own model (landmarks/, D8) is not drawn as a plain block
     let wall; if (L && L.type) wall = LM_WALL[L.type] || (L.type.includes('station') ? LM_WALL.station : 0); else wall = 0;
+    if (stm) wall = STATESMAN.wall;
     if (!wall) { let pal = WALLS[b.use] || WALLS.other; const A = ctx.life && ctx.life.identity && ['residential', 'commercial', 'retail', 'other', undefined].includes(b.use) ? ctx.life.identity.areaAt(r[0], r[1]) : null; if (A && A.walls && A.walls.length) pal = A.walls.map(h => parseInt(h.slice(1), 16));       // the area's own wall colours from identity.json (CP white, Lutyens cream, Old Delhi sandstone), for the ordinary buildings; offices, civic and religious keep the use palette
       const k = hash(b.id); wall = pal[Math.floor(k * pal.length) % pal.length]; }
     const wc = shade(wall, 0.9 + 0.2 * hash(b.id * 7 + 1)), rc = L && L.type ? shade(wall, 0.8) : shade(0x77726a, 0.85 + 0.3 * hash(b.id * 3)); let area = 0, cx = 0, cz = 0, x0 = Infinity, x1b = -Infinity, z0 = Infinity, z1b = -Infinity;
     for (let i = 0; i < n; i++) { const j = (i + 1) % n, xi = r[i * 2], zi = r[i * 2 + 1], xj = r[j * 2], zj = r[j * 2 + 1]; area += xi * zj - xj * zi; cx += xi; cz += zi; x0 = Math.min(x0, xi); x1b = Math.max(x1b, xi); z0 = Math.min(z0, zi); z1b = Math.max(z1b, zi); }
     const ccw = area > 0;                                                                // the pack says counter-clockwise; walls are built for either
     const anB = ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(r[0], r[1]) : '', corn = !b.infill && !L && hgt >= 9 && (anB === 'cp' || anB === 'lutyens' || anB === 'oldDelhi') && cornN < 140 && (cornN++, true);          // a cornice on the taller buildings of Connaught Place, Lutyens' Delhi and Old Delhi (140 a tile at most: a lip along the roof edge, 6 triangles a wall)
-    const arc = !b.infill && (!L || L.type === 'district') && hgt >= 9 && anB === 'cp';                         // Connaught Place: the colonnade (arcade) in front of the shops, on walls that face a street (200 walls a tile at most)
+    const arc = !stm && !b.infill && (!L || L.type === 'district') && hgt >= 9 && anB === 'cp';                         // Connaught Place: the colonnade (arcade) in front of the shops, on walls that face a street (200 walls a tile at most)
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n, ax = r[i * 2], az = r[i * 2 + 1], bx = r[j * 2], bz = r[j * 2 + 1], dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 0.05) continue;
       let nx = dz / l, nz = -dx / l; if (!ccw) { nx = -nx; nz = -nz; } const u1 = l / 14.4, v0 = vv(y0), v1 = vv(y1), y2 = Math.min(y1, y0 + 2.4), AO = 0.6;
@@ -529,6 +533,7 @@ export function* buildTileSteps(tile, ctx) {
         let ox = -(ax / la + bx / lb), oz = -(az / la + bz / lb); const ol = Math.hypot(ox, oz) || 1; cornerPavilion(B, X, Z, r[i * 2], r[i * 2 + 1], ax / la, az / la, bx / lb, bz / lb, y1, wc); mine++; drumN++;      /* R7: the square corner pavilion replaces the drum dome (cpfacade.js; drumCorner stays in the file, unused) */
         { const uxn = ox / ol, uzn = oz / ol, pxn = -uzn, pzn = uxn, dcx = r[i * 2] - uxn * 1.815, dcz = r[i * 2 + 1] - uzn * 1.815, bx2 = dcx + uxn * 4.1, bz2 = dcz + uzn * 4.1;      /* paired corner columns under a lintel in front of the drum */
           for (const sg of [-1, 1]) roundColumn(M.colm, X, Z, bx2 + pxn * 1.6 * sg, y0, bz2 + pzn * 1.6 * sg, 5.6, wc); junkBox(M.colm, X, Z, bx2, y0 + 5.6, bz2, 3.9, 0.55, 0.9, Math.atan2(pzn, pxn), wc); } } }
+    if (stm) statesmanDetail(B, M.cpbrand, X, Z, r, y0, y1);
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
     let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }
     if (tris) { const all = contour.concat(...holes), base = B.p.length / 3; for (const q of all) B.v(X(q.x), y1, Z(q.y), 0, 1, 0, rc, 0.06, 0.06); for (const t of tris) B.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0); }
@@ -542,7 +547,8 @@ export function* buildTileSteps(tile, ctx) {
   void SAND;
   /* ---- street life (D7, streetlife.js): shop boards, ads, poles and wires, stalls, shelters, trees ---- */
   { const yawAt = (x, z) => { let best = 1e9, yaw = 0; for (const s of tile.streets) { const p = s.pts; for (let i = 0; i + 3 < p.length; i += 2) { const dx = p[i + 2] - p[i], dz = p[i + 3] - p[i + 1], L2 = dx * dx + dz * dz; if (L2 < 1e-6) continue; const f = Math.max(0, Math.min(1, ((x - p[i]) * dx + (z - p[i + 1]) * dz) / L2)), d = Math.hypot(p[i] + dx * f - x, p[i + 1] + dz * f - z); if (d < best) { best = d; yaw = Math.atan2(dz, dx); } } } yawAt.d = best; return yaw; };
-    cpProps(M.junk, M.cpbrand, X, Z, gy, ox, oz, size, tile, junkBox, yawAt, out); }      /* L6: petrol stations, Palika Bazaar gates and the Hanuman shrine at their OSM points (cpprops.js) */
+    cpProps(M.junk, M.cpbrand, X, Z, gy, ox, oz, size, tile, junkBox, yawAt, out); 
+    cpPark(M, X, Z, gy, ox, oz, size, junkBox, out); }      /* Central Park rebuilt from the owner's aerial photos (cppark.js) */      /* L6: petrol stations, Palika Bazaar gates and the Hanuman shrine at their OSM points (cpprops.js) */
   if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow, cpbrand: M.cpbrand, cplight: M.cplight }, out); Object.assign(M, r.M); out.life = r.stats; }
   /* ---- the meshes ---- */
   return { M, out };

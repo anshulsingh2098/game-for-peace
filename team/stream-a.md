@@ -1,3 +1,10 @@
+## 2026-11-22 16:00  A-2026-11-22-12  Deploy of main 97ab81b (PR 113 included) to the owner's account
+Branch: main  Commit: 97ab81b
+What changed: nothing in the code. Clean `git archive` of origin/main, self-test 121, staged with `tools/stage_cloudflare.py`, bundled (`bundle: dist/game.js 3.86 MB`; one esbuild warning for a duplicate key `tx` in an object literal), `wrangler whoami` named mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy` gave version ac75b6a8-8d85-4bd1-9657-0c2005c7e646 at https://game-for-peace.mailrajulsingh-in.workers.dev. The earlier deploy of the fork session was df302bca (PRs 111 and 112).
+Evidence: the live index answers 200, `dist/game.js` is 3,856,493 bytes and contains the PVX Plaza board text. NOT done: a look at the live page in a browser; a phone check.
+For the other stream: nothing. Anshul's account keeps its older versions untouched.
+Status: info
+
 ## 2026-11-22 00:00  A-2026-11-21-11  Day sun lowered (SHARED file src/env/environment.js)
 Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
 What changed: day preset `sun` y 0.85 to 0.55 and `hi` 1.15 to 1.0 (one line, CRLF kept), with more shadow casters in `cityworld.js`. Owner asked for it so sun shadows read.

@@ -1,6 +1,7 @@
 /* L6 (docs/CP_LANDMARKS.md): landmark props of Connaught Place built at the OpenStreetMap points of the places: four petrol stations (canopy, columns, dispensers, a small office, a lit board), the Palika Bazaar gates (a kiosk with an arched stair opening and a board), and the Prachin Hanuman Mandir (a small stepped-roof shrine with a flag). Flat colours on the `junk` mesh (junkBox, tilemesh.js) and the lettering on the emissive `cpbrand` mesh (specialUV, cpfacade.js). Each prop is built only by the tile that contains its point and only if the point is not inside a building. Names are the game names (BHARAT PETROL, PALIKA BAZAAR GATE). */
 import * as THREE from 'three';
 import { specialUV } from './cpfacade.js';
+import { newBookLand, NEWBOOK } from './cplandmarks.js';
 
 export const CP_FUEL = [[1224, -1999], [1252, -1946], [855, -2331], [1206, -1752]];
 export const CP_PALIKA = [[986, -1930], [953, -1953], [1018, -1883], [1027, -1931]];
@@ -18,7 +19,7 @@ function board(m, X, Z, cx, cz, y, w, h, yaw, id) {
 export function cpProps(J, m, X, Z, gy, ox, oz, size, tile, junkBox, yawAt, out) {
   const col = h => new THREE.Color(h), here = (x, z) => x >= ox && x < ox + size && z >= oz && z < oz + size && !tile.buildings.some(b => b.ring && inRing(b.ring, x, z));
   /* the nearest free ground to a point: the point itself, then rings of 6 m up to 60 m, where no building covers the footprint corners (r metres round it) and the nearest street is at least r + 8 m away; null when none */
-  const free = (x0, z0, r, rb = r) => { for (let ring = 0; ring <= 10; ring++) for (let k = 0; k < (ring ? 8 + ring * 4 : 1); k++) { const a = k / (ring ? 8 + ring * 4 : 1) * Math.PI * 2, x = x0 + Math.cos(a) * ring * 6, z = z0 + Math.sin(a) * ring * 6; if (!(x >= ox + 12 && x < ox + size - 12 && z >= oz + 12 && z < oz + size - 12)) continue; const yaw = yawAt(x, z); if (yawAt.d < r + 8) continue; let ok = true; for (const [dx, dz] of [[0, 0], [rb, 0], [-rb, 0], [0, rb], [0, -rb], [rb * 0.7, rb * 0.7], [-rb * 0.7, rb * 0.7], [rb * 0.7, -rb * 0.7], [-rb * 0.7, -rb * 0.7]]) if (tile.buildings.some(b => b.ring && inRing(b.ring, x + dx, z + dz))) { ok = false; break; } if (ok) return [x, z, yaw]; } return null; };
+  const free = (x0, z0, r, rb = r, sd = r + 8) => { for (let ring = 0; ring <= 10; ring++) for (let k = 0; k < (ring ? 8 + ring * 4 : 1); k++) { const a = k / (ring ? 8 + ring * 4 : 1) * Math.PI * 2, x = x0 + Math.cos(a) * ring * 6, z = z0 + Math.sin(a) * ring * 6; if (!(x >= ox + 12 && x < ox + size - 12 && z >= oz + 12 && z < oz + size - 12)) continue; const yaw = yawAt(x, z); if (yawAt.d < sd) continue; let ok = true; for (const [dx, dz] of [[0, 0], [rb, 0], [-rb, 0], [0, rb], [0, -rb], [rb * 0.7, rb * 0.7], [-rb * 0.7, rb * 0.7], [rb * 0.7, -rb * 0.7], [-rb * 0.7, -rb * 0.7]]) if (tile.buildings.some(b => b.ring && inRing(b.ring, x + dx, z + dz))) { ok = false; break; } if (ok) return [x, z, yaw]; } return null; };
   const y0 = gy + 0.04, placed = []; let n = 0;
   for (const [fx, fz] of CP_FUEL) { if (!(fx >= ox && fx < ox + size && fz >= oz && fz < oz + size)) continue; const sp = free(fx, fz, 9, 18); if (!sp || placed.some(q => Math.hypot(q[0] - sp[0], q[1] - sp[1]) < 40)) continue; placed.push(sp); const [x, z, yaw] = sp, c = Math.cos(yaw), s = Math.sin(yaw), P = (a, b) => [x + a * c - b * s, z + a * s + b * c];
     /* canopy 14 x 8 m on four columns, 5.2 m up, a red and blue band on its edge; two islands with two dispensers each; a small office; a lit board on a pole */
@@ -40,5 +41,7 @@ export function cpProps(J, m, X, Z, gy, ox, oz, size, tile, junkBox, yawAt, out)
     for (let k = 0; k < 5; k++) { const w = 4.6 - k * 0.8; junkBox(J, X, Z, x, y0 + 3.45 + k * 0.9, z, w, 0.9, w * 0.85, yaw, col(k % 2 ? 0xe8791e : 0xf08a2a)); }
     junkBox(J, X, Z, x, y0 + 7.95, z, 0.35, 0.6, 0.35, yaw, col(0xe6b84a)); junkBox(J, X, Z, x + 3.8, y0, z, 0.12, 7.5, 0.12, yaw, col(0x8d8a84)); junkBox(J, X, Z, x + 3.8, y0 + 6.3, z + 0.5, 0.05, 0.9, 1.0, yaw, col(0xc4202e));
     out.circles.push(x, z, 3.2); n++; }
+  /* New Book Land (Janpath Market): the round glazed kiosk on the nearest free ground to its OSM point */
+  { const [bx, bz] = [NEWBOOK.x, NEWBOOK.z]; if (bx >= ox && bx < ox + size && bz >= oz && bz < oz + size) { const sp = free(bx, bz, 3, 4.2, 7); if (sp) { newBookLand(J, m, X, Z, y0, sp[0], sp[1], sp[2] + Math.PI / 2, junkBox); out.circles.push(sp[0], sp[1], 2.9); n++; } } }
   return n;
 }
