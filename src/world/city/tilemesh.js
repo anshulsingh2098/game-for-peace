@@ -4,7 +4,7 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { CP_CIRCLE } from './smooth.js';
-import { brandBand, drumCorner, makeBrandMaterial } from './cpfacade.js';
+import { brandBand, drumCorner, makeBrandMaterial, facadeBands, bladeSign } from './cpfacade.js';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
@@ -468,15 +468,16 @@ export function* buildTileSteps(tile, ctx) {
   if (infill.yards) { for (const y of infill.yards) { const v = hash(y[0] * 7 + y[1] * 13), c = shade(0x8a867c, 0.85 + 0.3 * v), q = (x, z) => M.walk.v(X(x), gy + LIFT.walk, Z(z), 0, 1, 0, c, X(x) / TEX_WALK, Z(z) / TEX_WALK), a0 = q(y[0], y[1]), a1 = q(y[2], y[1]), a2 = q(y[2], y[3]), a3 = q(y[0], y[3]); M.walk.tri(a0, a3, a2, 0, 1, 0); M.walk.tri(a0, a2, a1, 0, 1, 0); } out.nYards = infill.yards.length; }
   let cornN = 0, arcN = 0, nArc = 0, drumN = 0;
   /* the CP colonnade (reference N19: white columns, a continuous shaded walk, shop bays behind): a paved walk D m deep along the wall, square columns every ~3.6 m at its outer edge, and a slab over it at 5.6 m (the photos R2 and R4: columns about 3 persons high, about 0.7 m across; an estimate) whose underside is darker; one wall is about 20 triangles per bay */
-  const arcade = (B, ax, az, bx, bz, nx, nz, l, y0, D, k) => {
+  const arcade = (B, ax, az, bx, bz, nx, nz, l, y0, D, k, y1) => {
     const wc = shade(0xf1ede2, 0.94 + 0.08 * k), sc = wc.clone().multiplyScalar(0.62), pc = shade(0x9c978c, 0.9 + 0.2 * k), H = 5.6, T = 0.5, TH = 0.5, tx = (bx - ax) / l, tz = (bz - az) / l, nb = Math.max(2, Math.round(l / 3.6)), P = (u, d) => [ax + tx * u + nx * d, az + tz * u + nz * d];
     const face = (p, q, ya, yb, c, wx, wz) => { let a = p, b = q; if ((-(q[1] - p[1])) * wx + (q[0] - p[0]) * wz < 0) { a = q; b = p; } const v = (pt, y) => B.v(X(pt[0]), y, Z(pt[1]), wx, 0, wz, c, 0.06, 0.06); const q0 = v(a, ya), q1 = v(b, ya), q2 = v(b, yb), q3 = v(a, yb); B.tri(q0, q1, q2, wx, 0, wz); B.tri(q0, q2, q3, wx, 0, wz); };
     const flat = (pts, y, c, up) => { const idx = pts.map(pt => B.v(X(pt[0]), y, Z(pt[1]), 0, up, 0, c, 0.06, 0.06)); const cr = (pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[1][1] - pts[0][1]) * (pts[2][0] - pts[0][0]); const o = (cr < 0) === (up > 0) ? 0 : 1; B.tri(idx[0], idx[o ? 2 : 1], idx[o ? 1 : 2], 0, up, 0); B.tri(idx[0], idx[o ? 3 : 2], idx[o ? 2 : 3], 0, up, 0); };
     const A0 = P(0, 0), A1 = P(l, 0), A2 = P(l, D), A3 = P(0, D), ye = y0 + H;
     const wv = (pt) => M.walk.v(X(pt[0]), gy + LIFT.walk + 0.012, Z(pt[1]), 0, 1, 0, pc, X(pt[0]) / TEX_WALK, Z(pt[1]) / TEX_WALK), w = [wv(A0), wv(A1), wv(A2), wv(A3)]; M.walk.tri(w[0], w[3], w[2], 0, 1, 0); M.walk.tri(w[0], w[2], w[1], 0, 1, 0);   // paved walk
-    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz); brandBand(M.cpbrand, X, Z, A3[0], A3[1], A2[0], A2[1], nx, nz, ye + TH, 1.1, 3.6, Math.floor(k * 1000));      /* the brand-board band on the arcade front (cpfacade.js) */                                           // soffit, top of the slab and its front fascia
+    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz); brandBand(M.cpbrand, X, Z, A3[0], A3[1], A2[0], A2[1], nx, nz, ye + TH, 1.1, 3.6, Math.floor(k * 1000)); if (y1) facadeBands(B, X, Z, ax, az, bx, bz, nx, nz, ye + TH + 1.2, y1, wc);      /* the brand-board band on the arcade front (cpfacade.js) */                                           // soffit, top of the slab and its front fascia
     face(A0, A3, ye, ye + TH, wc, tx, tz); face(A1, A2, ye, ye + TH, wc, -tx, -tz);
     for (let q = 0; q <= nb; q++) { const u = q === 0 ? 0.5 : q === nb ? l - 0.5 : l * q / nb, rc = P(u, D - 0.55); roundColumn(M.colm, X, Z, rc[0], y0, rc[1], H, wc);       // the round column (near view)
+      if (q > 0 && q < nb && q % 3 === 1) bladeSign(M.cpbrand, X, Z, rc[0], rc[1], nx, nz, tx, tz, y0 + 2.9, Math.floor(k * 1000) + q);      // a vertical blade sign on every third column (cpfacade.js)
       const c0 = P(u - T / 2, D - 0.8), c1 = P(u + T / 2, D - 0.8), c2 = P(u + T / 2, D - 0.3), c3 = P(u - T / 2, D - 0.3);                // columns
       face(c3, c2, y0, ye, wc, nx, nz); face(c0, c3, y0, ye, sc, -tx, -tz); face(c1, c2, y0, ye, wc, tx, tz); }
     nArc++;
@@ -507,7 +508,7 @@ export function* buildTileSteps(tile, ctx) {
         const f0 = B.v(X(ax + ox), yb, Z(az + oz), nx, 0, nz, cd, 0.06, 0.06), f1 = B.v(X(bx + ox), yb, Z(bz + oz), nx, 0, nz, cd, 0.06, 0.06), f2 = B.v(X(bx + ox), yt, Z(bz + oz), nx, 0, nz, cc, 0.06, 0.06), f3 = B.v(X(ax + ox), yt, Z(az + oz), nx, 0, nz, cc, 0.06, 0.06); B.tri(f0, f1, f2, nx, 0, nz); B.tri(f0, f2, f3, nx, 0, nz);
         const t0 = B.v(X(ax + ox), yt, Z(az + oz), 0, 1, 0, cc, 0.06, 0.06), t1 = B.v(X(bx + ox), yt, Z(bz + oz), 0, 1, 0, cc, 0.06, 0.06), t2 = B.v(X(bx), yt, Z(bz), 0, 1, 0, cc, 0.06, 0.06), t3 = B.v(X(ax), yt, Z(az), 0, 1, 0, cc, 0.06, 0.06); B.tri(t0, t1, t2, 0, 1, 0); B.tri(t0, t2, t3, 0, 1, 0); B.tri(t0, t2, t1, 0, 1, 0); B.tri(t0, t3, t2, 0, 1, 0); }
       if (arc && l >= 8 && arcN < 200 && infill.streetClear) { const D = 3.4, ok = [0.08, 0.5, 0.92].every(t => infill.streetClear(ax + dx * t + nx * (D + 0.6), az + dz * t + nz * (D + 0.6), 0.6) && infill.streetClear(ax + dx * t + nx * (D * 0.5), az + dz * t + nz * (D * 0.5), 0.4));
-        if (ok) { arcN++; arcade(B, ax, az, bx, bz, nx, nz, l, y0, D, hash(b.id * 29 + i)); } }
+        if (ok) { arcN++; arcade(B, ax, az, bx, bz, nx, nz, l, y0, D, hash(b.id * 29 + i), y1); } }
       if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
     }
     if (arc && drumN < 30 && Math.hypot(r[0] - CP_CIRCLE.cx, r[1] - CP_CIRCLE.cz) > 135 && Math.hypot(r[0] - CP_CIRCLE.cx, r[1] - CP_CIRCLE.cz) < 340) { let mine = 0; for (let i = 0; i < n && mine < 2 && drumN < 30; i++) { const p = (i + n - 1) % n, q = (i + 1) % n, ax = r[p * 2] - r[i * 2], az = r[p * 2 + 1] - r[i * 2 + 1], bx = r[q * 2] - r[i * 2], bz = r[q * 2 + 1] - r[i * 2 + 1], la = Math.hypot(ax, az), lb = Math.hypot(bx, bz); if (la < 10 || lb < 10) continue;

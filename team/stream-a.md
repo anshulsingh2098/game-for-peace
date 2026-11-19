@@ -1,3 +1,10 @@
+## 2026-11-20 18:00  A-2026-11-20-09  CP facade detail on a new branch (PRs 101 and 102 are merged)
+Branch: claude/cp-facade-detail (from main b5055bf, separate worktree)  Commit: see the PR
+What changed: `src/world/city/cpfacade.js` (arched drum windows, sills, pediment, `facadeBands`, `bladeSign`), `src/world/city/tilemesh.js` (the `arcade()` signature and three calls). Details and the honest verdict in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121 checks; seen in the game by day and by night. NOT done: a visible-window frame time, the dusk grade, window surrounds and balustrade posts.
+For the other stream: nothing required. The branch is based on main (PR 102 merged), so new PRs from `claude/delhi-p1-infill` are no longer needed; use new branches from main.
+Status: info
+
 ## 2026-11-20 16:00  A-2026-11-20-08  Handoff and status updated; final merge and deploy of the day
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `HANDOFF.md` (new section "State on 19/20 Nov 2026"), `docs/STATUS.md` (20 Nov section), tracker. The branch holds everything since PR 101: roundabout islands, CP facade, live signal heads, signs with places and STOP. Self-test 121.
