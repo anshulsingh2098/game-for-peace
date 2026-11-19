@@ -21,6 +21,16 @@ Owner, 21 Nov 2026: five photos covering the overall design, structure, day and 
 - The whole axis lit by **two rows of amber lamps** in perspective (a lamp about every 25 m on each side), the central promenade packed with people, **lit trees** (amber from below), **canals lit blue-violet** at the near crossing, dark lawns, **orange folding barricades** along the crossing roads, **traffic streaks** (red and yellow) at the cross streets, a few buses, and Rashtrapati Bhavan and the Blocks **lit in pink, green and purple** far down the axis; cranes and a glass tower at the right; heavy grey evening cloud.
 - The central road is closed to cars in the evening and used as a promenade (the white lines still show on it).
 
+## K6. Night at ground level, on the footpath looking west (phone photo)
+- **Footpath:** pink-grey sandstone slabs, large rectangles (about 0.6 by 1.2 m) laid in a running pattern, about 6 m wide, with a **pale stone strip about 0.5 m wide** between the footpath and the carriageway and a solid white line beside it.
+- **Lawn side:** cream stone **bollards with rounded tops (about 0.9 m high, 3 m apart) and black chains in swags** between them; the lawn behind is short and flat, bright green, with a thin paved path across it.
+- **Lamps:** **black lamp posts about 6 m high with a single lantern head (white LED, strong halo, not amber)**, one on each side every 30 m, standing on the footpath edge; a small signboard on a post beside the first lamp.
+- **Road:** dark grey asphalt, a **solid white edge line**, **white dashed lane lines** (dash about 2 m, gap about 4 m), and a yellow line on the far side; the carriageway is full of people walking (a night promenade).
+- **Far end:** North and South Blocks and Rashtrapati Bhavan **lit in pink and violet** (domes and the long fronts); a **blue-lit canal edge** on the left; trees dark with warm uplights; deep blue sky, no moon.
+## K7. Night on the road looking east to India Gate (phone photo)
+- The same arrangement toward **India Gate lit white** at the end of the axis; **lamp posts every 30 m on both sides**, each with a white halo; the dashed white lane lines and a solid yellow line on the left; **a crowd of people on the carriageway and the footpath** in bright clothes (red, yellow, teal), long shadows thrown by the lamps; blue-lit canal edge at the right; cream bollards with chains on the right lawn edge.
+**Correction to K5:** the lamps at ground level are neutral white with a halo, not amber (the aerial photo looks amber because of the camera). Trees are uplit warm; the canal is lit blue.
+
 ## What the game has now (21 Nov build, Kartavya zone from PR 110)
 One carriageway with the markings and red/yellow painted kerb; the avenue's lawns and lamps and a hedge; palm cards; the landmark models (India Gate arch, Rashtrapati Bhavan, the Blocks) from `assets/cities/delhi/landmarks.json`.
 ## Gaps (K-register; to copy into `docs/OPEN_ITEMS.md` after the stack merges)
@@ -37,3 +47,7 @@ One carriageway with the markings and red/yellow painted kerb; the avenue's lawn
 | K-9 | **Tree rows**: a double row of big round-crowned trees along the whole axis, uplit at night | K1, K5 |
 | K-10 | **Road**: one solid yellow centre line on Raisina Hill (the Delhi main plan removed the double yellow: check which is right per road), white edge and dashed lane lines on Kartavya Path; the central road as a night promenade | K3, K4, K5 |
 | K-11 | Night: orange folding barricades at the crossings, people crowds on the promenade, lit Rashtrapati Bhavan in colours | K5 |
+| K-12 | **Night crowd:** people everywhere on the carriageway and footpath of Kartavya Path in the evening (the road is a promenade), bright clothes, long lamp shadows | K5, K6, K7 |
+| K-13 | **Lamp light colour:** neutral white LED with a strong halo on Kartavya Path (CP lamps are amber): per-area lamp colour | K6, K7 |
+| K-14 | **Paving pattern:** large rectangles about 0.6 by 1.2 m in a running bond, a pale stone strip and a white line at the road side; footpath 6 m wide | K6 |
+| K-15 | **Bollards:** rounded tops about 0.9 m, 3 m apart, chains in swags (measured from K6, replaces the 2.5 m of K4) | K4, K6 |
