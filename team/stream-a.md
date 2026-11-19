@@ -1,3 +1,10 @@
+## 2026-11-21 16:00  A-2026-11-21-06  Research pack ticked off: `docs/CP_MAX_CHECKLIST.md` (50 places, 78 assets) and the CP gate extended
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `tools/build_cp_checklist.mjs` writes `docs/CP_MAX_CHECKLIST.md`: every place and asset of the owner's pack with scope (CP now 43 assets, CP surround 6, kit for later 29), our state (built 21 / partial 13 / not started 9 for CP) and where it lives; places get their game position, pack area and nearest landmark. `docs/CP_MAX_PLAN.md` gets gate item 6 and workstream 2b (CP street furniture: bus shelter, drain, barricade, bollard, dustbin, CCTV, transformer, AC units, lightboxes). The pack holds 50 places and 78 assets, not the 45 and 70 its README says.
+Evidence: states are my reading of the code and logs (a code search), nothing looked at against a photo, nothing accepted; the position conversion is computed from the pack origin.
+For the other stream: the other Stream A session: please check the CP rows against what you built (PRs 105 to 111) and correct a state in the script if I got one wrong.
+Status: open
+
 ## 2026-11-21 15:00  A-2026-11-21-05  Plan: finish CP end to end, build the kit while doing it, then all Delhi (`docs/CP_MAX_PLAN.md`)
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: new `docs/CP_MAX_PLAN.md` (docs only): where CP stands, the gate that declares CP done, workstreams 0 to 8 in order, the kit modules to extract while building (roadkit, signkit, facadekit, groundkit, lightkit, lifekit) with a two-place non-CP test, the Delhi-wide order by area, what the owner must decide. It orders the existing plans; it replaces none.
