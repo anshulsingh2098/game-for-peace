@@ -31,6 +31,7 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 30 | CP landmarks | The whole CP landmarks and showrooms programme L2 to L7 (`docs/CP_LANDMARKS.md`): boards from data, the cinema, the pavilion block, granite pavements, petrol pump, street life | Plan and data only so far | Owner confirms the decisions at the end of that file |
 | 31 | L2 | Place boards: 68 of the 129 places got a board in the first tiles (the rest lie outside an arcade front or in tiles not loaded); two adjacent arcade fronts can show the same generic board side by side (seen: SPICE ROUTE twice); a place board may land a few metres from the real shop | OSM points are not shopfronts | A second look with a photo; dedupe neighbours |
 | 32 | L2 | The brand atlas grew from 1024 x 576 to 1024 x 1632 pixels (+4 MB of texture memory with mips) | New place cells | Phone memory check; halve the place cells if needed |
+| 33 | L3 | The PVX Plaza front: the building behind it is the map's block (not a tall blank-wall cinema block: height, roof line and the side wall are the block's); the gold letters sit on a dark band (the photo has gold on white); the posters are invented art; the Regal, Odeon (OSM: Odeon Inox at x 1180, z -2270) and the Rivolo fronts are not built; not seen at night; no frame cost measured | Placed on the OSM point, built one front only | L3b: old cinemas; night look; cost |
 
 ## Closed
 | Item | Evidence |

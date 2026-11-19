@@ -12,7 +12,9 @@ const CELL_W = 256, CELL_H = 64, COLS = 4, ROWS = 8, ROWS_ALL = 9;      /* 8 row
 export const BRAND_COUNT = BRANDS.length;
 /* L2 (docs/CP_LANDMARKS.md): the named places of CP as extra boards. Atlas cells for them sit below the lamp row, 5 columns of 192 x 48; an index of 1000 + k means place k. */
 const PCELL_W = 192, PCELL_H = 48, PCOLS = 5, PLACE_NAMES = [], PLACE_KIND = [], PLACE_OF = new Map(); for (const [n, kind] of CP_PLACES) if (!PLACE_OF.has(n)) { PLACE_OF.set(n, PLACE_NAMES.length); PLACE_NAMES.push(n); PLACE_KIND.push(kind); }
-const PBASE_Y = 9 * 64, ATLAS_H = PBASE_Y + Math.ceil(PLACE_NAMES.length / PCOLS) * PCELL_H;
+const PBASE_Y = 9 * 64, SP_Y = PBASE_Y + Math.ceil(PLACE_NAMES.length / PCOLS) * PCELL_H, ATLAS_H = SP_Y + 320;      /* L3: below the place cells a strip for the cinema: the big letters (1024 x 96), the canopy board (512 x 64), two solid cells (yellow, gold) and three film posters (128 x 160) */
+const SPECIAL = { letters: [0, SP_Y, 1024, 96], canopy: [0, SP_Y + 96, 512, 64], yellow: [520, SP_Y + 100, 16, 16], gold: [560, SP_Y + 100, 16, 16], poster0: [0, SP_Y + 160, 128, 160], poster1: [136, SP_Y + 160, 128, 160], poster2: [272, SP_Y + 160, 128, 160] };
+export function specialUV(id) { const [x, y, w, h] = SPECIAL[id], W = 1024; return [(x + 1) / W, 1 - (y + h - 1) / ATLAS_H, (x + w - 1) / W, 1 - (y + 1) / ATLAS_H]; }
 /* a board style by kind and by name (a deterministic pick): cafes brown and cream, bars black with a neon colour, restaurants deep red, green or blue with cream, food counters red and yellow, the cinema black and gold */
 const PSTYLE = { cafe: [[0x4a2c1a, 0xf5e6c8], [0x1f5a3c, 0xf5e6c8], [0x2b1d14, 0xe8c27a]], bar: [[0x15161a, 0xff5fa8], [0x15161a, 0x5fd0ff], [0x1b1030, 0xffd45f]], restaurant: [[0x7a1a22, 0xf5e6b8], [0x1d3f6a, 0xf5ecd8], [0x2e5a2a, 0xf5ecd8], [0x3a2a24, 0xe8c27a]], food: [[0xc4202e, 0xffd23a], [0xe9791c, 0xffffff], [0xf2c230, 0x8a1c1c], [0x1f5bb8, 0xffffff]], cinema: [[0x111111, 0xe6b84a]] };
 const pstyle = (name, kind) => { let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0; const l = PSTYLE[kind] || PSTYLE.restaurant; return l[h % l.length]; };
@@ -37,6 +39,13 @@ export function makeBrandAtlas() {
   PLACE_NAMES.forEach((name, k) => { const [bg, fg] = pstyle(name, PLACE_KIND[k]), x = (k % PCOLS) * PCELL_W, y = PBASE_Y + Math.floor(k / PCOLS) * PCELL_H, hex = h => '#' + h.toString(16).padStart(6, '0');
     g.fillStyle = hex(bg); g.fillRect(x, y, PCELL_W, PCELL_H); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 2; g.strokeRect(x + 2, y + 2, PCELL_W - 4, PCELL_H - 4);
     g.fillStyle = hex(fg); g.textAlign = 'center'; g.textBaseline = 'middle'; let fs = 26; g.font = 'bold ' + fs + 'px Arial,Helvetica,sans-serif'; while (g.measureText(name.toUpperCase()).width > PCELL_W - 18 && fs > 10) { fs -= 2; g.font = 'bold ' + fs + 'px Arial,Helvetica,sans-serif'; } g.fillText(name.toUpperCase(), x + PCELL_W / 2, y + PCELL_H / 2 + 1); });
+  { const [lx, ly, lw, lh] = SPECIAL.letters; g.fillStyle = '#16120e'; g.fillRect(lx, ly, lw, lh); g.fillStyle = '#e8b83a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 84px Georgia,serif'; g.fillText('P V X   P L A Z A', lw / 2, ly + lh / 2 + 4);
+    const [cx, cy, cw, ch] = SPECIAL.canopy; g.fillStyle = '#f0c020'; g.fillRect(cx, cy, cw, ch); g.fillStyle = '#1a1208'; g.font = 'bold 36px Arial,Helvetica,sans-serif'; g.fillText('PVX PLAZA CINEMA  TICKETS', cx + cw / 2, cy + ch / 2 + 2);
+    g.fillStyle = '#f5c518'; g.fillRect(...SPECIAL.yellow); g.fillStyle = '#e8b83a'; g.fillRect(...SPECIAL.gold);
+    const posters = [['#7a1c1c', '#f0b030', 'DHOOM', 'NIGHTS'], ['#12304f', '#8fd0ff', 'RAJA', 'RETURNS'], ['#3a1850', '#ff9ad0', 'CHAI', 'AUR PYAAR']];
+    posters.forEach(([bg, fg, t1, t2], i) => { const [px, py, pw, ph] = SPECIAL['poster' + i], gr = g.createLinearGradient(px, py, px, py + ph); gr.addColorStop(0, bg); gr.addColorStop(1, '#0b0b10'); g.fillStyle = gr; g.fillRect(px, py, pw, ph);
+      g.fillStyle = fg; g.globalAlpha = 0.35; g.beginPath(); g.ellipse(px + pw / 2, py + ph * 0.42, pw * 0.3, ph * 0.28, 0, 0, 7); g.fill(); g.fillRect(px + pw * 0.22, py + ph * 0.6, pw * 0.56, ph * 0.2); g.globalAlpha = 1;
+      g.fillStyle = fg; g.font = 'bold 26px Arial,Helvetica,sans-serif'; g.fillText(t1, px + pw / 2, py + ph * 0.84); g.font = 'bold 15px Arial,Helvetica,sans-serif'; g.fillText(t2, px + pw / 2, py + ph * 0.93); g.strokeStyle = fg; g.lineWidth = 2; g.strokeRect(px + 3, py + 3, pw - 6, ph - 6); }); }
   return c;
 }
 export function brandUV(i) {
@@ -228,4 +237,35 @@ export function makeLeafCanvas() {
   for (let i = 0; i < 520; i++) { const x = rnd() * S, y = rnd() * S, r = 2 + rnd() * 4, t = rnd(), col = t < 0.3 ? '#2f5a26' : t < 0.7 ? '#5f9a40' : '#7bb653', a = rnd() * 3.14;
     for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) { g.fillStyle = col; g.beginPath(); g.ellipse(x + dx, y + dy, r, r * 0.55, a, 0, 7); g.fill(); } }
   return c;
+}
+
+/* L3 (docs/CP_LANDMARKS.md, owner's photos P4 and P5): the cinema front of a CP block. OSM puts "PVR Plaza Cinema" at x 1044, z -2356; the game calls it PVX Plaza. The facade piece is built on the wall edge nearest to that point. */
+export const CINEMA = { x: 1044, z: -2356 };
+export function cinemaEdge(ax, az, bx, bz, l) {
+  if (l < 14) return null; const dx = bx - ax, dz = bz - az, tx = dx / l, tz = dz / l, u = (CINEMA.x - ax) * tx + (CINEMA.z - az) * tz, d = Math.abs(-(CINEMA.x - ax) * tz + (CINEMA.z - az) * tx);
+  return u > 4 && u < l - 4 && d < 14 ? { u } : null;
+}
+/* the front: a dark band with the gold letters across the top, three lit poster frames, a yellow canopy over the street front with its board, a lit strip, and a few air conditioner boxes on the roof. B: the building mesh (flat colours), m: the emissive board mesh (cpbrand). Spans about 26 m of the edge, centred on the cinema's point, clipped to the edge. */
+export function cinemaFront(B, m, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, cin) {
+  const dx = bx - ax, dz = bz - az, tx = dx / l, tz = dz / l, W = Math.min(l - 2, 26), u0 = Math.max(1, Math.min(l - 1 - W, cin.u - W / 2)), u1 = u0 + W, sgn = (tx * nz - tz * nx) < 0, WH = new THREE.Color(0xffffff);
+  const P = (u, d, y) => [ax + tx * u + nx * d, y, az + tz * u + nz * d];
+  const quadSP = (id, a, b, c, dd, ny) => { const uv0 = specialUV(id), uv = sgn ? [uv0[2], uv0[1], uv0[0], uv0[3]] : uv0, v0 = m.v(X(a[0]), a[1], Z(a[2]), nx, ny, nz, WH, uv[0], uv[1]), v1 = m.v(X(b[0]), b[1], Z(b[2]), nx, ny, nz, WH, uv[2], uv[1]), v2 = m.v(X(c[0]), c[1], Z(c[2]), nx, ny, nz, WH, uv[2], uv[3]), v3 = m.v(X(dd[0]), dd[1], Z(dd[2]), nx, ny, nz, WH, uv[0], uv[3]); m.tri(v0, v1, v2, nx, ny, nz); m.tri(v0, v2, v3, nx, ny, nz); };
+  const solid = (a, b, c, dd, col, n0, n1, n2) => { const v0 = B.v(X(a[0]), a[1], Z(a[2]), n0, n1, n2, col, 0.06, 0.06), v1 = B.v(X(b[0]), b[1], Z(b[2]), n0, n1, n2, col, 0.06, 0.06), v2 = B.v(X(c[0]), c[1], Z(c[2]), n0, n1, n2, col, 0.06, 0.06), v3 = B.v(X(dd[0]), dd[1], Z(dd[2]), n0, n1, n2, col, 0.06, 0.06); B.tri(v0, v1, v2, n0, n1, n2); B.tri(v0, v2, v3, n0, n1, n2); };
+  const top = y1 - 0.6, yBand = top - 2.2;
+  /* a blank wall panel over the windows (photos P4 and P5 show an unbroken white wall above the street front), 4 cm off the facade */
+  solid(P(u0, 0.04, y0 + 4.3), P(u1, 0.04, y0 + 4.3), P(u1, 0.04, top), P(u0, 0.04, top), wc.clone().multiplyScalar(1.03), nx, 0, nz);
+  /* the dark band with the letters, 1.8 m proud of nothing: 7 cm off the wall, 2.2 m tall, as wide as the front; the letters run across it */
+  quadSP('letters', P(u0, 0.08, yBand), P(u1, 0.08, yBand), P(u1, 0.08, top), P(u0, 0.08, top), 0);
+  /* three poster frames of 3.6 x 4.7 m at 4 m storey height above the canopy: a dark frame behind each, the poster in front */
+  const pw = 3.6, ph = 4.7, gap = (W - 3 * pw) / 4, yp = Math.max(y0 + 6.2, yBand - ph - 1.0), dark = new THREE.Color(0x1c1a18);
+  for (let k = 0; k < 3; k++) { const a = u0 + gap + k * (pw + gap), b = a + pw; solid(P(a - 0.2, 0.05, yp - 0.2), P(b + 0.2, 0.05, yp - 0.2), P(b + 0.2, 0.05, yp + ph + 0.2), P(a - 0.2, 0.05, yp + ph + 0.2), dark, nx, 0, nz);
+    quadSP('poster' + k, P(a, 0.09, yp), P(b, 0.09, yp), P(b, 0.09, yp + ph), P(a, 0.09, yp + ph), 0); }
+  /* the yellow canopy: a slab 2.3 m out at 3.6 m, 0.55 m thick; its front carries the board; a lit strip under the posters */
+  const yc = y0 + 3.6, yel = new THREE.Color(0xe8b520), D = 2.3;
+  solid(P(u0, 0, yc), P(u1, 0, yc), P(u1, D, yc), P(u0, D, yc), yel.clone().multiplyScalar(0.7), 0, -1, 0); solid(P(u0, 0, yc + 0.55), P(u0, D, yc + 0.55), P(u1, D, yc + 0.55), P(u1, 0, yc + 0.55), yel, 0, 1, 0);
+  quadSP('canopy', P(u0, D + 0.02, yc), P(u1, D + 0.02, yc), P(u1, D + 0.02, yc + 0.55), P(u0, D + 0.02, yc + 0.55), 0);
+  quadSP('yellow', P(u0, 0.1, yp - 0.9), P(u1, 0.1, yp - 0.9), P(u1, 0.1, yp - 0.7), P(u0, 0.1, yp - 0.7), 0);
+  /* air conditioner boxes on the roof */
+  const roof = new THREE.Color(0x8d9096); for (let k = 0; k < 4; k++) { const cu = u0 + 3 + k * (W - 6) / 3, hx = 0.9, hz = 0.7, y = y1; const q = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => P(cu + a * hx, -1.6 + b * hz, y)), qt = q.map(p => [p[0], y + 1.1, p[2]]);
+    for (let e = 0; e < 4; e++) { const a = q[e], b = q[(e + 1) % 4], at = qt[e], bt = qt[(e + 1) % 4], nx2 = (b[2] - a[2]), nz2 = -(b[0] - a[0]), nl = Math.hypot(nx2, nz2) || 1; solid(a, b, bt, at, roof, nx2 / nl, 0, nz2 / nl); } solid(qt[0], qt[1], qt[2], qt[3], roof.clone().multiplyScalar(1.1), 0, 1, 0); }
 }

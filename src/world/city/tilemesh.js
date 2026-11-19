@@ -4,7 +4,7 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { CP_CIRCLE } from './smooth.js';
-import { brandBand, drumCorner, makeBrandMaterial, facadeBands, bladeSign, soffitLights, makeLightMaterial, arcadePools, cpFacadeTextures, roofCornice, makeLeafCanvas, columnWash, wallWash, boardReflections } from './cpfacade.js';
+import { brandBand, drumCorner, makeBrandMaterial, facadeBands, bladeSign, soffitLights, makeLightMaterial, arcadePools, cpFacadeTextures, roofCornice, makeLeafCanvas, cinemaEdge, cinemaFront, columnWash, wallWash, boardReflections } from './cpfacade.js';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
@@ -510,7 +510,8 @@ export function* buildTileSteps(tile, ctx) {
       if (corn && l > 2.5) { const cc = shade(wall, 1.12 + 0.1 * hash(b.id * 13 + i)), cd = cc.clone().multiplyScalar(0.78), ox = nx * 0.4, oz = nz * 0.4, yb = y1 - 0.35, yt = y1 + 0.25;
         const f0 = B.v(X(ax + ox), yb, Z(az + oz), nx, 0, nz, cd, 0.06, 0.06), f1 = B.v(X(bx + ox), yb, Z(bz + oz), nx, 0, nz, cd, 0.06, 0.06), f2 = B.v(X(bx + ox), yt, Z(bz + oz), nx, 0, nz, cc, 0.06, 0.06), f3 = B.v(X(ax + ox), yt, Z(az + oz), nx, 0, nz, cc, 0.06, 0.06); B.tri(f0, f1, f2, nx, 0, nz); B.tri(f0, f2, f3, nx, 0, nz);
         const t0 = B.v(X(ax + ox), yt, Z(az + oz), 0, 1, 0, cc, 0.06, 0.06), t1 = B.v(X(bx + ox), yt, Z(bz + oz), 0, 1, 0, cc, 0.06, 0.06), t2 = B.v(X(bx), yt, Z(bz), 0, 1, 0, cc, 0.06, 0.06), t3 = B.v(X(ax), yt, Z(az), 0, 1, 0, cc, 0.06, 0.06); B.tri(t0, t1, t2, 0, 1, 0); B.tri(t0, t2, t3, 0, 1, 0); B.tri(t0, t2, t1, 0, 1, 0); B.tri(t0, t3, t2, 0, 1, 0); }
-      if (arc && l >= 8 && arcN < 200 && infill.streetClear) { const D = 3.4, ok = [0.08, 0.5, 0.92].every(t => infill.streetClear(ax + dx * t + nx * (D + 0.6), az + dz * t + nz * (D + 0.6), 0.6) && infill.streetClear(ax + dx * t + nx * (D * 0.5), az + dz * t + nz * (D * 0.5), 0.4));
+      const cin = arc ? cinemaEdge(ax, az, bx, bz, l) : null; if (cin) cinemaFront(B, M.cpbrand, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, cin);      /* L3: the PVX Plaza cinema front instead of an arcade (cpfacade.js) */
+      if (!cin && arc && l >= 8 && arcN < 200 && infill.streetClear) { const D = 3.4, ok = [0.08, 0.5, 0.92].every(t => infill.streetClear(ax + dx * t + nx * (D + 0.6), az + dz * t + nz * (D + 0.6), 0.6) && infill.streetClear(ax + dx * t + nx * (D * 0.5), az + dz * t + nz * (D * 0.5), 0.4));
         if (ok) { arcN++; arcade(B, ax, az, bx, bz, nx, nz, l, y0, D, hash(b.id * 29 + i), y1); } }
       if (arc && l > 4) roofCornice(B, X, Z, ax, az, bx, bz, nx, nz, y1, wc);      /* the deep roof cornice of the CP blocks (cpfacade.js) */
       if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
