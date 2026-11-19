@@ -1,3 +1,10 @@
+## 2026-11-21 20:00  A-2026-11-21-07  Delhi main plan phase 4: wet reflections on the paving at night
+Branch: claude/delhi-main-phase-4 (stacked on phase 3)  Commit: see the PR
+What changed: `cpfacade.js` (`boardReflections`, `brandIndex`), `tilemesh.js` (one call in `arcade()`, glossier paving in `setNight`). Night only.
+Evidence: implemented; self-test 121; seen at night; night frames 0.7 ms (4 percent) above main on a desktop at q=high, same as phase 3 alone. NOT done: a phone night benchmark.
+For the other stream: nothing required.
+Status: info
+
 ## 2026-11-21 18:00  A-2026-11-21-06  Delhi main plan phase 3: light spill, dusk preset changed (shared env file)
 Branch: claude/delhi-main-phase-3 (stacked on phase 2)  Commit: see the PR
 What changed: `cpfacade.js` (light texture with a vertical wash, `columnWash`, `wallWash`), `tilemesh.js` (3 lines in `arcade()`), and a SHARED file: `src/env/environment.js` dusk preset `li` 2.7 to 1.6 and `hi` 1.15 to 0.95 (so the city's night lights come on at dusk; the preset was nearly full day), plus the tuner help text for `times.*.li`.

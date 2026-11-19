@@ -32,7 +32,7 @@ export function makeBrandMaterial() {
 /* the brand-board band along one arcade front: from point a to point b (x, z), at height y0, `h` tall, facing (nx, nz), one board a bay of about `bay` metres, each a different brand. `key` varies the choice by building. */
 export function brandBand(m, X, Z, ax, az, bx, bz, nx, nz, y0, h, bay, key) {
   const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 3) return 0; const n = Math.max(1, Math.round(L / bay)), tx = dx / L, tz = dz / L, w = L / n - 0.25; let q = 0;
-  for (let k = 0; k < n; k++) { const uMid = (k + 0.5) * L / n, cx = ax + tx * uMid + nx * 0.06, cz = az + tz * uMid + nz * 0.06, uv0 = brandUV(Math.floor(((key * 7 + k * 5 + Math.floor(key / 3)) % 1000 + 1000) % BRAND_COUNT)), uv = (tx * nz - tz * nx) < 0 ? [uv0[2], uv0[1], uv0[0], uv0[3]] : uv0;      /* seen from outside the wall the texture must run left to right: the viewer's right is (nz, -nx), so a wall running the other way gets the picture turned round (it read mirrored on half the walls) */ const W = new THREE.Color(0xffffff);
+  for (let k = 0; k < n; k++) { const uMid = (k + 0.5) * L / n, cx = ax + tx * uMid + nx * 0.06, cz = az + tz * uMid + nz * 0.06, uv0 = brandUV(brandIndex(key, k)), uv = (tx * nz - tz * nx) < 0 ? [uv0[2], uv0[1], uv0[0], uv0[3]] : uv0;      /* seen from outside the wall the texture must run left to right: the viewer's right is (nz, -nx), so a wall running the other way gets the picture turned round (it read mirrored on half the walls) */ const W = new THREE.Color(0xffffff);
     const v0 = m.v(X(cx - tx * w / 2), y0, Z(cz - tz * w / 2), nx, 0, nz, W, uv[0], uv[1]), v1 = m.v(X(cx + tx * w / 2), y0, Z(cz + tz * w / 2), nx, 0, nz, W, uv[2], uv[1]), v2 = m.v(X(cx + tx * w / 2), y0 + h, Z(cz + tz * w / 2), nx, 0, nz, W, uv[2], uv[3]), v3 = m.v(X(cx - tx * w / 2), y0 + h, Z(cz - tz * w / 2), nx, 0, nz, W, uv[0], uv[3]); m.tri(v0, v1, v2, nx, 0, nz); m.tri(v0, v2, v3, nx, 0, nz); q++; }
   return q;
 }
@@ -158,5 +158,17 @@ export function columnWash(m, X, Z, cx, cz, nx, nz, tx, tz, y0) {
 /* the same on the wall behind the arcade: one wash a bay, from the soffit (height yTop) down 3.2 m, on the wall plane pushed 6 cm out. */
 export function wallWash(m, X, Z, ax, az, tx, tz, nx, nz, l, bays, yTop) {
   let q = 0; for (let k = 0; k < bays; k++) { const u = (k + 0.5) * l / bays, cx = ax + tx * u + nx * 0.06, cz = az + tz * u + nz * 0.06, w = l / bays * 0.6, P = [[-1, yTop - 3.2, 0.5], [1, yTop - 3.2, 0.5], [1, yTop - 0.05, 1], [-1, yTop - 0.05, 1]].map(([a, y, v], i) => m.v(X(cx + tx * a * w), y, Z(cz + tz * a * w), nx, 0, nz, WARM, i === 0 || i === 3 ? 0 : 1, v)); m.tri(P[0], P[1], P[2], nx, 0, nz); m.tri(P[0], P[2], P[3], nx, 0, nz); q += 2; }
+  return q;
+}
+
+/* which brand the board number k of a wall with key `key` shows (shared by the band and its reflection, so they always agree) */
+export function brandIndex(key, k) { return Math.floor(((key * 7 + k * 5 + Math.floor(key / 3)) % 1000 + 1000) % BRAND_COUNT); }
+
+/* Wet reflections on the paving at night (phase 4 of docs/DELHI_MAIN_PLAN.md): in front of every board, a soft streak of the board's own colour on the plaza, brightest at the arcade and fading outward, as the glowing board would shine on wet stone. Additive, night only (the `cplight` mesh). From a to b along the arcade front, outward normal (nx, nz), at ground height y, `reach` metres out, a streak a board wide (same bays as brandBand). 2 triangles a board. */
+export function boardReflections(m, X, Z, ax, az, bx, bz, nx, nz, y, bay, key, reach = 8) {
+  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 3) return 0; const n = Math.max(1, Math.round(L / bay)), tx = dx / L, tz = dz / L, w = L / n - 0.25; let q = 0;
+  for (let k = 0; k < n; k++) { const bg = BRANDS[brandIndex(key, k)][1], col = new THREE.Color(bg).multiplyScalar(1.7), u = (k + 0.5) * L / n, cx = ax + tx * u, cz = az + tz * u;
+    const P = [[-1, 0, 0.5], [1, 0, 0.5], [1, 1, 1], [-1, 1, 1]].map(([a, d, v], i) => { const off = d ? 0.4 : 0.4 + reach; return m.v(X(cx + tx * a * w / 2 + nx * off), y, Z(cz + tz * a * w / 2 + nz * off), 0, 1, 0, col, i === 0 || i === 3 ? 0 : 1, v); });      // d 1 = the edge at the arcade (bright), d 0 = the far edge (faded)
+    m.tri(P[0], P[1], P[2], 0, 1, 0); m.tri(P[0], P[2], P[3], 0, 1, 0); q += 2; }
   return q;
 }
