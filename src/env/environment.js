@@ -56,7 +56,7 @@ export class Environment {
           float shade = fbm(cp * 1.8 + 3.0);
           vec3 cc = mix(cloudCol * 0.62, cloudCol, shade) + sunCol * pow(sd, 5.0) * 0.55;
           c = mix(c, cc, cl);
-          c += sunCol * (pow(sd, 900.0) * 3.5 + pow(sd, 14.0) * 0.30 + pow(sd, 3.0) * 0.10) * (1.0 - cl * 0.85);
+          c += sunCol * (pow(sd, 900.0) * 3.5 + pow(sd, 120.0) * 0.9 + pow(sd, 14.0) * 0.42 + pow(sd, 3.0) * 0.12) * (1.0 - cl * 0.85);
           gl_FragColor = vec4(c, 1.0);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
