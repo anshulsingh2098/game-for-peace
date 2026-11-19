@@ -1,5 +1,5 @@
 {
- "commit": "433bd3d",
+ "commit": "97ff31f",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -1641,6 +1641,11 @@
  ],
  "prs": [
   [
+   "136",
+   "Maruti 800, Figo and Aspire; carjacking; damage tested on the new cars; docs",
+   "merged"
+  ],
+  [
    "135",
    "Log: deploy of main 433bd3d (release/damage and the new cars)",
    "open"
@@ -1834,57 +1839,52 @@
    "97",
    "Fix Delhi stuck on loading screen (builder boost + progress)",
    "merged"
-  ],
-  [
-   "96",
-   "Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 201 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 205 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 252 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 256 behind main)"
   ],
   [
    "vehicle/damage-1",
-   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 16 behind main)"
+   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 20 behind main)"
   ],
   [
    "vehicle/damage-3",
-   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 15 behind main)"
+   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 19 behind main)"
   ],
   [
    "vehicle/damage-4",
-   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 14 behind main)"
+   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 18 behind main)"
   ],
   [
    "vehicle/damage-5",
-   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 13 behind main)"
+   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 17 behind main)"
   ],
   [
    "vehicle/damage-6",
-   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 12 behind main)"
+   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 16 behind main)"
   ],
   [
    "vehicle/damage-7",
-   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 11 behind main)"
+   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 15 behind main)"
   ],
   [
    "vehicle/damage-8",
-   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 10 behind main)"
+   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 14 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 250 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 254 behind main)"
   ],
   [
    "vehicle/ragdoll",
-   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 17 behind main)"
+   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 21 behind main)"
   ]
  ],
  "tests": "125",
@@ -1898,5 +1898,5 @@
    "125 checks passing"
   ]
  ],
- "generated": "2026-11-19T19:32:59.538Z"
+ "generated": "2026-11-19T20:16:21.357Z"
 }

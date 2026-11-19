@@ -1407,6 +1407,6 @@ test('carjacking (C2): every garage car a taken NPC car becomes exists, and ever
   const { VEHICLES } = await import('../src/vehicle/defs.js'), src = readFileSync(new URL('../src/world/city/vehicles.js', import.meta.url), 'utf8'), ids = new Set(VEHICLES.map(v => v.id));
   const m = src.match(/GARAGE_OF = \{([^}]*)\}/); assert.ok(m, 'GARAGE_OF is in vehicles.js'); const pairs = [...m[1].matchAll(/'?([\w-]+)'?: ('?[\w-]+'?|null)/g)].map(x => [x[1], x[2].replace(/'/g, '')]); assert.ok(pairs.length >= 10);
   for (const [k, v] of pairs) if (v !== 'null') assert.ok(ids.has(v), 'GARAGE_OF ' + k + ' -> ' + v + ' is a garage car');
-  const sets = [...src.matchAll(/^  '([\w-]+)': \{ base: '(\w+)'/gm)].map(x => x[1]); assert.ok(sets.length >= 3); for (const k of sets) assert.ok(pairs.some(([a, b]) => a === k && b !== 'null'), k + ' (a model kind) can be taken');
+  const sets = [...src.matchAll(/^  '([\w-]+)': \{ (?:pack: '[\w-]+', )?base: '(\w+)'/gm)].map(x => x[1]); assert.ok(sets.length >= 10); for (const k of sets) assert.ok(pairs.some(([a, b]) => a === k && b !== 'null'), k + ' (a model kind) can be taken');
 });
 console.log(`\n${passed} checks passed`);
