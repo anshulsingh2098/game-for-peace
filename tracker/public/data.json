@@ -1,5 +1,5 @@
 {
- "commit": "97ff31f",
+ "commit": "6f4258f",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -386,6 +386,14 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a4ba69a5",
+     "t": "A-2026-11-22-24 Mission M1 and M2: Repo Man (wallet, Missions card, pins, parked target, sale in Karol Bagh); STREAM B FILE TOUCHED (main.js)",
+     "d": "Anshul's Claude: please read the three lines in main.js (search missions); the carjack hook only reads car.mission. Nothing else of yours is used except view.damage.state and frame.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-25, from Rajul's Claude"
+    },
+    {
      "id": "a686ff17",
      "t": "A-2026-11-22-23 Near traffic cars in full graphics; tougher cars with settings in the tuner; STREAM B FILES TOUCHED (damage.js, trafficdamage.js, main.js)",
      "d": "Anshul's Claude: please look at the HEALTH changes in damage.js (defaults are the owner's: you may want different ones for your own cars) and tell me if debris should apply to trafficdamage.js pieces too (it only applies to the player's car now).",
@@ -576,14 +584,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a02c4051",
-     "t": "A-2026-11-18-20: Delhi look part 3 (species crowns, medians, haze, colony trees) and the green-data check (docs/DELHI_GREEN_DATA.md)",
-     "d": "Anshul's Claude: continue L2, L3 and P3 from docs/NEXT_PHASES.md; measure draw calls and triangles on a phone before adding more trees.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
     }
    ]
   ],
@@ -698,14 +698,6 @@
      "s": "doing",
      "w": "Rajul",
      "r": "PR 138"
-    },
-    {
-     "id": "a410d2d9",
-     "t": "PR 137: Traffic: no box cars for cars and trucks, smooth turns",
-     "d": "Open pull request on branch claude/traffic-smooth. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 137"
     },
     {
      "id": "ac20be42",
@@ -1332,6 +1324,14 @@
      "r": "CHECKLIST.md"
     },
     {
+     "id": "aad5544c",
+     "t": "Mission, Repo Man",
+     "d": "Mission, Repo Man (20 Nov 2026): tap Missions, start Mr Khanna's GT-R; the route and the objective line appear; drive to Jantar Mantar, a black GT-R is parked in the street; get out (G), walk up, Take the car (G); drive to the Karol Bagh car market (the route line leads there), stop in the yard: Selling..., the cash rises in the pill top left and stays after a reload; try it with a dented car (less pay) and on a pho…",
+     "s": "todo",
+     "w": "You",
+     "r": "CHECKLIST.md"
+    },
+    {
      "id": "af12b793",
      "t": "Open the live or local address on a real phone (same wifi: start the server with python tools/serve.py --lan",
      "d": "Open the live or local address on a real phone (same wifi: start the server with python tools/serve.py --lan; it prints the address to type into the phone. Plain python tools/serve.py is only reachable from the computer itself).",
@@ -1657,6 +1657,11 @@
  ],
  "prs": [
   [
+   "139",
+   "Near traffic cars in full graphics; tougher cars (toughness, debris, fuse) with tuner settings; includes the traffic fix of PR 137",
+   "merged"
+  ],
+  [
    "138",
    "Plan: Karol Bagh Run (mission game), docs only",
    "open"
@@ -1664,7 +1669,7 @@
   [
    "137",
    "Traffic: no box cars for cars and trucks, smooth turns",
-   "open"
+   "merged"
   ],
   [
    "136",
@@ -1850,60 +1855,55 @@
    "100",
    "Trees by species (clumps, shadows), Metro through buildings fixed, asset cache, engine sound start",
    "merged"
-  ],
-  [
-   "99",
-   "Docs: handoff, status, decisions, task T1 (trees), log after merging PRs 93-98",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 205 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 210 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 256 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 261 behind main)"
   ],
   [
    "vehicle/damage-1",
-   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 20 behind main)"
+   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 25 behind main)"
   ],
   [
    "vehicle/damage-3",
-   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 19 behind main)"
+   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 24 behind main)"
   ],
   [
    "vehicle/damage-4",
-   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 18 behind main)"
+   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 23 behind main)"
   ],
   [
    "vehicle/damage-5",
-   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 17 behind main)"
+   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 22 behind main)"
   ],
   [
    "vehicle/damage-6",
-   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 16 behind main)"
+   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 21 behind main)"
   ],
   [
    "vehicle/damage-7",
-   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 15 behind main)"
+   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 20 behind main)"
   ],
   [
    "vehicle/damage-8",
-   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 14 behind main)"
+   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 19 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 254 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 259 behind main)"
   ],
   [
    "vehicle/ragdoll",
-   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 21 behind main)"
+   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 26 behind main)"
   ]
  ],
- "tests": "125",
+ "tests": "126",
  "facts": [
   [
    "Tracker data",
@@ -1911,8 +1911,8 @@
   ],
   [
    "Self-test",
-   "125 checks passing"
+   "126 checks passing"
   ]
  ],
- "generated": "2026-11-19T20:27:26.740Z"
+ "generated": "2026-11-19T20:50:05.402Z"
 }

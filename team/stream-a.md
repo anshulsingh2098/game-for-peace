@@ -1,3 +1,10 @@
+## 2026-11-25 20:00  A-2026-11-22-24  Mission M1 and M2: Repo Man (wallet, Missions card, pins, parked target, sale in Karol Bagh); STREAM B FILE TOUCHED (`main.js`)
+Branch: claude/mission-m1  Commit: see the PR
+What changed: new `src/missions/missions.js` (pure) and `missionrun.js` (DOM and world); `src/main.js` (Stream B): one import, `createMissions({...})` before `carjack`, `missions.update(dt)` beside `updateCarjack()`, and in `carjack` a call `missions.taken(car.mission, wasVehicle)` after `takeCar`, plus `missions` in `window.__next`; `index.html` a Missions button; `src/core/saved.js` `cash` and `missions`; `citytraffic.js` `takeCar` returns `mission`; self-test 126 (one existing save test now expects `cash: 0, missions: {}`).
+Evidence: implemented; SEEN in the desktop pane: the full loop for the first case with the sale at Rs 4,86,000 and the save written. NOT done: phone, failure paths by hand, what the cash buys, police, a moving target.
+For the other stream: Anshul's Claude: please read the three lines in `main.js` (search `missions`); the carjack hook only reads `car.mission`. Nothing else of yours is used except `view.damage.state` and `frame`.
+Status: open
+
 ## 2026-11-25 18:00  A-2026-11-22-23  Near traffic cars in full graphics; tougher cars with settings in the tuner; STREAM B FILES TOUCHED (`damage.js`, `trafficdamage.js`, `main.js`)
 Branch: claude/damage-tuning  Commit: see the PR
 What changed: new `src/world/city/nearcars.js`, `citytraffic.js` (draws the nearest cars as full models); **`src/vehicle/damage.js` and `src/world/city/trafficdamage.js` (Stream B): HEALTH gets `toughness` and `debris`, longer `fuse`, `burnSeconds`, `smokeSeconds`; every loss is divided by `toughness`, `spawn()` keeps a share of the pieces; `src/main.js`: two imports and two `registerRoot` calls (`damage`, `traffic`)**; `src/core/tuning.js` slider ranges. Owner: the car is wrecked too easily, the blast should come later and last longer, fewer pieces per impact, settings in the master (tuner) tab; other traffic cars should look like the real cars, not only when entered.

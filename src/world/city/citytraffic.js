@@ -120,7 +120,7 @@ export class CityTraffic {
   }
   /* the car is taken: it leaves the traffic (a parked one leaves its street for good). Returns what the player needs to drive it: { kind, paint, x, z, yaw (travel direction in the game plane), v (m/s) } */
   takeCar(ref) {
-    const c = ref.c, out = { kind: c.kind, paint: c.paint, x: c.x, z: c.z, yaw: c.yaw, v: ref.parked ? 0 : (c.v || 0) };
+    const c = ref.c, out = { kind: c.kind, paint: c.paint, x: c.x, z: c.z, yaw: c.yaw, v: ref.parked ? 0 : (c.v || 0), mission: c.mission };
     if (ref.parked) { for (const l of this.parked.values()) { const i = l.indexOf(c); if (i >= 0) { l.splice(i, 1); break; } } } else { const i = this.cars.indexOf(c); if (i >= 0) this.cars.splice(i, 1); }
     return out;
   }

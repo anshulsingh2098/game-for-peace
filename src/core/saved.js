@@ -2,6 +2,7 @@
    Pure (no DOM), so the self-test can throw rubbish at it. sanitiseSaved(raw, ctx) returns a plain object with only valid fields; anything wrong is dropped
    (the game then uses its default). ctx: { vehicles (how many), vehicleIds: ['car', ...], locations: ['default', ...] } */
 const TIMES = ['dawn', 'day', 'dusk', 'night', 'auto'], WEATHER = ['clear', 'overcast', 'fog', 'rain', 'storm', 'snow', 'auto'], LIGHTS = ['auto', 'on', 'off'], CAMS = ['middle', 'far', 'close', 'hood', 'bumper', 'cockpit', 'cinematic'];
+import { sanitiseWallet } from '../missions/missions.js';
 const RATINGS = ['bronze', 'silver', 'gold'];
 /* progress: { activities: { id: { plays, best?, rating? } } }; bad entries are dropped, the count is capped, so storage can never grow without bound */
 export function sanitiseProgress(p) {
@@ -14,7 +15,7 @@ export function sanitiseProgress(p) {
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
 
 export function sanitiseSaved(raw, ctx = {}) {
-  const out = { paint: {}, progress: { activities: {} } }; if (!isObj(raw)) return out;                                       // always an object: the garage reads S.paint[id]
+  const out = { paint: {}, progress: { activities: {} }, cash: 0, missions: {} }; if (!isObj(raw)) return out; Object.assign(out, sanitiseWallet(raw));       // the wallet and the mission record (docs/MISSION_PLAN.md)                                       // always an object: the garage reads S.paint[id]
   if (TIMES.includes(raw.time)) out.time = raw.time;
   if (WEATHER.includes(raw.weather)) out.weather = raw.weather;
   if (LIGHTS.includes(raw.lights)) out.lights = raw.lights;
