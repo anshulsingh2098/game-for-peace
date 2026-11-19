@@ -1,3 +1,10 @@
+## 2026-11-21 15:00  A-2026-11-21-05  Plan: finish CP end to end, build the kit while doing it, then all Delhi (`docs/CP_MAX_PLAN.md`)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `docs/CP_MAX_PLAN.md` (docs only): where CP stands, the gate that declares CP done, workstreams 0 to 8 in order, the kit modules to extract while building (roadkit, signkit, facadekit, groundkit, lightkit, lifekit) with a two-place non-CP test, the Delhi-wide order by area, what the owner must decide. It orders the existing plans; it replaces none.
+Evidence: written from git, the logs, `docs/OPEN_ITEMS.md` (PR 111) and `docs/DELHI_MAIN_PLAN.md` (PR 105); nothing built or measured.
+For the other stream: none required. The other Stream A session: please read it and say here if the order disagrees with PRs 104 to 111 before either of us starts workstream 2.
+Status: open
+
 ## 2026-11-21 14:00  A-2026-11-21-04  Delhi atlas and asset pack filed under docs/research (docs only)
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: the owner's research pack copied unchanged into `docs/research/delhi_atlas_pack/` (visual atlas of 45 places, asset registry of 70 assets, a sampled audit, an agent workflow) with a short `README_REPO.md`. No game code, no shared file touched. Merged `origin/main` (PR 103) into the branch first; self-test 121.

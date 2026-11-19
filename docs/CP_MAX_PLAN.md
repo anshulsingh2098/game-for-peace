@@ -1,0 +1,43 @@
+# CP maxing, end to end, then the kit for all Delhi
+
+Owner decision (21 Nov 2026): finish Connaught Place (CP) end to end first, to the highest look and scale we can reach ("CP maxing"); only then apply the same kit to the rest of Delhi. Stream A (Rajul's Claude). This page puts the existing plans in one order; it does not replace them: `docs/CP_MATCH_PLAN.md` (what CP must match and the check loop), `docs/DELHI_MAIN_PLAN.md` (the phases, on PR 105), `docs/CP_LANDMARKS.md` (L2 to L7), `docs/OPEN_ITEMS.md` (the not-done register, on PR 111), `docs/GTA_GAP.md`, and the owner's atlas pack in `docs/research/delhi_atlas_pack/`.
+
+## Where CP stands (from git and the logs, 21 Nov)
+Built: roads (smooth circles, wide corners, markings, painted kerbs, wear), signs on every junction (Hindi, gantry with places, STOP, give way, chevrons), arcade columns and facade (drum corners with domes, arched windows, brand-board band, blade signs, light pools), stone paving, power poles with wires, palms, roundabout islands, live signal heads, area rules for Kartavya and Lutyens. Merged into `main` through PR 103; PRs 104 to 111 (phases 1 to 7 and housekeeping) are open and stacked, not merged.
+Not yet true: nobody has scored the six CP spots; no phone frame time at CP; the landmark programme L2 to L7 is plan and data only; 34 items are open in `docs/OPEN_ITEMS.md`.
+
+## Definition of done for CP (the gate, decided before building)
+1. The owner scores the six fixed spots (`tools/cp_views.json`) 4 or more out of 5 on shape, colour, boards, light, ground and scale.
+2. A named phone runs the CP spawn at q=low and q=med for 30 s (`?play&city=delhi&q=med&bench=30`) at p95 within budget (the budget is written in `PERFORMANCE.md`), day, dusk and night.
+3. A 10 minute drive around both circles and out on every radial road with no stall, no pop-in at street height, no object on the carriageway, and boards that agree with the road ahead.
+4. Every model, texture and board is in `assets/ASSETS.md`; no third-party photo or logo is shipped; the atlas pack's image rights are cleared individually or the photo stays outside the repo.
+5. Self-test and `daily_check.py` pass; the not-done register has no open line marked "CP".
+
+## Workstreams, in order (each: reference, build, check loop at the spots, measure, log, small commit)
+**0. Land what exists (needs the owner's yes).** Merge PRs 104 to 111 in stack order (105/106, then 107 to 110, then 111, then 104), one deploy from a clean archive after the last, then the owner's first look. Nothing below starts on unmerged code.
+**1. Measure first.** Run the six spots and the CP drive on the merged build; write the scores and frame times into `docs/CP_MATCH_LOG.md`. The owner's scoring sheet decides the order of 2 to 7; unscored items default to the order below.
+**2. Roads and signs at CP, closed.** Item 4 and 6 of the register (roundabout k6, Kartavya markings), STOP and give-way at the radial road mouths, lane arrows at all circle entries, direction gantry at each of the seven radial entries naming the next place (the places list already has CP's own metro and landmark names), a drive-through check that every board agrees with the road ahead.
+**3. Arcade and facade, closed.** Register 21, 33, 34: drum dome proportions against the owner's photo, pavilions on the real blocks (needs the block letters A to N from the pack), granite pavement strips, the cinema fronts; balustrade and paired pilasters as round shafts.
+**4. Brand boards and shops, closed.** L2: boards from the place data (68 of 129 placed so far), fix the duplicate-board case, halve the brand atlas if the phone memory check fails (register 32).
+**5. Light and weather.** Day, dusk, night, wet night, fog, post-rain; the shared sun preset (register 25) reviewed with Anshul's Claude before anything else uses it.
+**6. Life.** Trees (T1 pictures), benches and bins, people at scale, rickshaws and buses at the right density, the traffic spawn bias (register 28) checked outside CP.
+**7. Phone gate.** Tiers: anything over budget gets a lower detail tier, never removed. The phone result is the gate for 8.
+**8. Acceptance.** Owner scores; the not-done register is walked line by line; a clean deploy; CP is declared done in `docs/STATUS.md` with evidence.
+
+## The kit (built while doing CP, so it exists when CP is done)
+Rule: nothing CP-specific is hard-coded in a way that cannot be re-parameterised. While doing 2 to 6, each element is written as a **module with a parameter set**, and the CP values live in `assets/cities/delhi/identity.json` (area rules) and `src/world/city/cpfacade.js` style files, not scattered through `tilemesh.js`.
+Modules to end with: `roadkit` (markings, kerbs, wear, corners by class and width), `signkit` (boards, gantry, small signs, destination logic: already data-driven through `signdests.js` and `places.js`), `facadekit` (arcade bay, window bay, corner drum, parapet, brand band: parameters for height, colour, spacing, style), `groundkit` (paving, kerb, lawn, hedge by area), `lightkit` (poles, lamps, soffit lights, light pools), `lifekit` (trees, furniture, people, traffic density by area and hour).
+Each module is tested on two places that are not CP before CP is declared done (one Lutyens, one residential), so the parameters prove they are not CP-only.
+
+## Then all Delhi (after the CP gate)
+Order, by area rules (`identity.js`) and by what is nearest to what is already good: Kartavya and Lutyens, Khan Market and the market areas, Old Delhi, DDA colonies, South Delhi villas, dense mixed use, industrial. For each: reference photos (owner or cleared images from the atlas pack, one place at a time), the kit with the area's parameters, the same check loop at three fixed spots, a phone check, a not-done line. The atlas pack's 45 places and 70 assets become the work list (`visual_atlas.csv`, `asset_registry.csv`); an asset is "done" only with provenance and licence in `assets/ASSETS.md`.
+Delhi-wide scale rules already in place and kept: build only in the detailed ring around the player, draw by distance (signs 300 m), cap the count a tile, no load that a phone cannot afford; a feature that costs more than its worth is dropped for that tier.
+
+## What I need from the owner
+1. A yes to merge the stack (workstream 0), and a yes to deploy after it.
+2. Scores for the six CP spots, and the reference photos for the open items (drum dome R1, palm, Kartavya Path).
+3. A phone, named, for the benchmark (or Anshul's Claude's phone run).
+4. The decisions at the end of `docs/CP_LANDMARKS.md` (brand names and logos).
+
+## Rules that stay
+Only edit what Stream A owns; shared files get a log entry first; one session writes `tilemesh.js` at a time; every claim says what was implemented, self-tested, seen, tried on a phone, accepted; nothing is merged or deployed without the owner's yes.
