@@ -99,6 +99,7 @@ export class CityWorld {
     const dk = []; for (const d of out.decks) for (let i = 0; i < d.pos.length; i += 6) dk.push({ x: (d.pos[i] + d.pos[i + 3]) / 2, z: (d.pos[i + 2] + d.pos[i + 5]) / 2, y: d.pos[i + 1], hw: d.hw });
     const deckCells = new Map(); for (const q of dk) { const key = this.ck(Math.floor(q.x / 6), Math.floor(q.z / 6)); let l = deckCells.get(key); if (!l) deckCells.set(key, l = []); l.push(q); }
     const labels = out.labels.map(l => this.label(grp, l, tile)); this.tiles.set(k, { tx: tile.tx, tz: tile.tz, streets: tile.streets, grp, meshes, owner, circ: { arr: c, cells }, decks: out.decks, deckCells, labels, stalls: out.stallPts });
+    if (this.props && out.poles && out.poles.length) this.props.addPoles(k, out.poles);          // lamp posts and electric poles: pieces of their own that can snap (breakables.js)
     if (out.lamps && out.lamps.length) { if (!this.signals) { this.signals = new SignalHeads(this.group); this.signals.reposition(this.origin); } this.signals.addTile(k, out.lamps); }      // the lenses of the mast-arm signals (tilemesh.js mastArm), lit live (signalheads.js)
     const ckeys = []; for (const c of out.cuts) { c.id = k; const n = Math.max(1, Math.ceil(Math.hypot(c.x1 - c.x0, c.z1 - c.z0) / 3)); for (let q = 0; q <= n; q++) { const key = this.ck(Math.floor((c.x0 + (c.x1 - c.x0) * q / n) / 6), Math.floor((c.z0 + (c.z1 - c.z0) * q / n) / 6)); let l = this.cutCells.get(key); if (!l) this.cutCells.set(key, l = []); if (l[l.length - 1] !== c) { l.push(c); ckeys.push(key); } } if (c.open) this.openCuts.push(c); }
     this.tiles.get(k).cuts = out.cuts; this.tiles.get(k).ckeys = ckeys;
@@ -117,7 +118,7 @@ export class CityWorld {
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true, transparent: true, fog: false })); sp.scale.set(36, 6.75, 1); sp.position.set(l.x - tile.tx * this.pack.size, l.y, l.z - tile.tz * this.pack.size); grp.add(sp); this.labels.set(l.id, sp); return sp;
   }
   drop(k) {
-    const t = this.tiles.get(k); if (!t) return; if (this.signals) this.signals.removeTile(k); this.group.remove(t.grp); for (const m of t.meshes) m.geometry.dispose(); for (const l of t.labels) if (l) { this.labels.delete([...this.labels].find(([, v]) => v === l)?.[0]); l.material.map.dispose(); l.material.dispose(); }
+    const t = this.tiles.get(k); if (!t) return; if (this.signals) this.signals.removeTile(k); if (this.props) this.props.removePoles(k); this.group.remove(t.grp); for (const m of t.meshes) m.geometry.dispose(); for (const l of t.labels) if (l) { this.labels.delete([...this.labels].find(([, v]) => v === l)?.[0]); l.material.map.dispose(); l.material.dispose(); }
     const L = this.ko.listeners.slice(); this.ko.listeners.length = 0; this.ko.removeOwner(t.owner); for (const f of L) this.ko.listeners.push(f); if (t.cuts && t.cuts.length) { const dead = new Set(t.cuts); for (const key of new Set(t.ckeys)) { const l = this.cutCells.get(key); if (l) { const n = l.filter(c => !dead.has(c)); if (n.length) this.cutCells.set(key, n); else this.cutCells.delete(key); } } this.openCuts = this.openCuts.filter(c => !dead.has(c)); }
     this.traffic.removeTile(k); for (const s of t.streets) { const l = this.geomMap.get(s.id); if (l) { const n = l.filter(q => q.k !== k); if (n.length) this.geomMap.set(s.id, n); else this.geomMap.delete(s.id); } } this.tiles.delete(k); this.refreshStats();
   }
@@ -143,7 +144,7 @@ export class CityWorld {
     const i0 = Math.floor((x - r) / CELL), i1 = Math.floor((x + r) / CELL), j0 = Math.floor((z - r) / CELL), j1 = Math.floor((z + r) / CELL), S = this.pack.size, out = [];
     for (let tx = Math.floor((x - r) / S); tx <= Math.floor((x + r) / S); tx++) for (let tz = Math.floor((z - r) / S); tz <= Math.floor((z + r) / S); tz++) { const t = this.tiles.get(this.tileKey(tx, tz)); if (!t) continue; const a = t.circ.arr;
       for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const l = t.circ.cells.get(this.ck(i, j)); if (l) for (const n of l) if ((KERB_WALL || a[n + 2] > 0) && Math.abs(a[n] - x) < r + Math.abs(a[n + 2]) && Math.abs(a[n + 1] - z) < r + Math.abs(a[n + 2])) out.push({ x: a[n], z: a[n + 1], r: Math.abs(a[n + 2]), y: this.gy, kerb: a[n + 2] < 0 }); } }
-    const tc = this.traffic.circles(x, z, r).concat(this.peds.circles(x, z, r), this.transit.circles(x, z, r), this.lmx.circles(x, z, r), this.buses ? this.buses.circles(x, z, r) : []); return out.length || tc.length ? [out.concat(tc)] : [];
+    const tc = this.traffic.circles(x, z, r).concat(this.peds.circles(x, z, r), this.transit.circles(x, z, r), this.lmx.circles(x, z, r), this.buses ? this.buses.circles(x, z, r) : [], this.props ? this.props.circles(x, z, r) : []); return out.length || tc.length ? [out.concat(tc)] : [];
   }
   /* deck triangles of the flyovers around (cx, cz) for the physics, in world metres: { pos, idx } or null */
   deckMesh(cx, cz, half) {
