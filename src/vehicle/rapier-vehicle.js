@@ -128,7 +128,7 @@ export class RapierVehicle {
   telemetry() { return makeTelemetry(this, this.id); }                                  // the stable report of this vehicle's state (see VEHICLE_CONTRACT.md)
 
   step(dt, input) {
-    this.input = input; this.acc += Math.min(dt, 0.1); this.impact = 0;
+    this.input = input; this.acc += Math.min(dt, 0.1); this.impact = 0; this.hit = null;
     while (this.acc >= H) { this.sub(input); this.acc -= H; }
     this.read();
   }
@@ -285,6 +285,7 @@ export class RapierVehicle {
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, pen = rr - d; px += nx * pen; pz += nz * pen; moved = true;
         const wx = u * c - v * s, wz = u * s + v * c, vn = wx * nx + wz * nz; if (vn >= 0) continue;
         const bounce = o.slide ? 1.05 : 1.2, ax = wx - bounce * vn * nx, az = wz - bounce * vn * nz; u = (ax * c + az * s) * (o.slide ? 0.997 : 0.85); v = (-ax * s + az * c) * (o.slide ? 0.9 : 0.6);          // a rail (slide) is a long wall to scrape along: a little bounce, hardly any speed lost; a tree stops you dr += (-s * nx + c * nz) * off * -vn * (o.slide ? 0.07 : 0.02);
+        if (-vn > this.impact && !o.kerb && !o.slide) this.hit = { x: cx - nx * p.radius, z: cz - nz * p.radius, nx, nz, vn: -vn };          // where and how hard (for the visible dents, vehicle/damage.js)
         this.impact = Math.max(this.impact, -vn);
       }
     }

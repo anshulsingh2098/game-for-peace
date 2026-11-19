@@ -298,7 +298,7 @@ function useBuff() {
   if (mode !== 'drive' || !phys || buffCd > 0) return; const b = VEHICLES[vehicle].buff;
   buffT = b.secs; buffCd = b.cooldown; phys.setMod(b.mod); toast(b.name);
 }
-function backToRoad() { if (!phys) return; if (cityMode) { const e = city.nearestStreet(phys.x, phys.z); if (e) { const fwd = Math.cos(phys.yaw - e.yaw) >= 0; phys.reset(e.x, e.z, fwd ? e.yaw : e.yaw + Math.PI, city.gy); view.camYaw = null; setMode('drive'); toast('Back on the street'); } return; } roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
+function backToRoad() { if (!phys) return; if (view.damage) view.damage.repair(); if (cityMode) { const e = city.nearestStreet(phys.x, phys.z); if (e) { const fwd = Math.cos(phys.yaw - e.yaw) >= 0; phys.reset(e.x, e.z, fwd ? e.yaw : e.yaw + Math.PI, city.gy); view.camYaw = null; setMode('drive'); toast('Back on the street'); } return; } roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 /* on foot (N14, src/player/onfoot.js): G beside a stopped vehicle gets you out; G beside the parked vehicle gets you back in. The vehicle waits on its handbrake. */
 let playerGltf = null, exitSeq = null; loadPlayerModel().then(g => { playerGltf = g; }).catch(() => {});          // the cartoon character; until it loads (or if it fails) getting out is the old instant step
 let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0, footPitch = 0.28, lookDrag = null;
@@ -691,7 +691,7 @@ function update(dt, now) {
         if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null; let adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (cityMode) { adRoad = cityNav.path; adSim = null; autodrive.lookMin = 6; autodrive.forward = true; autodrive.lane = () => -1.5; autodrive.lanes = () => 1; if (!cityNav.active || cityNav.arrived) { setAuto(false); if (cityNav.arrived) arriveT = 2.5; else toast('Autodrive off: no route'); } } if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = cityMode ? 0 : rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); if (cityMode) { adStuck = Math.abs(phys.u) < 0.4 && input.throttle > 0.5 ? adStuck + dt : 0; if (adStuck > 3) { adStuck = 0; if (cityNav.blockHere(phys.x, phys.z, phys.yaw)) backToRoad(); } } }
       }
       if (cityMode && arriveT > 0) { arriveT -= dt; input = { ...input, throttle: 0, brake: 1 }; }                    // stop at the destination
-      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; phys.step(dt, input);
+      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; phys.step(dt, input); if (phys.hit && view.damage && q.get('damage') !== 'off') view.damage.hit(phys.hit, grid.origin, phys.y);          // visible dents (vehicle/damage.js)
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
     }

@@ -1,6 +1,6 @@
 # Crash damage and impact physics: plan
 
-Status: PLAN plus phase 1 started (Stream B, Anshul's Claude, 22 Nov 2026). Nothing here is accepted by the owner yet.
+Status: PLAN; phase 1 (cones and dustbins) and phase 3 (visible dents on the player's vehicle) are built, on branches `vehicle/damage-1` and `vehicle/damage-3` (Stream B, Anshul's Claude, 22 Nov 2026). Phases 2, 4 and 5 are not done. Nothing here is accepted by the owner yet.
 
 Goal: when a vehicle hits something, what happens should depend on the thing and the speed: a trash can flies, a cone flips, a light pole snaps or holds, a wall wins, a parked car is shoved and dented, and the player's car (and any other vehicle) shows damage that builds up.
 
