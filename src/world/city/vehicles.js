@@ -24,12 +24,15 @@ export const DIM = Object.fromEntries(Object.entries(KINDS).map(([k, v]) => [k, 
 DIM.bus = { len: 11, wid: 2.5, speed: 0.9 };
 /* Real car models used as NPC traffic (docs/NEW_CARS_PLAN.md, phase C1b): each is a low-polygon version (about 3,000 triangles) of one of the owner-supplied cars, stored in the traffic pack (assets/traffic/traffic_pack.glb) and drawn here as one more InstancedMesh. A model stands in for its `base` kind (paint colours, parking and spacing rules come from the base kind) for `share` of the cars of that kind, once the pack has loaded; until then, and if it does not load, every car is the box car. */
 export const MODEL_SETS = {
+  'maruti-800': { base: 'hatch', share: 0.3, speed: 0.9 },       // the most common small car on Delhi's older roads
+  'figo-hatch': { base: 'hatch', share: 0.12, speed: 1 },
+  'aspire-hatch': { base: 'hatch', share: 0.1, speed: 1 },
   'sx4-hatch': { base: 'hatch', share: 0.22, speed: 1 },
   'endeavour-suv': { base: 'suv', share: 0.45, speed: 0.95 },
   'gtr-sports': { base: 'hatch', share: 0.012, speed: 1.15 },       // one car in eighty: a supercar is rare on a Delhi road
 };
 /* which garage car a taken NPC car becomes (null: it cannot be driven by the player: auto rickshaws, e-rickshaws, cycle rickshaws) */
-export const GARAGE_OF = { hatch: 'sx4', 'sx4-hatch': 'sx4', suv: 'everest', 'endeavour-suv': 'everest', 'gtr-sports': 'r35', taxi: 'sx4', two: 'bike', tempo: 'truck', truck: 'truck', auto: null, erick: null, cyclerick: null };
+export const GARAGE_OF = { hatch: 'sx4', 'sx4-hatch': 'sx4', 'maruti-800': 'maruti', 'figo-hatch': 'figo', 'aspire-hatch': 'aspire', suv: 'everest', 'endeavour-suv': 'everest', 'gtr-sports': 'r35', taxi: 'sx4', two: 'bike', tempo: 'truck', truck: 'truck', auto: null, erick: null, cyclerick: null };
 export const baseKind = k => (MODEL_SETS[k] ? MODEL_SETS[k].base : k);
 
 function merge(parts) {

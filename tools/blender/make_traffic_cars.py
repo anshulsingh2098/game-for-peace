@@ -9,6 +9,9 @@ TARGET = 3000
 CARS = {
   'sx4':     dict(kind='sx4-hatch',    weight=9, w=1.78, tyre=['wheel.1'], glass=['glass'], light=['chassis.5', 'left front light']),
   'r35':     dict(kind='gtr-sports',   weight=1, w=1.95, tyre=['heel3A_Details_Material1'], glass=['Black', 'Light_glass', 'red_galass', 'gtr:Nissan_LBGTRType2_2017WindowA_Material1'], light=['gtr:Nissan_LBGTRType2_2017LightC_Material1']),
+  'maruti':  dict(kind='maruti-800',   weight=14, w=1.44, tyre=['rim_rf'], glass=['glass.001'], light=['lights_main_2']),
+  'figo':    dict(kind='figo-hatch',    weight=6, w=1.7, tyre=[], glass=[], light=[], scan=True),
+  'aspire':  dict(kind='aspire-hatch',  weight=5, w=1.75, tyre=[], glass=[], light=[], scan=True),
   'everest': dict(kind='endeavour-suv', weight=5, w=1.95, tyre=['roda.1'], glass=['glass', 'glass.001'], light=['boot_ok.4']),
 }
 def lin(c): return tuple(((x + 0.055) / 1.055) ** 2.4 if x > 0.04045 else x / 12.92 for x in c)
@@ -39,10 +42,11 @@ def main():
         new = [o for o in bpy.data.objects if o not in before]; meshes = [o for o in new if o.type == 'MESH']
         for o in meshes:                                                         # bake each mesh's place into its points and free it from the wheel and door nodes
             o.data = o.data.copy(); o.data.transform(o.matrix_world); o.parent = None; o.matrix_world = o.matrix_world.Identity(4)
-            me = o.data; col = me.color_attributes.new('Col', 'FLOAT_COLOR', 'CORNER'); mats = [s.material for s in o.material_slots]
+            me = o.data; src = me.color_attributes[0] if (C.get('scan') and len(me.color_attributes)) else None; col = me.color_attributes.new('Col', 'FLOAT_COLOR', 'CORNER'); mats = [s.material for s in o.material_slots]
             for p in me.polygons:
                 m = mats[p.material_index] if p.material_index < len(mats) and mats[p.material_index] else None; nm = m.name if m else ''
                 if nm == 'Paint_Body': p.material_index = 0; c = (1, 1, 1)
+                elif src is not None: p.material_index = 1; cs = [src.data[l].color for l in p.loop_indices]; c = tuple(sum(x[k] for x in cs) / len(cs) for k in range(3))
                 else:
                     p.material_index = 1
                     c = (0.05, 0.065, 0.08) if nm in C['glass'] else (0.03, 0.03, 0.035) if nm in C['tyre'] else lin(avg_colour(m)) if m else (0.3, 0.3, 0.3)

@@ -12,6 +12,9 @@ RECIPES = {
   'gtr50': dict(delete=['Icosphere'], delete_re=r'Interior$|Seat|Pedal|Shifter|SteeringWheel|GlassInside|Carbon1MDetails|InteriorTilling|SeatBelt', wheels=['Wheel1A_LF', 'Wheel1A_RF', 'Wheel1A_LR', 'Wheel1A_RR'], paint=['OEMPaint'], accent=['Coloured'], rotate_z=0, scale=1.0, decimate=0.5, wheel_decimate=0.4, glass=['GlassMtl', 'GlassRed'], front_axis='-Y'),
   # r35: an FBX in centimetres that imports 100 times too small (4.7 cm long), front -Y; one material per part: PaintA is the body colour (shared by the Paint and Carbon1 meshes), Coloured the accent; the interior, engine, belts, the 43-triangle wheel stickers and the Textured part (it carries the supplied tiger livery) are deleted; everything is flattened (no pivots) and scaled up in the mesh data so no node carries a scale
   'r35': dict(delete=[], delete_re=r'Interior|Engine_Geo|SeatBelt|WindowInside|^w:Wheel01|Textured_Geo', wheels=['gtr:gtr:polySurface1', 'gtr:gtr:polySurface151', 'gtr:gtr:polySurface301', 'gtr:gtr:polySurface451'], paint=['gtr:Nissan_LBGTRType2_2017PaintA_Material1'], accent=['gtr:Nissan_LBGTRType2_2017Coloured_Material1'], flatten=True, rotate_z=0, scale=100.0, decimate=0.5, wheel_decimate=0.4, glass=['Black', 'Light_glass', 'red_galass', 'gtr:Nissan_LBGTRType2_2017WindowA_Material1'], front_axis='-Y'),
+  # maruti: Z up, front +Y; the model is 1.25 times too big (4.18 m long, 1.81 m wide; the real 800 is 3.335 by 1.44 m), so it is scaled by 0.8; 198 meshes with a full interior: the interior, logos and wipers are deleted and the parts are joined into a few meshes (a door each, boot, bonnet, front bumper, one chassis) so damage can still take doors and bumpers; the four rims (31,700 triangles each, tyre included) are the wheels
+  'maruti': dict(delete_re=r'^(seat|dash|steer|speedo|int_|console|pedals|gear|hand_break|radio|ac$|carpett|seat_belt|hanger|hazard|press_red|key_insert|wiper|frnt_logo|logo_plas|boot_logo|rpart|under|Plane|circle_dash|decals|green|red$|blue$|rrr)|door_\w+_(int|intt|innnt|parttts|partts|partt|partss|lock|mirror_shelf)|parttts|boot_(int|part|lock|loch|plastic)', wheels=['rim_rf', 'rim_rf.001', 'rim_rf.002', 'rim_rf.003'], paint=['primary.001'], glass=['glass.001'], flatten=True, rotate_z=180, scale=0.8, decimate=0.5, wheel_decimate=0.12, decimate_by={'chassis': 0.12, 'door_lf': 0.35, 'door_rf': 0.35, 'door_lr': 0.35, 'door_rr': 0.35, 'boot': 0.35, 'bump_front': 0.4, 'bonnet': 0.6},
+    groups=[('door_lf', r'^door_lf'), ('door_rf', r'^door_rf'), ('door_lr', r'^door_lr'), ('door_rr', r'^(door_rr|roor_rr)'), ('boot', r'^boot'), ('bonnet', r'^(bonet|hood_part)'), ('bump_front', r'^(bumper|frnt_grill|grill)')]),
   'sx4': dict(delete=['Plane'], wheels=['wheel', 'wheel.001', 'wheel.002', 'wheel.003'], paint=['chassis.0'], rotate_z=180, scale=1.0, decimate=0.9, glass=['glass'], front_axis='+Y'),
 }
 
@@ -36,7 +39,7 @@ def main():
         if o.type == 'MESH' and o.parent is not None and o.parent.type == 'ARMATURE': mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw
     for o in list(sc.objects):
         if o.type == 'ARMATURE': bpy.data.objects.remove(o, do_unlink=True)
-    for n in R['delete']:
+    for n in R.get('delete', []):
         o = sc.objects.get(n)
         if o: bpy.data.objects.remove(o, do_unlink=True)
     if R.get('delete_re'):
@@ -75,6 +78,19 @@ def main():
         xg, zg = wc.x, -wc.y; side = 'L' if xg > 0 else 'R'; fr = 'F' if zg > 0 else 'R'
         e = bpy.data.objects.new('Wheel_' + fr + side, None); sc.collection.objects.link(e); e.parent = root; e.matrix_world = mathutils.Matrix.Translation(wc)
         mw = o.matrix_world.copy(); o.parent = e; o.matrix_world = mw
+    if R.get('groups'):                                                      # join the many small meshes into a few: one per named group, the rest into 'chassis'
+        import re as _re
+        free = [o for o in sc.objects if o.type == 'MESH' and (o.parent is None or o.parent is root)]; left = list(free)
+        def join(name, objs):
+            if not objs: return
+            bpy.ops.object.select_all(action='DESELECT')
+            for o in objs: o.select_set(True)
+            bpy.context.view_layer.objects.active = objs[0]
+            if len(objs) > 1: bpy.ops.object.join()
+            bpy.context.view_layer.objects.active.name = name
+        for gname, rx in R['groups']:
+            g = [o for o in left if _re.search(rx, o.name)]; left = [o for o in left if o not in g]; join(gname, g)
+        join('chassis', left)
     # paint material: a plain colour
     for mn in R['paint']:
         m = bpy.data.materials.get(mn)
