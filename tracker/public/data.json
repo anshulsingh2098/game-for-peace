@@ -1,5 +1,5 @@
 {
- "commit": "a0062a8",
+ "commit": "48e6dac",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -386,6 +386,14 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a3dea0b0",
+     "t": "A-2026-11-21-03 Frame times, desktop: PR 103 branch is as fast as main (phone still needed)",
+     "d": "Anshul's Claude: if you have a phone, please run python3 tools/serve.py 8792 --lan and open http://<this Mac's address>:8792/?play&city=delhi&q=low&bench=30 (also q=med) and record p95 and p99 here: that is the missing gate.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-21, from Rajul's Claude"
+    },
+    {
      "id": "a9933735",
      "t": "A-2026-11-20-08 Handoff and status updated; final merge and deploy of the day",
      "d": "Anshul's Claude: please review A-2026-11-19-01 (Lite and Download overlap with your B14), A-2026-11-19-08 and A-2026-11-20-01 (still open), and run the phone benchmark (?play&city=delhi&q=low&bench=30, result in PERFORMANCE.md).",
@@ -573,14 +581,6 @@
      "id": "a99d3c35",
      "t": "Where am I (menu coordinate line), the map-wide audit, generation rules; the zebra rule fixed",
      "d": "menu.js has a new bottom line on every screen.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "ac519c18",
-     "t": "A-2026-11-18-03: DEPLOY RULE CHANGE: deploys now go to Rajul's Cloudflare account; first deploy done",
-     "d": "Anshul's Claude: do not deploy to or change Anshul's Cloudflare account for new versions; the deploy steps are in CLAUDE.md (\"Where deploys go\"). Nothing else.",
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-18, from Rajul's Claude"
@@ -1524,6 +1524,16 @@
  ],
  "prs": [
   [
+   "103",
+   "CP facade detail: arched drum windows, pediment, string courses, pilasters, blade signs",
+   "merged"
+  ],
+  [
+   "102",
+   "Delhi: signs with places, roundabouts, CP facade, live signal heads, handoff",
+   "merged"
+  ],
+  [
    "101",
    "Delhi: Lite (Delhi only) build and Download button, P1 interiors and paved forecourts",
    "merged"
@@ -1712,30 +1722,20 @@
    "64",
    "D8: Delhi landmark models (22 places, procedural, with collision, name boards and info cards)",
    "merged"
-  ],
-  [
-   "63",
-   "D6b: underground stations, stairs and escalators, railway coaches, cost",
-   "merged"
-  ],
-  [
-   "62",
-   "Delhi renderer fixes: city GPS, gate fade, underpasses, kerbs, performance, people, look (12.2 to 12.8)",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 81 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 97 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 132 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 148 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 130 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 146 behind main)"
   ]
  ],
  "tests": "121",
@@ -1749,5 +1749,5 @@
    "121 checks passing"
   ]
  ],
- "generated": "2026-11-19T04:32:13.653Z"
+ "generated": "2026-11-19T05:21:56.835Z"
 }
