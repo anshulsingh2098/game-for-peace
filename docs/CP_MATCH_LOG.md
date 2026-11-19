@@ -2,6 +2,12 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-22  Phase 10: hedges and trees (GTA gap list items 2 and 3)
+Built: (1) `hedge()` (`streetlife.js`): the clipped hedges of the avenues and CP are pieces of about 1.1 m, each with its own height (plus or minus 12 percent), its own green (plus or minus 18 percent), a chamfered top and closed ends; a new mesh `hedge` with a drawn leaf texture (`makeLeafCanvas`, `cpfacade.js`; own work) via `cityworld.js` and `tilemesh.js`. (2) Half of the tree cards are mirrored (`cityworld.js`), the palm in `identity.json` is shorter with a fuller crown.
+Seen (game, day, CP junction and Inner Circle): hedges read as leafy clipped hedges with lumps and tone changes instead of green boxes; palms squatter; neighbouring trees differ. Verdict: close; still low-poly at close range. Console: no new error.
+Frame cost, desktop, visible pane (the first run was invalid, the pane was hidden: 10 fps, discarded), q=high, day, 30 s: 12.7 ms (78.8 fps), p95 16.8, p99 17.3, 530 calls, 562,660 triangles; main 11.9 ms (83.8), 502 calls, 386,610. So +0.8 ms (7 percent) against main, of which about +0.7 ms came with this change (the branch was 12.0 before). Phone not measured.
+Self-test 121 checks.
+
 ## 2026-11-21  Phase 9 follow-up: the day sun lowered (shared environment preset)
 Owner's yes (21 Nov). `src/env/environment.js` (CRLF file, one line, edited byte-safe): day `sun` [-0.30, 0.85, -0.45] to [-0.55, 0.55, -0.65], hemisphere `hi` 1.15 to 1.0. Seen at CP and on the avenue by day: columns, a tree and a pole now throw readable shadows and the arcade has depth; the road shadows are still gentle because asphalt is dark. It is a SHARED file: it also changes every other scene and the automatic day cycle (the day key), which were not looked at (OPEN_ITEMS 25). Self-test 121 checks.
 

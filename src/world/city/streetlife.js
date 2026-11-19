@@ -28,6 +28,19 @@ function box(m, cx, y0, cz, sx, sy, sz, ux, uz, c, cTop) {
   quad(m, P(1, 1, y0), P(1, -1, y0), P(1, -1, y1), P(1, 1, y1), ux, 0, uz, c); quad(m, P(-1, -1, y0), P(-1, 1, y0), P(-1, 1, y1), P(-1, -1, y1), -ux, 0, -uz, c);
   quad(m, P(-1, -1, y1), P(1, -1, y1), P(1, 1, y1), P(-1, 1, y1), 0, 1, 0, cTop || c);
 }
+/* a clipped hedge (GTA gap list item 2): not one smooth box but pieces of about 1.1 m, each with its own height (plus or minus 10 percent), a slightly different green and a chamfered top (the top is 70 percent of the foot width), so it reads as foliage; ends are closed. c and cTop are Colors. */
+function hedge(m, cx, y0, cz, len, h, w, ux, uz, seed, c, cTop) {
+  const n = Math.max(2, Math.round(len / 1.1)), fx = -uz, fz = ux, hw = w / 2, tw = hw * 0.7, sl = len / n; let prevH = 0;
+  for (let i = 0; i < n; i++) {
+    const r1 = (Math.sin((seed + i) * 12.9898) * 43758.5453) % 1, r2 = (Math.sin((seed * 1.7 + i) * 78.233) * 24634.6345) % 1, f = 1 + 0.12 * (r1 - Math.floor(r1) - 0.5) * 2, g = 1 + 0.18 * (r2 - Math.floor(r2) - 0.5) * 2, yt = y0 + h * f, u0 = -len / 2 + i * sl, u1 = u0 + sl;
+    const cc = c.clone().multiplyScalar(g), ct = cTop.clone().multiplyScalar(g), P = (u, j, y) => [cx + ux * u + fx * hw * j, y, cz + uz * u + fz * hw * j], T = (u, j, y) => [cx + ux * u + fx * tw * j, y, cz + uz * u + fz * tw * j];
+    const uA = (seed + i * 1.1) % 7, uB = uA + sl / 1.4, vH = (yt - y0) / 1.4; quad(m, P(u0, 1, y0), P(u1, 1, y0), T(u1, 1, yt), T(u0, 1, yt), fx * 0.87, 0.5, fz * 0.87, cc, [uA, 0, uB, vH]); quad(m, P(u1, -1, y0), P(u0, -1, y0), T(u0, -1, yt), T(u1, -1, yt), -fx * 0.87, 0.5, -fz * 0.87, cc, [uB, 0, uA, vH]);
+    quad(m, T(u0, -1, yt), T(u1, -1, yt), T(u1, 1, yt), T(u0, 1, yt), 0, 1, 0, ct, [uA, 0, uB, 0.7]);
+    if (i === 0) quad(m, P(u0, -1, y0), P(u0, 1, y0), T(u0, 1, yt), T(u0, -1, yt), -ux, 0, -uz, cc); if (i === n - 1) quad(m, P(u1, 1, y0), P(u1, -1, y0), T(u1, -1, yt), T(u1, 1, yt), ux, 0, uz, cc);
+    if (i > 0 && yt > prevH) quad(m, P(u0, 1, prevH), P(u0, -1, prevH), T(u0, -1, yt), T(u0, 1, yt), -ux, 0, -uz, cc); else if (i > 0 && yt < prevH) quad(m, P(u0, -1, yt), P(u0, 1, yt), T(u0, 1, prevH), T(u0, -1, prevH), ux, 0, uz, cc);
+    prevH = yt;
+  }
+}
 /* a tree: a trunk and a broad crown of one or two lathed blobs (neem, peepal and jamun in Delhi are 12 to 25 m with wide spreading crowns, so the sizes of identity.json are scaled up, and the crown has a second blob to the side so it is not one ball); `big` scales a whole tree (scrub and forest trees are smaller) */
 /* the crown shapes of the main Delhi trees as extra blobs: [dx in crown radii, dy in crown heights, dz, radius scale, height scale]: neem a wide dome of clumps, peepal very broad and low, jamun tall and dense, kikar a flat umbrella */
 const BLOBS = { neem: { main: 1, more: [[0.55, 0.12, 0.2, 0.62, 0.7], [-0.5, 0.1, -0.3, 0.6, 0.68], [0.1, 0.32, -0.5, 0.5, 0.6]] }, peepal: { main: 1.05, more: [[0.65, 0.05, 0.1, 0.7, 0.6], [-0.65, 0.05, 0.1, 0.7, 0.6], [0.0, 0.25, 0.55, 0.55, 0.5]] }, jamun: { main: 0.9, more: [[0.3, 0.3, 0.15, 0.55, 0.7], [-0.25, 0.45, -0.2, 0.45, 0.5]] }, gulmohar: { main: 1, more: [[0.6, 0.05, 0.1, 0.65, 0.5], [-0.6, 0.05, -0.1, 0.65, 0.5]] }, amaltas: { main: 0.9, more: [[0.5, 0.1, 0.2, 0.55, 0.6]] } };
@@ -61,7 +74,7 @@ function inPoly(r, x, z) { let ins = false; const n = r.length / 2; for (let i =
 /* tile: the decoded tile; ctx: { G, gy, size, identity, art, month, stops, Mesher, yieldNow }; out: the tile's `out` (circles are added). Returns { sign, ad, ban, prop, stats }. */
 export function* buildStreetLife(tile, ctx, out) {
   const { G, gy, size, identity: ID, art, Mesher } = ctx, ox = tile.tx * size, oz = tile.tz * size, seed = tile.tx * 7919 + tile.tz * 104729, rnd = (i, k = 0) => hash(seed + i * 31 + k * 977);
-  const M = { sign: new Mesher(), ad: new Mesher(), ban: new Mesher(), prop: new Mesher() }, st = { signs: 0, stacked: 0, awnings: 0, stalls: 0, kiosks: 0, hoardings: 0, shelters: 0, poles: 0, trees: 0, spans: 0 };
+  const M = { sign: new Mesher(), ad: new Mesher(), ban: new Mesher(), prop: new Mesher(), hedge: new Mesher() }, st = { signs: 0, stacked: 0, awnings: 0, stalls: 0, kiosks: 0, hoardings: 0, shelters: 0, poles: 0, trees: 0, spans: 0 };
   const CARDS = ctx.cards === false ? null : {}; out.cards = CARDS; const plant = (lx, y0, lz, spc, kk, bloom, big) => tree(M.prop, lx, y0, lz, spc, kk, bloom, big, CARDS);
   /* local frame in, circles absolute out */
   const L = (x, z) => [x - ox, z - oz], circle = (x, z, r) => out.circles.push(x, z, r), WHITE = C(0xffffff);
@@ -166,7 +179,7 @@ export function* buildStreetLife(tile, ctx, out) {
   }
   /* ---- hedges: a low clipped hedge along the outer edge of the avenues of Lutyens' Delhi, DDA colonies and Connaught Place ---- */
   { let nh = 0; for (const pc of pieces) { if (nh > 260 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 24) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if (an !== 'lutyens' && an !== 'kartavya' && an !== 'dda' && an !== 'cp') continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
-      for (const side of [1, -1]) { if (rnd(pc.id, 70 + side) > 0.55) continue; for (let s = 6; s < pc.len - 6 && nh < 260; s += 6) { const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 3.4 : 2.4), px = o.x + -o.tz * off * side, pz = o.z + o.tx * off * side; if (insideBuilding(px, pz, 1.2) || inRoad(px, pz, 0.8) || [-3.1, 3.1].some(e => inRoad(px + o.tx * e, pz + o.tz * e, 1.1) || insideBuilding(px + o.tx * e, pz + o.tz * e, 0.5))) continue; /* both ends too: a 5.6 m hedge no longer reaches across the mouth of a side street (seen from above at Radial Road 7, CP match log) */ const [lx, lz] = L(px, pz); box(M.prop, lx, gy, lz, 5.6, 0.85, 0.9, o.tx, o.tz, C(0x3a6a2a), C(0x4f8236)); nh++; } } }
+      for (const side of [1, -1]) { if (rnd(pc.id, 70 + side) > 0.55) continue; for (let s = 6; s < pc.len - 6 && nh < 260; s += 6) { const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 3.4 : 2.4), px = o.x + -o.tz * off * side, pz = o.z + o.tx * off * side; if (insideBuilding(px, pz, 1.2) || inRoad(px, pz, 0.8) || [-3.1, 3.1].some(e => inRoad(px + o.tx * e, pz + o.tz * e, 1.1) || insideBuilding(px + o.tx * e, pz + o.tz * e, 0.5))) continue; /* both ends too: a 5.6 m hedge no longer reaches across the mouth of a side street (seen from above at Radial Road 7, CP match log) */ const [lx, lz] = L(px, pz); hedge(M.hedge, lx, gy, lz, 5.6, 0.85, 0.95, o.tx, o.tz, nh * 3.1 + pc.id, C(0x3a6a2a), C(0x4f8236)); nh++; } } }
     st.hedges = nh; }
   /* ---- compound walls: a low plastered wall with a coping along the plot edge of the residential streets of Lutyens' Delhi and the DDA colonies, in gaps and not through anything ---- */
   { let nw = 0; for (const pc of pieces) { if (nw > 220 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 20) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if ((an !== 'lutyens' && an !== 'dda') || (pc.cls !== 'residential' && pc.cls !== 'tertiary')) continue; if (ctx.yieldNow && ctx.yieldNow()) yield;

@@ -52,7 +52,7 @@
       { "id": "neem", "canopy": "#4f7a3a", "h": 9, "r": 3.6, "shape": "round", "weight": 3 },
       { "id": "peepal", "canopy": "#5a8a3e", "h": 11, "r": 4.4, "shape": "round", "weight": 2 },
       { "id": "jamun", "canopy": "#3f6b34", "h": 12, "r": 4.0, "shape": "oval", "weight": 3 },
-      { "id": "palm", "canopy": "#3f7d34", "h": 8.5, "r": 2.3, "shape": "palm", "weight": 1 },
+      { "id": "palm", "canopy": "#3f7d34", "h": 7.2, "r": 2.7, "shape": "palm", "weight": 1 },
       { "id": "ashoka", "canopy": "#3a6a30", "h": 9, "r": 1.7, "shape": "cone", "weight": 2 },
       { "id": "gulmohar", "canopy": "#4a7a34", "bloom": "#d9532a", "h": 8, "r": 4.8, "shape": "flat", "weight": 1, "bloomMonths": [4, 5, 6] },
       { "id": "amaltas", "canopy": "#5a8a3a", "bloom": "#e3c33a", "h": 7, "r": 3.2, "shape": "round", "weight": 1, "bloomMonths": [4, 5, 6] },

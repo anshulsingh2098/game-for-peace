@@ -24,6 +24,7 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 22 | Phase 8 | GTA 5 gap list (`docs/GTA_GAP.md`, 12 lines) | Ranked from frames; none started except wires | Owner picks the order |
 | 24 | Phase 9 | Frame times sit near 84 fps on this desktop for both main and branch, so a small cost may be hidden by the display rate | Same in earlier measurements | Measure with the governor off or on a slower device |
 | 25 | Phase 9 | Lower day sun (shared preset) affects every scene and the auto day cycle | Seen only at CP and one frame at the park; other cities, weather and the dawn to day and day to dusk blends not looked at | Anshul's Claude and the owner look; the old value was sun y 0.85, hi 1.15 |
+| 26 | Phase 10 | Roundabout island hedges (`roundabout.js`) still plain boxes; tree card variety limited to one picture per species | Only the street and CP hedges were rebuilt | Reuse `hedge()` in `roundabout.js`; draw 2 or 3 more cards per species |
 
 ## Closed
 | Item | Evidence |

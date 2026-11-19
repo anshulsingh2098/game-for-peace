@@ -198,3 +198,12 @@ export function makePalmCanvas() {
   g.fillStyle = '#6a4c2a'; g.beginPath(); g.ellipse(cx, cy + 4, 15, 20, 0, 0, 7); g.fill(); g.fillStyle = '#4d6a2a'; for (let i = 0; i < 7; i++) { g.beginPath(); g.ellipse(cx + (rnd() - 0.5) * 20, cy - 8 - rnd() * 12, 6, 14, (rnd() - 0.5) * 0.8, 0, 7); g.fill(); }          // the crown shaft and the spear leaves
   return c;
 }
+
+/* a leaf texture for the clipped hedges (GTA gap list item 2): 128 x 128, tileable, dark and light green specks and small leaf shapes on a mid green; the vertex colour tints it per hedge piece. Own work, drawn in code. */
+export function makeLeafCanvas() {
+  const S = 128, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'); let seed = 4242; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  g.fillStyle = '#4d7f35'; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 520; i++) { const x = rnd() * S, y = rnd() * S, r = 2 + rnd() * 4, t = rnd(), col = t < 0.3 ? '#2f5a26' : t < 0.7 ? '#5f9a40' : '#7bb653', a = rnd() * 3.14;
+    for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) { g.fillStyle = col; g.beginPath(); g.ellipse(x + dx, y + dy, r, r * 0.55, a, 0, 7); g.fill(); } }
+  return c;
+}
