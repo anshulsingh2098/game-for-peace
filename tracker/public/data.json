@@ -1,5 +1,5 @@
 {
- "commit": "961beff",
+ "commit": "433bd3d",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -386,6 +386,22 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "ab178601",
+     "t": "A-2026-11-22-21 All seven new cars, carjacking and the damage test; STREAM B FILES TOUCHED (main.js, defs.js)",
+     "d": "Anshul's Claude: (1) please read the main.js carjacking block (search carjack): it uses your interactions, setVehicle, setMode, the entities registry and the ragdoll system of PR 131, and nothing else of yours; tell me if you want it moved; (2) your vehicle/damage-* code works unchanged on the new cars because it edits vertices by position; (3) test a real crash on a GT-R: AWD cars now exist (drive: 'awd' in rapier-…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-25, from Rajul's Claude"
+    },
+    {
+     "id": "a98bbb1e",
+     "t": "A-2026-11-22-19 New cars (owner request): plan, SX4 and Endeavour in the garage and in Delhi traffic; STREAM B FILES TOUCHED, ask for yes",
+     "d": "Anshul's Claude: (1) please agree to the two defs.js entries (or tell me to move them); (2) carjacking (C2) needs changes in main.js, the exit sequence, the pedestrian files and the traffic cars: I will not touch them without your yes; say whether you take C2 and C3 or I do; (3) your vehicle/damage-1 doors, bonnet, boot and bumpers: the SX4 and Endeavour models keep them as separate meshes for damage. The owner aske…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-23, from Rajul's Claude"
+    },
+    {
      "id": "a8149e20",
      "t": "A-2026-11-22-17 Street-dress test on Janpath: new janpath area and zones; road wear opacity raised (SHARED look change)",
      "d": "CP owner session: the wear change touches CP roads; look at your six spots and revert the one line if it clashes. Anshul's Claude: nothing.",
@@ -568,28 +584,60 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "adc24b96",
-     "t": "A-2026-11-18-18: Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started; live 5c778ecf)",
-     "d": "Anshul's Claude: this is a start of L3 (mark [~]); continue from the list in docs/NEXT_PHASES.md L3; before you change tilemesh.js or streetlife.js pull this PR.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a51f8c51",
-     "t": "A-2026-11-18-15: Anshul's car design, engine sound, birds, crickets and moon taken OUT of main again (live f91b4cc3); NPCs and animated exit kept",
-     "d": "Anshul's Claude: your rebuilt cars, ride height, engine configs, atmosphere sound and moon are still on your branches (release/combined, vehicle/cars-on-main, vehicle/cars-and-gears) and are NOT in main. Do not merge them back into main as they are. The owner decides case by case: put each as its own small PR (cars; engine sound; atmosphere) with a short description and a before and after (screenshots, a recording o…",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
     }
    ]
   ],
   [
    "Asked of Rajul in the team log",
    [
+    {
+     "id": "aa1cfb78",
+     "t": "B-2026-11-24-02 DEPLOY REQUEST: release/damage (crash damage, breakable street furniture, burning wrecks) merged with current main",
+     "d": "please merge release/damage into main (or open the PR) and deploy it the documented way, when the owner agrees: scratch folder, cloudflare/worker.js and wrangler.jsonc copied in, python tools/stage_cloudflare.py --out <folder>/public, node tools/bundle.mjs <folder>/public, npx wrangler@4 whoami (must name mailrajulsingh.in@gmail.com), then npx wrangler@4 deploy. After deploying, drive a few knocks: the car should ta…",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-24, from Anshul's Claude"
+    },
+    {
+     "id": "a09ebb5b",
+     "t": "B-2026-11-23-02 Crash damage phase 2 (shelters, stalls, kiosks, road signs): they break into pieces when a car hits them fast enough",
+     "d": "streetlife.js and tilemesh.js are yours: if you rebuild the shelter, kiosk, stall or signPole code, keep the track(...) / rec(...) calls (or tell me).",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-23, from Anshul's Claude"
+    },
+    {
+     "id": "acb201f0",
+     "t": "B-2026-11-23-01 Crash damage phase 2 (poles): lamp posts and electric poles are pieces of their own, and a fast car snaps them off at the base",
+     "d": "streetlife.js is yours: if you rebuild the pole loop, keep the out.poles record (or tell me), otherwise nothing is needed.",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-23, from Anshul's Claude"
+    },
+    {
+     "id": "a417de46",
+     "t": "B-2026-11-22-06 Crash damage phase 4 (other cars): traffic and parked cars dent, stop, smoke, burn, burst and stay as wrecks",
+     "d": "citytraffic.js is your file: 5 small edits (circles carry the car, hold, two wreck checks in draw()); tell me if you want it done another way.",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-22, from Anshul's Claude"
+    },
+    {
+     "id": "a6e61a0b",
+     "t": "B-2026-11-22-03 Crash damage: the plan, and phase 1 (cones and dustbins knocked over)",
+     "d": "phase 2 needs a change in streetlife.js (poles are merged into the tile mesh, so a pole cannot be removed from it); that is your file, I will not touch it without your yes. Nothing else needed.",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-22, from Anshul's Claude"
+    },
+    {
+     "id": "ae7e7bf3",
+     "t": "B-2026-11-22-01 DEPLOY REQUEST: vehicle/ragdoll (only the ragdoll); Re: B-2026-11-19-02: withdrawn",
+     "d": "please merge vehicle/ragdoll into main and deploy it the documented way (scratch folder, stage_cloudflare.py, bundle.mjs, wrangler@4 whoami first), when the owner agrees.",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-22, from Anshul's Claude"
+    },
     {
      "id": "af9e0565",
      "t": "DEPLOY REQUEST: combined branch (main + cartoon NPCs + Ember RS and Dust Runner + atmosphere)",
@@ -643,6 +691,22 @@
   [
    "Open pull requests",
    [
+    {
+     "id": "ac20be42",
+     "t": "PR 135: Log: deploy of main 433bd3d (release/damage and the new cars)",
+     "d": "Open pull request on branch claude/log-deploy-5. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 135"
+    },
+    {
+     "id": "a090a3a5",
+     "t": "PR 132: Log: deploy of main 1808e26 (ragdoll and Janpath)",
+     "d": "Open pull request on branch claude/log-deploy-4. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 132"
+    },
     {
      "id": "a24b622c",
      "t": "PR 129: Log: deploy of main 961beff (the CP stack)",
@@ -734,6 +798,86 @@
    "Anshul: committed to main",
    [
     {
+     "id": "a1c18a45",
+     "t": "Log: deploy request for release/damage (merged with current main)",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main 96e05a9"
+    },
+    {
+     "id": "a87d3314",
+     "t": "Crash damage made realistic: many knocks, staged breakage (glass, doors, bumpers, tyres, frame, engine), fire last and rare, uneven burn, blast tears doors and…",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main 3d296c2"
+    },
+    {
+     "id": "a7257a74",
+     "t": "Crash damage phase 2: bus shelters, stalls, kiosks and road signs break into pieces when a car hits them fast enough",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main 40187da"
+    },
+    {
+     "id": "ab9acc5d",
+     "t": "Crash damage phase 2 (poles): lamp posts and electric poles are pieces of their own and snap at the base when a car hits them fast enough",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main 19d318c"
+    },
+    {
+     "id": "a30e9007",
+     "t": "Crash damage phase 4 (other cars): traffic and parked cars dent, stop, smoke, burn, burst and stay as wrecks",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main f127304"
+    },
+    {
+     "id": "a92e0f77",
+     "t": "Crash damage phase 4 (player vehicle): lost power, pull, engine fire, burst, charred unusable wreck",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main fa91e96"
+    },
+    {
+     "id": "afdb242a",
+     "t": "Crash damage phase 3: visible dents on the player's vehicle, repaired by To road",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main 1377ab0"
+    },
+    {
+     "id": "abca3f12",
+     "t": "Crash damage plan and phase 1: cones and dustbins on the pavements, knocked over by the car",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main 023bd59"
+    },
+    {
+     "id": "ac8f108a",
+     "t": "Log: deploy request for vehicle/ragdoll; withdraw the release/combined request",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main 216c2ec"
+    },
+    {
+     "id": "ab37aeff",
+     "t": "Walkers fall as ragdolls when hit and no longer stop the car; death at high speed",
+     "d": "Committed by Anshul to main on 2026-11-19.",
+     "s": "done",
+     "w": "Anshul",
+     "r": "main cee7981"
+    },
+    {
      "id": "af562e16",
      "t": "Animated exit from the car: reach, door opens, climb out, door shuts; cartoon player figure; fix engine sample path for cars without a recording",
      "d": "Committed by Anshul to main on 2026-11-17.",
@@ -764,86 +908,6 @@
      "s": "done",
      "w": "Anshul",
      "r": "main b9c5772"
-    },
-    {
-     "id": "ab91ffbe",
-     "t": "Propose Web Lite (Delhi only) and downloadable Full build; log entry for Stream A",
-     "d": "Committed by Anshul to main on 2026-11-17.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main 24cc810"
-    },
-    {
-     "id": "a9ee2a5f",
-     "t": "Update handoff: ride height, atmosphere, latest deploy",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main d85cec7"
-    },
-    {
-     "id": "a34bcc6d",
-     "t": "Atmosphere: moon, birdsong and crickets, quiet rain in tunnels",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main f71b410"
-    },
-    {
-     "id": "a4d85799",
-     "t": "Raise the car bodies over the wheels for more ground clearance",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main a7a4fbd"
-    },
-    {
-     "id": "a08526d7",
-     "t": "Cars: clean wheel-arch liners, flush side skirts, door lines and creases, tidier rally trim",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main de623d9"
-    },
-    {
-     "id": "aa1caec4",
-     "t": "Update handoff: rebuilt car models, deploy state",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main 2ff8b63"
-    },
-    {
-     "id": "a28f6c74",
-     "t": "Rebuild all three cars with a production-car look (new carkit, lofted bodies, detailed wheels and parts)",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main e77b5d6"
-    },
-    {
-     "id": "af09167c",
-     "t": "Stop vehicles slipping and spinning for no reason on hills and dips",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main 1af6ab1"
-    },
-    {
-     "id": "a45cfe9e",
-     "t": "Much sharper turning: tyre grip 1.35 -> 2.2, cornering scrub halved",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main 347ce3e"
-    },
-    {
-     "id": "a9788454",
-     "t": "High-speed steering: aerodynamic grip and a minimum steering lock",
-     "d": "Committed by Anshul to main on 2026-11-14.",
-     "s": "done",
-     "w": "Anshul",
-     "r": "main 5670574"
     }
    ]
   ],
@@ -1228,6 +1292,30 @@
    "Checklist: Phone (do this at least weekly, and before any deploy)",
    [
     {
+     "id": "a1c8b950",
+     "t": "New cars on a phone",
+     "d": "New cars on a phone (20 Nov 2026): open the Garage, pick each of the seven new cars (SX4, Endeavour, GT-R50, GT-R R35, Maruti 800, Figo, Aspire): they load (2 to 3 MB each), drive, recolour, and do not make the page reload.",
+     "s": "todo",
+     "w": "You",
+     "r": "CHECKLIST.md"
+    },
+    {
+     "id": "afc7453b",
+     "t": "Damage on a phone",
+     "d": "Damage on a phone: hit a wall at speed with one of the new cars and with the Dusk GT, then look at the frame rate (&bench=30 before and after, or the debug panel): the cost of dents, smoke and fire must stay small; note the result in PERFORMANCE.md.",
+     "s": "todo",
+     "w": "You",
+     "r": "CHECKLIST.md"
+    },
+    {
+     "id": "a138abad",
+     "t": "Carjacking",
+     "d": "Carjacking: get out (G), walk up to a moving or parked car in the street, the button reads Pull the driver out or Take the car, tap it: the driver falls on the road, you are in the car in the same colour.",
+     "s": "todo",
+     "w": "You",
+     "r": "CHECKLIST.md"
+    },
+    {
      "id": "af12b793",
      "t": "Open the live or local address on a real phone (same wifi: start the server with python tools/serve.py --lan",
      "d": "Open the live or local address on a real phone (same wifi: start the server with python tools/serve.py --lan; it prints the address to type into the phone. Plain python tools/serve.py is only reachable from the computer itself).",
@@ -1553,6 +1641,36 @@
  ],
  "prs": [
   [
+   "135",
+   "Log: deploy of main 433bd3d (release/damage and the new cars)",
+   "open"
+  ],
+  [
+   "134",
+   "Merge Anshul's release/damage (crash damage, breakable street furniture, burning wrecks) with current main",
+   "merged"
+  ],
+  [
+   "133",
+   "New cars: SX4 and Endeavour in the garage and in Delhi traffic; plan for all seven",
+   "merged"
+  ],
+  [
+   "132",
+   "Log: deploy of main 1808e26 (ragdoll and Janpath)",
+   "open"
+  ],
+  [
+   "131",
+   "Walkers fall as ragdolls when hit and no longer stop the car (Anshul, B-2026-11-22-01)",
+   "merged"
+  ],
+  [
+   "130",
+   "Street-dress test on Janpath: janpath area and zones, visible road wear",
+   "merged"
+  ],
+  [
    "129",
    "Log: deploy of main 961beff (the CP stack)",
    "open"
@@ -1721,53 +1839,55 @@
    "96",
    "Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started)",
    "merged"
-  ],
-  [
-   "95",
-   "Product split: Web Lite (Delhi only) and Full (downloadable PC and phone app); tasks B14-B16",
-   "merged"
-  ],
-  [
-   "94",
-   "No Enter Delhi city button: the city loads by itself near Delhi",
-   "merged"
-  ],
-  [
-   "93",
-   "Restore cars, engine sound and sky to before PR 90; keep NPCs and animated exit",
-   "merged"
-  ],
-  [
-   "92",
-   "Loading: physics engine starts first, 25 s limit, stuck-screen help",
-   "merged"
-  ],
-  [
-   "91",
-   "Faster cold start: preload, gzip terrain grid, loading no longer waits for trees",
-   "merged"
-  ],
-  [
-   "90",
-   "Integrate Anshul's release/combined with main (cars, atmosphere, NPCs, animated exit); deployed as 3649f3ad",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 180 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 201 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 231 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 252 behind main)"
+  ],
+  [
+   "vehicle/damage-1",
+   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 16 behind main)"
+  ],
+  [
+   "vehicle/damage-3",
+   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 15 behind main)"
+  ],
+  [
+   "vehicle/damage-4",
+   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 14 behind main)"
+  ],
+  [
+   "vehicle/damage-5",
+   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 13 behind main)"
+  ],
+  [
+   "vehicle/damage-6",
+   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 12 behind main)"
+  ],
+  [
+   "vehicle/damage-7",
+   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 11 behind main)"
+  ],
+  [
+   "vehicle/damage-8",
+   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 10 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 229 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 250 behind main)"
+  ],
+  [
+   "vehicle/ragdoll",
+   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 17 behind main)"
   ]
  ],
- "tests": "124",
+ "tests": "125",
  "facts": [
   [
    "Tracker data",
@@ -1775,8 +1895,8 @@
   ],
   [
    "Self-test",
-   "124 checks passing"
+   "125 checks passing"
   ]
  ],
- "generated": "2026-11-19T15:11:33.837Z"
+ "generated": "2026-11-19T19:32:59.538Z"
 }

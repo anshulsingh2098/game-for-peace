@@ -28,3 +28,7 @@ The pane's display refresh caps frames at about 180 per second (5.6 ms), so a 5.
 
 - No change to texture or mesh compression yet (KTX2 and meshopt are only worth it if a phone shows a download or memory problem; measure first).
 - Loading screen added (`#loading` in `next.html`): shows what is still loading and fades out at the first drawn frame.
+
+## Crash damage and the new cars, 20 Nov 2026 (desktop, Claude app browser pane, 905 x 664, `q=med`, fly camera so the draw call counts are not comparable with the street view)
+The Nissan GT-R LB Works, p50 frame time: fresh 12.5 ms, dented (four 16 m/s hits) 13.4 ms, burning (eight more at 25 m/s) 13.4 ms; draw calls 1,183, 1,195, 1,196. So crash damage costs about 1 ms and 12 draw calls on this machine. **Not measured on a phone.** To measure on an iPhone: open the live address with `&bench=30` on a fresh start and note the average and the 95th percentile; then get out, take one of the new cars (carjack), hit a wall at 50 km/h until it smokes and run `&bench=30` again on that car (use `?damage=cosmetic` to compare dents only, `?damage=off` for none). Record the iPhone model, the iOS version, the tier and both results here.
+
