@@ -1,3 +1,10 @@
+## 2026-11-21 14:00  A-2026-11-21-04  Delhi atlas and asset pack filed under docs/research (docs only)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: the owner's research pack copied unchanged into `docs/research/delhi_atlas_pack/` (visual atlas of 45 places, asset registry of 70 assets, a sampled audit, an agent workflow) with a short `README_REPO.md`. No game code, no shared file touched. Merged `origin/main` (PR 103) into the branch first; self-test 121.
+Evidence: files read; NOT used by any code; image rights and asset licences are all unverified, headings are blank.
+For the other stream: nothing required. Before anyone builds from the atlas, check coordinates against the pack and say here which places are taken so two sessions do not build the same block.
+Status: info
+
 ## 2026-11-21 12:00  A-2026-11-21-03  Frame times, desktop: PR 103 branch is as fast as main (phone still needed)
 Branch: claude/cp-facade-detail  Commit: see PR 103
 What changed: nothing in the game; measurement logged in `docs/CP_MATCH_LOG.md`.
