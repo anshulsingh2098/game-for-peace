@@ -1,3 +1,10 @@
+## 2026-11-21 23:00  A-2026-11-21-10  Phase 7: open items closed where possible, register of what is not done
+Branch: claude/delhi-main-phase-7 (stacked on phase 6)  Commit: see the PR
+What changed: `streetlife.js` (CP power poles and wires), `identity.json` (no palm on Kartavya), `docs/OPEN_ITEMS.md` (new: every not-done item from every ask), `tools/kartavya_views.json`.
+Evidence: night q=high 12.4 ms against main 11.9 ms (desktop, visible); dusk 12.2 ms; self-test 121. NOT done: phone, spots k3 to k6, Lutyens kit; the full list is in `docs/OPEN_ITEMS.md`.
+For the other stream: Anshul's Claude: please read item 3 and 14 in `docs/OPEN_ITEMS.md` (dusk preset, lane widening audit).
+Status: open
+
 ## 2026-11-21 22:00  A-2026-11-21-09  Delhi main plan phase 6: Kartavya Path area rules
 Branch: claude/delhi-main-phase-6 (stacked on phase 5)  Commit: see the PR
 What changed: `identity.json` (zone and area `kartavya`), small hooks in `infill.js`, `tilemesh.js`, `streetlife.js` (world files, edited under the 17 Nov Delhi override), `tools/kartavya_views.json`.
