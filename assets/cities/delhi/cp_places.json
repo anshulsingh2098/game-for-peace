@@ -1,0 +1,1166 @@
+{
+"about": "Named places inside 450 m of Connaught Place from OpenStreetMap (Overpass, 22 Nov 2026), game metres from the Delhi origin. `game` is the lettering used on the board: for a chain or famous place a similar but different name (the owner's call 22 Nov), for a local place the real name as plain lettering (owner to confirm). Positions are the OSM node, not the shopfront: the board goes on the nearest arcade front.",
+"places": [
+{
+"name": "Beer Cafe",
+"game": "Beer Kafe",
+"kind": "bar",
+"x": 1177,
+"z": -1870,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Bira",
+"game": "Beera",
+"kind": "bar",
+"x": 839,
+"z": -2291,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Cafe Sandoz",
+"game": "Cafe Sandoz",
+"kind": "bar",
+"x": 1048,
+"z": -1803,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Excuse Me Boss",
+"game": "Excuse Me Boss",
+"kind": "bar",
+"x": 1162,
+"z": -1915,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Kill The Bill",
+"game": "Kill The Bill",
+"kind": "bar",
+"x": 1151,
+"z": -1907,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Lord of the Drinks",
+"game": "Lord of the Drinks",
+"kind": "bar",
+"x": 763,
+"z": -1994,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "My Bar",
+"game": "My Bar",
+"kind": "bar",
+"x": 1058,
+"z": -1857,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "OMG Bar & Kitchen",
+"game": "OMG Bar & Kitchen",
+"kind": "bar",
+"x": 1118,
+"z": -1946,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Plum",
+"game": "Plum Bar",
+"kind": "bar",
+"x": 1049,
+"z": -1811,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Tafree",
+"game": "Tafree",
+"kind": "bar",
+"x": 1131,
+"z": -1947,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "The Beer Cafè",
+"game": "The Beer Kafe",
+"kind": "bar",
+"x": 1050,
+"z": -1697,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Barista",
+"game": "Baristo",
+"kind": "cafe",
+"x": 979,
+"z": -2122,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "Bistro 57",
+"game": "Bistro 57",
+"kind": "cafe",
+"x": 1024,
+"z": -2178,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Blue Tokai",
+"game": "Blue Tokay",
+"kind": "cafe",
+"x": 827,
+"z": -2276,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "Cafe Coffee Day",
+"game": "Cafe Coffee Dawn",
+"kind": "cafe",
+"x": 777,
+"z": -1895,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "Cafe Coffee Day",
+"game": "Cafe Coffee Dawn",
+"kind": "cafe",
+"x": 927,
+"z": -2230,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "Cafe Coffee Day",
+"game": "Cafe Coffee Dawn",
+"kind": "cafe",
+"x": 1021,
+"z": -2272,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "Cafe Coffee Day",
+"game": "Cafe Coffee Dawn",
+"kind": "cafe",
+"x": 1059,
+"z": -2131,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "Chaayos",
+"game": "Chaiyos",
+"kind": "cafe",
+"x": 1135,
+"z": -1953,
+"cuisine": "tea",
+"renamed": true
+},
+{
+"name": "Chai Point",
+"game": "Chai Spot",
+"kind": "cafe",
+"x": 875,
+"z": -2243,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "DePaul's",
+"game": "DePaul's",
+"kind": "cafe",
+"x": 944,
+"z": -1667,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Hashery",
+"game": "Hashery",
+"kind": "cafe",
+"x": 888,
+"z": -2265,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Madras Coffee House",
+"game": "Madras Kaffee House",
+"kind": "cafe",
+"x": 714,
+"z": -1996,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Nothing Before Coffee",
+"game": "Nothing Before Coffee",
+"kind": "cafe",
+"x": 884,
+"z": -2237,
+"cuisine": "coffee_shop",
+"renamed": false
+},
+{
+"name": "OTB Café",
+"game": "OTB Café",
+"kind": "cafe",
+"x": 905,
+"z": -2275,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Softyboy",
+"game": "Softy Boy",
+"kind": "cafe",
+"x": 764,
+"z": -1909,
+"cuisine": "bubble_tea",
+"renamed": true
+},
+{
+"name": "Starbucks",
+"game": "Starbeans",
+"kind": "cafe",
+"x": 850,
+"z": -2035,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "Starbucks",
+"game": "Starbeans",
+"kind": "cafe",
+"x": 1121,
+"z": -1823,
+"cuisine": "coffee_shop",
+"renamed": true
+},
+{
+"name": "The Chai Story",
+"game": "The Chai Story",
+"kind": "cafe",
+"x": 887,
+"z": -2293,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "The Junkyard Cafe",
+"game": "The Junkyard Cafe",
+"kind": "cafe",
+"x": 1144,
+"z": -1833,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "PVR Rivoli Cinema",
+"game": "PVX Rivolo Cinema",
+"kind": "cinema",
+"x": 716,
+"z": -1901,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "34, Chowringhee Lane",
+"game": "34, Chowringhee Lane",
+"kind": "food",
+"x": 953,
+"z": -1667,
+"cuisine": "roll",
+"renamed": false
+},
+{
+"name": "Bake N Brew Cafe",
+"game": "Bake N Brew Cafe",
+"kind": "food",
+"x": 1041,
+"z": -2167,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Bake N More",
+"game": "Bake & More",
+"kind": "food",
+"x": 1039,
+"z": -2161,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Bake n More",
+"game": "Bake & More",
+"kind": "food",
+"x": 1009,
+"z": -2074,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Bakers Pride",
+"game": "Bakers Prize",
+"kind": "food",
+"x": 1051,
+"z": -2078,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Bhogal's Chhole Bhature",
+"game": "Bhogle's Chhole Bhature",
+"kind": "food",
+"x": 1114,
+"z": -1714,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Burger King",
+"game": "Burger Kingdom",
+"kind": "food",
+"x": 991,
+"z": -2091,
+"cuisine": "burger",
+"renamed": true
+},
+{
+"name": "Burger Singh",
+"game": "Burger Sengh",
+"kind": "food",
+"x": 843,
+"z": -2266,
+"cuisine": "burger",
+"renamed": true
+},
+{
+"name": "Burger Singh",
+"game": "Burger Sengh",
+"kind": "food",
+"x": 989,
+"z": -2118,
+"cuisine": "burger",
+"renamed": true
+},
+{
+"name": "Burger Singh Express",
+"game": "Burger Sengh Express",
+"kind": "food",
+"x": 986,
+"z": -2063,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Burgitos",
+"game": "Burgitos",
+"kind": "food",
+"x": 1005,
+"z": -2065,
+"cuisine": "burger",
+"renamed": false
+},
+{
+"name": "Burgitos",
+"game": "Burgitos",
+"kind": "food",
+"x": 1021,
+"z": -2170,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Coffee Home",
+"game": "Coffee Home",
+"kind": "food",
+"x": 565,
+"z": -1909,
+"cuisine": "indian",
+"renamed": false
+},
+{
+"name": "Cosmic 87",
+"game": "Cosmic 87",
+"kind": "food",
+"x": 987,
+"z": -2068,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Daryaganj",
+"game": "Daryaganj Kitchen",
+"kind": "food",
+"x": 821,
+"z": -1802,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Domino's",
+"game": "Domini's",
+"kind": "food",
+"x": 769,
+"z": -1903,
+"cuisine": "pizza",
+"renamed": true
+},
+{
+"name": "Dosa Coffee",
+"game": "Dosa Kaffee",
+"kind": "food",
+"x": 693,
+"z": -2097,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Food Hub",
+"game": "Food Hub",
+"kind": "food",
+"x": 1040,
+"z": -2178,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Food On The Go",
+"game": "Food On The Go",
+"kind": "food",
+"x": 983,
+"z": -2059,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Food on the Go",
+"game": "Food on the Go",
+"kind": "food",
+"x": 991,
+"z": -2077,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Foody Delhi",
+"game": "Foody Delhi",
+"kind": "food",
+"x": 1007,
+"z": -2070,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Hira Sweets",
+"game": "Hira Mithai",
+"kind": "food",
+"x": 1014,
+"z": -2084,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Hira Sweets",
+"game": "Hira Mithai",
+"kind": "food",
+"x": 1018,
+"z": -2062,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Jain Chawal Wale",
+"game": "Jain Chawal Wale",
+"kind": "food",
+"x": 678,
+"z": -1989,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Jumbo King",
+"game": "Jumbo Kingdom",
+"kind": "food",
+"x": 1011,
+"z": -2079,
+"cuisine": "burger",
+"renamed": true
+},
+{
+"name": "Jumbo King",
+"game": "Jumbo Kingdom",
+"kind": "food",
+"x": 1042,
+"z": -2170,
+"cuisine": "burger",
+"renamed": true
+},
+{
+"name": "KFC",
+"game": "KFG Chicken",
+"kind": "food",
+"x": 876,
+"z": -2137,
+"cuisine": "chicken",
+"renamed": true
+},
+{
+"name": "KFC",
+"game": "KFG Chicken",
+"kind": "food",
+"x": 1087,
+"z": -1760,
+"cuisine": "chicken",
+"renamed": true
+},
+{
+"name": "Keventer's Milkshake",
+"game": "Keventa's Milkshake",
+"kind": "food",
+"x": 891,
+"z": -2178,
+"cuisine": "shake;sandwich;regional",
+"renamed": true
+},
+{
+"name": "McDonald's",
+"game": "MacDonnell's",
+"kind": "food",
+"x": 702,
+"z": -2044,
+"cuisine": "burger",
+"renamed": true
+},
+{
+"name": "McDonald's",
+"game": "MacDonnell's",
+"kind": "food",
+"x": 1082,
+"z": -1813,
+"cuisine": "burger",
+"renamed": true
+},
+{
+"name": "McDonald's",
+"game": "MacDonnell's",
+"kind": "food",
+"x": 1083,
+"z": -1834,
+"cuisine": "burger",
+"renamed": true
+},
+{
+"name": "Mcdonald",
+"game": "MacDonnell's",
+"kind": "food",
+"x": 810,
+"z": -1856,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Metro Trip",
+"game": "Metro Trip",
+"kind": "food",
+"x": 1020,
+"z": -2165,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Metro Trip Café",
+"game": "Metro Trip Café",
+"kind": "food",
+"x": 994,
+"z": -2084,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Metro Walkers",
+"game": "Metro Walkers",
+"kind": "food",
+"x": 1038,
+"z": -2158,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Mirchi Bhau",
+"game": "Mirchi Bhau",
+"kind": "food",
+"x": 1023,
+"z": -2174,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Mongini's",
+"game": "Mongini's",
+"kind": "food",
+"x": 989,
+"z": -2073,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Mother Dairy",
+"game": "Mother Diary",
+"kind": "food",
+"x": 994,
+"z": -2049,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Pasta Zest",
+"game": "Pasta Zest",
+"kind": "food",
+"x": 1040,
+"z": -2163,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Popeyes",
+"game": "Popeyez",
+"kind": "food",
+"x": 1018,
+"z": -2156,
+"cuisine": "chicken",
+"renamed": true
+},
+{
+"name": "Qureshi Kabab",
+"game": "Qureshi Kebab",
+"kind": "food",
+"x": 1100,
+"z": -1856,
+"cuisine": "kabab",
+"renamed": true
+},
+{
+"name": "Saravana Bhavan",
+"game": "Saravan Bhawan",
+"kind": "food",
+"x": 704,
+"z": -2035,
+"cuisine": "indian;south_indian",
+"renamed": true
+},
+{
+"name": "Shake Point",
+"game": "Shake Point",
+"kind": "food",
+"x": 864,
+"z": -2191,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Snack on the Go",
+"game": "Snack on the Go",
+"kind": "food",
+"x": 1030,
+"z": -2166,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Subway",
+"game": "Subwave",
+"kind": "food",
+"x": 706,
+"z": -1964,
+"cuisine": "sandwich",
+"renamed": true
+},
+{
+"name": "Taco Bell",
+"game": "Taco Bellow",
+"kind": "food",
+"x": 1095,
+"z": -1815,
+"cuisine": "mexican",
+"renamed": true
+},
+{
+"name": "The Belgian Waffle Company",
+"game": "The Belgium Waffle Co",
+"kind": "food",
+"x": 780,
+"z": -1891,
+"cuisine": "waffle",
+"renamed": true
+},
+{
+"name": "Wenger's Deli",
+"game": "Wenzel's Deli",
+"kind": "food",
+"x": 882,
+"z": -2176,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Ardor 2.1",
+"game": "Ardor 2.1",
+"kind": "restaurant",
+"x": 1087,
+"z": -1814,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Barbeque Nation",
+"game": "Barbecue Nations",
+"kind": "restaurant",
+"x": 773,
+"z": -1892,
+"cuisine": "barbecue",
+"renamed": true
+},
+{
+"name": "Barbeque Nation",
+"game": "Barbecue Nations",
+"kind": "restaurant",
+"x": 1138,
+"z": -1825,
+"cuisine": "regional",
+"renamed": true
+},
+{
+"name": "Barbeque Nation",
+"game": "Barbecue Nations",
+"kind": "restaurant",
+"x": 1144,
+"z": -1829,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Bheemeshwara",
+"game": "Bheemeshwara",
+"kind": "restaurant",
+"x": 710,
+"z": -1966,
+"cuisine": "south_indian",
+"renamed": false
+},
+{
+"name": "Bikkgane Biryani",
+"game": "Bikkgane Biryani",
+"kind": "restaurant",
+"x": 699,
+"z": -1961,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Biryani Blues",
+"game": "Biryani Blues",
+"kind": "restaurant",
+"x": 1131,
+"z": -1771,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Blues",
+"game": "Blues",
+"kind": "restaurant",
+"x": 1136,
+"z": -1827,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Castle's Barbeque",
+"game": "Castle's Barbeque",
+"kind": "restaurant",
+"x": 1140,
+"z": -1830,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "DS Dosa Factory",
+"game": "DS Dosa Factory",
+"kind": "restaurant",
+"x": 1153,
+"z": -1829,
+"cuisine": "South Indian;North Indian;Chinese",
+"renamed": false
+},
+{
+"name": "Dhaba",
+"game": "Dhaba",
+"kind": "restaurant",
+"x": 972,
+"z": -2265,
+"cuisine": "indian;punjabi",
+"renamed": false
+},
+{
+"name": "Diggin",
+"game": "Digging",
+"kind": "restaurant",
+"x": 877,
+"z": -2140,
+"cuisine": "italian",
+"renamed": true
+},
+{
+"name": "Dāsaprakāsh",
+"game": "Dāsaprakāsh",
+"kind": "restaurant",
+"x": 853,
+"z": -2310,
+"cuisine": "indian",
+"renamed": false
+},
+{
+"name": "Fa Yian The Chinese Restaurant",
+"game": "Fa Yian The Chinese Restaurant",
+"kind": "restaurant",
+"x": 817,
+"z": -2099,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Flavours Of China",
+"game": "Flavours Of China",
+"kind": "restaurant",
+"x": 833,
+"z": -2288,
+"cuisine": "chinese",
+"renamed": false
+},
+{
+"name": "Gokulam",
+"game": "Gokulam",
+"kind": "restaurant",
+"x": 1050,
+"z": -1670,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Gupta Foods",
+"game": "Gupta Foods",
+"kind": "restaurant",
+"x": 1142,
+"z": -1877,
+"cuisine": "indian",
+"renamed": false
+},
+{
+"name": "Hard Rock Cafe",
+"game": "Hard Rack Cafe",
+"kind": "restaurant",
+"x": 1050,
+"z": -1694,
+"cuisine": "american",
+"renamed": true
+},
+{
+"name": "Harlequin",
+"game": "Harlequin",
+"kind": "restaurant",
+"x": 1028,
+"z": -2303,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Hello Dada",
+"game": "Hello Dada",
+"kind": "restaurant",
+"x": 817,
+"z": -2084,
+"cuisine": "indian",
+"renamed": false
+},
+{
+"name": "Indian Coffee House",
+"game": "Indian Kaffee House",
+"kind": "restaurant",
+"x": 688,
+"z": -1867,
+"cuisine": "coffee_shop;indian",
+"renamed": true
+},
+{
+"name": "Karigari",
+"game": "Karigari",
+"kind": "restaurant",
+"x": 1155,
+"z": -1776,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Kwality",
+"game": "Quality Restaurant",
+"kind": "restaurant",
+"x": 807,
+"z": -1780,
+"cuisine": "indian",
+"renamed": true
+},
+{
+"name": "Mughlai Junction",
+"game": "Mughlai Junction",
+"kind": "restaurant",
+"x": 1127,
+"z": -1874,
+"cuisine": "indian",
+"renamed": false
+},
+{
+"name": "Naivedyam",
+"game": "Naivedyam",
+"kind": "restaurant",
+"x": 698,
+"z": -2067,
+"cuisine": "indian;southern_indian",
+"renamed": false
+},
+{
+"name": "Nando's",
+"game": "Nandu's",
+"kind": "restaurant",
+"x": 1053,
+"z": -1900,
+"cuisine": "chicken;portuguese",
+"renamed": true
+},
+{
+"name": "Nik Baker's",
+"game": "Nick Baker's",
+"kind": "restaurant",
+"x": 1057,
+"z": -1841,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "OTB Courtyard",
+"game": "OTB Courtyard",
+"kind": "restaurant",
+"x": 924,
+"z": -2231,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Pind Balluchi",
+"game": "Pind Baluchi",
+"kind": "restaurant",
+"x": 834,
+"z": -1829,
+"cuisine": "punjabi",
+"renamed": true
+},
+{
+"name": "Pind Balluchi",
+"game": "Pind Baluchi",
+"kind": "restaurant",
+"x": 1050,
+"z": -1699,
+"cuisine": "indian",
+"renamed": true
+},
+{
+"name": "Po",
+"game": "Po Asian",
+"kind": "restaurant",
+"x": 979,
+"z": -2264,
+"cuisine": "asian",
+"renamed": true
+},
+{
+"name": "Punjab Grill",
+"game": "Punjab Grille",
+"kind": "restaurant",
+"x": 1048,
+"z": -1619,
+"cuisine": "north_indian",
+"renamed": true
+},
+{
+"name": "Rajdhani",
+"game": "Rajdhani",
+"kind": "restaurant",
+"x": 1121,
+"z": -1769,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Rodeo",
+"game": "Rodeo",
+"kind": "restaurant",
+"x": 877,
+"z": -2143,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Si Nonna's",
+"game": "Si Nonna's",
+"kind": "restaurant",
+"x": 806,
+"z": -2227,
+"cuisine": "pizza",
+"renamed": false
+},
+{
+"name": "Social",
+"game": "Sosial",
+"kind": "restaurant",
+"x": 975,
+"z": -2298,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Taste of China",
+"game": "Taste of China",
+"kind": "restaurant",
+"x": 1139,
+"z": -1828,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "The Art of Dumpling",
+"game": "The Art of Dumpling",
+"kind": "restaurant",
+"x": 751,
+"z": -2153,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "The Big Chill",
+"game": "The Big Chilli",
+"kind": "restaurant",
+"x": 992,
+"z": -2271,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "The Colonnade",
+"game": "The Colonnade",
+"kind": "restaurant",
+"x": 983,
+"z": -2264,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "The Host",
+"game": "The Host",
+"kind": "restaurant",
+"x": 1166,
+"z": -1979,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "The Immigrant Cafe",
+"game": "The Immigrant Cafe",
+"kind": "restaurant",
+"x": 955,
+"z": -2252,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "The Mandi Chowk",
+"game": "The Mandi Chowk",
+"kind": "restaurant",
+"x": 704,
+"z": -1964,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Tirumala",
+"game": "Tirumala",
+"kind": "restaurant",
+"x": 1117,
+"z": -1870,
+"cuisine": "chinese;indian",
+"renamed": false
+},
+{
+"name": "Véda",
+"game": "Véda",
+"kind": "restaurant",
+"x": 891,
+"z": -2353,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Xero Degrees",
+"game": "Zero Degree",
+"kind": "restaurant",
+"x": 780,
+"z": -2204,
+"cuisine": "",
+"renamed": true
+},
+{
+"name": "Yeti",
+"game": "Yeti Himalayan",
+"kind": "restaurant",
+"x": 978,
+"z": -2266,
+"cuisine": "nepalese;tibetan;bhutanese",
+"renamed": true
+},
+{
+"name": "Zen",
+"game": "Zen",
+"kind": "restaurant",
+"x": 999,
+"z": -2265,
+"cuisine": "",
+"renamed": false
+},
+{
+"name": "Zero Degrees",
+"game": "Zero Degree",
+"kind": "restaurant",
+"x": 1041,
+"z": -2089,
+"cuisine": "",
+"renamed": true
+}
+]
+}
