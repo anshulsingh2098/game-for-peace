@@ -2,6 +2,9 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-21  Kartavya zone shrunk to follow the avenue
+Before: one 950 m circle round (1170, 60) took in a glass office slab at (700, 300). Now 12 circles of 170 m (400 m at India Gate) every 250 m on the straight line Rashtrapati Bhavan (x -932, z -65) to India Gate (x 2000, z 108), in `identity.json` (the smallest zone wins, so Lutyens shows outside them). Checked with the game's own `__where()` at 8 points (list in OPEN_ITEMS closed table) and one frame of the avenue. The line is straight, the real road may bend; the width was not measured. Self-test 121 checks.
+
 ## 2026-11-21  Spot check k3 to k5 (Kartavya Path and Lutyens' Delhi)
 Method: the game teleported to each spot, a second camera rendered once into an overlay (`window.__view` in the page, not committed), `__where()` for street and area.
 k3 (x 1100, z 60, looking west, day): wide road, double yellow line, red and yellow kerb, gravel walks, lawns, a regular jamun avenue; Rashtrapati Bhavan far end is only a pale arcade-like block. Close, not accurate: the real avenue has two carriageways, canals and red sandstone.
