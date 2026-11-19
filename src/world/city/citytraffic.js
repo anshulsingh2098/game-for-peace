@@ -47,17 +47,21 @@ export class CityTraffic {
   place(car, pc, dir, s) { car.pc = pc; car.dir = dir; car.s = s; car.v = Math.min(car.v || 0, pc.speed); }
   spawn(px, pz) {
     const list = [...this.pieces.keys()]; if (!list.length) return null;
-    for (let t = 0; t < 30; t++) { const pc = list[Math.floor(this.rnd() * list.length)], s = this.rnd() * pc.len, o = this.at(pc, s, {}), d = Math.hypot(o.x - px, o.z - pz); if (d < 90 || d > 520) continue; const dir = pc.one !== 0 ? pc.one : this.rnd() < 0.5 ? 1 : -1; if (!this.canGo(pc, dir)) continue;
-      const kind = this.pickKind(o.x, o.z, this.rnd()); return { pc, dir, s, h: this.hOf(pc, o.x, o.z), v: pc.speed * (0.6 + 0.4 * this.rnd()), kind, k: DIM[kind].speed, paint: this.paintOf(kind), x: o.x, z: o.z, yaw: 0, lat: 0, wait: 0 }; }
-    return null;
+    /* phase 11 (GTA gap list item 6): a tournament, not the first piece that fits: of several random places 40 or 90 to 520 m from the player the NEAREST is taken (6 tries in the dense CP, 3 elsewhere), so the cars you see are not all at the far edge; the 17 cars at CP had none within 150 m before */
+    let best = null, bd = 1e9, tries = 0; const want = this.minD === 40 ? 6 : 3; let found = 0;
+    for (let t = 0; t < 60 && found < want; t++) { const pc = list[Math.floor(this.rnd() * list.length)], s = this.rnd() * pc.len, o = this.at(pc, s, {}), d = Math.hypot(o.x - px, o.z - pz); if (d < (this.minD || 90) || d > 520) continue; const dir = pc.one !== 0 ? pc.one : this.rnd() < 0.5 ? 1 : -1; if (!this.canGo(pc, dir)) continue; found++; tries++;
+      if (d < bd) { bd = d; best = { pc, dir, s, o: { x: o.x, z: o.z } }; } }
+    if (!best) return null; const { pc, dir, s, o } = best, kind = this.pickKind(o.x, o.z, this.rnd());
+    return { pc, dir, s, h: this.hOf(pc, o.x, o.z), v: pc.speed * (0.6 + 0.4 * this.rnd()), kind, k: DIM[kind].speed, paint: this.paintOf(kind), x: o.x, z: o.z, yaw: 0, lat: 0, wait: 0 };
   }
   update(dt, px, pz, pyaw, py) {
     this.px = px; this.pz = pz; const ph = py === undefined ? undefined : py - (this.gy || 0);       // ph: the player's height above the ground, so a car on a flyover does not stop for someone driving underneath
-    const cars = this.cars; this.time += dt; while (cars.length > this.want) cars.pop();
-    if (cars.length < this.want && this.pieces.size) { const c = this.spawn(px, pz); if (c) cars.push(c); }
+    const cars = this.cars; this.time += dt; const inCP = !!(this.identity && this.identity.areaNameAt && this.identity.areaNameAt(px, pz) === 'cp'), want = Math.round(this.want * (inCP ? 1.7 : 1)); this.minD = inCP ? 40 : 90;      /* Connaught Place is busy: 70 percent more cars round the player, and they may appear from 40 m (not 90 m) away (GTA gap list item 6, phase 11) */
+    while (cars.length > want) cars.pop();
+    if (cars.length < want && this.pieces.size) { const c = this.spawn(px, pz); if (c) cars.push(c); }
     const o = {}, SIDE = {};
     for (let n = 0; n < cars.length; n++) { const c = cars[n];
-      if (!c.pc.alive || Math.hypot(c.x - px, c.z - pz) > 700) { const r = this.spawn(px, pz); if (r) cars[n] = r; else cars.splice(n--, 1); continue; }
+      if (!c.pc.alive || Math.hypot(c.x - px, c.z - pz) > (inCP ? 330 : 700)) { const r = this.spawn(px, pz); if (r) cars[n] = r; else cars.splice(n--, 1); continue; }
       /* the gap to what is ahead on this lane: another car, or the player */
       this.at(c.pc, c.s, o); const tx = o.tx * c.dir, tz = o.tz * c.dir; let gap = 99;
       for (const k of [...cars, ...this.buses, ...(this.peds ? this.peds.filter(p => p.state === 'cross') : []), { x: px, z: pz, player: true, h: ph }]) { if (k === c) continue; if (k.player ? (k.h !== undefined && Math.abs(k.h - c.h) > 3) : Math.abs((k.h || 0) - c.h) > 3) continue; const dx = k.x - c.x, dz = k.z - c.z, ahead = dx * tx + dz * tz, side = Math.abs(-dx * tz + dz * tx); if (ahead > 0 && ahead < gap && side < (k.player ? 2.4 : 2.0)) gap = ahead; }
