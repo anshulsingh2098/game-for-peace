@@ -181,6 +181,16 @@ export function cpFacadeTextures(rnd) {
       for (const sx of [wx - 9, wx + ww + 1]) { g.fillStyle = '#5b7a55'; g.fillRect(sx, wy - 1, 8, wh + 2); g.fillStyle = '#46603f'; for (let l2 = 0; l2 < 12; l2++) g.fillRect(sx + 1, wy + l2 * 3, 6, 1); } }
     g.fillStyle = '#cfc9bb'; g.fillRect(x, y + 61, 64, 3);                                                                                            // the floor line (a string course goes here)
   }
+  /* F1b (docs/CP_FIX_PLAN.md): weathering over the whole facade texture: a tonal wash per cell, rain streaks running down from every sill and from the corners of the surrounds, damp and soot along the floor line, green-grey mould patches, and darker bay edges. Alpha-blended greys on top of the clean drawing, kept inside each 64 px cell so the texture still tiles. Colour map only. */
+  g.save();
+  for (let k = 0; k < 3; k++) for (let q = 0; q < 4; q++) { const x = q * 64, y = (3 - k) * 64, wx = x + 21, ww = 22, wy = y + 16, wh = 36;
+    g.fillStyle = 'rgba(70,62,50,' + (0.03 + 0.08 * rnd()).toFixed(3) + ')'; g.fillRect(x, y, 64, 64);                                                     // a tonal wash
+    for (let st = 0; st < 5; st++) { const sx = wx - 2 + rnd() * (ww + 4), len = 10 + rnd() * 26, w = 1 + Math.floor(rnd() * 3), a = 0.14 + 0.2 * rnd(); const gr = g.createLinearGradient(0, y + wy - y + wh + 3, 0, Math.min(y + 62, wy + wh + 3 + len)); gr.addColorStop(0, 'rgba(60,54,44,' + a.toFixed(3) + ')'); gr.addColorStop(1, 'rgba(60,54,44,0)'); g.fillStyle = gr; g.fillRect(sx, wy + wh + 3, w, Math.min(len, y + 62 - (wy + wh + 3))); }        // streaks from the sill
+    for (const sx of [wx - 3, wx + ww + 2]) { const len = 8 + rnd() * 16, gr = g.createLinearGradient(0, wy, 0, wy + len); gr.addColorStop(0, 'rgba(55,50,42,0.2)'); gr.addColorStop(1, 'rgba(55,50,42,0)'); g.fillStyle = gr; g.fillRect(sx, wy - 4, 2, len); }     // down the edges of the surround
+    { const gr = g.createLinearGradient(0, y + 46, 0, y + 64); gr.addColorStop(0, 'rgba(50,46,38,0)'); gr.addColorStop(1, 'rgba(50,46,38,' + (0.12 + 0.12 * rnd()).toFixed(3) + ')'); g.fillStyle = gr; g.fillRect(x, y + 46, 64, 18); }      // damp and soot above the floor line
+    if (rnd() < 0.5) { const mx = x + 10 + rnd() * 44, my = y + 8 + rnd() * 8, mr = 6 + rnd() * 6, gr = g.createRadialGradient(mx, my, 0, mx, my, mr); gr.addColorStop(0, 'rgba(70,86,60,' + (0.1 + 0.08 * rnd()).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(70,86,60,0)'); g.fillStyle = gr; g.fillRect(Math.max(x, mx - mr), Math.max(y, my - mr), Math.min(2 * mr, x + 64 - Math.max(x, mx - mr)), Math.min(2 * mr, y + 64 - Math.max(y, my - mr))); }      // a mould patch under the string course
+    g.fillStyle = 'rgba(60,54,44,0.12)'; g.fillRect(x, y, 2, 64); g.fillRect(x + 62, y, 2, 64); }
+  g.restore();
   return [cv, ev];
 }
 
