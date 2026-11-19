@@ -60,5 +60,25 @@ export const VEHICLES = [
     cam: { back: 7.0, up: 3.0, look: 2.4 }, eye: [-0.32, 1.24, 0.10], shadow: [3.0, 5.2],
     lights: { tail: [[-0.66, 0.82, -1.99], [0.66, 0.82, -1.99]], head: [[-0.62, 0.69, 2.02], [0.62, 0.69, 2.02]], tailSize: 0.7, headSize: 1.0, beam: [0.8, 2.0] },
     buff: { name: 'Gravel Grip', desc: 'Extra bite and a sharper turn-in, and loose ground drags less.', label: 'Grip', secs: 6, cooldown: 12, mod: { grip: 1.3, steer: 1.2, drag: 0.35 } },
-    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#dde0e2', '#f08a24', '#d62828', '#2846a4', '#2a9d5b', '#16181d'] } }
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#dde0e2', '#f08a24', '#d62828', '#2846a4', '#2a9d5b', '#16181d'] } },
+  { id: 'sx4', file: 'assets/cars/sx4.glb', name: 'Suzuki SX4', tag: 'Hatch', color: '#c8101c',
+    desc: 'A small, honest crossover hatchback. Light, tidy and easy to place.',
+    stats: { Speed: 58, Accel: 52, Handling: 60, Grip: 62, Top: 185 },
+    body: { mass: 1190, front: 1.22, rear: 1.47, track: 1.62, wheelR: 0.34, steerMax: 0.6, brake: 9.2, revAccel: 2.4, revTop: 7, aero: 0.3,
+      /* the SX4 Sportback 1.6 VVT: about 88 kW (120 hp) at 6000 rpm, 6500 rpm redline, a 5-speed box in the original, six close ratios here because the game's gearbox never shifts into a gear whose revs would fall under 60 percent of the limiter, 4.1 final drive, Cd 0.34 x 2.1 m2 frontal area. Axle positions from the model: wheelbase 2.69 m, track 1.62 m */
+      pt: { kw: 88, peak: 6000, redline: 6600, idle: 850, launch: 3200, gears: [3.4, 2.2, 1.55, 1.15, 0.9, 0.75], final: 4.1, eff: 0.88, cdA: 0.71, upshift: 0.96, shiftTime: 0.2, tcs: 0.8, brakeMul: 0.8, down: 0.48, downEasy: 0.4 }, lean: 0.09, cg: 0.55, radius: 0.95, circles: [1.3, 0, -1.3] },
+    cam: { back: 6.4, up: 2.4, look: 2.6 }, eye: [-0.36, 1.2, 0.1], shadow: [2.8, 4.8],
+    lights: { tail: [[-0.7, 0.95, -2.12], [0.7, 0.95, -2.12]], head: [[-0.62, 0.78, 2.0], [0.62, 0.78, 2.0]], tailSize: 0.7, headSize: 1.0, beam: [0.7, 2.0] },
+    buff: { name: 'Easy Does It', desc: 'Extra grip and a calmer, steadier car for a few seconds.', label: 'Grip', secs: 6, cooldown: 12, mod: { grip: 1.25, steer: 1.1 } },
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#c8101c', '#dde0e2', '#2846a4', '#16181d', '#2a9d5b', '#f0b323', '#6e7782'] } },
+  { id: 'everest', file: 'assets/cars/everest.glb', name: 'Ford Endeavour', tag: 'SUV', color: '#e8e9ec',
+    desc: 'A tall, heavy seven-seat SUV. Torquey diesel, soft springs and a big shadow on the road.',
+    stats: { Speed: 56, Accel: 48, Handling: 40, Grip: 58, Top: 180 },
+    body: { mass: 2150, front: 1.37, rear: 1.54, track: 1.72, wheelR: 0.4, steerMax: 0.55, brake: 8.8, revAccel: 2.2, revTop: 6.5, aero: 0.4,
+      /* the Endeavour 3.2 and 2.2 TDCi family: about 118 kW (160 hp) at 3200 rpm, 4600 rpm redline (a diesel), 6-speed box, 3.7 final drive, Cd 0.40 x 3.0 m2 frontal area. Axles from the model: wheelbase 2.91 m, track 1.72 m */
+      pt: { kw: 118, peak: 3200, redline: 4600, idle: 800, launch: 2000, gears: [3.9, 2.55, 1.8, 1.35, 1.0, 0.78], final: 3.7, eff: 0.87, cdA: 1.2, upshift: 0.94, shiftTime: 0.22, tcs: 0.8, brakeMul: 0.75, down: 0.48, downEasy: 0.4 }, lean: 0.14, cg: 0.62, radius: 1.05, circles: [1.6, 0, -1.6] },
+    cam: { back: 7.6, up: 3.0, look: 2.8 }, eye: [-0.38, 1.6, 0.2], shadow: [3.2, 5.6],
+    lights: { tail: [[-0.78, 1.0, -2.4], [0.78, 1.0, -2.4]], head: [[-0.72, 0.98, 2.38], [0.72, 0.98, 2.38]], tailSize: 0.8, headSize: 1.1, beam: [0.8, 2.2] },
+    buff: { name: 'Haul', desc: 'A steady surge of torque and extra grip for a few seconds.', label: 'Torque', secs: 6, cooldown: 12, mod: { accel: 1.6, grip: 1.15 } },
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#e8e9ec', '#16181d', '#6e7782', '#2846a4', '#a11d1d', '#2a6d4a', '#c9a227'] } }
 ];

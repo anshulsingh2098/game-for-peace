@@ -2,8 +2,9 @@
    continuing street at each end (pieces meet end to end within a few metres) and are respawned near the player when they leave the loaded ground. They are simple boxes (one instanced body and one cabin), not the
    traffic pack's models, and they have no signals yet. Flyovers, ramps and underpasses carry traffic too (audit R14, owner decision 17 Nov 2026): each car has a height `h` above or below the ground, cars only see cars at their own level, and a car's obstacle circles carry that height so the physics ignores a car on the other level. Obstacle circles go to the vehicle physics through `circles()`, so the player cannot drive through them. Browser only. */
 import * as THREE from 'three';
-import { Fleet, DIM } from './vehicles.js';
+import { Fleet, DIM, MODEL_SETS, baseKind } from './vehicles.js';
 import { deckHeight, underDepth } from './pack.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const PARK_MAX = 300, AUTO = [0xe3b21a, 0x2e8b57, 0x2e8b57, 0xe3b21a];
 const MODES = { off: 0, low: 10, mid: 22, high: 34 }, CELL = 8, PAINT = [0xf2f2f2, 0xf2f2f2, 0xd9d9d9, 0x1b1b1d, 0x9a9da3, 0xb11f1f, 0x2a4f8a, 0xe8c547, 0x3a3a3c, 0xcfd2d6];
@@ -15,13 +16,23 @@ export class CityTraffic {
   constructor(scene, origin, G, identity = null) {
     this.rnd = makeRnd(12345);
     this.identity = identity; this.buses = []; this.origin = origin; this.G = G; this.max = 34 + PARK_MAX; this.parked = new Map(); this.px = 0; this.pz = 0; this.scA = new THREE.Vector3(0.78, 0.95, 0.62); this.want = 0; this.cars = []; this.pieces = new Map(); this.ends = new Map(); this.tile = new Map();
-    this.fleet = new Fleet(scene);
+    this.fleet = new Fleet(scene); this.models = {}; this.loadModels();       // the real car models (traffic pack) join in when they arrive
     this.sig = new Map(); this.xing = new Map(); this.peds = null; this.time = 0; { const xz = G.xz, f = G.nodeFlags; for (let i = 0; i < G.nodes; i++) { const k = Math.floor(xz[i * 2] / 12) + ',' + Math.floor(xz[i * 2 + 1] / 12); if (f[i] & 1) { let l = this.sig.get(k); if (!l) this.sig.set(k, l = []); l.push(i); } else if (f[i] & 2) { let l = this.xing.get(k); if (!l) this.xing.set(k, l = []); l.push(i); } } }       // the signalised nodes (flag 1) by 12 m cell
     this.col = new THREE.Color(); this.m4 = new THREE.Matrix4(); this.q = new THREE.Quaternion(); this.up = new THREE.Vector3(0, 1, 0); this.sc = new THREE.Vector3(1, 1, 1); this.pos = new THREE.Vector3();
   }
   /* a vehicle kind for the area at (x, z) from identity.json (buses are CityBuses'; a parked vehicle is never a cycle rickshaw, a truck or an auto stand-in) */
-  pickKind(x, z, r, parked = false) { const ID = this.identity; if (!ID) return 'hatch'; let k = ID.vehicleKind(ID.areaNameAt(x, z), r); if (k === 'bus') k = 'hatch'; if (parked && (k === 'cyclerick' || k === 'truck')) k = 'two'; return k; }
-  paintOf(kind) { const ID = this.identity, l = ID && ID.j.vehicles.paints[kind]; if (!l) return PAINT[Math.floor(this.rnd() * PAINT.length)]; return parseInt(l[Math.floor(this.rnd() * l.length)].slice(1), 16); }
+  pickKind(x, z, r, parked = false) { const ID = this.identity; if (!ID) return 'hatch'; let k = ID.vehicleKind(ID.areaNameAt(x, z), r); if (k === 'bus') k = 'hatch'; if (parked && (k === 'cyclerick' || k === 'truck')) k = 'two'; return this.variantOf(k); }
+  /* some cars of a base kind are drawn as a real model once the pack is loaded (a stream of its own, so the simulation's random numbers do not change whether or not the models are there) */
+  variantOf(k) { for (const name in this.models) { const S = MODEL_SETS[name]; if (S && S.base === k && this.vr() < S.share) return name; } return k; }
+  loadModels() {
+    this.vr = (() => { let s = 777; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
+    import('../../traffic/traffic.js').then(m => m.loadTrafficPack()).then(pack => {
+      if (!pack) return; for (const k of pack.kinds) { const S = MODEL_SETS[k.name], p = pack.parts[k.name]; if (!S || !p) continue;
+        const gs = [p.paint, p.rest].filter(Boolean).map(g => { const c = g.clone(); for (const a of Object.keys(c.attributes)) if (a !== 'position' && a !== 'normal' && a !== 'color') c.deleteAttribute(a); return c; });
+        if (!gs.length) continue; const geo = gs.length > 1 ? mergeGeometries(gs) : gs[0]; this.fleet.addModel(k.name, geo, k.len, k.w, S.speed); this.models[k.name] = true; }
+    }).catch(() => {});
+  }
+  paintOf(kind) { const ID = this.identity, l = ID && ID.j.vehicles.paints[baseKind(kind)]; if (!l) return PAINT[Math.floor(this.rnd() * PAINT.length)]; return parseInt(l[Math.floor(this.rnd() * l.length)].slice(1), 16); }
   setMode(m) { this.want = MODES[m] === undefined ? 10 : MODES[m]; if (this.onMode) this.onMode(m); }
   key(x, z) { return Math.floor(x / CELL) + ',' + Math.floor(z / CELL); }
   addTile(k, streets, gy) {
