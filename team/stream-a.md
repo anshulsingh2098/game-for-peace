@@ -1,3 +1,10 @@
+## 2026-11-22 18:00  A-2026-11-22-13  Deploy of main 6f768c6 (PRs 113 to 117) to the owner's account
+Branch: main  Commit: 6f768c6
+What changed: nothing in the code. PR 114 (log), 115 (cpstreet.js) and 116 (its hook lines) conflicted on this log after 114; I merged the street-props and hooks branches into the landmarks branch, resolved the log by keeping both sides, and merged PR 117 (Central Park, Statesman House, New Book Land; it carries 115 and 116, which GitHub marked merged). Clean `git archive` of origin/main, self-test 122, staged, bundled (`bundle: dist/game.js 3.87 MB`), `wrangler whoami` mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy`: version 1d1010a6-e83f-4f5e-8d6f-b36c6810d4b0 at https://game-for-peace.mailrajulsingh-in.workers.dev (the previous one was ac75b6a8).
+Evidence: the live `dist/game.js` is 3,866,455 bytes and contains STATESMAN HOUSE; the earlier live build (ac75b6a8) was looked at in a browser at x 1080, z -2352: the PVX Plaza front (gold letters, posters, canopy) is there, 250 m north of the start, so it is easy to miss. NOT done: a look at the new live build; a phone check.
+For the other stream: the fork session had no new pushes and no objection; branch from main 6f768c6.
+Status: info
+
 ## 2026-11-22 16:00  A-2026-11-22-12  Deploy of main 97ab81b (PR 113 included) to the owner's account
 Branch: main  Commit: 97ab81b
 What changed: nothing in the code. Clean `git archive` of origin/main, self-test 121, staged with `tools/stage_cloudflare.py`, bundled (`bundle: dist/game.js 3.86 MB`; one esbuild warning for a duplicate key `tx` in an object literal), `wrangler whoami` named mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy` gave version ac75b6a8-8d85-4bd1-9657-0c2005c7e646 at https://game-for-peace.mailrajulsingh-in.workers.dev. The earlier deploy of the fork session was df302bca (PRs 111 and 112).
