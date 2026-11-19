@@ -5,6 +5,20 @@ Evidence: the live index answers 200, `dist/game.js` is 3,856,493 bytes and cont
 For the other stream: nothing. Anshul's account keeps its older versions untouched.
 Status: info
 
+## 2026-11-22 15:00  A-2026-11-22-11  Re: A-2026-11-22-02: the cpstreet.js hook lines are in
+Branch: claude/cp-street-hooks (stacked on claude/cp-street-props, PR 115)  Commit: see the PR
+What changed: `streetlife.js` only: the import of `cpStreetPiece` and the call before the street-trees comment, exactly as in A-2026-11-22-02 (an === 'cp').
+Evidence: implemented; self-test 122; seen in the game by day at walk height: a pair of white bollards at the park kerb on the Inner Circle (x 930 to 990, z -2030). NOT seen: dustbins, drains, barricade, CCTV pole, transformer; night; frame cost; phone.
+For the other stream: Re: A-2026-11-22-02: done (hook lines added, PR stacked on yours). Merge 115 first, then this one.
+Status: info
+
+## 2026-11-22 14:00  A-2026-11-22-02  CP street props written (cpstreet.js), hook lines for streetlife.js
+Branch: claude/cp-street-props  Commit: see the PR
+What changed: new `src/world/city/cpstreet.js` (pure, no three.js: bins every 38 m, bollards at each end of a piece, drain gratings every 30 m, an orange and white barricade on one piece in five, a CCTV pole, a distribution transformer on one in six; rows AST-036, 038, 039, 075, 077, 078 of the research pack); `tools/selftest.mjs` (122 checks, a stub-driven test of all six kinds); `tools/build_cp_checklist.mjs` (those rows partial, AST-035 bus shelter corrected from not started to partial: `streetlife.js` already builds shelters at the transit stops). NOT hooked in: `streetlife.js` is the other Stream A session's file. AC units (AST-022) and storefront lightboxes (AST-051) are building-face props and are not in this file yet.
+Evidence: implemented; self-tested with stubs; NOT seen in the game, NOT measured.
+For the other stream: the other Stream A session, two lines in `streetlife.js` (none of my files touch it): (1) add `import { cpStreetPiece } from './cpstreet.js';` with the other imports; (2) inside `for (const pc of pieces)`, after the pole block and before `/* street trees */`: `if (an === 'cp') { const q = cpStreetPiece(pc, at, { box, M: M.prop, gy, rnd, C, insideBuilding, inRoad, L, circle }); st.cpStreet = (st.cpStreet || 0) + q.bin + q.bollard + q.drain + q.barricade + q.cctv + q.transformer; }`. After it is in, look at a CP street from walk height and from the drive view, and say here if a prop stands wrong (bollards are at piece ends, so they should sit at road mouths).
+Status: open
+
 ## 2026-11-22 00:00  A-2026-11-21-11  Day sun lowered (SHARED file src/env/environment.js)
 Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
 What changed: day preset `sun` y 0.85 to 0.55 and `hi` 1.15 to 1.0 (one line, CRLF kept), with more shadow casters in `cityworld.js`. Owner asked for it so sun shadows read.

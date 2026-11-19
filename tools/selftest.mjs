@@ -1387,4 +1387,11 @@ test('sign boards name real places: PLACES is built from the pack, a road leadin
   assert.ok(boards >= 20 && withKm === boards, 'boards ' + boards);
   const src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8'); assert.ok(/kind: stop \? 'stop' : 'give'/.test(src) && /k === 'stop'/.test(src), 'STOP signs with a stop line');
 });
+test('CP street furniture (cpstreet.js): bins, bollards, drains, barricades, CCTV and transformers are placed by rule on a CP street piece, deterministically, and none sits in a building or the road', async () => {
+  const { cpStreetPiece } = await import('../src/world/city/cpstreet.js'), mk = (id, len, walk) => ({ id, len, hw: 4, walk, cls: 'secondary' }), at = (pc, s) => ({ x: s, z: 0, tx: 1, tz: 0 });
+  const run = pc => { const boxes = [], circles = [], h = { box: (M, lx, y, lz, sx, sy, sz) => boxes.push([lx, y, lz, sx, sy, sz]), M: {}, gy: 0, rnd: (a, b) => { let x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); }, C: v => v, insideBuilding: () => false, inRoad: () => false, L: (x, z) => [x, z], circle: (x, z, r) => circles.push([x, z, r]) }; return { n: cpStreetPiece(pc, at, h), boxes, circles }; };
+  const a = run(mk(5, 120, 2)), b = run(mk(5, 120, 2)); assert.deepEqual(a, b); assert.ok(a.n.bin >= 2 && a.n.bollard >= 4 && a.n.drain >= 4, JSON.stringify(a.n)); assert.ok(a.boxes.length >= 20 && a.boxes.every(q => q.every(Number.isFinite)));
+  assert.equal(Object.values(run(mk(6, 10, 2)).n).reduce((x, y) => x + y, 0), 0, 'a short piece gets nothing'); assert.equal(Object.values(run(mk(7, 120, 0)).n).reduce((x, y) => x + y, 0), 0, 'a street without a walk gets nothing');
+  let kinds = new Set(); for (let id = 1; id < 60; id++) for (const [k, v] of Object.entries(run(mk(id, 90, 2)).n)) if (v) kinds.add(k); assert.equal(kinds.size, 6, 'all six kinds occur: ' + [...kinds]);
+});
 console.log(`\n${passed} checks passed`);

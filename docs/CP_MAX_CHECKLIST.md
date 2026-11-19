@@ -97,11 +97,11 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 | ☐ | AST-032 | roads | underpass retaining wall | KIT | 🟨 partial | underpass walls in the cut code |
 | ☑ | AST-033 | roads | traffic signal | CP | 🟩 built | mast arms with live signal heads |
 | ☑ | AST-034 | roads | Indian road sign bilingual | CP | 🟩 built | Hindi/English boards, gantry with places, small signs (A-2026-11-20-06, -07) |
-| ☐ | AST-035 | roads | bus stop shelter | CP | ⬜ not started | buses exist (citybus.js); no shelter model |
-| ☐ | AST-036 | roads | road drain | CP | ⬜ not started |  |
+| ☐ | AST-035 | roads | bus stop shelter | CP | 🟨 partial | bus shelters at the transit stops (streetlife.js); not placed on every CP stop |
+| ☐ | AST-036 | roads | road drain | CP | 🟨 partial | cpstreet.js (not hooked in yet: A-2026-11-22-02) |
 | ☑ | AST-037 | roads | manhole cover | CP | 🟩 built | manhole covers in road wear |
-| ☐ | AST-038 | roads | traffic barricade | CP | ⬜ not started |  |
-| ☐ | AST-039 | roads | parking bollard | CP | ⬜ not started |  |
+| ☐ | AST-038 | roads | traffic barricade | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
+| ☐ | AST-039 | roads | parking bollard | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
 | ☐ | AST-040 | commerce | pharmacy sign template | CP | 🟨 partial | pharmacy as a shop kind with board |
 | ☐ | AST-041 | commerce | mobile shop sign template | CP | 🟨 partial | mobile shop kind |
 | ☐ | AST-042 | commerce | coaching banner template | KIT | ⬜ not started |  |
@@ -137,16 +137,16 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 | ☑ | AST-072 | infrastructure | metro train | KIT | 🟩 built | metro train |
 | ☑ | AST-073 | infrastructure | utility pole | CP | 🟩 built | power poles with wires |
 | ☐ | AST-074 | infrastructure | cable bundle | CP | 🟨 partial | wires between poles; no bundle model |
-| ☐ | AST-075 | infrastructure | distribution transformer | CP | ⬜ not started |  |
+| ☐ | AST-075 | infrastructure | distribution transformer | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
 | ☑ | AST-076 | infrastructure | streetlamp | CP | 🟩 built | street lamps with light pools |
-| ☐ | AST-077 | infrastructure | public dustbin | CP | ⬜ not started |  |
-| ☐ | AST-078 | infrastructure | roadside CCTV | CP | ⬜ not started |  |
+| ☐ | AST-077 | infrastructure | public dustbin | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
+| ☐ | AST-078 | infrastructure | roadside CCTV | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
 
 ## Totals (assets)
 
 | Scope | Rows | built | partial | not started |
 |---|---|---|---|---|
-| CP | 43 | 21 | 14 | 8 |
+| CP | 43 | 21 | 21 | 1 |
 | SUR | 6 | 0 | 4 | 2 |
 | KIT | 29 | 5 | 7 | 17 |
 
