@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { CAMFX } from './camfx.js';
+import { CarDamage } from './damage.js';
 const loader = new GLTFLoader(), cache = new Map(); let glowTex = null;
 /* paint the car like a car: a metallic base under a clear glossy coat, dark mirror-like glass, brighter chrome and rim reflections, tyres that do not shine */
 function polish(scene) {
@@ -42,6 +43,7 @@ export class VehicleView {
     if (def.scale && def.scale !== 1) this.model.scale.setScalar(def.scale);                              // def.scale: draw the model smaller or larger than it was made (physics sizes in defs.js stay in metres)
     const lift = { car: 0.08, sport: 0.07, rally: 0.05 }[def.id] || 0;                                    // ride height: the body sits higher over the wheels, so the tyres no longer look half buried in the arches
     if (lift) { let top = this.model; while (top.children.length === 1 && !top.children.some(c => /^Wheel_/.test(c.name))) top = top.children[0]; if (!top.children.some(c => /^Wheel_/.test(c.name))) top = this.model.children[0]; for (const c of top.children) if (!/^Wheel_/.test(c.name)) c.position.y += lift; }
+    if (this.damage) this.damage.dispose(); this.damage = new CarDamage(this);
     this.buildCockpit(def.id, def); this.buildLights(def.lights); this.shadow.scale.set(def.shadow[0], 1, def.shadow[1]); this.camYaw = null; this.setView(this.view);
   }
   /* dashboard and steering wheel for the driver view (the models have no interior) */
@@ -98,7 +100,7 @@ export class VehicleView {
     /* front wheels follow the real road-wheel angle, with Ackermann geometry: the inner wheel turns more than the outer */
     const L = ph.p.L, T = ph.p.track, tn = Math.tan(ph.delta), R = Math.abs(tn) > 1e-4 ? L / tn : 1e6;
     for (const w of this.wheels) {
-      if (rb) { const st = ph.wheelStates.find(s => s.front === w.front && s.side === w.side); if (st) { w.o.rotation.x = st.spin; w.o.rotation.y = st.steer; w.o.position.y = w.y0 + st.susp; } continue; }      // each wheel's own spin, steering and spring travel
+      if (rb) { const st = ph.wheelStates.find(s => s.front === w.front && s.side === w.side); if (st) { w.o.rotation.x = st.spin; w.o.rotation.y = st.steer; w.o.position.y = w.y0 + st.susp - (w.sag || 0); } continue; }      // each wheel's own spin, steering and spring travel
       w.o.rotation.x = ph.spin; let a = 0;
       if (w.front) a = w.side === 0 ? ph.delta : Math.atan(L / (R + w.side * T / 2));          // side: +1 left wheel, -1 right wheel, 0 a single front wheel (bike)
       w.o.rotation.y = -a;

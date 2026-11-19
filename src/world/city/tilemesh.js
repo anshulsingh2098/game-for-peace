@@ -230,6 +230,7 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, ex
   const m = M.rsign, A = SIGNATLAS, pw = 0.045, pu = A.plain;
   const V = (x, y, z, nxn, nzn, u, v) => m.v(X(x), y, Z(z), nxn, 0, nzn, WHITE_C, u, v);
   const at = (ox, dt) => [bx + nx * ox + tx * dt, bz + nz * ox + tz * dt];
+  const rec = (cx, cz, hw, hgt, sn) => { const ex = Math.abs(nx) * hw + Math.abs(tx) * 0.12, ez = Math.abs(nz) * hw + Math.abs(tz) * 0.12; (M.brkList || (M.brkList = [])).push({ k: 'sign', snap: sn, circles: [[cx, cz, 0.16]], bb: [cx - ex, cz - ez, cx + ex, cz + ez, gy, gy + hgt] }); };      /* breakables.js can tear this sign out of the tile's meshes */
   /* a flat board centred at (ox along n, dt along t), cy high, w wide, h tall; front uv, plain back 4 cm behind */
   const board = (ox, dt, cy0, w, h, uv, uvB) => { const cy = gy + cy0, [cx, cz] = at(ox, dt);
     const side = (dt2, sgn, u) => { const px = cx + tx * dt2, pz = cz + tz * dt2, L = [px + nx * w / 2, pz + nz * w / 2], R = [px - nx * w / 2, pz - nz * w / 2]; const a = V(L[0], cy - h / 2, L[1], tx * sgn, tz * sgn, sgn > 0 ? u[0] : u[2], u[1]), b = V(R[0], cy - h / 2, R[1], tx * sgn, tz * sgn, sgn > 0 ? u[2] : u[0], u[1]), c2 = V(R[0], cy + h / 2, R[1], tx * sgn, tz * sgn, sgn > 0 ? u[2] : u[0], u[3]), d = V(L[0], cy + h / 2, L[1], tx * sgn, tz * sgn, sgn > 0 ? u[0] : u[2], u[3]); m.tri(a, b, c2, tx * sgn, 0, tz * sgn); m.tri(a, c2, d, tx * sgn, 0, tz * sgn); };
@@ -239,7 +240,7 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, ex
   const beam = (ox0, ox1, dt, y0, th) => { const y = gy + y0, [x0, z0] = at(ox0, dt), [x1, z1] = at(ox1, dt); let a = V(x0, y - th, z0, tx, tz, pu[0], pu[1]), b = V(x1, y - th, z1, tx, tz, pu[2], pu[1]), c2 = V(x1, y + th, z1, tx, tz, pu[2], pu[3]), d = V(x0, y + th, z0, tx, tz, pu[0], pu[3]); m.tri(a, b, c2, tx, 0, tz); m.tri(a, c2, d, tx, 0, tz);
     a = V(x0 + tx * th, y + th, z0 + tz * th, 0, 1, pu[0], pu[1]); b = V(x1 + tx * th, y + th, z1 + tz * th, 0, 1, pu[2], pu[1]); c2 = V(x1 - tx * th, y + th, z1 - tz * th, 0, 1, pu[2], pu[3]); d = V(x0 - tx * th, y + th, z0 - tz * th, 0, 1, pu[0], pu[3]); m.tri(a, b, c2, 0, 1, 0); m.tri(a, c2, d, 0, 1, 0); };
   /* the small road signs on their own thin posts: curve chevrons (yellow, one each side so each direction sees its own), the give-way triangle, the speed-camera plate, the blue route-number plate */
-  if (extra) { const k = extra.kind;
+  if (extra) { rec(bx, bz, 0.7, 2.8, 4); const k = extra.kind;
     if (k === 'chev') { post(0, 0, 2.3); board(0, 0, 1.75, 0.85, 1.15, A.icon(extra.dir === 'left' ? 2 : 3), A.icon(extra.dir === 'left' ? 3 : 2)); }
     else if (k === 'give') { post(0, 0, 2.4); board(0, 0, 1.95, 0.95, 0.85, A.icon(4)); }
     else if (k === 'stop') { post(0, 0, 2.4); board(0, 0, 1.95, 0.85, 0.85, A.icon(6)); }
@@ -247,9 +248,9 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, ex
     else if (k === 'ref') { post(-0.5, 0, 2.5); post(0.5, 0, 2.5); board(0, 0, 2.05, 1.3, 0.62, A.refPlate(extra.ref)); }
     return; }
   /* the street's own name: green hexagon (NDMC), 2.0 x 0.95 m, lower edge at 2.5 m, on two posts */
-  if (name) { post(-0.9, 0, 3.55); post(0.9, 0, 3.55); board(0, 0, 2.98, 2.0, 0.95, A.name(name, hi)); }
+  if (name) { rec(bx, bz, 1.1, 3.6, 7); post(-0.9, 0, 3.55); post(0.9, 0, 3.55); board(0, 0, 2.98, 2.0, 0.95, A.name(name, hi)); }
   /* the speed limit: yellow plate, 0.8 m, 12 m further back so it is read from afar */
-  if (speed) { post(0, 12, 2.9); board(0, 12, 2.4, 0.8, 0.8, A.speed(speed)); }
+  if (speed) { rec(bx + tx * 12, bz + tz * 12, 0.5, 3.0, 5); post(0, 12, 2.9); board(0, 12, 2.4, 0.8, 0.8, A.speed(speed)); }
   /* the direction gantry, after the owner's GTA frames (13, 15, 16, 17): a thick round concrete column on the kerb with a footing, a lattice truss (two chords and zig-zag braces) across the carriageway, big boards hung under it on small brackets with a row of lamps below, board 4.2 x 2.0 m, lower edge 5.3 m above the road (a real gantry clears 5.5 m; the GTA boards are about 1.3 lanes wide) */
   if (gant && gant.dests.length) { const list = gant.dests.diag && gant.w >= 9 ? [{ diag: gant.dests.diag }, gant.dests[0]] : gant.dests, dt = 22, n = list.length, BW = 4.2, BH = 2.0, GAP = 0.5, span = n * BW + (n - 1) * GAP + 1.4, L = Math.max(span, Math.min(gant.w + 3.6, 17)), CON = new THREE.Color(0x9b9a95), STL = new THREE.Color(0x7d8185), DRK = new THREE.Color(0x2b2c2e);
     const Vc = (x, y, z, nxn, nyn, nzn, C) => m.v(X(x), gy + y, Z(z), nxn, nyn, nzn, C, pu[0], pu[1]);
@@ -552,6 +553,7 @@ export function* buildTileSteps(tile, ctx) {
   { const yawAt = (x, z) => { let best = 1e9, yaw = 0; for (const s of tile.streets) { const p = s.pts; for (let i = 0; i + 3 < p.length; i += 2) { const dx = p[i + 2] - p[i], dz = p[i + 3] - p[i + 1], L2 = dx * dx + dz * dz; if (L2 < 1e-6) continue; const f = Math.max(0, Math.min(1, ((x - p[i]) * dx + (z - p[i + 1]) * dz) / L2)), d = Math.hypot(p[i] + dx * f - x, p[i + 1] + dz * f - z); if (d < best) { best = d; yaw = Math.atan2(dz, dx); } } } yawAt.d = best; return yaw; };
     cpProps(M.junk, M.cpbrand, X, Z, gy, ox, oz, size, tile, junkBox, yawAt, out); 
     cpPark(M, X, Z, gy, ox, oz, size, junkBox, out); }      /* Central Park rebuilt from the owner's aerial photos (cppark.js) */      /* L6: petrol stations, Palika Bazaar gates and the Hanuman shrine at their OSM points (cpprops.js) */
+  if (M.brkList) out.brk = (out.brk || []).concat(M.brkList);
   if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow, cpbrand: M.cpbrand, cplight: M.cplight }, out); Object.assign(M, r.M); out.life = r.stats; }
   /* ---- the meshes ---- */
   return { M, out };

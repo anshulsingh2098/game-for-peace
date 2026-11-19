@@ -298,7 +298,34 @@ function useBuff() {
   if (mode !== 'drive' || !phys || buffCd > 0) return; const b = VEHICLES[vehicle].buff;
   buffT = b.secs; buffCd = b.cooldown; phys.setMod(b.mod); toast(b.name);
 }
-function backToRoad() { if (!phys) return; if (cityMode) { const e = city.nearestStreet(phys.x, phys.z); if (e) { const fwd = Math.cos(phys.yaw - e.yaw) >= 0; phys.reset(e.x, e.z, fwd ? e.yaw : e.yaw + Math.PI, city.gy); view.camYaw = null; setMode('drive'); toast('Back on the street'); } return; } roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
+const dmgMode = q.get('damage') || 'full';                                                          // ?damage=off: no dents; ?damage=cosmetic: dents only; default: dents, lost power, fire and a wreck (vehicle/damage.js)
+function carDamageInput() {
+  const D = view.damage; if (!D) return; D.cosmetic = dmgMode !== 'full';
+  if (D.wrecked) { setAuto(false); input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; return; }                // burnt out: nothing works any more
+  if (D.cosmetic) return; const pull = Math.abs(phys.u) > 4 ? D.pull : 0;
+  if (D.power < 1 || pull) input = { ...input, throttle: (input.throttle || 0) * D.power, steer: Math.max(-1, Math.min(1, (input.steer || 0) + pull)) };       // a damaged engine gives less power, a crumpled corner pulls the car to that side
+}
+let dmgState = 'ok';
+const carStateNow = () => mode === 'drive' && phys ? { x: phys.x, z: phys.z, y: phys.y, yaw: phys.yaw, u: phys.u, v: phys.v, circles: phys.p.circles, radius: phys.p.radius } : null;
+function carDamageFrame(dt) {
+  const D = view.damage; if (!D) return; D.origin = grid.origin;
+  if (!D.onChunks) { D.onChunks = (center, chunks) => { if (city && city.props) city.props.debris.spawnChunks({ x: center.x, y: center.y, z: center.z }, chunks, carStateNow()); }; D.onEvent = name => { try { if (name === 'metal') { sound.burst(0, 260, 0.3, 0.5, 'bandpass', 1.2); sound.burst(0.03, 900, 0.2, 0.3, 'bandpass', 2); } else if (name === 'glass') { sound.burst(0, 4200, 0.35, 0.35, 'highpass', 0.7); sound.burst(0.05, 2600, 0.25, 0.25, 'highpass', 0.7); } else if (name === 'pop') { sound.burst(0, 140, 0.15, 0.6, 'lowpass', 0.8); sound.burst(0, 2400, 0.06, 0.4, 'highpass', 0.8); } } catch (e) { /* no audio yet */ } }; }
+  const ev = D.update(dt);
+  if (D.state !== dmgState) { dmgState = D.state; if (dmgState === 'smoking') toast('The engine is smoking'); else if (dmgState === 'dead') toast('The engine is dead: "To road" repairs the car'); else if (dmgState === 'burning') toast('The engine is on fire: get out (G)!'); }
+  if (ev.burst) onCarBurst();
+}
+/* the engine blows: a small burst throws the car up, the engine dies for good, and anyone still inside is thrown out beside it */
+function onCarBurst() {
+  if (phys && phys.body) { const lv = phys.body.linvel(), av = phys.body.angvel(); phys.body.setLinvel({ x: lv.x * 0.4, y: lv.y + 3.2, z: lv.z * 0.4 }, true); phys.body.setAngvel({ x: av.x + (Math.random() - 0.5) * 2.2, y: av.y + (Math.random() - 0.5) * 2, z: av.z + (Math.random() - 0.5) * 2.2 }, true); }
+  setAuto(false); sound.setEngineOn(false); try { sound.burst(0, 90, 0.9, 1.0, 'lowpass', 0.8); sound.burst(0.04, 700, 0.5, 0.55, 'bandpass', 0.7); sound.burst(0.1, 160, 1.4, 0.4, 'lowpass', 0.8); } catch (e) { /* no audio yet */ }
+  toast('The engine blew: the car is wrecked. Pick another vehicle in the Garage.'); if (mode === 'drive') ejectPlayer();
+}
+function ejectPlayer() {
+  if (!phys || mode !== 'drive') return; const sd = view.def && view.def.eye && view.def.eye[0] > 0 ? 1 : -1, m0 = view.model.localToWorld(new THREE.Vector3(0, 0, 0)), m1 = view.model.localToWorld(new THREE.Vector3(sd, 0, 0)), driverLeft = (m1.x - m0.x) * -Math.sin(phys.yaw) + (m1.z - m0.z) * Math.cos(phys.yaw) > 0;
+  const spot = chooseExit({ x: phys.x, z: phys.z, yaw: phys.yaw, halfWidth: 1.6, halfLength: (phys.p.front + phys.p.rear) / 2 + 1 }, footWorld, driverLeft ? [1, -1] : [-1, 1]); if (!spot) return;
+  completeExit(spot, playerGltf ? new PlayerFigure(playerGltf) : null);
+}
+function backToRoad() { if (!phys) return; if (view.damage && view.damage.burntOut) { toast('This car is burnt out: pick another vehicle in the Garage'); return; } if (view.damage) view.damage.repair(); if (cityMode) { const e = city.nearestStreet(phys.x, phys.z); if (e) { const fwd = Math.cos(phys.yaw - e.yaw) >= 0; phys.reset(e.x, e.z, fwd ? e.yaw : e.yaw + Math.PI, city.gy); view.camYaw = null; setMode('drive'); toast('Back on the street'); } return; } roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 /* on foot (N14, src/player/onfoot.js): G beside a stopped vehicle gets you out; G beside the parked vehicle gets you back in. The vehicle waits on its handbrake. */
 let playerGltf = null, exitSeq = null; loadPlayerModel().then(g => { playerGltf = g; }).catch(() => {});          // the cartoon character; until it loads (or if it fails) getting out is the old instant step
 let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0, footPitch = 0.28, lookDrag = null;
@@ -320,7 +347,7 @@ function completeExit(spot, fig) {
   cam.yaw = -Math.PI / 2 - foot.yaw; vehicleHandle = (entities = entities || new Registry({ vehicle: 4, player: 1 }, bus)).create('vehicle', { index: vehicle }); setMode('foot'); bus.emit('vehicle:exited', { handle: vehicleHandle });
   interactions.add({ id: 'vehicle', x: phys.x, z: phys.z, r: 3.4, prompt: 'Get in (G)', onUse: enterVehicle }); toast('On foot: W A S D walk, Shift run, Space jump, G to get back in');
 }
-function enterVehicle() { if (mode !== 'foot' || !phys) return; interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
+function enterVehicle() { if (mode !== 'foot' || !phys) return; if (view.damage && view.damage.burntOut) { toast('This car is burnt out'); return; } interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
 function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && interactions.use(phys.x, phys.z, 'activity:')) { /* an activity started */ } else exitVehicle(); }
 /* mouse look on foot: click the game to capture the mouse (Esc releases it), then moving the mouse turns the character and tilts the camera; on a touch screen, drag on the scene */
 const lookBy = (dx, dy) => { if (mode !== 'foot' || !foot || frozen()) return; foot.yaw += dx * 0.0035; footPitch = Math.max(-0.35, Math.min(1.1, footPitch + dy * 0.0030)); };
@@ -691,7 +718,7 @@ function update(dt, now) {
         if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null; let adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (cityMode) { adRoad = cityNav.path; adSim = null; autodrive.lookMin = 6; autodrive.forward = true; autodrive.lane = () => -1.5; autodrive.lanes = () => 1; if (!cityNav.active || cityNav.arrived) { setAuto(false); if (cityNav.arrived) arriveT = 2.5; else toast('Autodrive off: no route'); } } if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = cityMode ? 0 : rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); if (cityMode) { adStuck = Math.abs(phys.u) < 0.4 && input.throttle > 0.5 ? adStuck + dt : 0; if (adStuck > 3) { adStuck = 0; if (cityNav.blockHere(phys.x, phys.z, phys.yaw)) backToRoad(); } } }
       }
       if (cityMode && arriveT > 0) { arriveT -= dt; input = { ...input, throttle: 0, brake: 1 }; }                    // stop at the destination
-      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; phys.step(dt, input);
+      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; carDamageInput(); phys.step(dt, input); if (phys.hit && view.damage && dmgMode !== 'off') view.damage.hit(phys.hit, grid.origin, phys.y); if (phys.hit && phys.hit.o && phys.hit.o.car && dmgMode !== 'off' && city && city.traffic.dmg) { city.traffic.dmg.cosmetic = dmgMode !== 'full'; city.traffic.dmg.hit(phys.hit.o.car, phys.hit); }          // visible dents (vehicle/damage.js)
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
     }
@@ -722,11 +749,15 @@ function update(dt, now) {
   if (city) { city.transit.footY = mode === 'foot' && foot ? foot.y : city.gy; city.update(px, pz, dt, mode === 'foot' && foot ? foot.y : phys ? phys.y : undefined); city.setNight(!!env.lightsOn); city.setWet(env.w.wet); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
+  const carNow = () => mode === 'drive' && phys ? { x: phys.x, z: phys.z, y: phys.y, yaw: phys.yaw, u: phys.u, v: phys.v, circles: phys.p.circles, radius: phys.p.radius } : null;
+  if (city && city.traffic.dmg) city.traffic.dmg.update(dt, px, pz, city.gy);          // other cars: dents, smoke, fire, wrecks (trafficdamage.js)
+  if (phys && phys.broke && city && city.props) { const car = carNow(); for (const o of phys.broke) if (o.pole) city.props.snapPole(o.pole, car); else if (o.brk) city.props.breakObject(o.brk, car); phys.broke = null; }          // poles the car snapped (breakables.js)
+  if (city && city.props) { const hs = city.props.update(dt, px, pz, city.gy, carNow()); if (hs.length && phys && phys.body) { let k = 1; for (const h of hs) k *= h.keep; const lv = phys.body.linvel(); phys.body.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); } }       // cones and dustbins: knocked over, the car keeps going (breakables.js)
   { const pv = city ? city.peds.view : peds;                                                                                                // the car can hit walkers: they fall as ragdolls and the car keeps going (pedestrians/ragdoll.js)
-    if (pv) { const car = mode === 'drive' && phys ? { x: phys.x, z: phys.z, y: phys.y, yaw: phys.yaw, u: phys.u, v: phys.v, circles: phys.p.circles, radius: phys.p.radius } : null, hits = pv.physics(dt, car);
+    if (pv) { const car = carNow(), hits = pv.physics(dt, car);
       if (hits.length) { if (phys && phys.body) { const lv = phys.body.linvel(), k = Math.max(0.9, 1 - 0.025 * hits.length); phys.body.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); } bus.emit('ped:hit', { hits }); } } }
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; if (figure.userData.pf) figure.userData.pf.update(dt, foot.speed > 0.3 || foot.moving, foot.phase); else { const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; } }
-  if (exitSeq) exitSeq.update(dt);
+  if (exitSeq) exitSeq.update(dt); carDamageFrame(dt);
   updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } if (city) updateCityMap(now, dt); updateToll(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }

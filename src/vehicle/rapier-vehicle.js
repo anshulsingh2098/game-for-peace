@@ -128,7 +128,7 @@ export class RapierVehicle {
   telemetry() { return makeTelemetry(this, this.id); }                                  // the stable report of this vehicle's state (see VEHICLE_CONTRACT.md)
 
   step(dt, input) {
-    this.input = input; this.acc += Math.min(dt, 0.1); this.impact = 0;
+    this.input = input; this.acc += Math.min(dt, 0.1); this.impact = 0; this.hit = null; this.broke = null;
     while (this.acc >= H) { this.sub(input); this.acc -= H; }
     this.read();
   }
@@ -282,9 +282,11 @@ export class RapierVehicle {
         const o = list[i], dx = cx - o.x, dz = cz - o.z, rr = p.radius + o.r, d2 = dx * dx + dz * dz; if (d2 >= rr * rr || d2 === 0) continue;
         if (o.kerb && Math.abs(u) < 2.5) continue;                                                                                            // a kerb (a city pavement edge) can be mounted at walking pace, not driven over
         if (o.y !== undefined ? Math.abs(o.y - this.y) > 3.2 : onDeck) continue;                                                       // on the other level of an overpass (rails, posts and cars carry their height y)
+        if (o.snap) { const dd = Math.sqrt(d2), cl = -((u * c - v * s) * dx / dd + (u * s + v * c) * dz / dd); if (cl > o.snap) { o.broke = true; (this.broke || (this.broke = [])).push(o); u *= o.keep || 0.93; v *= o.keep || 0.93; if (cl * 0.6 > this.impact) this.hit = { x: cx - dx / dd * p.radius, z: cz - dz / dd * p.radius, nx: dx / dd, nz: dz / dd, vn: cl * 0.6, o }; this.impact = Math.max(this.impact, cl * 0.6); moved = true; continue; } }          // a lamp post that is hit fast enough breaks off at the base: the car goes on, a little slower
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, pen = rr - d; px += nx * pen; pz += nz * pen; moved = true;
         const wx = u * c - v * s, wz = u * s + v * c, vn = wx * nx + wz * nz; if (vn >= 0) continue;
         const bounce = o.slide ? 1.05 : 1.2, ax = wx - bounce * vn * nx, az = wz - bounce * vn * nz; u = (ax * c + az * s) * (o.slide ? 0.997 : 0.85); v = (-ax * s + az * c) * (o.slide ? 0.9 : 0.6);          // a rail (slide) is a long wall to scrape along: a little bounce, hardly any speed lost; a tree stops you dr += (-s * nx + c * nz) * off * -vn * (o.slide ? 0.07 : 0.02);
+        if (-vn > this.impact && !o.kerb && !o.slide) this.hit = { x: cx - nx * p.radius, z: cz - nz * p.radius, nx, nz, vn: -vn, o };          // where and how hard (for the visible dents, vehicle/damage.js)
         this.impact = Math.max(this.impact, -vn);
       }
     }

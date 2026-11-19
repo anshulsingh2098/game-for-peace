@@ -78,7 +78,7 @@ export class CityTraffic {
       this.at(c.pc, c.s, o); const tx = o.tx * c.dir, tz = o.tz * c.dir; let gap = 99;
       for (const k of [...cars, ...this.buses, ...(this.peds ? this.peds.filter(p => p.state === 'cross') : []), { x: px, z: pz, player: true, h: ph }]) { if (k === c) continue; if (k.player ? (k.h !== undefined && Math.abs(k.h - c.h) > 3) : Math.abs((k.h || 0) - c.h) > 3) continue; const dx = k.x - c.x, dz = k.z - c.z, ahead = dx * tx + dz * tz, side = Math.abs(-dx * tz + dz * tx); if (ahead > 0 && ahead < gap && side < (k.player ? 2.4 : 2.0)) gap = ahead; }
       { const rem = c.dir > 0 ? c.pc.len - c.s : c.s; if (rem < 22 && rem > 0.5) { const q = c.pc.s.pts, ex = c.dir > 0 ? q[q.length - 2] : q[0], ez = c.dir > 0 ? q[q.length - 1] : q[1], nd = this.signalAt(ex, ez); if (nd >= 0 && !this.green(nd, tx, tz)) gap = Math.min(gap, rem - 1.5); } }       // a red signal at the end of the piece is a wall
-      const want = gap < 9 ? 0 : Math.min(c.pc.speed * c.k, c.v + 3 * dt) * Math.min(1, (gap - 9) / 14); c.v += Math.max(-9 * dt, Math.min(2.5 * dt, want - c.v)); c.s += c.dir * c.v * dt;
+      if (c.hold > 0) c.hold -= dt; const want = gap < 9 || c.hold > 0 ? 0 : Math.min(c.pc.speed * c.k, c.v + 3 * dt) * Math.min(1, (gap - 9) / 14); c.v += Math.max(-9 * dt, Math.min(2.5 * dt, want - c.v)); c.s += c.dir * c.v * dt;
       if (c.s > c.pc.len || c.s < 0) {                                    // the end of the piece: continue on another that starts here, else turn this car round at a dead end (or retire it)
         const end = c.dir > 0 ? c.pc.len : 0, p = c.pc.s.pts, ex = c.dir > 0 ? p[p.length - 2] : p[0], ez = c.dir > 0 ? p[p.length - 1] : p[1], opts = [];
         for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = this.ends.get(this.key(ex + a * CELL, ez + b * CELL)); if (l) for (const e of l) if (e.pc !== c.pc && e.pc.alive && Math.hypot(e.x - ex, e.z - ez) < 4 && Math.abs(this.hOf(e.pc, e.x, e.z) - c.h) < 3 && this.canGo(e.pc, e.end === 0 ? 1 : -1)) opts.push(e); }
@@ -90,8 +90,8 @@ export class CityTraffic {
   }
   draw() {
     const gy = this.gy || 0, pk = this.parkedNear(), F = this.fleet, ox = this.origin.x, oz = this.origin.z; F.begin();
-    for (const c of this.cars) F.add(c.kind, c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint);
-    for (const c of pk) F.add(c.kind, c.x - ox, gy, c.z - oz, c.yaw, c.paint);
+    for (const c of this.cars) if (!c.wreck) F.add(c.kind, c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint);
+    for (const c of pk) if (!c.wreck) F.add(c.kind, c.x - ox, gy, c.z - oz, c.yaw, c.paint);
     F.end();
   }
   /* the nearest car in front of `ph` ({ x, z, yaw }) within `range` m and 2.3 m either side of its heading: { gap, speed } or null (autodrive's leader) */
@@ -100,7 +100,7 @@ export class CityTraffic {
   /* parked cars within 220 m of the player (at most PARK_MAX) */
   parkedNear() { const out = []; for (const l of this.parked.values()) for (const c of l) if (Math.abs(c.x - this.px) < 220 && Math.abs(c.z - this.pz) < 220) { out.push(c); if (out.length >= PARK_MAX) return out; } return out; }
   circles(x, z, r) {
-    const out = [], put = (c, tr) => { const d = DIM[c.kind || 'hatch'], rr = d.wid / 2 + 0.15, h = Math.max(0, d.len / 2 - rr), cx = Math.cos(c.yaw), sz = Math.sin(c.yaw); if (h < 0.3) out.push({ x: c.x, z: c.z, r: rr, y: this.gy + (c.h || 0), traffic: tr }); else out.push({ x: c.x + cx * h, z: c.z + sz * h, r: rr, y: this.gy + (c.h || 0), traffic: tr }, { x: c.x - cx * h, z: c.z - sz * h, r: rr, y: this.gy + (c.h || 0), traffic: tr }); };
+    const out = [], put = (c, tr) => { const d = DIM[c.kind || 'hatch'], rr = d.wid / 2 + 0.15, h = Math.max(0, d.len / 2 - rr), cx = Math.cos(c.yaw), sz = Math.sin(c.yaw); if (h < 0.3) out.push({ x: c.x, z: c.z, r: rr, y: this.gy + (c.h || 0), traffic: tr, car: c }); else out.push({ x: c.x + cx * h, z: c.z + sz * h, r: rr, y: this.gy + (c.h || 0), traffic: tr, car: c }, { x: c.x - cx * h, z: c.z - sz * h, r: rr, y: this.gy + (c.h || 0), traffic: tr, car: c }); };
     for (const l of this.parked.values()) for (const c of l) { if (Math.abs(c.x - x) > r + 3 || Math.abs(c.z - z) > r + 3) continue; put(c, undefined); }
     for (const c of this.cars) { if (Math.abs(c.x - x) > r + 5 || Math.abs(c.z - z) > r + 5) continue; put(c, true); } return out; }
 }
