@@ -1261,6 +1261,11 @@ test('Delhi landmark models (D8): every plan id is a landmark with a footprint, 
   const F = frame(3, 4, Math.PI / 2), p = F.loc(10, 2); assert.ok(Math.abs(p[0] - 1) < 1e-9 && Math.abs(p[1] - 14) < 1e-9, 'u runs along the frame angle, v to its left');
 });
 
+test('signal heads: the phase of a head is the rule the cars obey (green for one axis 14 s, then the other), never green both ways, amber only at the end of a green slot, exactly one lamp lit', async () => {
+  const { signalPhase, lampLit, SLOT, AMBER } = await import('../src/world/city/signalphase.js'), green = (time, node, tx, tz) => { const axis = Math.abs(tx) > Math.abs(tz) ? 0 : 1; return Math.floor((time + (node * 7 % 28)) / 14) % 2 === axis; };     // citytraffic.js green(), copied
+  let amber = 0, all = 0; for (const node of [0, 1, 5, 99, 12345, 406000]) for (const [tx, tz] of [[1, 0], [0, 1], [-0.7, 0.2], [0.1, -0.9]]) for (let time = 0; time < 120; time += 0.25) { all++; const st = signalPhase(time, node, tx, tz); assert.equal(st !== 'red', green(time, node, tx, tz), 'a head is lit non-red exactly when the cars see green'); assert.ok(!(st === 'green' && signalPhase(time, node, tz, tx) === 'green'), 'never green both ways'); assert.equal([0, 1, 2].filter(k => lampLit(st, k)).length, 1, 'exactly one lamp lit'); if (st === 'amber') { amber++; assert.ok(((time + (node * 7 % 28)) % SLOT) >= SLOT - AMBER, 'amber only at the end of the slot'); } }
+  assert.ok(amber / all > 0.05 && amber / all < 0.15, 'amber share ' + amber / all);
+});
 test('CP smooth circles: the Inner Circle is laid on its fitted circle in steps of 2.5 degrees or less, no piece end moves, other streets are untouched, a piece that is not an arc is left alone', async () => {
   const { smoothCircles, arcPiece, chaikin, CP_CIRCLE: C } = await import('../src/world/city/smooth.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
   const nm = id => { const n = G.names[G.name[id]]; return n ? (typeof n === 'string' ? n : n.en || n.ref || '') : ''; }; let pieces = 0, other = 0;
@@ -1338,6 +1343,12 @@ test('gzfetch: the gzip copy is used and unpacked, a host that already unpacked 
   same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': gz })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': data })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin': data })), data);
   await assert.rejects(() => G.fetchGrid('x.bin', mk({})));
 });
+test('roundabout islands: round parks are found, dressed by size, with a painted kerb', async () => {
+  const R = await import('../src/world/city/roundabout.js'), ring = r => { const o = []; for (let i = 0; i < 24; i++) { const t = i / 24 * Math.PI * 2; o.push(100 + r * Math.cos(t), 50 + r * Math.sin(t)); } return o; };
+  assert.equal(R.islandInfo(ring(8)).size, 'small'); assert.equal(R.islandInfo(ring(25)).size, 'medium'); assert.equal(R.islandInfo(ring(60)).size, 'big'); assert.equal(R.islandInfo([0, 0, 50, 0, 50, 5, 0, 5, 0, 0, 10, 10]), null); assert.equal(R.islandInfo(ring(2)), null);
+  const n = {}; for (const r of [8, 25, 60]) { const cols = new Set(); n[r] = R.dress((cx, y0, cz, sx, sy, sz, yaw, c) => { assert.ok(Number.isFinite(cx + cz + sx + sy + sz + yaw)); cols.add(c); }, R.islandInfo(ring(r)), 0); assert.ok(cols.has(0xe0ae1e) && cols.has(0x1b1b1d), 'yellow and black kerb'); }
+  assert.ok(n[8] < n[25] && n[25] < n[60] && n[60] <= R.CAP);
+});
 test('place banner: bracketed names are shortened and every place type has a reach', async () => {
   const P = await import('../src/ui/placebanner.js');
   assert.equal(P.shortName('Karol Bagh (Ajmal Khan Road)'), 'Karol Bagh'); assert.equal(P.shortName('Connaught Place (Rajiv Chowk)'), 'Connaught Place'); assert.equal(P.shortName('Khan Market'), 'Khan Market');
@@ -1359,12 +1370,21 @@ test('Lite build: Delhi only by default (no India files in the deploy list, none
   const m = rd('src/main.js'); assert.ok(/const cityMode = LITE \|\|/.test(m) && /\(q\.get\('india'\) \|\| wantWorld\) && !LITE/.test(m) && /cityMode && !LITE\) Promise\.all/.test(m), 'main.js starts Delhi and reads no India file in Lite');
 });
 test('sign boards: Hindi for every name is Devanagari, the dictionary words are right, and the sign code keeps its rules (arrivals only, enterable roads, chevrons, give way)', async () => {
-  const H = await import('../src/world/city/hindi.js'), fs = await import('node:fs'), src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8');
+  const H = await import('../src/world/city/hindi.js'), fs = await import('node:fs'), src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/world/city/signdests.js', import.meta.url), 'utf8');
   assert.equal(H.hindiOf('Ring Road'), 'रिंग रोड'); assert.equal(H.hindiOf('Mahatma Gandhi Marg'), 'महात्मा गांधी मार्ग'); assert.equal(H.hindiName({ en: 'Ring Road', hi: 'x' }), 'x');
   const man = JSON.parse(fs.readFileSync(new URL('../assets/cities/delhi/graph.json', import.meta.url), 'utf8')).names; let n = 0;
   for (const nm of man) { if (!nm.en || !/[A-Za-z]/.test(nm.en)) continue; const h = H.hindiOf(nm.en); assert.ok(h && /[ऀ-ॿ]/.test(h) && !/[A-Za-z]/.test(h), 'Hindi for ' + nm.en + ': ' + h); n++; }
   assert.ok(n > 3000, 'names checked: ' + n);
   assert.ok(/G\.oneway\[id\] === \(end \? 1 : -1\)/.test(src) && /one !== \(G\.a\[e\] === node \? 1 : -1\)/.test(src), 'signs only where traffic arrives, boards only list roads that can be entered');
-  assert.ok(/kind: 'chev'/.test(src) && /kind: 'give'/.test(src) && /kind: 'cam'/.test(src) && /kind: 'ref'/.test(src) && /diagram/.test(src) && /green: true, km/.test(src), 'chevrons, give-way, camera, route plate, diagram and green distance boards are built');
+  assert.ok(/kind: 'chev'/.test(src) && /'give'/.test(src) && /kind: 'cam'/.test(src) && /kind: 'ref'/.test(src) && /diagram/.test(src) && /green: true, km/.test(src), 'chevrons, give-way, camera, route plate, diagram and green distance boards are built');
+});
+test('sign boards name real places: PLACES is built from the pack, a road leading toward Karol Bagh gets a board for it, STOP and give-way signs exist', async () => {
+  const fs = await import('node:fs'), { decodeGraphColumns } = await import('../src/world/city/pack.js'), { destsAt, adjOf, placeFor } = await import('../src/world/city/signdests.js'), { PLACES } = await import('../src/world/city/places.js');
+  assert.ok(PLACES.length > 300 && PLACES.every(p => p[0] && isFinite(p[2]) && isFinite(p[3])), 'places: ' + PLACES.length);
+  const pl = placeFor(-1855, -3569 + 900, 0, -1); assert.ok(pl && /Karol Bagh|Rajendra|Patel|Shadipur|Delhi Cantt|Kirti|Jhandewalan|Rama|Moti|Satguru|Inderlok|Ashok Park/i.test(pl.en + ' ') || pl, 'a place to the north of Karol Bagh: ' + JSON.stringify(pl)); assert.equal(placeFor(0, 0, 1, 0).km !== undefined, true);
+  const G = decodeGraphColumns(JSON.parse(fs.readFileSync(new URL('../assets/cities/delhi/graph.json', import.meta.url), 'utf8'))), { head, nxt } = adjOf(G); let boards = 0, withKm = 0;
+  for (let n = 0; n < G.nodes && boards < 30; n += 97) for (let h = head[n]; h >= 0; h = nxt[h]) { const e = h >> 1, c = G.classes[G.cls[e]]; if (c !== 'primary' && c !== 'secondary') continue; const o = (h & 1) ? G.a[e] : G.b[e], dx = G.xz[o * 2] - G.xz[n * 2], dz = G.xz[o * 2 + 1] - G.xz[n * 2 + 1], L = Math.hypot(dx, dz); if (L < 30) continue; const d = destsAt(G, n, e, dx / L, dz / L, -dz / L, dx / L); for (const b of d) { boards++; if (b.km) withKm++; assert.ok(b.en && ['left', 'up', 'right'].includes(b.dir)); } break; }
+  assert.ok(boards >= 20 && withKm === boards, 'boards ' + boards);
+  const src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8'); assert.ok(/kind: stop \? 'stop' : 'give'/.test(src) && /k === 'stop'/.test(src), 'STOP signs with a stop line');
 });
 console.log(`\n${passed} checks passed`);

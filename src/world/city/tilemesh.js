@@ -4,11 +4,14 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { CP_CIRCLE } from './smooth.js';
+import { brandBand, drumCorner, makeBrandMaterial } from './cpfacade.js';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
+import { islandInfo, dress as dressIsland } from './roundabout.js';
 import { hindiName } from './hindi.js';
+import { destsAt, adjOf } from './signdests.js';
 
 /* layers that lie in the ground plane are given real height steps (metres over the ground: it was 0 for all of them and only depth offsets told them apart, which shimmers with distance): ground 0, parks and water, pavement, road, markings */
 const ZEBRA_MAX = 16, TEX_ROAD = 5, TEX_WALK = 4;       // metres one tile of the road and pavement textures covers (a divisor of 1000, so tiles meet without a seam)
@@ -219,18 +222,6 @@ function makeSignAtlas() {
   return SIGNATLAS;
 }
 const SPEEDS = [30, 40, 50, 60];
-/* Where the arriving traffic can go: the named roads that meet the node, as { en, hi, dir } with dir 'up' (ahead), 'left' or 'right' relative to a driver coming along -t. Biggest road class first, one board a name, at most two. The node's edge lists are built once a graph. */
-const RANK = { motorway: 5, trunk: 5, primary: 4, secondary: 3, tertiary: 2, residential: 1 };
-function adjOf(G) { if (!G.__adj) { const head = new Int32Array(G.nodes).fill(-1), nxt = new Int32Array(G.n * 2); for (let e = 0; e < G.n; e++) { nxt[e * 2] = head[G.a[e]]; head[G.a[e]] = e * 2; nxt[e * 2 + 1] = head[G.b[e]]; head[G.b[e]] = e * 2 + 1; } G.__adj = { head, nxt }; } return G.__adj; }
-function destsAt(G, node, id, tx, tz, nx, nz) {
-  const { head, nxt } = adjOf(G), own = G.names[G.name[id]], ownEn = own && own.en, found = new Map();
-  for (let h = head[node]; h >= 0; h = nxt[h]) { const e = h >> 1; if (e === id) continue; const other = (h & 1) ? G.a[e] : G.b[e], nm = G.names[G.name[e]], en = nm && nm.en, r = RANK[G.classes[G.cls[e]]] || 0; if (!en || !r) continue; const one = G.oneway[e]; if (one !== 0 && one !== (G.a[e] === node ? 1 : -1)) continue;
-    const ux = G.xz[other * 2] - G.xz[node * 2], uz = G.xz[other * 2 + 1] - G.xz[node * 2 + 1], L = Math.hypot(ux, uz); if (L < 8) continue; const fx = ux / L, fz = uz / L, ahead = -(fx * tx + fz * tz); if (ahead < -0.5) continue;
-    const dir = ahead > 0.6 ? 'up' : (fx * nx + fz * nz) > 0 ? 'left' : 'right'; if (en === ownEn && dir !== 'up') continue; const sc = r * 10 + Math.min(L, 400) / 100; const old = found.get(en); if (!old || old.sc < sc) found.set(en, { en, hi: hindiName(nm), dir, sc, r, km: Math.max(0.1, G.len[e] / 1000).toFixed(1) }); }
-  const ORD = { left: 0, up: 1, right: 2 }, all = [...found.values()].sort((a, b) => b.sc - a.sc), pick = all.slice(0, 2).sort((a, b) => ORD[a.dir] - ORD[b.dir]);
-  const dirs = new Set(all.map(d => d.dir)); pick.diag = all.length >= 3 && dirs.size >= 3 ? all.filter((d, i, ar) => ar.findIndex(q => q.dir === d.dir) === i).sort((a, b) => ORD[a.dir] - ORD[b.dir]) : null;     // three roads in three directions: a diagram board
-  return pick;
-}
 /* The boards face the traffic that ARRIVES at the junction: the normal is the road direction (tx, tz) pointing away from the node, the board is spread along the sideways axis (nx, nz) and its left edge (seen by the driver) is on the +n side, the driver's kerb side (traffic keeps left). The back is a plain grey plate, so no text is ever seen mirrored. */
 function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, extra) {
   const m = M.rsign, A = SIGNATLAS, pw = 0.045, pu = A.plain;
@@ -248,6 +239,7 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, ex
   if (extra) { const k = extra.kind;
     if (k === 'chev') { post(0, 0, 2.3); board(0, 0, 1.75, 0.85, 1.15, A.icon(extra.dir === 'left' ? 2 : 3), A.icon(extra.dir === 'left' ? 3 : 2)); }
     else if (k === 'give') { post(0, 0, 2.4); board(0, 0, 1.95, 0.95, 0.85, A.icon(4)); }
+    else if (k === 'stop') { post(0, 0, 2.4); board(0, 0, 1.95, 0.85, 0.85, A.icon(6)); }
     else if (k === 'cam') { post(0, 0, 2.7); board(0, 0, 2.2, 0.75, 0.75, A.icon(5)); }
     else if (k === 'ref') { post(-0.5, 0, 2.5); post(0.5, 0, 2.5); board(0, 0, 2.05, 1.3, 0.62, A.refPlate(extra.ref)); }
     return; }
@@ -274,7 +266,7 @@ function signPole(M, X, Z, gy, bx, bz, tx, tz, nx, nz, name, speed, hi, gant, ex
     const cm = (x0 + x1) / 2, half = Math.abs(x1 - x0) / 2; box(cm, dt + 0.55, half, 0.5, 4.93, 5.0, STL);                                   // the catwalk (a grating plate) under the boards
     box(cm, dt + 1.05, half, 0.025, 5.95, 6.02, STL); box(cm, dt + 1.05, half, 0.02, 5.45, 5.5, STL);                                          // the rail and the knee rail along its outer edge
     for (let q = 0, nq = Math.floor(half * 2 / 1.5); q <= nq; q++) box(x0 - q * (half * 2) / nq, dt + 1.05, 0.03, 0.03, 5.0, 6.02, STL);        // rail posts
-    for (let k = 0; k < n; k++) { const ox = ox0 - 0.34 - 0.5 - BW / 2 - k * (BW + GAP), bcy = 6.3; const d = list[k], flip = q => q === 'left' ? 'right' : q === 'right' ? 'left' : 'up', hw2 = d.r >= 4 ? { green: true, km: d.km } : null;
+    for (let k = 0; k < n; k++) { const ox = ox0 - 0.34 - 0.5 - BW / 2 - k * (BW + GAP), bcy = 6.3; const d = list[k], flip = q => q === 'left' ? 'right' : q === 'right' ? 'left' : 'up', hw2 = d.r >= 4 ? { green: true, km: d.km } : d.r >= 2 && d.km ? { km: d.km } : null;
       if (d.diag) board(ox, dt + 0.12, bcy, BW, BH, A.diagram(d.diag), A.diagram(d.diag.map(q => ({ ...q, dir: flip(q.dir) }))));
       else board(ox, dt + 0.12, bcy, BW, BH, A.blue(d.en, d.hi, d.dir, hw2), A.blue(d.en, d.hi, flip(d.dir), hw2));      /* roads of class primary and up get the green highway board with the distance (km) */
       for (const e of [-1, 1]) box(ox + e * BW * 0.32, dt, 0.05, 0.05, bcy + BH / 2, yb, STL);            // brackets from the board to the lower chord
@@ -291,12 +283,12 @@ function roundColumn(J, X, Z, cx, y0, cz, h, C) {
   junkBox(J, X, Z, cx, yt + 0.25, cz, 1.05, 0.3, 1.05, 0, C);                                // abacus
 }
 /* a traffic signal on a mast arm (owner's GTA frames G8 and G9): a grey pole at the kerb, an arm over the arriving lanes, and signal heads hanging from it facing the driver, each a dark housing with a dull red, amber and green lens. Static: the heads do not animate (the cars obey the real signal state in citytraffic.js). In the `junk` mesh, drawn within 240 m; about 100 triangles a mast. */
-function mastArm(J, X, Z, gy, bx, bz, tx, tz, nx, nz, armLen, headOs) {
+function mastArm(J, X, Z, gy, bx, bz, tx, tz, nx, nz, armLen, headOs, lamps, node) {
   const yaw = Math.atan2(nz, nx), GREY = col(0x6b6f73), DARK = col(0x1b1d1f), LR = col(0x8a2a2a), LA = col(0x9a7a20), LG = col(0x2a7a46), y0 = gy + 0.12;
   junkBox(J, X, Z, bx, y0, bz, 0.22, 7.0, 0.22, yaw, GREY);                                              // pole
   const mx = bx + nx * armLen / 2, mz = bz + nz * armLen / 2; junkBox(J, X, Z, mx, y0 + 6.3, mz, Math.abs(armLen), 0.16, 0.16, yaw, GREY);       // the arm along the sideways axis (negative = toward the road)
   for (const o of headOs) { const cx = bx + nx * o, cz = bz + nz * o; junkBox(J, X, Z, cx, y0 + 5.2, cz, 0.42, 1.1, 0.3, yaw, DARK);
-    [[LR, 0.82], [LA, 0.55], [LG, 0.28]].forEach(([C, h]) => junkBox(J, X, Z, cx + tx * 0.17, y0 + 5.2 + h, cz + tz * 0.17, 0.2, 0.2, 0.05, yaw, C)); }
+    [0.82, 0.55, 0.28].forEach((h, kind) => lamps.push(cx + tx * 0.2, y0 + 5.2 + h + 0.1, cz + tz * 0.2, node, tx, tz, kind)); }      // the three lenses are handed over as lamp records (red, amber, green) and lit live in signalheads.js
 }
 /* a painted road arrow (straight or turning) in the marking layer: tail at (cx, cz), pointing along (dx, dz), (nx, nz) the sideways unit vector; turn: -1 turns toward -n, +1 toward +n, 0 straight. Shaft 0.24 m wide, head 0.9 m wide. */
 function roadArrow(m, X, Z, y, cx, cz, dx, dz, nx, nz, turn) {
@@ -307,7 +299,7 @@ function roadArrow(m, X, Z, y, cx, cz, dx, dz, nx, nz, turn) {
   const k = Math.SQRT1_2, ex = dx * k + nx * turn * k, ez = dz * k + nz * turn * k, e1 = shaft(cx, cz, dx, dz, 1.5, 0.12), e2 = shaft(e1[0], e1[1], ex, ez, 1.1, 0.12); head(e2[0], e2[1], ex, ez);
 }
 export function* buildTileSteps(tile, ctx) {
-  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), rsign: new Mesher(), junk: new Mesher(), colm: new Mesher(), wearD: new Mesher(), wearL: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), rsign: new Mesher(), junk: new Mesher(), colm: new Mesher(), cpbrand: new Mesher(), wearD: new Mesher(), wearL: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y, uvs = 11) => {                                           // a polygon (ring and holes in metres) lying at height y; uvs: metres one texture repeat covers
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
@@ -327,6 +319,7 @@ export function* buildTileSteps(tile, ctx) {
     else flat(M.ground, b.ring, b.holes, shade(0xb9a888, 0.85 + 0.25 * v), 0); }
   const PARKC = { forest: shade(0xb4cf86, 0.72), scrub: col(0xd6c98e), sports: shade(0xe2f6aa, 1.0), golf: shade(0xe2f6aa, 1.05), garden: shade(0xd3ec9e, 0.95) };
   for (const p of tile.parks) flat(M.lawn, p.ring, p.holes, PARKC[p.class] || PARK, LIFT.park);          // by class: forest deeper green, scrub dry olive, sports and golf bright
+  { let nIsl = 0; for (const p of tile.parks) { if (nIsl >= 6) break; const isl = islandInfo(p.ring); if (!isl || (p.holes && p.holes.length)) continue; nIsl++; dressIsland((cx, y0, cz, sx, sy, sz, yaw, hex) => junkBox(M.junk, X, Z, cx, y0, cz, sx, sy, sz, yaw, col(hex)), isl, gy + LIFT.park); } out.nIslands = nIsl; }       // round traffic islands: painted kerb, hedges, beds (src/world/city/roundabout.js)
   /* the Yamuna floodplain and other farmland: fields in greens and ochres (they were left as bare ground) */
   for (const l of tile.landuse) if (l.class === 'farmland') { let cx = 0, cz = 0; const n = l.ring.length / 2; for (let i = 0; i < n; i++) { cx += l.ring[i * 2]; cz += l.ring[i * 2 + 1]; } cx /= n || 1; cz /= n || 1; const v = (((Math.floor(cx * 0.21) * 73856093) ^ (Math.floor(cz * 0.21) * 19349663)) >>> 0) % 1000 / 1000; flat(M.lawn, l.ring, l.holes, v < 0.45 ? shade(0xcde88c, 0.85 + 0.3 * v) : v < 0.8 ? shade(0xe6dc8a, 0.9 + 0.2 * v) : shade(0xcab27a, 0.9), LIFT.park * 0.4); }          // lawns and gardens: the real grass texture (mats.lawn), the water stays plain
   for (const w of tile.water) flat(M.park, w.ring, w.holes, WATER, LIFT.park);
@@ -424,7 +417,7 @@ export function* buildTileSteps(tile, ctx) {
       if (fl & 1) { const sx = pts[i0 * 2] + tx * 8.2, sz = pts[i0 * 2 + 1] + tz * 8.2, o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25, m = M.mark, y = gy + LIFT.mark, P = (o, d) => m.v(X(sx + nxv * o + tx * d), y, Z(sz + nzv * o + tz * d), 0, 1, 0, MARK); if (o1 - o0 > 1) { const q0 = P(o0, -0.25), q1 = P(o1, -0.25), q2 = P(o1, 0.25), q3 = P(o0, 0.25); m.tri(q0, q1, q2, 0, 1, 0); m.tri(q0, q2, q3, 0, 1, 0); out.nStop = (out.nStop || 0) + 1; }
         { const o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25, nl = Math.max(1, Math.round((o1 - o0) / 3.3)), lwid = (o1 - o0) / nl, ay = gy + LIFT.mark - 0.006;      // painted arrows in each arriving lane, 16.5 m back (the kerb lane turns left, the inside lane of three or more turns right, the others go straight)
           if (o1 - o0 > 2.2) for (let k = 0; k < nl; k++) { const o = o0 + (k + 0.5) * lwid, cx = pts[i0 * 2] + tx * 16.5 + nxv * o, cz = pts[i0 * 2 + 1] + tz * 16.5 + nzv * o, turn = nl >= 2 && k === nl - 1 ? 1 : nl >= 3 && k === 0 ? -1 : 0; roadArrow(M.mark, X, Z, ay, cx, cz, -tx, -tz, nxv, nzv, turn); out.nArrow = (out.nArrow || 0) + 1; } }
-        if ((out.nMast || 0) < 40) { const o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25; if (o1 - o0 > 2.5) { const off = hw + 0.8, bxm = pts[i0 * 2] + tx * 11 + nxv * off, bzm = pts[i0 * 2 + 1] + tz * 11 + nzv * off, heads = (o1 - o0 > 6 ? [o0 + (o1 - o0) * 0.28, o0 + (o1 - o0) * 0.72] : [(o0 + o1) / 2]).map(o => o - off); mastArm(M.junk, X, Z, gy, bxm, bzm, tx, tz, nxv, nzv, (o0 + (o1 - o0) * 0.12) - off, heads); out.nMast = (out.nMast || 0) + 1; } }
+        if ((out.nMast || 0) < 40) { const o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25; if (o1 - o0 > 2.5) { const off = hw + 0.8, bxm = pts[i0 * 2] + tx * 11 + nxv * off, bzm = pts[i0 * 2 + 1] + tz * 11 + nzv * off, heads = (o1 - o0 > 6 ? [o0 + (o1 - o0) * 0.28, o0 + (o1 - o0) * 0.72] : [(o0 + o1) / 2]).map(o => o - off); mastArm(M.junk, X, Z, gy, bxm, bzm, tx, tz, nxv, nzv, (o0 + (o1 - o0) * 0.12) - off, heads, out.lamps || (out.lamps = []), node); out.nMast = (out.nMast || 0) + 1; } }
         if (SIGNATLAS && (out.nPole || 0) < 40 && (G.oneway[id] === 0 || G.oneway[id] === (end ? 1 : -1))) { const nm = G.names && G.name ? G.names[G.name[id]] : null, en = nm && (typeof nm === 'string' ? nm : nm.en || nm.ref || ''), sp0 = G.speed ? G.speed[id] : 0, sp = sp0 >= 25 && sp0 <= 100 ? SPEEDS.reduce((b, v) => Math.abs(v - sp0) < Math.abs(b - v) ? v : b, 30) : ({ residential: 30, tertiary: 40, secondary: 50, primary: 60, trunk: 60 }[cls] || 40), off = hw + 0.9; signPole(M, X, Z, gy, sx + nxv * off, sz + nzv * off, tx, tz, nxv, nzv, en || null, sp, nm ? hindiName(nm) : '', w >= 6.5 ? { w, dests: destsAt(G, node, id, tx, tz, nxv, nzv) } : null); out.nPole = (out.nPole || 0) + 1; } }
     }
     /* small signs. Give way: where this road ends at an unsignalled node that a bigger road also meets, 4 m before the node on the kerb. Speed camera and route number plate: 28 to 34 m before a signalled node on a long straight run (a camera on a minority of roads, the plate where the road has a number, NH 48 and the like). */
@@ -432,7 +425,7 @@ export function* buildTileSteps(tile, ctx) {
       if (clip & (end ? 2 : 1)) continue; if (!(G.oneway[id] === 0 || G.oneway[id] === (end ? 1 : -1))) continue; const node = end ? G.b[id] : G.a[id], fl = G.nodeFlags[node]; const nx0 = G.xz[node * 2], nz0 = G.xz[node * 2 + 1], e0 = end ? pts.length - 2 : 0; if (Math.hypot(pts[e0] - nx0, pts[e0 + 1] - nz0) > 3) continue;
       const i0 = end ? F.n - 1 : 0, i1 = end ? F.n - 2 : 1, dx = pts[i1 * 2] - pts[i0 * 2], dz = pts[i1 * 2 + 1] - pts[i0 * 2 + 1], L = Math.hypot(dx, dz); if (L < 6) continue; const tx = dx / L, tz = dz / L, nxv = -tz, nzv = tx, off = hw + 0.8, put = (d, extra) => signPole(M, X, Z, gy, pts[i0 * 2] + tx * d + nxv * off, pts[i0 * 2 + 1] + tz * d + nzv * off, tx, tz, nxv, nzv, null, 0, '', null, extra);
       if (!(fl & 1)) { const { head, nxt } = adjOf(G); let deg = 0, bigger = false; for (let h = head[node]; h >= 0; h = nxt[h]) { const e = h >> 1; if (e === id) continue; deg++; if ((RANKOF[G.classes[G.cls[e]]] || 0) > rank) bigger = true; }
-        if (deg >= 2 && bigger && (out.nGive || 0) < 30) { put(4, { kind: 'give' }); out.nGive = (out.nGive || 0) + 1; if (typeof window !== 'undefined') { const q = window.__signs || (window.__signs = { junction: 0, give: 0, chev: 0, cam: 0, ref: 0, signal: 0 }); q.give++; } }
+        if (deg >= 2 && bigger && (out.nGive || 0) < 30) { const stop = rank <= 1 && (G.nodeFlags[node] & 2) === 0 && hash(id * 13 + end) < 0.6; put(stop ? 3.5 : 4, { kind: stop ? 'stop' : 'give' }); if (stop) { const sx = pts[i0 * 2] + tx * 3.2, sz = pts[i0 * 2 + 1] + tz * 3.2, o0 = two ? 0.25 : -hw + 0.25, o1 = hw - 0.25, m = M.mark, y = gy + LIFT.mark, P = (o, d) => m.v(X(sx + nxv * o + tx * d), y, Z(sz + nzv * o + tz * d), 0, 1, 0, MARK); if (o1 - o0 > 1) { const q0 = P(o0, -0.25), q1 = P(o1, -0.25), q2 = P(o1, 0.25), q3 = P(o0, 0.25); m.tri(q0, q1, q2, 0, 1, 0); m.tri(q0, q2, q3, 0, 1, 0); } } out.nGive = (out.nGive || 0) + 1; if (typeof window !== 'undefined') { const q = window.__signs || (window.__signs = { junction: 0, give: 0, chev: 0, cam: 0, ref: 0, signal: 0 }); q.give++; } }
         /* Delhi-wide: a main road (secondary and up) arriving at any junction, signalled or not, gets its name board and speed plate, and the bigger ones the direction gantry (only 1,017 of the 38,913 main-road junction ends are mapped as signals, mostly outside Connaught Place) */
         else if (deg >= 2 && !bigger && rank >= 2 && w >= 5.5 && (out.nJ || 0) < 24) { const nm = G.names && G.name ? G.names[G.name[id]] : null, en = nm && nm.en, sp0 = G.speed ? G.speed[id] : 0, sp = sp0 >= 25 && sp0 <= 100 ? SPEEDS.reduce((b2, v) => Math.abs(v - sp0) < Math.abs(b2 - v) ? v : b2, 30) : ({ tertiary: 40, secondary: 50, primary: 60, trunk: 60 }[cls] || 40);
           signPole(M, X, Z, gy, pts[i0 * 2] + tx * 8.2 + nxv * off, pts[i0 * 2 + 1] + tz * 8.2 + nzv * off, tx, tz, nxv, nzv, en || null, sp, nm ? hindiName(nm) : '', rank >= 4 && w >= 6.5 ? { w, dests: destsAt(G, node, id, tx, tz, nxv, nzv) } : null); out.nJ = (out.nJ || 0) + 1; if (typeof window !== 'undefined') { const q = window.__signs || (window.__signs = { junction: 0, give: 0, chev: 0, cam: 0, ref: 0, signal: 0 }); q.junction++; } } }
@@ -473,7 +466,7 @@ export function* buildTileSteps(tile, ctx) {
   let infill = []; if (ctx.infill !== false) infill = yield* infillSteps(tile, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nInfill = infill.length; tile.buildings = tile.buildings.concat(infill); yield;
   /* P1 part 3 (infill.js `yards`): open ground left inside the dense blocks is paved, so a forecourt reads as one; own cells of the pavement mesh, same height and texture as the pavements */
   if (infill.yards) { for (const y of infill.yards) { const v = hash(y[0] * 7 + y[1] * 13), c = shade(0x8a867c, 0.85 + 0.3 * v), q = (x, z) => M.walk.v(X(x), gy + LIFT.walk, Z(z), 0, 1, 0, c, X(x) / TEX_WALK, Z(z) / TEX_WALK), a0 = q(y[0], y[1]), a1 = q(y[2], y[1]), a2 = q(y[2], y[3]), a3 = q(y[0], y[3]); M.walk.tri(a0, a3, a2, 0, 1, 0); M.walk.tri(a0, a2, a1, 0, 1, 0); } out.nYards = infill.yards.length; }
-  let cornN = 0, arcN = 0, nArc = 0;
+  let cornN = 0, arcN = 0, nArc = 0, drumN = 0;
   /* the CP colonnade (reference N19: white columns, a continuous shaded walk, shop bays behind): a paved walk D m deep along the wall, square columns every ~3.6 m at its outer edge, and a slab over it at 5.6 m (the photos R2 and R4: columns about 3 persons high, about 0.7 m across; an estimate) whose underside is darker; one wall is about 20 triangles per bay */
   const arcade = (B, ax, az, bx, bz, nx, nz, l, y0, D, k) => {
     const wc = shade(0xf1ede2, 0.94 + 0.08 * k), sc = wc.clone().multiplyScalar(0.62), pc = shade(0x9c978c, 0.9 + 0.2 * k), H = 5.6, T = 0.5, TH = 0.5, tx = (bx - ax) / l, tz = (bz - az) / l, nb = Math.max(2, Math.round(l / 3.6)), P = (u, d) => [ax + tx * u + nx * d, az + tz * u + nz * d];
@@ -481,7 +474,7 @@ export function* buildTileSteps(tile, ctx) {
     const flat = (pts, y, c, up) => { const idx = pts.map(pt => B.v(X(pt[0]), y, Z(pt[1]), 0, up, 0, c, 0.06, 0.06)); const cr = (pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[1][1] - pts[0][1]) * (pts[2][0] - pts[0][0]); const o = (cr < 0) === (up > 0) ? 0 : 1; B.tri(idx[0], idx[o ? 2 : 1], idx[o ? 1 : 2], 0, up, 0); B.tri(idx[0], idx[o ? 3 : 2], idx[o ? 2 : 3], 0, up, 0); };
     const A0 = P(0, 0), A1 = P(l, 0), A2 = P(l, D), A3 = P(0, D), ye = y0 + H;
     const wv = (pt) => M.walk.v(X(pt[0]), gy + LIFT.walk + 0.012, Z(pt[1]), 0, 1, 0, pc, X(pt[0]) / TEX_WALK, Z(pt[1]) / TEX_WALK), w = [wv(A0), wv(A1), wv(A2), wv(A3)]; M.walk.tri(w[0], w[3], w[2], 0, 1, 0); M.walk.tri(w[0], w[2], w[1], 0, 1, 0);   // paved walk
-    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz);                                           // soffit, top of the slab and its front fascia
+    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz); brandBand(M.cpbrand, X, Z, A3[0], A3[1], A2[0], A2[1], nx, nz, ye + TH, 1.1, 3.6, Math.floor(k * 1000));      /* the brand-board band on the arcade front (cpfacade.js) */                                           // soffit, top of the slab and its front fascia
     face(A0, A3, ye, ye + TH, wc, tx, tz); face(A1, A2, ye, ye + TH, wc, -tx, -tz);
     for (let q = 0; q <= nb; q++) { const u = q === 0 ? 0.5 : q === nb ? l - 0.5 : l * q / nb, rc = P(u, D - 0.55); roundColumn(M.colm, X, Z, rc[0], y0, rc[1], H, wc);       // the round column (near view)
       const c0 = P(u - T / 2, D - 0.8), c1 = P(u + T / 2, D - 0.8), c2 = P(u + T / 2, D - 0.3), c3 = P(u - T / 2, D - 0.3);                // columns
@@ -517,6 +510,9 @@ export function* buildTileSteps(tile, ctx) {
         if (ok) { arcN++; arcade(B, ax, az, bx, bz, nx, nz, l, y0, D, hash(b.id * 29 + i)); } }
       if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
     }
+    if (arc && drumN < 30 && Math.hypot(r[0] - CP_CIRCLE.cx, r[1] - CP_CIRCLE.cz) > 135 && Math.hypot(r[0] - CP_CIRCLE.cx, r[1] - CP_CIRCLE.cz) < 340) { let mine = 0; for (let i = 0; i < n && mine < 2 && drumN < 30; i++) { const p = (i + n - 1) % n, q = (i + 1) % n, ax = r[p * 2] - r[i * 2], az = r[p * 2 + 1] - r[i * 2 + 1], bx = r[q * 2] - r[i * 2], bz = r[q * 2 + 1] - r[i * 2 + 1], la = Math.hypot(ax, az), lb = Math.hypot(bx, bz); if (la < 10 || lb < 10) continue;
+        const cosA = (ax * bx + az * bz) / (la * lb), cross = ax * bz - az * bx; if (cosA < -0.34 || cosA > 0.5 || (cross < 0) !== ccw) continue;          /* a convex corner of 60 to 110 degrees: the drum corner block of the CP photos (cpfacade.js drumCorner), 2 a building and 30 a tile at most */
+        let ox = -(ax / la + bx / lb), oz = -(az / la + bz / lb); const ol = Math.hypot(ox, oz) || 1; drumCorner(B, X, Z, r[i * 2], r[i * 2 + 1], ox / ol, oz / ol, y0, y1, wc, wc.clone().multiplyScalar(0.16)); mine++; drumN++; } }
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
     let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }
     if (tris) { const all = contour.concat(...holes), base = B.p.length / 3; for (const q of all) B.v(X(q.x), y1, Z(q.y), 0, 1, 0, rc, 0.06, 0.06); for (const t of tris) B.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0); }
@@ -572,7 +568,7 @@ export function makeMaterials() {
   const plaza = (() => { const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex(plazaTex), roughness: 0.6, metalness: 0, envMapIntensity: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); return m; })();
 const rsign = (() => { const A = makeSignAtlas(); const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: A.tex, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide, envMapIntensity: 0.4, alphaTest: 0.5 }); return m; })(), junk = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.2 });
   const wearMat = (opacity, lit) => { const o = { vertexColors: true, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -9 }; return lit ? new THREE.MeshStandardMaterial({ ...o, roughness: 1, metalness: 0, envMapIntensity: 0.1 }) : new THREE.MeshBasicMaterial(o); };
-  const mats = { ground: dirt, plaza, rsign, junk, colm: junk, wearD: wearMat(0.16, false), wearL: wearMat(0.12, true), park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
-  mats.setNight = on => { for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
+  const mats = { ground: dirt, plaza, rsign, junk, colm: junk, cpbrand: makeBrandMaterial(), wearD: wearMat(0.16, false), wearL: wearMat(0.12, true), park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
+  mats.setNight = on => { mats.cpbrand.emissiveIntensity = on ? 1.0 : 0.12; for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
   return mats;
 }

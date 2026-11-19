@@ -1,8 +1,28 @@
+## 2026-11-20 16:00  A-2026-11-20-08  Handoff and status updated; final merge and deploy of the day
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `HANDOFF.md` (new section "State on 19/20 Nov 2026"), `docs/STATUS.md` (20 Nov section), tracker. The branch holds everything since PR 101: roundabout islands, CP facade, live signal heads, signs with places and STOP. Self-test 121.
+For the other stream: Anshul's Claude: please review A-2026-11-19-01 (Lite and Download overlap with your B14), A-2026-11-19-08 and A-2026-11-20-01 (still open), and run the phone benchmark (`?play&city=delhi&q=low&bench=30`, result in PERFORMANCE.md).
+Status: open
+
+## 2026-11-20 14:00  A-2026-11-20-07  Boards name real places; STOP signs; deployed to Rajul's account
+Branch: claude/delhi-p1-infill  Commit: a271972
+What changed: new `tools/build_places.mjs` makes `src/world/city/places.js` (369 places: landmarks, 285 metro and 47 railway stations, with Hindi); new `src/world/city/signdests.js` (destination logic, testable without three.js: for each road leaving a junction, the most prominent place 0.7 to 14 km away inside a 37 degree cone of the road's direction, distance = straight line x 1.25, else the road name); `tilemesh.js` uses it (km on place boards) and builds STOP signs with a stop line at minor-road approaches (residential or service meeting a main road) beside the give-way ones; `tools/selftest.mjs` 120 checks. Deployed a clean `git archive` of a271972 (not the working tree) to Rajul's account (whoami checked), live at https://game-for-peace.mailrajulsingh-in.workers.dev, Lite build; the served `dist/game.js` has the new code.
+Evidence: implemented; self-test 120; node check of the board text at CP, Karol Bagh and Lajpat Nagar (for example Pusa Road: ahead "Karol Bagh 1.2 km"); NOT seen in a browser after the places change, NOT on a phone; the place pick is a direction heuristic, not a route search, so a board can name a place the road reaches only by a turn.
+For the other stream: nothing required.
+Status: info
+
 ## 2026-11-20 12:00  A-2026-11-20-06  Road signs finished and applied Delhi-wide: Hindi for every name, green highway boards, diagram board, chevrons, give way, camera, route plates
 Branch: claude/delhi-p1-infill  Commit: see the PR (2514c92 and after)
 What changed: `src/world/city/tilemesh.js` (signs only where traffic arrives; boards only list roads a driver can enter; gantry with two round columns, truss, catwalk, boards 4.2 x 2.0 m on both sides; green boards with km for primary roads and up; a diagram board at a three-way junction; yellow chevrons on bends of 29 degrees or more; give-way triangles at minor roads; camera and route-number plates; name board, speed plate and gantry now also at unsignalled junctions of tertiary roads and up, because only 1,017 of the 38,913 main-road junction ends in the data are signals), new `src/world/city/hindi.js` (Hindi for the 2,800 names the pack has none for: a dictionary of Delhi street words plus a plain transliteration; the pack's own Hindi is always used first), `tools/selftest.mjs` (118 checks: Hindi is Devanagari for all names, the sign rules exist). `window.__signs` counts signs built (debug).
 Evidence: implemented; self-test 118; seen in a visible pane: the gantry at a junction near CP, chevron, give-way and camera signs near CP, give-way and junction signs in Lajpat Nagar; bench at the CP spawn, q=med, window visible, desktop: avg 11.9 ms, p95 27.7 ms, 444 calls, 394 k triangles (was 400 calls, 335 k before the new signs). NOT done: a phone, a person driving past them, Hindi spelling checked by a Hindi reader (the made names are plain transliteration), real destinations (Karol Bagh) on boards: the map has road names only, not place-to-road lists.
 For the other stream: nothing required. `put`/`signPole` in tilemesh.js are the places if you change signs.
+Status: info
+
+## 2026-11-20 16:00  A-2026-11-20-08  CP facade: brand boards and drum corners
+Branch: claude/delhi-p1-infill  Commit: 63eeddc (on origin under d7126f1)
+What changed: new `src/world/city/cpfacade.js`; `tilemesh.js` (an import, the `cpbrand` mesh and material, the board band call in `arcade()`, the drum corner loop in the building loop); `cityworld.js` (mesh name, view range). Details and the honest verdict in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121 checks from a clean archive of origin; seen in the game (a block with a round tower and the board band). NOT done: arched windows and pediment on the drum, night and dusk look, a visible-window frame cost.
+For the other stream: nothing required. The invented board names are in `BRANDS` in cpfacade.js; change them freely (names only, no logos).
 Status: info
 
 ## 2026-11-20 10:00  A-2026-11-20-05  Phone: full-screen home-screen app, HUD, resolution no longer dropped (shared files touched)
@@ -11,6 +31,13 @@ What changed: `index.html` (phone HUD: compact speed card, round map under it, 4
 Evidence: implemented; self-test passes; the owner's phone screenshot showed the strip and the lowered resolution; NOT yet seen on a phone after this change (the strip may need the icon removed and added again, iOS keeps the old setting), no frame times measured on a phone.
 For the other stream: Anshul's Claude: a phone measurement is still wanted (`?play&city=delhi&q=low&bench=30` on a real phone, results in PERFORMANCE.md); the radius and governor numbers above are guesses until then.
 Status: open
+
+## 2026-11-20 10:00  A-2026-11-20-05  Live signal heads
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `src/world/city/signalheads.js` and `signalphase.js`; `cityworld.js` (5 lines of hooks); `tilemesh.js` `mastArm` (3 lines: lenses become lamp records); `tools/selftest.mjs` (+1 test). The heads follow the cars' rule exactly (green 14 s per axis; amber only in the last 2.5 s of a green slot).
+Evidence: implemented; self-test 119 checks, also from a clean `git archive` of HEAD; read back from the page: 1,179 lamps, 0 mismatches against the rule at two times. NOT done: a car watched stopping under a red head, the night look, a visible-window frame cost.
+For the other stream: nothing required. Two other sessions edit `tilemesh.js`; my commit touched only the 3 mast-arm lines.
+Status: info
 
 ## 2026-11-20 08:00  A-2026-11-20-04  Road signs rebuilt (GTA/Delhi references), phone controls and place banner (shared files touched)
 Branch: claude/delhi-p1-infill  Commit: see the PR

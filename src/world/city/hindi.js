@@ -10,7 +10,7 @@ const WORDS = {
   airport: 'एयरपोर्ट', metro: 'मेट्रो', bus: 'बस', stand: 'स्टैंड', hospital: 'अस्पताल', school: 'स्कूल', university: 'विश्वविद्यालय', college: 'कॉलेज', temple: 'मंदिर', mandir: 'मंदिर',
   masjid: 'मस्जिद', gurudwara: 'गुरुद्वारा', church: 'चर्च', fort: 'किला', qila: 'किला', red: 'लाल', kila: 'किला', ganj: 'गंज', gunj: 'गंज', mandi: 'मंडी', sabzi: 'सब्ज़ी', block: 'ब्लॉक',
   sector: 'सेक्टर', phase: 'फेज़', pocket: 'पॉकेट', village: 'गाँव', gaon: 'गाँव', khan: 'खान', ali: 'अली', shah: 'शाह', kalan: 'कलां', khurd: 'खुर्द', sarai: 'सराय', kunj: 'कुंज', apartments: 'अपार्टमेंट्स',
-  of: 'ऑफ़', the: 'द', and: 'और', to: 'टू', ke: 'के', ka: 'का', ki: 'की', and_: 'और', service: 'सर्विस', slip: 'स्लिप', approach: 'एप्रोच', entry: 'एंट्री', exit: 'एग्ज़िट'
+  middle: 'मिडिल', radial: 'रेडियल', hanuman: 'हनुमान', connaught: 'कनॉट', ahmed: 'अहमद', kidwai: 'किदवई', rafi: 'रफ़ी', tolstoy: 'टॉलस्टॉय', kasturba: 'कस्तूरबा', sansad: 'संसद', janpath: 'जनपथ', ashok: 'अशोक', ashoka: 'अशोक', akbar: 'अकबर', shahjahan: 'शाहजहाँ', aurangzeb: 'औरंगज़ेब', mathura: 'मथुरा', ghazipur: 'ग़ाज़ीपुर', noida: 'नोएडा', gurgaon: 'गुड़गाँव', gurugram: 'गुरुग्राम', faridabad: 'फ़रीदाबाद', rohtak: 'रोहतक', najafgarh: 'नजफ़गढ़', rohini: 'रोहिणी', dwarka: 'द्वारका', saket: 'साकेत', okhla: 'ओखला', mehrauli: 'महरौली', 'of': 'ऑफ़', the: 'द', and: 'और', to: 'टू', ke: 'के', ka: 'का', ki: 'की', and_: 'और', service: 'सर्विस', slip: 'स्लिप', approach: 'एप्रोच', entry: 'एंट्री', exit: 'एग्ज़िट'
 };
 const NUM = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
 /* longest match first */
