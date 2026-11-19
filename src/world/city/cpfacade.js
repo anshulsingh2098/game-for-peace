@@ -54,7 +54,7 @@ export function drumCorner(B, X, Z, vx, vz, ox, oz, y0, y1, wc, dark) {
       const fh = V(sx0, yS, sz0, ox, 0, oz, ring); let fp = fd; for (let k3 = 1; k3 <= 4; k3++) { const an = Math.PI * k3 / 4, ex = sx0 - px * fw * Math.cos(an), ez = sz0 - pz * fw * Math.cos(an), ey = yS + fw * Math.sin(an), cu = V(ex, ey, ez, ox, 0, oz, ring); B.tri(fh, fp, cu, ox, 0, oz); fp = cu; } }
     const a = V(wx - px * hw2, yb, wz - pz * hw2, ox, 0, oz, dark), b = V(wx + px * hw2, yb, wz + pz * hw2, ox, 0, oz, dark), c2 = V(wx + px * hw2, yb + hStraight, wz + pz * hw2, ox, 0, oz, dark), d = V(wx - px * hw2, yb + hStraight, wz - pz * hw2, ox, 0, oz, dark); B.tri(a, b, c2, ox, 0, oz); B.tri(a, c2, d, ox, 0, oz);
     const hub = V(wx, yb + hStraight, wz, ox, 0, oz, dark); let prev = d; for (let k2 = 1; k2 <= 6; k2++) { const an = Math.PI * k2 / 6, ex = wx - px * hw2 * Math.cos(an), ez = wz - pz * hw2 * Math.cos(an), ey = yb + hStraight + hw2 * Math.sin(an), cur = V(ex, ey, ez, ox, 0, oz, dark); B.tri(hub, prev, cur, ox, 0, oz); prev = cur; }
-    const sx = wx + ox * 0.1, sz = wz + oz * 0.1, sw = w2 + 0.5, s0 = V(sx - px * sw / 2, yb - 0.4, sz - pz * sw / 2, ox, 0, oz, sill), s1 = V(sx + px * sw / 2, yb - 0.4, sz + pz * sw / 2, ox, 0, oz, sill), s2 = V(sx + px * sw / 2, yb, sz + pz * sw / 2, ox, 0, oz, sill), s3 = V(sx - px * sw / 2, yb, sz - pz * sw / 2, ox, 0, oz, sill); B.tri(s0, s1, s2, ox, 0, oz); B.tri(s0, s2, s3, ox, 0, oz);
+    const sx = wx + ox * 0.1, sz = wz + oz * 0.1, sw = w2 + 0.5, Vu = (x, y, z, c, u, v) => B.v(X(x), y, Z(z), ox, 0, oz, c, u, v), s0 = Vu(sx - px * sw / 2, yb - 0.4, sz - pz * sw / 2, sill, 0.059, 0.031), s1 = Vu(sx + px * sw / 2, yb - 0.4, sz + pz * sw / 2, sill, 0.191, 0.031), s2 = Vu(sx + px * sw / 2, yb, sz + pz * sw / 2, sill, 0.191, 0.082), s3 = Vu(sx - px * sw / 2, yb, sz - pz * sw / 2, sill, 0.059, 0.082);      /* the sill block shows the balustrade strip (rail and posts) of the CP facade texture: no extra triangles for the posts */ B.tri(s0, s1, s2, ox, 0, oz); B.tri(s0, s2, s3, ox, 0, oz);
     const t0 = V(sx - px * sw / 2, yb, sz - pz * sw / 2, 0, 1, 0, sill), t1 = V(sx + px * sw / 2, yb, sz + pz * sw / 2, 0, 1, 0, sill), t2 = V(sx + px * sw / 2 - ox * 0.12, yb, sz + pz * sw / 2 - oz * 0.12, 0, 1, 0, sill), t3 = V(sx - px * sw / 2 - ox * 0.12, yb, sz - pz * sw / 2 - oz * 0.12, 0, 1, 0, sill); B.tri(t0, t1, t2, 0, 1, 0); B.tri(t0, t2, t3, 0, 1, 0); }
   { const pb = top + 0.35, pcx = cx + ox * (R + 0.2), pcz = cz + oz * (R + 0.2), hwp = 1.9, ph = 1.35, f0 = V(pcx - px * hwp, pb, pcz - pz * hwp, ox, 0, oz, ring), f1 = V(pcx + px * hwp, pb, pcz + pz * hwp, ox, 0, oz, ring), f2 = V(pcx, pb + ph, pcz, ox, 0, oz, ring); B.tri(f0, f1, f2, ox, 0, oz);
     const dpt = 0.45, g0 = V(pcx - px * hwp - ox * dpt, pb, pcz - pz * hwp - oz * dpt, 0, 1, 0, cap), g1 = V(pcx - ox * dpt, pb + ph, pcz - oz * dpt, 0, 1, 0, cap), g2 = V(pcx + px * hwp - ox * dpt, pb, pcz + pz * hwp - oz * dpt, 0, 1, 0, cap); B.tri(f0, g0, g1, 0, 1, 0); B.tri(f0, g1, f2, 0, 1, 0); B.tri(f1, f2, g1, 0, 1, 0); B.tri(f1, g1, g2, 0, 1, 0); }
@@ -112,4 +112,37 @@ export function arcadePools(m, X, Z, ax, az, tx, tz, nx, nz, l, D, y, bays) {
   const W = WARM; let q = 0; for (let k = 0; k < bays; k++) { const u = (k + 0.5) * l / bays, cx = ax + tx * u + nx * D * 0.8, cz = az + tz * u + nz * D * 0.8, w = l / bays * 1.5, d = 6.6;
     const P = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].map(([a, b, uu, vv]) => m.v(X(cx + tx * a * w / 2 + nx * b * d / 2), y, Z(cz + tz * a * w / 2 + nz * b * d / 2), 0, 1, 0, W, uu, vv)); m.tri(P[0], P[1], P[2], 0, 1, 0); m.tri(P[0], P[2], P[3], 0, 1, 0); q += 2; }
   return q;
+}
+
+/* The CP facade texture (phase 2 of docs/DELHI_MAIN_PLAN.md): 4 bays by 4 storeys on 256 px, a bay 3.6 m wide and a storey 4.0 m tall, so a floor is 64 px and the texture's floor lines fall exactly on the string courses (the walls of CP blocks are mapped from the top of the arcade band, y = 7.3 m, see tilemesh.js). Rows from the bottom: 0 the first upper floor: tall arched windows with white surrounds and a balustrade rail with posts; 1 and 2 rectangular windows with lintels, sills and green louvred shutters; 3 the arcade zone seen behind the columns (plain stucco, a darker band). Returns [colour canvas, emissive canvas] (lit windows glow warm at night). The texel at (0.06, 0.06) stays plain wall: the drum corner blocks use it as their blank area. Own work, drawn in code. */
+export function cpFacadeTextures(rnd) {
+  const mk = () => { const c = document.createElement('canvas'); c.width = c.height = 256; return c; }, cv = mk(), ev = mk(), g = cv.getContext('2d'), e = ev.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); e.fillStyle = '#000'; e.fillRect(0, 0, 256, 256);
+  const lit = () => { const t = rnd(); return t < 0.45 ? '#ffd58a' : t < 0.6 ? '#bfe3ff' : null; };
+  for (let k = 0; k < 4; k++) for (let q = 0; q < 4; q++) { const x = q * 64, y = (3 - k) * 64;         // cell: k the storey from the bottom, canvas y grows downward
+    if (k === 3) { g.fillStyle = '#ece6d8'; g.fillRect(x, y, 64, 64); g.fillStyle = '#d6cfbd'; g.fillRect(x, y + 40, 64, 10); continue; }
+    g.fillStyle = '#e4dfd2'; g.fillRect(x, y, 3, 64); g.fillRect(x + 61, y, 3, 64);                                                                   // the bay edges (pilaster shadow)
+    const wx = x + 21, ww = 22, wy = y + 16, wh = 36, c = lit();
+    if (k === 0) { g.fillStyle = '#f4f2ea'; g.fillRect(wx - 3, wy + 9, ww + 6, wh - 9 + 3); g.beginPath(); g.arc(x + 32, wy + 9, 14, Math.PI, 0); g.fill();                 // the surround, arched
+      g.fillStyle = '#33465c'; g.fillRect(wx, wy + 9, ww, wh - 9); g.beginPath(); g.arc(x + 32, wy + 9, 11, Math.PI, 0); g.fill(); g.fillStyle = '#c9c8c0'; g.fillRect(x + 31, wy - 2, 2, wh + 2); g.fillRect(wx, wy + 22, ww, 1);
+      if (c) { e.fillStyle = c; e.fillRect(wx + 1, wy + 9, ww - 2, wh - 11); e.beginPath(); e.arc(x + 32, wy + 9, 10, Math.PI, 0); e.fill(); }
+      g.fillStyle = '#e9e5d8'; g.fillRect(wx - 6, y + 43, ww + 12, 2);                                                                              // the balustrade rail
+      g.fillStyle = '#dcd7c8'; for (let p = 0; p < 8; p++) g.fillRect(wx - 5 + p * 5, y + 45, 2, 9); g.fillRect(wx - 6, y + 54, ww + 12, 2); }
+    else { g.fillStyle = '#f0ede2'; g.fillRect(wx - 3, wy - 5, ww + 6, 5); g.fillRect(wx - 2, wy + wh, ww + 4, 3);                                    // lintel and sill
+      g.fillStyle = '#33465c'; g.fillRect(wx, wy, ww, wh); g.fillStyle = '#c9c8c0'; g.fillRect(x + 31, wy, 2, wh); g.fillRect(wx, wy + 14, ww, 1);
+      if (c) { e.fillStyle = c; e.fillRect(wx + 1, wy + 1, ww - 2, wh - 2); }
+      for (const sx of [wx - 9, wx + ww + 1]) { g.fillStyle = '#5b7a55'; g.fillRect(sx, wy - 1, 8, wh + 2); g.fillStyle = '#46603f'; for (let l2 = 0; l2 < 12; l2++) g.fillRect(sx + 1, wy + l2 * 3, 6, 1); } }
+    g.fillStyle = '#cfc9bb'; g.fillRect(x, y + 61, 64, 3);                                                                                            // the floor line (a string course goes here)
+  }
+  return [cv, ev];
+}
+
+/* a deep roof cornice for a CP wall (phase 2): three stacked projecting bands (0.25, 0.5 and 0.7 m out, 0.35, 0.3 and 0.3 m tall) just under the roof edge, in the building mesh (blank area 0.06); about 12 triangles a wall. From a to b, outward normal (nx, nz), the roof edge at y1. */
+export function roofCornice(B, X, Z, ax, az, bx, bz, nx, nz, y1, wc) {
+  const uv = 0.06, c = wc.clone().multiplyScalar(1.1), d = wc.clone().multiplyScalar(0.9); let tris = 0;
+  const V = (x, y, z, ny, nxx, nzz, col2) => B.v(X(x), y, Z(z), nxx, ny, nzz, col2, uv, uv);
+  for (const [off, h, y] of [[0.25, 0.35, y1 - 1.0], [0.5, 0.3, y1 - 0.65], [0.7, 0.3, y1 - 0.35]]) {
+    const a0 = V(ax + nx * off, y, az + nz * off, 0, nx, nz, d), b0 = V(bx + nx * off, y, bz + nz * off, 0, nx, nz, d), b1 = V(bx + nx * off, y + h, bz + nz * off, 0, nx, nz, c), a1 = V(ax + nx * off, y + h, az + nz * off, 0, nx, nz, c); B.tri(a0, b0, b1, nx, 0, nz); B.tri(a0, b1, a1, nx, 0, nz);
+    const t0 = V(ax, y + h, az, 1, 0, 0, c), t1 = V(bx, y + h, bz, 1, 0, 0, c); B.tri(a1, b1, t1, 0, 1, 0); B.tri(a1, t1, t0, 0, 1, 0); tris += 4; }
+  return tris;
 }

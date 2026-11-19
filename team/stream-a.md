@@ -1,3 +1,10 @@
+## 2026-11-21 16:00  A-2026-11-21-05  Delhi main plan phase 2: CP facade texture, roof cornice, corner columns
+Branch: claude/delhi-main-phase-2 (from main 48e6dac, separate worktree)  Commit: see the PR
+What changed: `src/world/city/cpfacade.js` (`cpFacadeTextures`, `roofCornice`, sill uv), `tilemesh.js` (new mesh and material `bldgCP`, wall mapping for CP blocks, the cornice call, the corner portico), `cityworld.js` (mesh name). Details in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121; seen by day and by night at a drum corner; q=high frames equal to main (11.8 against 12.1 ms average). NOT done: phase 3 onward, a phone, the owner's scoring.
+For the other stream: nothing required.
+Status: info
+
 ## 2026-11-21 12:00  A-2026-11-21-03  Frame times, desktop: PR 103 branch is as fast as main (phone still needed)
 Branch: claude/cp-facade-detail  Commit: see PR 103
 What changed: nothing in the game; measurement logged in `docs/CP_MATCH_LOG.md`.
