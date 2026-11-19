@@ -1,3 +1,9 @@
+## 2026-11-20 16:00  A-2026-11-20-08  Handoff and status updated; final merge and deploy of the day
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `HANDOFF.md` (new section "State on 19/20 Nov 2026"), `docs/STATUS.md` (20 Nov section), tracker. The branch holds everything since PR 101: roundabout islands, CP facade, live signal heads, signs with places and STOP. Self-test 121.
+For the other stream: Anshul's Claude: please review A-2026-11-19-01 (Lite and Download overlap with your B14), A-2026-11-19-08 and A-2026-11-20-01 (still open), and run the phone benchmark (`?play&city=delhi&q=low&bench=30`, result in PERFORMANCE.md).
+Status: open
+
 ## 2026-11-20 14:00  A-2026-11-20-07  Boards name real places; STOP signs; deployed to Rajul's account
 Branch: claude/delhi-p1-infill  Commit: a271972
 What changed: new `tools/build_places.mjs` makes `src/world/city/places.js` (369 places: landmarks, 285 metro and 47 railway stations, with Hindi); new `src/world/city/signdests.js` (destination logic, testable without three.js: for each road leaving a junction, the most prominent place 0.7 to 14 km away inside a 37 degree cone of the road's direction, distance = straight line x 1.25, else the road name); `tilemesh.js` uses it (km on place boards) and builds STOP signs with a stop line at minor-road approaches (residential or service meeting a main road) beside the give-way ones; `tools/selftest.mjs` 120 checks. Deployed a clean `git archive` of a271972 (not the working tree) to Rajul's account (whoami checked), live at https://game-for-peace.mailrajulsingh-in.workers.dev, Lite build; the served `dist/game.js` has the new code.

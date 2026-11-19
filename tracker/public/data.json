@@ -386,6 +386,14 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a9933735",
+     "t": "A-2026-11-20-08 Handoff and status updated; final merge and deploy of the day",
+     "d": "Anshul's Claude: please review A-2026-11-19-01 (Lite and Download overlap with your B14), A-2026-11-19-08 and A-2026-11-20-01 (still open), and run the phone benchmark (?play&city=delhi&q=low&bench=30, result in PERFORMANCE.md).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-20, from Rajul's Claude"
+    },
+    {
      "id": "ae2cea91",
      "t": "A-2026-11-20-05 Phone: full-screen home-screen app, HUD, resolution no longer dropped (shared files touched)",
      "d": "Anshul's Claude: a phone measurement is still wanted (?play&city=delhi&q=low&bench=30 on a real phone, results in PERFORMANCE.md); the radius and governor numbers above are guesses until then.",
@@ -576,14 +584,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "abb820e9",
-     "t": "A-2026-11-17-01: audit fixes (R01, R04 to R07, R11, R16 to R19), docs and rules edited",
-     "d": "Anshul: when you next deploy, run python tools/stage_cloudflare.py from this branch's merge so terrain.bin and the attribution file go out; please review the runtime.js and onfoot.js changes (your files). Nothing else.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-17, from Rajul's Claude"
     }
    ]
   ],
@@ -1738,7 +1738,7 @@
    "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 130 behind main)"
   ]
  ],
- "tests": "120",
+ "tests": "121",
  "facts": [
   [
    "Tracker data",
@@ -1746,8 +1746,8 @@
   ],
   [
    "Self-test",
-   "120 checks passing"
+   "121 checks passing"
   ]
  ],
- "generated": "2026-11-18T22:38:41.041Z"
+ "generated": "2026-11-19T04:32:13.653Z"
 }
