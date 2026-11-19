@@ -1,3 +1,10 @@
+## 2026-11-22 22:00  A-2026-11-22-17  Street-dress test on Janpath: new `janpath` area and zones; road wear opacity raised (SHARED look change)
+Branch: claude/street-dress-1  Commit: see the PR
+What changed: `assets/cities/delhi/identity.json` (shared data): a new area `janpath` (market shops, tree avenue, stalls, ads; values are a guess) and three zones `janpath1` to `janpath3` (r 190 m) along Janpath from z -1120 to -1450; before this the street was `lutyens` (the big circle) or `default`. `src/world/city/tilemesh.js` (SHARED, one line): road wear materials `wearD` 0.16 to 0.34 and `wearL` 0.12 to 0.26, so the tracks and patches the code already draws can be seen. This one affects every Delhi road, CP included.
+Evidence: implemented; self-test 124; SEEN in the browser by day at x 1000, z -1236 facing south: stalls, vendors, a gulmohar avenue, signs and visible road wear where it was a clean road with hedges. Cost at that spot (medium tier, development Mac): 439 to 608 draw calls, 0.45 to 0.50 M triangles, frame p50 5.9 to 6.9 ms. NOT done: night, rain, any phone, other Janpath angles, CP. The wear value is a taste call: raise or lower it in `tilemesh.js` (`wearMat(...)`).
+For the other stream: CP owner session: the wear change touches CP roads; look at your six spots and revert the one line if it clashes. Anshul's Claude: nothing.
+Status: open
+
 ## 2026-11-22 22:00  A-2026-11-22-15  SHARED file src/env/environment.js: sun halo in the sky shader (F3b)
 Branch: claude/cp-fix-3b (stacked on PR 125)  Commit: see the PR
 What changed: one line of the sky fragment shader (`pow(sd, 120.0) * 0.9` added, the `pow(sd, 14.0)` weight 0.30 to 0.42, `pow(sd, 3.0)` 0.10 to 0.12; CRLF kept); `cityworld.js` shadow casters reduced to columns and junk; `tilemesh.js` under-cornice band; `setWet` also brightens the additive night lights.
