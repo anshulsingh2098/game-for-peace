@@ -1,3 +1,10 @@
+## 2026-11-21 22:00  A-2026-11-21-09  Delhi main plan phase 6: Kartavya Path area rules
+Branch: claude/delhi-main-phase-6 (stacked on phase 5)  Commit: see the PR
+What changed: `identity.json` (zone and area `kartavya`), small hooks in `infill.js`, `tilemesh.js`, `streetlife.js` (world files, edited under the 17 Nov Delhi override), `tools/kartavya_views.json`.
+Evidence: implemented; self-test 121; one spot seen by day. NOT done: spots k2 to k6, dusk, frame cost, phone.
+For the other stream: Anshul's Claude: the zone centre and radius are a guess; correct them from the map if you know better.
+Status: info
+
 ## 2026-11-21 21:00  A-2026-11-21-08  Delhi main plan phase 5: palms and wide pavements
 Branch: claude/delhi-main-phase-5 (stacked on phase 4)  Commit: see the PR
 What changed: `cpfacade.js` (`makePalmCanvas`), `cityworld.js` (palm card hook), `streetlife.js` (palm sizing), `assets/cities/delhi/identity.json` (palm species), `tilemesh.js` (4.2 m pavements near CP). Own work, no licence needed.

@@ -1,0 +1,11 @@
+{
+ "about": "Six camera spots for the main region outside CP (phase 6 of docs/DELHI_MAIN_PLAN.md), same format as cp_views.json. Move the car with window.__next.city.transit.onTeleport(x, z, yaw). Only k1 was looked at (21 Nov 2026); the rest are first guesses from the landmark positions in src/world/city/places.js and must be adjusted after looking.",
+ "spots": [
+  { "id": "k1-avenue", "what": "Kartavya Path, east towards India Gate, lawns and the jamun avenue", "x": 1200, "z": 60, "yaw": 1.5708, "time": "day", "checked": true },
+  { "id": "k2-indiagate", "what": "India Gate from the avenue, 150 m short", "x": 1850, "z": 105, "yaw": 1.5708, "time": "day", "checked": false },
+  { "id": "k3-west", "what": "Kartavya Path looking west to Rashtrapati Bhavan", "x": 1100, "z": 60, "yaw": -1.5708, "time": "day", "checked": false },
+  { "id": "k4-dusk", "what": "the avenue at dusk, lamps on", "x": 1200, "z": 60, "yaw": 1.5708, "time": "dusk", "checked": false },
+  { "id": "k5-lutyens", "what": "a Lutyens street, low cream bungalows behind compound walls and hedges", "x": 700, "z": 300, "yaw": 0.0, "time": "day", "checked": false },
+  { "id": "k6-roundabout", "what": "a Lutyens roundabout from a drive-in arm", "x": 1500, "z": 700, "yaw": 0.0, "time": "day", "checked": false }
+ ]
+}

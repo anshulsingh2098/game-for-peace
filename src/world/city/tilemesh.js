@@ -119,7 +119,7 @@ function junctionShapes(J, M, X, Z, gy, out) {
   out.nFillets = nf; out.nNotches = nn;
 }
 /* How worn a street is (0 = new and swept, 1 = broken, dusty and littered), by area: the VIP and government areas and the big landmarks are kept clean, the busy and old parts are not (owner, 20 Nov 2026: Delhi's roads are not all clean). A street within 220 m of a major landmark counts a third as much. These numbers are a judgement from the owner's description, not a survey. */
-const GRIME = { lutyens: 0.08, business: 0.25, cp: 0.3, dda: 0.5, default: 0.65, market: 0.85, village: 0.9, oldDelhi: 1.0 };
+const GRIME = { kartavya: 0.04, lutyens: 0.08, business: 0.25, cp: 0.3, dda: 0.5, default: 0.65, market: 0.85, village: 0.9, oldDelhi: 1.0 };
 const VIP_TYPES = new Set(['government', 'memorial', 'avenue', 'museum', 'convention', 'fort', 'tomb', 'monument', 'archaeological', 'observatory', 'stepwell']);      // landmarks that are kept clean around; markets, stations, temples and the busy districts are landmarks too but are not kept clean
 const grimeAt = (ID, vip, x, z) => { let g = GRIME[ID && ID.areaNameAt ? ID.areaNameAt(x, z) : 'default']; if (g === undefined) g = 0.65; for (const l of vip) if (Math.hypot(l.x - x, l.z - z) < 220) { g *= 0.35; break; } return g; };
 
@@ -311,7 +311,7 @@ export function* buildTileSteps(tile, ctx) {
   /* ---- ground: land use first, then blocks, parks and water ---- */
   for (const l of tile.landuse) { const c = BLOCK[l.class]; if (c && !['residential', 'commercial', 'retail', 'industrial'].includes(l.class)) flat(M.ground, l.ring, l.holes, c, 0); }
   /* the land between the streets: lawns (green, the real grass texture) where the area is green (Lutyens' Delhi, DDA colonies, business parks) or the block is mapped as grass or a garden, dusty earth elsewhere (the sand texture, warm, not a grey blotch) */
-  const IDN = ctx.life && ctx.life.identity, GREEN_AREAS = new Set(['lutyens', 'dda', 'business']), GREEN_USE = new Set(['grass', 'meadow', 'recreation_ground', 'village_green', 'park', 'garden', 'forest', 'flowerbed']);
+  const IDN = ctx.life && ctx.life.identity, GREEN_AREAS = new Set(['lutyens', 'kartavya', 'dda', 'business']), GREEN_USE = new Set(['grass', 'meadow', 'recreation_ground', 'village_green', 'park', 'garden', 'forest', 'flowerbed']);
   for (const b of tile.blocks) { let cx = 0, cz = 0; const n = b.ring.length / 2; for (let i = 0; i < n; i++) { cx += b.ring[i * 2]; cz += b.ring[i * 2 + 1]; } cx /= n || 1; cz /= n || 1;
     const an = IDN && IDN.areaNameAt ? IDN.areaNameAt(cx, cz) : '', h = ((Math.floor(cx * 0.37) * 73856093) ^ (Math.floor(cz * 0.37) * 19349663)) >>> 0, v = (h % 1000) / 1000;
     if (GREEN_USE.has(b.landuse) || (GREEN_AREAS.has(an) && v < 0.8)) flat(M.lawn, b.ring, b.holes, shade(0xcfe69a, 0.82 + 0.3 * v), LIFT.park * 0.5);

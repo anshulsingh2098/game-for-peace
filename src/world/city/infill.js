@@ -15,6 +15,7 @@ export const STYLE = {
   dda: { rows: 1, fill: 0.45, floors: [4, 5], w: [14, 30], d: [10, 14], use: 'residential' },
   cp: { rows: 2, fill: 0.5, floors: [3, 4], w: [12, 22], d: [14, 18], use: 'commercial' },
   lutyens: { rows: 1, fill: 0.1, floors: [1, 2], w: [14, 24], d: [16, 24], use: 'residential' },
+  kartavya: { rows: 1, fill: 0.02, floors: [1, 1], w: [14, 20], d: [14, 20], use: 'residential' },
   business: { rows: 1, fill: 0.45, floors: [5, 10], w: [18, 36], d: [18, 30], use: 'office' },
 };
 const MAX_PER_TILE = 4000, INTERIOR_MAX = 1800, YARD_MAX = 700, YARD_STREET = 2.5, LANE = 3.2, INTERIOR_FILL = 0.8, EDGE_MARGIN = 25, STREET_CLEAR = 0.9, FLOOR = 3.2;

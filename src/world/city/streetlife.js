@@ -107,7 +107,7 @@ export function* buildStreetLife(tile, ctx, out) {
   for (const pc of pieces) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     if (pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 14) { if (pc.lay > 0 && pc.len > 20) deckLife(pc); continue; }
-    const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z), A = ID.area(an), edge = pc.hw + (pc.walk > 0 ? 1.7 : 0.7), lamp = an === 'cp' || an === 'lutyens' || an === 'business';
+    const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z), A = ID.area(an), edge = pc.hw + (pc.walk > 0 ? 1.7 : 0.7), lamp = an === 'cp' || an === 'lutyens' || an === 'kartavya' || an === 'business';
     /* poles */
     let prev = null, prevSide = 0; const step = lamp ? 32 : 28, sd = rnd(pc.id, 5) < 0.5 ? 1 : -1;
     for (let s = 6 + rnd(pc.id, 6) * 6; s < pc.len - 6 && st.poles < cap.poles; s += step) {
@@ -163,7 +163,7 @@ export function* buildStreetLife(tile, ctx, out) {
         const forest = p.class === 'forest' || p.class === 'scrub', list = forest ? ['neem', 'peepal', 'jamun'] : A.trees.species, id = list[Math.floor(rnd(904, key) * list.length)], spc = ID.species.get(id); if (!spc || spc.id === 'bougainvillea') continue; const [lx, lz] = L(px, pz); plant(lx, gy, lz, spc, rnd(905, key), bloomOnP(spc), big * (forest ? 0.8 + 0.4 * rnd(906, key) : 1)); np++; if (p.class === 'colony') nc++; st.trees++; circle(px, pz, 0.4); } }
   }
   /* ---- hedges: a low clipped hedge along the outer edge of the avenues of Lutyens' Delhi, DDA colonies and Connaught Place ---- */
-  { let nh = 0; for (const pc of pieces) { if (nh > 260 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 24) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if (an !== 'lutyens' && an !== 'dda' && an !== 'cp') continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
+  { let nh = 0; for (const pc of pieces) { if (nh > 260 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 24) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if (an !== 'lutyens' && an !== 'kartavya' && an !== 'dda' && an !== 'cp') continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
       for (const side of [1, -1]) { if (rnd(pc.id, 70 + side) > 0.55) continue; for (let s = 6; s < pc.len - 6 && nh < 260; s += 6) { const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 3.4 : 2.4), px = o.x + -o.tz * off * side, pz = o.z + o.tx * off * side; if (insideBuilding(px, pz, 1.2) || inRoad(px, pz, 0.8) || [-3.1, 3.1].some(e => inRoad(px + o.tx * e, pz + o.tz * e, 1.1) || insideBuilding(px + o.tx * e, pz + o.tz * e, 0.5))) continue; /* both ends too: a 5.6 m hedge no longer reaches across the mouth of a side street (seen from above at Radial Road 7, CP match log) */ const [lx, lz] = L(px, pz); box(M.prop, lx, gy, lz, 5.6, 0.85, 0.9, o.tx, o.tz, C(0x3a6a2a), C(0x4f8236)); nh++; } } }
     st.hedges = nh; }
   /* ---- compound walls: a low plastered wall with a coping along the plot edge of the residential streets of Lutyens' Delhi and the DDA colonies, in gaps and not through anything ---- */
