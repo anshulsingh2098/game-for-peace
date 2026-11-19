@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VEHICLES } from '../../vehicle/defs.js';
 
-export const NEAR = { count: 5, range: 32, parked: 1 };
+export const NEAR = { count: 3, range: 24, parked: 1 };
 /* traffic kind -> garage car whose full model replaces it */
 export const FULL = { 'maruti-800': 'maruti', 'figo-hatch': 'figo', 'aspire-hatch': 'aspire', 'aspire-taxi': 'aspire', 'sx4-hatch': 'sx4', 'endeavour-suv': 'everest', 'gtr-sports': 'r35' };
 

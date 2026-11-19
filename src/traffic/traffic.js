@@ -21,7 +21,7 @@ export async function loadTrafficPack(dir = 'assets/traffic') {
       node.traverse(o => { if (!o.isMesh) return; const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); (o.material && o.material.name === 'Paint' ? (p.paint = g) : (p.rest = g)); });
       if (p.rest || p.paint) parts[kind] = p;
     }
-    const kinds = Object.entries(meta).filter(([k]) => parts[k]).map(([name, m]) => ({ name, len: m.len, w: m.w, h: m.h, weight: m.weight, paintable: m.paintable }));
+    const kinds = Object.entries(meta).filter(([k]) => parts[k] && !k.endsWith('-lo')).map(([name, m]) => ({ name, len: m.len, w: m.w, h: m.h, weight: m.weight, paintable: m.paintable }));
     return kinds.length ? { kinds, parts } : null;
   } catch (e) { console.warn('traffic models not loaded, using plain boxes', e); return null; }
 }

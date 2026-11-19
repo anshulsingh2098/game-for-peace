@@ -128,12 +128,12 @@
   "tris": 2999
  },
  "maruti-800": {
-  "len": 3.41,
+  "len": 3.38,
   "w": 1.44,
-  "h": 1.43,
+  "h": 1.86,
   "weight": 14,
   "paintable": true,
-  "tris": 3725
+  "tris": 3387
  },
  "figo-hatch": {
   "len": 3.8,
@@ -150,5 +150,53 @@
   "weight": 5,
   "paintable": true,
   "tris": 3000
+ },
+ "sx4-hatch-lo": {
+  "len": 4.27,
+  "w": 1.78,
+  "h": 1.62,
+  "weight": 9,
+  "paintable": true,
+  "tris": 238
+ },
+ "endeavour-suv-lo": {
+  "len": 4.97,
+  "w": 1.95,
+  "h": 2.13,
+  "weight": 5,
+  "paintable": true,
+  "tris": 391
+ },
+ "gtr-sports-lo": {
+  "len": 4.66,
+  "w": 1.95,
+  "h": 1.23,
+  "weight": 1,
+  "paintable": true,
+  "tris": 119
+ },
+ "maruti-800-lo": {
+  "len": 3.36,
+  "w": 1.44,
+  "h": 1.42,
+  "weight": 14,
+  "paintable": true,
+  "tris": 737
+ },
+ "figo-hatch-lo": {
+  "len": 3.81,
+  "w": 1.7,
+  "h": 1.32,
+  "weight": 6,
+  "paintable": true,
+  "tris": 699
+ },
+ "aspire-hatch-lo": {
+  "len": 4.02,
+  "w": 1.75,
+  "h": 1.39,
+  "weight": 5,
+  "paintable": true,
+  "tris": 526
  }
 }

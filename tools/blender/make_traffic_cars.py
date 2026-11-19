@@ -4,7 +4,8 @@ Each car becomes one node with the two materials the traffic renderer expects (s
 import bpy, sys, os, json, math, numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-TARGET = 3000
+TARGET = int(os.environ.get('GFP_TARGET', 3000))          # triangles; GFP_TARGET=700 GFP_SUFFIX=-lo makes the far version (docs/NEW_CARS_PLAN.md, performance fix)
+SUFFIX = os.environ.get('GFP_SUFFIX', '')
 # per car: which material names are tyres, rims, glass, lights; the traffic weight (how common on a Delhi road) and the kind name
 CARS = {
   'sx4':     dict(kind='sx4-hatch',    weight=9, w=1.78, tyre=['wheel.1'], glass=['glass'], light=['chassis.5', 'left front light']),
@@ -59,14 +60,35 @@ def main():
         for o in meshes: o.select_set(True)
         bpy.context.view_layer.objects.active = meshes[0]; bpy.ops.object.join(); car = bpy.context.view_layer.objects.active
         tri = sum(len(p.vertices) - 2 for p in car.data.polygons)
-        md = car.modifiers.new('dec', 'DECIMATE'); md.ratio = min(1.0, TARGET / tri); md.use_collapse_triangulate = True
-        bpy.ops.object.modifier_apply(modifier='dec'); bpy.ops.object.shade_smooth_by_angle(angle=math.radians(38))
+        def drop_small(min_faces):                                              # delete the loose parts (shells) with fewer than min_faces faces: handles, wipers, badges, mirrors
+            import bmesh
+            bm = bmesh.new(); bm.from_mesh(car.data); bm.faces.ensure_lookup_table(); seen = set(); kill = []
+            for f0 in bm.faces:
+                if f0.index in seen: continue
+                comp = [f0]; seen.add(f0.index); stack = [f0]
+                while stack:
+                    f = stack.pop()
+                    for e in f.edges:
+                        for g in e.link_faces:
+                            if g.index not in seen: seen.add(g.index); comp.append(g); stack.append(g)
+                if len(comp) < min_faces: kill += comp
+            if kill: bmesh.ops.delete(bm, geom=kill, context='FACES')
+            bm.to_mesh(car.data); bm.free()
+        if TARGET < 1500: drop_small(90)                                        # the far version only
+        for k in range(5):                                                      # a model of many small parts does not collapse in one pass: repeat until it is near the target
+            tri = sum(len(p.vertices) - 2 for p in car.data.polygons)
+            if tri <= TARGET * 1.15: break
+            md = car.modifiers.new('dec', 'DECIMATE'); md.ratio = min(1.0, TARGET / tri); md.use_collapse_triangulate = True
+            bpy.ops.object.modifier_apply(modifier='dec')
+            if TARGET < 1500: drop_small(14 + 10 * k)
+        tri = sum(len(p.vertices) - 2 for p in car.data.polygons)
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(38))
         # centre on the length, stand on y 0 (Blender: Y is the length, Z up; glTF export turns Y into Z)
         bb = [car.matrix_world @ v.co for v in car.data.vertices]; mn = [min(b[i] for b in bb) for i in range(3)]; mx = [max(b[i] for b in bb) for i in range(3)]
         car.data.transform(__import__('mathutils').Matrix.Translation(((-(mn[0] + mx[0]) / 2), -(mn[1] + mx[1]) / 2, -mn[2])))
-        car.name = C['kind']; d = car.dimensions
-        meta[C['kind']] = {'len': round(d.y, 2), 'w': C.get('w', round(d.x, 2)), 'h': round(d.z, 2), 'weight': C['weight'], 'paintable': True, 'tris': sum(len(p.vertices) - 2 for p in car.data.polygons)}
-        built.append(car); print('RESULT', cid, meta[C['kind']])
+        car.name = C['kind'] + SUFFIX; d = car.dimensions
+        meta[C['kind'] + SUFFIX] = {'len': round(d.y, 2), 'w': C.get('w', round(d.x, 2)), 'h': round(d.z, 2), 'weight': C['weight'], 'paintable': True, 'tris': sum(len(p.vertices) - 2 for p in car.data.polygons)}
+        built.append(car); print('RESULT', cid, meta[C['kind'] + SUFFIX])
     bpy.ops.object.select_all(action='DESELECT')
     for o in built: o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', export_materials='EXPORT', export_cameras=False, export_lights=False, export_animations=False, export_extras=False, use_selection=True)

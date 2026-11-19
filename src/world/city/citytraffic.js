@@ -8,7 +8,7 @@ import { NearCars, NEAR, FULL } from './nearcars.js';
 import { deckHeight, underDepth } from './pack.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-const PARK_MAX = 300, AUTO = [0xe3b21a, 0x2e8b57, 0x2e8b57, 0xe3b21a];
+const LOD_NEAR = 45, PARK_MAX = 300, AUTO = [0xe3b21a, 0x2e8b57, 0x2e8b57, 0xe3b21a];
 const MODES = { off: 0, low: 10, mid: 22, high: 34 }, CELL = 8, PAINT = [0xf2f2f2, 0xf2f2f2, 0xd9d9d9, 0x1b1b1d, 0x9a9da3, 0xb11f1f, 0x2a4f8a, 0xe8c547, 0x3a3a3c, 0xcfd2d6];
 const DRIVABLE = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential']);
 /* each simulation owns its random stream, seeded when it is made, so a replay does not depend on what another simulation drew (audit R15) */
@@ -31,7 +31,8 @@ export class CityTraffic {
     import('../../traffic/traffic.js').then(m => m.loadTrafficPack()).then(pack => {
       if (!pack) return; for (const key in MODEL_SETS) { const S = MODEL_SETS[key], pn = S.pack || key, p = pack.parts[pn], meta = pack.kinds.find(k => k.name === pn); if (!p || !meta) continue;
         const gs = [p.paint, p.rest].filter(Boolean).map(g => { const c = g.clone(); for (const a of Object.keys(c.attributes)) if (a !== 'position' && a !== 'normal' && a !== 'color') c.deleteAttribute(a); return c; });
-        if (!gs.length) continue; const geo = gs.length > 1 ? mergeGeometries(gs) : gs[0]; this.fleet.addModel(key, geo, meta.len, meta.w, S.speed); this.models[key] = true; }
+        if (!gs.length) continue; const geo = gs.length > 1 ? mergeGeometries(gs) : gs[0]; this.fleet.addModel(key, geo, meta.len, meta.w, S.speed); this.models[key] = true;
+        const pl = pack.parts[pn + '-lo']; if (pl) { const gl = [pl.paint, pl.rest].filter(Boolean).map(g => { const c = g.clone(); for (const a of Object.keys(c.attributes)) if (a !== 'position' && a !== 'normal' && a !== 'color') c.deleteAttribute(a); return c; }); if (gl.length) this.fleet.addModel(key + '|lo', gl.length > 1 ? mergeGeometries(gl) : gl[0], meta.len, meta.w, S.speed); } }
       this.modelsDone = true;
     }).catch(() => { this.modelsDone = true; });
   }
@@ -104,8 +105,10 @@ export class CityTraffic {
       for (const c of this.cars) take(c, false); if (NEAR.parked) for (const c of pk) take(c, true); cand.sort((a, b) => a[0] - b[0]);
       for (let i = 0; i < cand.length && full.size < NEAR.count; i++) { const [, c, parked] = cand[i]; if (N.add(c.kind, c.x - ox, gy + (parked ? 0 : (c.h || 0)), c.z - oz, c.yaw, c.paint, parked ? 0 : c.v)) full.add(c); } }
     N.end();
-    for (const c of this.cars) if (!c.wreck && !full.has(c)) F.add(c.kind, c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint);
-    for (const c of pk) if (!c.wreck && !full.has(c)) F.add(c.kind, c.x - ox, gy, c.z - oz, c.yaw, c.paint);
+    /* two levels of the traffic models: about 3,000 triangles within LOD_NEAR metres of the player, about 700 beyond (the far ones are tiny on screen; there are up to 300 parked cars) */
+    const px2 = this.px, pz2 = this.pz, LO = LOD_NEAR * LOD_NEAR, key = (c, x, z) => { const k = c.kind; if (!F.f[k + '|lo']) return k; const dx = x - px2, dz = z - pz2; return dx * dx + dz * dz > LO ? k + '|lo' : k; };
+    for (const c of this.cars) if (!c.wreck && !full.has(c)) F.add(key(c, c.x, c.z), c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint);
+    for (const c of pk) if (!c.wreck && !full.has(c)) F.add(key(c, c.x, c.z), c.x - ox, gy, c.z - oz, c.yaw, c.paint);
     F.end();
   }
   /* the nearest car in front of `ph` ({ x, z, yaw }) within `range` m and 2.3 m either side of its heading: { gap, speed } or null (autodrive's leader) */
