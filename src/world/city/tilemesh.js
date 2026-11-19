@@ -4,6 +4,7 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { CP_CIRCLE } from './smooth.js';
+import { brandBand, drumCorner, makeBrandMaterial } from './cpfacade.js';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
@@ -298,7 +299,7 @@ function roadArrow(m, X, Z, y, cx, cz, dx, dz, nx, nz, turn) {
   const k = Math.SQRT1_2, ex = dx * k + nx * turn * k, ez = dz * k + nz * turn * k, e1 = shaft(cx, cz, dx, dz, 1.5, 0.12), e2 = shaft(e1[0], e1[1], ex, ez, 1.1, 0.12); head(e2[0], e2[1], ex, ez);
 }
 export function* buildTileSteps(tile, ctx) {
-  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), rsign: new Mesher(), junk: new Mesher(), colm: new Mesher(), wearD: new Mesher(), wearL: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), rsign: new Mesher(), junk: new Mesher(), colm: new Mesher(), cpbrand: new Mesher(), wearD: new Mesher(), wearL: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y, uvs = 11) => {                                           // a polygon (ring and holes in metres) lying at height y; uvs: metres one texture repeat covers
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
@@ -465,7 +466,7 @@ export function* buildTileSteps(tile, ctx) {
   let infill = []; if (ctx.infill !== false) infill = yield* infillSteps(tile, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nInfill = infill.length; tile.buildings = tile.buildings.concat(infill); yield;
   /* P1 part 3 (infill.js `yards`): open ground left inside the dense blocks is paved, so a forecourt reads as one; own cells of the pavement mesh, same height and texture as the pavements */
   if (infill.yards) { for (const y of infill.yards) { const v = hash(y[0] * 7 + y[1] * 13), c = shade(0x8a867c, 0.85 + 0.3 * v), q = (x, z) => M.walk.v(X(x), gy + LIFT.walk, Z(z), 0, 1, 0, c, X(x) / TEX_WALK, Z(z) / TEX_WALK), a0 = q(y[0], y[1]), a1 = q(y[2], y[1]), a2 = q(y[2], y[3]), a3 = q(y[0], y[3]); M.walk.tri(a0, a3, a2, 0, 1, 0); M.walk.tri(a0, a2, a1, 0, 1, 0); } out.nYards = infill.yards.length; }
-  let cornN = 0, arcN = 0, nArc = 0;
+  let cornN = 0, arcN = 0, nArc = 0, drumN = 0;
   /* the CP colonnade (reference N19: white columns, a continuous shaded walk, shop bays behind): a paved walk D m deep along the wall, square columns every ~3.6 m at its outer edge, and a slab over it at 5.6 m (the photos R2 and R4: columns about 3 persons high, about 0.7 m across; an estimate) whose underside is darker; one wall is about 20 triangles per bay */
   const arcade = (B, ax, az, bx, bz, nx, nz, l, y0, D, k) => {
     const wc = shade(0xf1ede2, 0.94 + 0.08 * k), sc = wc.clone().multiplyScalar(0.62), pc = shade(0x9c978c, 0.9 + 0.2 * k), H = 5.6, T = 0.5, TH = 0.5, tx = (bx - ax) / l, tz = (bz - az) / l, nb = Math.max(2, Math.round(l / 3.6)), P = (u, d) => [ax + tx * u + nx * d, az + tz * u + nz * d];
@@ -473,7 +474,7 @@ export function* buildTileSteps(tile, ctx) {
     const flat = (pts, y, c, up) => { const idx = pts.map(pt => B.v(X(pt[0]), y, Z(pt[1]), 0, up, 0, c, 0.06, 0.06)); const cr = (pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[1][1] - pts[0][1]) * (pts[2][0] - pts[0][0]); const o = (cr < 0) === (up > 0) ? 0 : 1; B.tri(idx[0], idx[o ? 2 : 1], idx[o ? 1 : 2], 0, up, 0); B.tri(idx[0], idx[o ? 3 : 2], idx[o ? 2 : 3], 0, up, 0); };
     const A0 = P(0, 0), A1 = P(l, 0), A2 = P(l, D), A3 = P(0, D), ye = y0 + H;
     const wv = (pt) => M.walk.v(X(pt[0]), gy + LIFT.walk + 0.012, Z(pt[1]), 0, 1, 0, pc, X(pt[0]) / TEX_WALK, Z(pt[1]) / TEX_WALK), w = [wv(A0), wv(A1), wv(A2), wv(A3)]; M.walk.tri(w[0], w[3], w[2], 0, 1, 0); M.walk.tri(w[0], w[2], w[1], 0, 1, 0);   // paved walk
-    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz);                                           // soffit, top of the slab and its front fascia
+    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz); brandBand(M.cpbrand, X, Z, A3[0], A3[1], A2[0], A2[1], nx, nz, ye + TH, 1.1, 3.6, Math.floor(k * 1000));      /* the brand-board band on the arcade front (cpfacade.js) */                                           // soffit, top of the slab and its front fascia
     face(A0, A3, ye, ye + TH, wc, tx, tz); face(A1, A2, ye, ye + TH, wc, -tx, -tz);
     for (let q = 0; q <= nb; q++) { const u = q === 0 ? 0.5 : q === nb ? l - 0.5 : l * q / nb, rc = P(u, D - 0.55); roundColumn(M.colm, X, Z, rc[0], y0, rc[1], H, wc);       // the round column (near view)
       const c0 = P(u - T / 2, D - 0.8), c1 = P(u + T / 2, D - 0.8), c2 = P(u + T / 2, D - 0.3), c3 = P(u - T / 2, D - 0.3);                // columns
@@ -509,6 +510,9 @@ export function* buildTileSteps(tile, ctx) {
         if (ok) { arcN++; arcade(B, ax, az, bx, bz, nx, nz, l, y0, D, hash(b.id * 29 + i)); } }
       if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
     }
+    if (arc && drumN < 30 && Math.hypot(r[0] - CP_CIRCLE.cx, r[1] - CP_CIRCLE.cz) > 135 && Math.hypot(r[0] - CP_CIRCLE.cx, r[1] - CP_CIRCLE.cz) < 340) { let mine = 0; for (let i = 0; i < n && mine < 2 && drumN < 30; i++) { const p = (i + n - 1) % n, q = (i + 1) % n, ax = r[p * 2] - r[i * 2], az = r[p * 2 + 1] - r[i * 2 + 1], bx = r[q * 2] - r[i * 2], bz = r[q * 2 + 1] - r[i * 2 + 1], la = Math.hypot(ax, az), lb = Math.hypot(bx, bz); if (la < 10 || lb < 10) continue;
+        const cosA = (ax * bx + az * bz) / (la * lb), cross = ax * bz - az * bx; if (cosA < -0.34 || cosA > 0.5 || (cross < 0) !== ccw) continue;          /* a convex corner of 60 to 110 degrees: the drum corner block of the CP photos (cpfacade.js drumCorner), 2 a building and 30 a tile at most */
+        let ox = -(ax / la + bx / lb), oz = -(az / la + bz / lb); const ol = Math.hypot(ox, oz) || 1; drumCorner(B, X, Z, r[i * 2], r[i * 2 + 1], ox / ol, oz / ol, y0, y1, wc, wc.clone().multiplyScalar(0.16)); mine++; drumN++; } }
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
     let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }
     if (tris) { const all = contour.concat(...holes), base = B.p.length / 3; for (const q of all) B.v(X(q.x), y1, Z(q.y), 0, 1, 0, rc, 0.06, 0.06); for (const t of tris) B.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0); }
@@ -564,7 +568,7 @@ export function makeMaterials() {
   const plaza = (() => { const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex(plazaTex), roughness: 0.6, metalness: 0, envMapIntensity: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); return m; })();
 const rsign = (() => { const A = makeSignAtlas(); const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: A.tex, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide, envMapIntensity: 0.4, alphaTest: 0.5 }); return m; })(), junk = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.2 });
   const wearMat = (opacity, lit) => { const o = { vertexColors: true, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -9 }; return lit ? new THREE.MeshStandardMaterial({ ...o, roughness: 1, metalness: 0, envMapIntensity: 0.1 }) : new THREE.MeshBasicMaterial(o); };
-  const mats = { ground: dirt, plaza, rsign, junk, colm: junk, wearD: wearMat(0.16, false), wearL: wearMat(0.12, true), park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
-  mats.setNight = on => { for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
+  const mats = { ground: dirt, plaza, rsign, junk, colm: junk, cpbrand: makeBrandMaterial(), wearD: wearMat(0.16, false), wearL: wearMat(0.12, true), park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
+  mats.setNight = on => { mats.cpbrand.emissiveIntensity = on ? 1.0 : 0.12; for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
   return mats;
 }
