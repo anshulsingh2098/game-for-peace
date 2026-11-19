@@ -22,6 +22,8 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 19 | Phase 8 | Kartavya Path has one carriageway with a double yellow line and red and yellow kerb paint; the real avenue is two wide carriageways with a lawn and water channels between | Map data has one way; no canal geometry | Owner decides if the canals and sandstone paths are wanted |
 | 21 | Phase 7 | Drum dome proportions against the owner's photo R1 | The photo is outside the repository and not available to this session; the dome (3.3 m drum radius, collar 0.45 m, dome 2.15 m high, finial 1.1 m) is only checked against the written notes | Owner sends R1 again or measures a real dome |
 | 22 | Phase 8 | GTA 5 gap list (`docs/GTA_GAP.md`, 12 lines) | Ranked from frames; none started except wires | Owner picks the order |
+| 23 | Phase 9 | Sun shadows still subtle by day | Day sun y 0.84 (near overhead); shadow map 70 m (q med) or 90 m (q high); asphalt albedo is dark so its shadows barely show | Owner decides a lower day sun in the shared env preset (affects all scenes); look at afternoon frames |
+| 24 | Phase 9 | Frame times sit near 84 fps on this desktop for both main and branch, so a small cost may be hidden by the display rate | Same in earlier measurements | Measure with the governor off or on a slower device |
 
 ## Closed
 | Item | Evidence |
