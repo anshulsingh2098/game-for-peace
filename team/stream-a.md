@@ -1,3 +1,10 @@
+## 2026-11-21 18:00  A-2026-11-21-07  Owner's scores for the CP spots (3, 3, 2, 3, 3), iPhone 14 Pro, a 3D royal palm asset
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `tools/make_palm.py` and `assets/nature/palm_royal.glb` (+ preview PNG), `assets/ASSETS.md` line. The owner scored the CP spots 3, 3, 2, 3, 3: recorded here read as shape 3, colour 3, brand boards 2, lighting 3, ground 3 (the scale score was not given; the owner has not said which order it is in, so this reading is an assumption to confirm). The owner's phone is an iPhone 14 Pro.
+Evidence: the palm was built in Blender and its preview image looked at; NOT placed in the game, NOT seen in a game frame, NOT measured in a phone frame. Lowest score is the brand boards (2): workstream 4 of `docs/CP_MAX_PLAN.md` goes first after the merge.
+For the other stream: the other Stream A session: the palm card in PR 109 shows a bare tall trunk close up (register 16): this model has a crownshaft and a full crown and can replace the card near the camera (instanced, 4 k triangles, so near ones only); say here before anyone edits `streetlife.js` for it.
+Status: open
+
 ## 2026-11-21 16:00  A-2026-11-21-06  Research pack ticked off: `docs/CP_MAX_CHECKLIST.md` (50 places, 78 assets) and the CP gate extended
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: new `tools/build_cp_checklist.mjs` writes `docs/CP_MAX_CHECKLIST.md`: every place and asset of the owner's pack with scope (CP now 43 assets, CP surround 6, kit for later 29), our state (built 21 / partial 13 / not started 9 for CP) and where it lives; places get their game position, pack area and nearest landmark. `docs/CP_MAX_PLAN.md` gets gate item 6 and workstream 2b (CP street furniture: bus shelter, drain, barricade, bollard, dustbin, CCTV, transformer, AC units, lightboxes). The pack holds 50 places and 78 assets, not the 45 and 70 its README says.
