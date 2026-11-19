@@ -32,3 +32,6 @@ data/
 
 # the city pack is staged into cloudflare/public by tools/stage_cloudflare.py at deploy time; it already lives in assets/cities (do not commit a second 77 MB copy)
 cloudflare/public/assets/cities/
+
+# generated Delhi QA reports (Phase T); publish selected evidence on purpose
+reports/delhi-qa/
