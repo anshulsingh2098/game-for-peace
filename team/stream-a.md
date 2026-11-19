@@ -1,3 +1,22 @@
+## 2026-11-22 16:00  A-2026-11-22-12  Deploy of main 97ab81b (PR 113 included) to the owner's account
+Branch: main  Commit: 97ab81b
+What changed: nothing in the code. Clean `git archive` of origin/main, self-test 121, staged with `tools/stage_cloudflare.py`, bundled (`bundle: dist/game.js 3.86 MB`; one esbuild warning for a duplicate key `tx` in an object literal), `wrangler whoami` named mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy` gave version ac75b6a8-8d85-4bd1-9657-0c2005c7e646 at https://game-for-peace.mailrajulsingh-in.workers.dev. The earlier deploy of the fork session was df302bca (PRs 111 and 112).
+Evidence: the live index answers 200, `dist/game.js` is 3,856,493 bytes and contains the PVX Plaza board text. NOT done: a look at the live page in a browser; a phone check.
+For the other stream: nothing. Anshul's account keeps its older versions untouched.
+Status: info
+
+## 2026-11-22 15:00  A-2026-11-22-11  Re: A-2026-11-22-02: the cpstreet.js hook lines are in
+Branch: claude/cp-street-hooks (stacked on claude/cp-street-props, PR 115)  Commit: see the PR
+What changed: `streetlife.js` only: the import of `cpStreetPiece` and the call before the street-trees comment, exactly as in A-2026-11-22-02 (an === 'cp').
+Evidence: implemented; self-test 122; seen in the game by day at walk height: a pair of white bollards at the park kerb on the Inner Circle (x 930 to 990, z -2030). NOT seen: dustbins, drains, barricade, CCTV pole, transformer; night; frame cost; phone.
+For the other stream: Re: A-2026-11-22-02: done (hook lines added, PR stacked on yours). Merge 115 first, then this one.
+Status: info
+
+## 2026-11-22 14:00  A-2026-11-22-02  CP street props written (cpstreet.js), hook lines for streetlife.js
+Branch: claude/cp-street-props  Commit: see the PR
+What changed: new `src/world/city/cpstreet.js` (pure, no three.js: bins every 38 m, bollards at each end of a piece, drain gratings every 30 m, an orange and white barricade on one piece in five, a CCTV pole, a distribution transformer on one in six; rows AST-036, 038, 039, 075, 077, 078 of the research pack); `tools/selftest.mjs` (122 checks, a stub-driven test of all six kinds); `tools/build_cp_checklist.mjs` (those rows partial, AST-035 bus shelter corrected from not started to partial: `streetlife.js` already builds shelters at the transit stops). NOT hooked in: `streetlife.js` is the other Stream A session's file. AC units (AST-022) and storefront lightboxes (AST-051) are building-face props and are not in this file yet.
+Evidence: implemented; self-tested with stubs; NOT seen in the game, NOT measured.
+For the other stream: the other Stream A session, two lines in `streetlife.js` (none of my files touch it): (1) add `import { cpStreetPiece } from './cpstreet.js';` with the other imports; (2) inside `for (const pc of pieces)`, after the pole block and before `/* street trees */`: `if (an === 'cp') { const q = cpStreetPiece(pc, at, { box, M: M.prop, gy, rnd, C, insideBuilding, inRoad, L, circle }); st.cpStreet = (st.cpStreet || 0) + q.bin + q.bollard + q.drain + q.barricade + q.cctv + q.transformer; }`. After it is in, look at a CP street from walk height and from the drive view, and say here if a prop stands wrong (bollards are at piece ends, so they should sit at road mouths).
 ## 2026-11-22 12:00  A-2026-11-22-01  Merged and deployed; the other Stream A session: add the CP and Kartavya plan to your task list
 Branch: claude/delhi-p1-infill  Commit: see main (a55dab2)
 What changed: at the owner's word, PR 111 (which holds phases 1 to 7) and PR 112 (docs: plan, checklist, references R7/R8 and K1 to K7, research pack, royal palm asset) are merged into `main`; PRs 106 to 110 closed as contained in 111. Clean `git archive` of main (a55dab2) deployed to Rajul's account, version df302bca; the served `dist/game.js` is byte-identical to the staged one; self-test 121.

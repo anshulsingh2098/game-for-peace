@@ -7,6 +7,8 @@ import * as THREE from 'three';
 import { deckHeight, pieceWidth, pieceSidewalk } from './pack.js';
 import { hash } from './identity.js';
 import { glowQuad, lightPool } from './cpfacade.js';
+import { onParkPath } from './cppark.js';
+import { cpStreetPiece } from './cpstreet.js';
 
 const PALE = { red: 0xb8332b, blue: 0x2a64c9, green: 0x2f8f5b, yellow: 0xe3b21a, orange: 0xe8791e, white: 0xe8e2d0, tarp: 0x3a7ab8, pink: 0xc23a7a, grey: 0x8a8a86, dark: 0x2b2b2d, wood: 0x6a4a2a, pole: 0x9a9890, steel: 0x6a6e72, wire: 0x16161a };
 const GOODS = { sweets: [0xf2b134, 0xe8e0c8, 0xd96a3a], cloth: [0xc23a7a, 0x2a64c9, 0xe3b21a, 0x2f8f5b], electronics: [0x2b2b2d, 0xd9d9d9], hardware: [0x8a8a86, 0xb8332b, 0x2a64c9], chai: [0xe8e0c8, 0x6a4a2a], paan: [0x2f8f5b, 0xe8e0c8], pharmacy: [0xe8e0c8, 0x2f8f5b], mobile: [0x2b2b2d, 0x2a64c9], barber: [0xe8e0c8], jewellery: [0xe3b21a], spices: [0xd96a3a, 0xe3b21a, 0x8a5a2a], shoes: [0x2b2b2d, 0x6a4a2a, 0xc23a7a] };
@@ -136,6 +138,8 @@ export function* buildStreetLife(tile, ctx, out) {
       /* CP (owner 21 Nov, phase 5 list): a power pole 2.2 m beside every second lamp post (every third gave one pole to a short street piece and so no wire span, seen 21 Nov), a cross-arm and three wires to the last one, so the walk is not bare of overhead cables */
       if (an === 'cp' && (pi++ & 1) === 0) { const qx = px + o.tx * 2.2, qz = pz + o.tz * 2.2; if (!insideBuilding(qx, qz, 0.4) && !inRoad(qx, qz, 0.4)) { const [mx, mz] = L(qx, qz); box(M.prop, mx, gy, mz, 0.22, 8.2, 0.22, 1, 0, C(PALE.pole)); box(M.prop, mx, gy + 7.2, mz, 1.6, 0.1, 0.12, -o.tz, o.tx, C(PALE.pole)); if (prevPow) { for (let k = 0; k < 3; k++) wire(M.prop, prevPow.x - ox, gy + 7.3 - k * 0.3, prevPow.z - oz, qx - ox, gy + 7.3 - k * 0.3, qz - oz, 0.7 + 0.2 * k, C(PALE.wire), 2.4, 8); st.spans++; } prevPow = { x: qx, z: qz }; } }
     }
+    /* CP street furniture (cpstreet.js, hook lines of team/stream-a.md A-2026-11-22-02): bollards, dustbins, drains, barricades, CCTV poles, transformers on the pieces of the CP area */
+    if (an === 'cp') { const q = cpStreetPiece(pc, at, { box, M: M.prop, gy, rnd, C, insideBuilding, inRoad, L, circle }); st.cpStreet = (st.cpStreet || 0) + q.bin + q.bollard + q.drain + q.barricade + q.cctv + q.transformer; }
     /* street trees */
     const dens = (veg.classDensity[pc.cls] || 0.5) * A.trees.density; if (dens > 0.03) {
       const sp = veg.spacing / dens, avenue = A.trees.avenue, one = A.trees.species[Math.floor(rnd(pc.id, 3) * A.trees.species.length)], bloomOn = sp0 => sp0.bloomMonths && sp0.bloomMonths.includes(ctx.month);
@@ -174,7 +178,7 @@ export function* buildStreetLife(tile, ctx, out) {
     for (const p of [...(tile.parks || []), ...(tile.blocks || []).filter(b => b.landuse === 'residential').map(b => ({ ring: b.ring, holes: b.holes, class: 'colony' }))]) { const R = p.ring; if (!R || R.length < 8) continue; if (p.class === 'colony' && nc >= CAP_COLONY) continue; if (ctx.yieldNow && ctx.yieldNow()) yield; const [STEP, base, big] = KIND[p.class] || [12, 0.4, 1]; let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (let i = 0; i < R.length; i += 2) { x0 = Math.min(x0, R[i]); x1 = Math.max(x1, R[i]); z0 = Math.min(z0, R[i + 1]); z1 = Math.max(z1, R[i + 1]); }
       for (let gx = x0 + STEP / 2; gx < x1 && np < CAP_PARK; gx += STEP) for (let gz = z0 + STEP / 2; gz < z1 && np < CAP_PARK; gz += STEP) {
         const key = Math.floor(gx * 3) * 7919 + Math.floor(gz * 5); const px = gx + (rnd(901, key) - 0.5) * STEP * 0.8, pz = gz + (rnd(902, key) - 0.5) * STEP * 0.8; if (!inPoly(R, px, pz)) continue; let hole = false; for (const h of p.holes || []) if (inPoly(h, px, pz)) { hole = true; break; } if (hole) continue;
-        const an = ID.areaNameAt(px, pz), A = ID.area(an), dens = Math.min(0.92, base * (0.6 + 0.8 * A.trees.density)); if (rnd(903, key) > Math.min(0.95, dens * (0.15 + 1.7 * clump(px, pz)))) continue; if (insideBuilding(px, pz, 2.0) || inRoad(px, pz, 1.0)) continue;
+        const an = ID.areaNameAt(px, pz), A = ID.area(an), dens = Math.min(0.92, base * (0.6 + 0.8 * A.trees.density)); if (rnd(903, key) > Math.min(0.95, dens * (0.15 + 1.7 * clump(px, pz)))) continue; if (insideBuilding(px, pz, 2.0) || inRoad(px, pz, 1.0) || onParkPath(px, pz)) continue;      /* Central Park: no trees on its paths, bowl or pavilions (cppark.js) */
         const forest = p.class === 'forest' || p.class === 'scrub', list = forest ? ['neem', 'peepal', 'jamun'] : A.trees.species, id = list[Math.floor(rnd(904, key) * list.length)], spc = ID.species.get(id); if (!spc || spc.id === 'bougainvillea') continue; const [lx, lz] = L(px, pz); plant(lx, gy, lz, spc, rnd(905, key), bloomOnP(spc), big * (forest ? 0.8 + 0.4 * rnd(906, key) : 1)); np++; if (p.class === 'colony') nc++; st.trees++; circle(px, pz, 0.4); } }
   }
   /* ---- hedges: a low clipped hedge along the outer edge of the avenues of Lutyens' Delhi, DDA colonies and Connaught Place ---- */
