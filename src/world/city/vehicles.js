@@ -22,6 +22,13 @@ const KINDS = {
 };
 export const DIM = Object.fromEntries(Object.entries(KINDS).map(([k, v]) => [k, { len: v.len, wid: v.wid, speed: v.speed }]));
 DIM.bus = { len: 11, wid: 2.5, speed: 0.9 };
+/* Real car models used as NPC traffic (docs/NEW_CARS_PLAN.md, phase C1b): each is a low-polygon version (about 3,000 triangles) of one of the owner-supplied cars, stored in the traffic pack (assets/traffic/traffic_pack.glb) and drawn here as one more InstancedMesh. A model stands in for its `base` kind (paint colours, parking and spacing rules come from the base kind) for `share` of the cars of that kind, once the pack has loaded; until then, and if it does not load, every car is the box car. */
+export const MODEL_SETS = {
+  'sx4-hatch': { base: 'hatch', share: 0.22, speed: 1 },
+  'endeavour-suv': { base: 'suv', share: 0.45, speed: 0.95 },
+  'gtr-sports': { base: 'hatch', share: 0.012, speed: 1.15 },       // one car in eighty: a supercar is rare on a Delhi road
+};
+export const baseKind = k => (MODEL_SETS[k] ? MODEL_SETS[k].base : k);
 
 function merge(parts) {
   const pos = [], nor = [], col = [], idx = [], c = new THREE.Color(); let base = 0;
@@ -57,6 +64,11 @@ export class Fleet {
   begin() { for (const k in this.f) this.f[k].n = 0; }
   /* one vehicle: kind, position relative to the scene (origin already subtracted), yaw (travel direction in the game's x, z plane), paint hex */
   add(kind, x, y, z, yaw, hex) { const f = this.f[kind]; if (!f || f.n >= f.cap) return false; this.q.setFromAxisAngle(this.up, -yaw + Math.PI / 2); this.pos.set(x, y, z); this.m4.compose(this.pos, this.q, this.sc); f.mesh.setMatrixAt(f.n, this.m4); f.mesh.setColorAt(f.n, this.col.setHex(hex)); f.n++; return true; }
+  /* a model kind from the traffic pack: geo carries position, normal and a 'color' attribute (white where the body paint goes); len and wid from the pack's size list */
+  addModel(kind, geo, len, wid, speed) {
+    if (this.f[kind]) return; const cap = 80, m = new THREE.InstancedMesh(geo, this.mat, cap); m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); m.instanceColor.setUsage(THREE.DynamicDrawUsage); m.visible = false;
+    this.group.add(m); this.f[kind] = { mesh: m, n: 0, cap }; DIM[kind] = { len, wid, speed };
+  }
   end() { for (const k in this.f) { const f = this.f[k]; f.mesh.count = f.n; f.mesh.visible = f.n > 0; f.mesh.instanceMatrix.needsUpdate = true; f.mesh.instanceColor.needsUpdate = true; } }
   counts() { const o = {}; for (const k in this.f) o[k] = this.f[k].n; return o; }
 }
