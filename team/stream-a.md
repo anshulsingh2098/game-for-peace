@@ -1,3 +1,31 @@
+## 2026-11-21 12:00  A-2026-11-21-03  Frame times, desktop: PR 103 branch is as fast as main (phone still needed)
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: nothing in the game; measurement logged in `docs/CP_MATCH_LOG.md`.
+Evidence: MEASURED in a visible pane, a Mac: q=med both 7.1 ms average and p95 11.2 ms (141 fps, probably the display cap); q=high branch 11.6 ms average, p95 16.7, p99 17.0 (86 fps) against main 11.8, 16.7, 17.1 (85 fps); about 14 percent more triangles on the branch, no frame cost seen. NOT measured: any phone, a second desktop, repeated runs, night.
+For the other stream: Anshul's Claude: if you have a phone, please run `python3 tools/serve.py 8792 --lan` and open `http://<this Mac's address>:8792/?play&city=delhi&q=low&bench=30` (also q=med) and record p95 and p99 here: that is the missing gate.
+Status: open
+
+## 2026-11-21 11:00  A-2026-11-21-02  Light on the walk (PR 103)
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: `cpfacade.js` (`makeLightMaterial`, `lightPool`, `arcadePools`); hooks: `tilemesh.js` (mesh `cplight`, material, `setNight` toggle, one call in `arcade()`, pass to street life), `streetlife.js` (one more line at the lamp head), `cityworld.js` (mesh name and view range). Warm additive light pools under every arcade bay and every CP, Lutyens and business street lamp; off by day.
+Evidence: implemented; self-test 121; seen at night under the arcade (warm pools on the walk) and by day (invisible). NOT done: the lamp pools on a road, dusk, a visible-window frame time.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-21 09:00  A-2026-11-21-01  CP facade refinement 2 on PR 103: soffit lights, lamp glow, window surrounds
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: `src/world/city/cpfacade.js` (lamp cell, `glowQuad`, `soffitLights`, drum surrounds, blade-sign orientation); one-line hooks in `tilemesh.js` (soffit call, `cpbrand` passed to street life) and `streetlife.js` (a glow quad under each lamp head of CP, Lutyens and business streets: shared file, 2 lines).
+Evidence: implemented; self-test 121; seen in the game at night under the arcade and at the drum. NOT done: light cast on the walk, dusk grade, a visible-window frame time.
+For the other stream: please glance at the 2-line `streetlife.js` hook when reviewing PR 103.
+Status: info
+
+## 2026-11-20 18:00  A-2026-11-20-09  CP facade detail on a new branch (PRs 101 and 102 are merged)
+Branch: claude/cp-facade-detail (from main b5055bf, separate worktree)  Commit: see the PR
+What changed: `src/world/city/cpfacade.js` (arched drum windows, sills, pediment, `facadeBands`, `bladeSign`), `src/world/city/tilemesh.js` (the `arcade()` signature and three calls). Details and the honest verdict in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121 checks; seen in the game by day and by night. NOT done: a visible-window frame time, the dusk grade, window surrounds and balustrade posts.
+For the other stream: nothing required. The branch is based on main (PR 102 merged), so new PRs from `claude/delhi-p1-infill` are no longer needed; use new branches from main.
+Status: info
+
 ## 2026-11-20 16:00  A-2026-11-20-08  Handoff and status updated; final merge and deploy of the day
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: `HANDOFF.md` (new section "State on 19/20 Nov 2026"), `docs/STATUS.md` (20 Nov section), tracker. The branch holds everything since PR 101: roundabout islands, CP facade, live signal heads, signs with places and STOP. Self-test 121.

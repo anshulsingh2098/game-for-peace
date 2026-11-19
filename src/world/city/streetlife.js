@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { deckHeight, pieceWidth, pieceSidewalk } from './pack.js';
 import { hash } from './identity.js';
+import { glowQuad, lightPool } from './cpfacade.js';
 
 const PALE = { red: 0xb8332b, blue: 0x2a64c9, green: 0x2f8f5b, yellow: 0xe3b21a, orange: 0xe8791e, white: 0xe8e2d0, tarp: 0x3a7ab8, pink: 0xc23a7a, grey: 0x8a8a86, dark: 0x2b2b2d, wood: 0x6a4a2a, pole: 0x9a9890, steel: 0x6a6e72, wire: 0x16161a };
 const GOODS = { sweets: [0xf2b134, 0xe8e0c8, 0xd96a3a], cloth: [0xc23a7a, 0x2a64c9, 0xe3b21a, 0x2f8f5b], electronics: [0x2b2b2d, 0xd9d9d9], hardware: [0x8a8a86, 0xb8332b, 0x2a64c9], chai: [0xe8e0c8, 0x6a4a2a], paan: [0x2f8f5b, 0xe8e0c8], pharmacy: [0xe8e0c8, 0x2f8f5b], mobile: [0x2b2b2d, 0x2a64c9], barber: [0xe8e0c8], jewellery: [0xe3b21a], spices: [0xd96a3a, 0xe3b21a, 0x8a5a2a], shoes: [0x2b2b2d, 0x6a4a2a, 0xc23a7a] };
@@ -112,7 +113,7 @@ export function* buildStreetLife(tile, ctx, out) {
     for (let s = 6 + rnd(pc.id, 6) * 6; s < pc.len - 6 && st.poles < cap.poles; s += step) {
       const o = at(pc, s), px = o.x + -o.tz * edge * sd, pz = o.z + o.tx * edge * sd; if (insideBuilding(px, pz, 0.4) || inRoad(px, pz, 0.4)) { prev = null; continue; }
       const [lx, lz] = L(px, pz); st.poles++; circle(px, pz, 0.25);
-      if (lamp) { box(M.prop, lx, gy, lz, 0.14, 7, 0.14, 1, 0, C(0x3a3d40)); box(M.prop, lx + o.tz * sd * 1.0, gy + 7, lz - o.tx * sd * 1.0, 0.5, 0.18, 0.3, 1, 0, C(0xe8e0c8)); }
+      if (lamp) { box(M.prop, lx, gy, lz, 0.14, 7, 0.14, 1, 0, C(0x3a3d40)); box(M.prop, lx + o.tz * sd * 1.0, gy + 7, lz - o.tx * sd * 1.0, 0.5, 0.18, 0.3, 1, 0, C(0xe8e0c8)); if (ctx.cpbrand) glowQuad(ctx.cpbrand, x => x, z => z, lx + o.tz * sd * 1.0, gy + 6.99, lz - o.tx * sd * 1.0, 0.5, 0.3, 1, 0); if (ctx.cplight) lightPool(ctx.cplight, x => x, z => z, lx + o.tz * sd * 1.0, gy + 0.08, lz - o.tx * sd * 1.0, 11); }      /* the lamp head glows warm at night (cpfacade.js lamp patch) */
       else { box(M.prop, lx, gy, lz, 0.2, 7.2, 0.2, 1, 0, C(PALE.pole)); box(M.prop, lx, gy + 6.2, lz, 1.4, 0.1, 0.12, -o.tz, o.tx, C(PALE.pole)); }
       const w = rnd(pc.id, s | 0) < A.shop.wires * 1.2;
       if (!lamp && prev && w) { for (let k = 0; k < 3; k++) wire(M.prop, prev.x - ox, gy + 6.3 - k * 0.35, prev.z - oz, px - ox, gy + 6.3 - k * 0.35, pz - oz, 0.6 + 0.25 * k, C(PALE.wire)); st.spans++;
