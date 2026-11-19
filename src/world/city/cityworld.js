@@ -120,6 +120,12 @@ export class CityWorld {
     this.traffic.removeTile(k); for (const s of t.streets) { const l = this.geomMap.get(s.id); if (l) { const n = l.filter(q => q.k !== k); if (n.length) this.geomMap.set(s.id, n); else this.geomMap.delete(s.id); } } this.tiles.delete(k); this.refreshStats();
   }
   refreshStats() { let b = 0, s = 0; for (const t of this.tiles.values()) { for (const m of t.meshes) if (m.userData.bld) b += m.geometry.index.count / 3; s += t.decks.length; } this.stats.tiles = this.tiles.size; this.stats.tris = b; this.stats.decks = s; }
+  /* F3 (docs/CP_FIX_PLAN.md): rain and wet weather change the city's own surfaces too (the engine only wetted its own ground and road): w = the weather's `wet` 0..1. Roads, pavements, plazas and the ground go darker and glossier, scaled from their dry values (kept on first use); nothing happens below 0.02 so a dry day and the night look are untouched. */
+  setWet(w) {
+    if (Math.abs(w - (this._wet || 0)) < 0.01) return; this._wet = w; const M = this.mats, lerp = (a, b, t) => a + (b - a) * t;
+    for (const [k, dark, rough] of [['road', 0.62, 0.35], ['walk', 0.7, 0.4], ['plaza', 0.7, 0.35], ['ground', 0.68, 0.7]]) { const m = M[k]; if (!m || !m.color) continue; const u = m.userData; if (u._dry === undefined) { u._dry = { r: m.roughness, e: m.envMapIntensity, c: m.color.clone() }; } if (w < 0.02) { m.roughness = u._dry.r; m.envMapIntensity = u._dry.e; m.color.copy(u._dry.c); continue; }
+      m.roughness = u._dry.r * lerp(1, rough, w); m.envMapIntensity = u._dry.e + 0.8 * w; m.color.copy(u._dry.c).multiplyScalar(lerp(1, dark, w)); }
+  }
   setNight(on) { if (on !== this.night) { this.night = on; this.mats.setNight(on); this.lmx.setNight(on); if (this.art) this.art.setNight(on); } }
   reposition() { if (this.signals) this.signals.reposition(this.origin); for (const t of this.tiles.values()) t.grp.position.set(t.tx * this.pack.size - this.origin.x, 0, t.tz * this.pack.size - this.origin.z); for (const f of this.far.values()) { f.mesh.position.set(f.tx * this.pack.size - this.origin.x, 0, f.tz * this.pack.size - this.origin.z); f.mesh.updateMatrix(); } this.transit.reposition(); this.lmx.reposition(); }
   /* the loaded geometry of street edge `id` as flat points running a -> b (pieces from several tiles are chained), or null when no tile with it is loaded: for the GPS route line and autodrive */

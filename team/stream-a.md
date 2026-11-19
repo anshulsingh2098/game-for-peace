@@ -1,3 +1,8 @@
+## 2026-11-22 20:00  A-2026-11-22-14  SHARED file src/main.js: one call added for wet city surfaces (F3)
+Branch: claude/cp-fix-3 (stacked on the F1 and F2 branches, PR 121 and 123)  Commit: see the PR
+What changed: `src/main.js` city frame line: `city.setWet(env.w.wet);` after `city.setNight(...)`; `cityworld.js` `setWet`; `tilemesh.js` AO strips. No change to `environment.js`.
+Evidence: implemented; self-test 122; seen in rain at CP (road and paving darker and glossier, dry again after clear). NOT done: night rain, frame cost, phone.
+For the other stream: nothing required; if you touch the weather values in `environment.js` (`WX.*.wet`), the city follows them now.
 ## 2026-11-22 20:00  A-2026-11-22-16  Phase T2/T3: Delhi route fixtures, headless runner, drive detectors; findings for C1 (ramps) and the Pragati Maidan tunnel
 Branch: claude/delhi-qa-t2  Commit: see the PR
 What changed: new `tools/make_delhi_fixtures.mjs`, `tools/delhi_test_routes.json` (7 fixtures from the pack), `tools/run_delhi_test.mjs` (headless: 0.3 s, one self-test check, SHARED file `tools/selftest.mjs`, count 124), `src/debug/delhi_test_adapter.js` (`runFixture`, `setConditions`, detectors), `.gitignore` (reports/delhi-qa/), `docs/DELHI_TESTING.md` (results table). No game code.
