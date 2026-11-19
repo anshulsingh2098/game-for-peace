@@ -690,6 +690,9 @@ function update(dt, now) {
   if (city) { city.transit.footY = mode === 'foot' && foot ? foot.y : city.gy; city.update(px, pz, dt); city.setNight(!!env.lightsOn); updateGateExit(); }  grid.update(px, pz); far.update(px, pz); roadMesh.update(roadS); scatter.update(px, pz); if (holes) holes.set(roadMesh.tunnels.portals(), grid.origin, px, pz, roadMesh.tunnels.W);
   if (traffic) traffic.update(dt, { x: px, z: pz, s: roadS, u: phys ? phys.u : 0, yaw: phys ? phys.yaw : 0 }, env.lightsOn);
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
+  { const pv = city ? city.peds.view : peds;                                                                                                // the car can hit walkers: they fall as ragdolls and the car keeps going (pedestrians/ragdoll.js)
+    if (pv) { const car = mode === 'drive' && phys ? { x: phys.x, z: phys.z, y: phys.y, yaw: phys.yaw, u: phys.u, v: phys.v, circles: phys.p.circles, radius: phys.p.radius } : null, hits = pv.physics(dt, car);
+      if (hits.length) { if (phys && phys.body) { const lv = phys.body.linvel(), k = Math.max(0.9, 1 - 0.025 * hits.length); phys.body.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); } bus.emit('ped:hit', { hits }); } } }
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; if (figure.userData.pf) figure.userData.pf.update(dt, foot.speed > 0.3 || foot.moving, foot.phase); else { const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; } }
   if (exitSeq) exitSeq.update(dt);
   updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } if (city) updateCityMap(now, dt); updateToll(); updatePrompt();

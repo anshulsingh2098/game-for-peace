@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { PedSim, POOL } from './sim.js';
+import { PlayerFigure } from '../player/exitseq.js';
+import { RagdollSystem, carTouches, HIT } from './ragdoll.js';
 /* Cartoon people (assets/npc, built by dev/build_npc_stylised.py): the ACTORS nearest walkers within NEAR metres are drawn as skinned, animated characters (commuter, vendor, tourist);
    everyone else stays a cheap box figure. If the models fail to load the box figures are used for everybody. */
 const ACTORS = 18, NEAR = 60, VARIANTS = ['commuter', 'vendor', 'tourist'];
@@ -18,6 +20,7 @@ export class Pedestrians {
     this.mats = [mat, dark]; this.geos = [torso, head, leg];
     const mk = (g, m, tint) => { const im = new THREE.InstancedMesh(g, m, POOL); im.count = 0; im.frustumCulled = false; im.castShadow = true; if (tint) im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(POOL * 3), 3); this.group.add(im); return im; };
     this.torso = mk(torso, mat, true); this.head = mk(head, mat, true); this.legL = mk(leg, dark, false); this.legR = mk(leg, dark, false);
+    this.rag = new RagdollSystem(scene, origin, PlayerFigure); this.onRemove = null;
     this.actors = []; this.models = new Array(VARIANTS.length).fill(null); this.loadModels();
     this.m = new THREE.Matrix4(); this.q = new THREE.Quaternion(); this.q2 = new THREE.Quaternion(); this.v = new THREE.Vector3(); this.one = new THREE.Vector3(1, 1, 1); this.c = new THREE.Color(); this.axisY = new THREE.Vector3(0, 1, 0); this.axisZ = new THREE.Vector3(0, 0, 1);
   }
@@ -36,7 +39,7 @@ export class Pedestrians {
   }
   wantVariant(p) { return p.arch === 'vendor' ? 1 : p.arch === 'tourist' ? 2 : (p.colour | 0) % VARIANTS.length; }
   assignActors(player) {
-    const near = []; for (const p of this.sim.list) { const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < NEAR) near.push([d, p]); }
+    const near = []; for (const p of this.sim.list) { if (p.gone) continue; const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < NEAR) near.push([d, p]); }
     near.sort((a, b) => a[0] - b[0]); const chosen = new Set(near.slice(0, this.actors.length).map(e => e[1]));
     for (const a of this.actors) if (a.p && !chosen.has(a.p)) { if (a.p.__a === a) a.p.__a = null; a.p = null; a.obj.visible = false; }
     for (const p of chosen) { if (p.__a && p.__a.p === p) continue; const w = this.wantVariant(p), a = this.actors.find(x => !x.p && x.variant === w) || this.actors.find(x => !x.p); if (a) { a.p = p; p.__a = a; } }
@@ -47,13 +50,25 @@ export class Pedestrians {
       a.walk.weight = walking ? 1 : 0; a.idle.weight = walking ? 0 : 1; a.walk.time = (((p.phase || 0) / (2 * Math.PI)) % 1) * a.dur; a.idle.time = t % a.idle.getClip().duration; a.mixer.update(0);
       a.obj.position.set(p.x - o.x, p.y + 0.16, p.z - o.z); a.obj.rotation.y = Math.PI / 2 - p.yaw; a.obj.visible = true; }
   }
+  /* every frame: the car (or null when the player is on foot) may hit walkers, which then fall as ragdolls (src/pedestrians/ragdoll.js). Returns the hits: [{ speed, fatal }] */
+  physics(dt, car) {
+    const hits = []; const sp = car ? Math.hypot(car.u, car.v) : 0;
+    if (car && sp >= HIT.minSpeed && this.models.every(Boolean)) {
+      for (const p of this.sim.list) {
+        if (p.gone || !carTouches(car, p.x, p.z, p.y)) continue;
+        const fl = this.rag.spawn({ x: p.x, z: p.z, y: p.y, yaw: p.yaw }, this.models[this.wantVariant(p)], car); if (!fl) break;
+        p.gone = true; if (this.onRemove) this.onRemove(p); hits.push({ speed: sp, fatal: fl.fatal });
+      }
+    }
+    this.rag.update(dt, car); return hits;
+  }
   setLevel(level) { this.sim.setLevel(level); }
   get level() { return this.sim.level; }
   update(dt, player, time) { this.sim.update(dt, player, time); this.draw(player); }
   draw(player) {
     const o = this.origin; let n = 0; if (this.actors.length) { this.assignActors(player); this.poseActors(o); }
     for (const p of this.sim.list) {
-      if (Math.hypot(p.x - player.x, p.z - player.z) > SHOW) continue; if (p.__a && p.__a.p === p) continue; const walking = (p.state === 'walk' || p.state === 'cross') && !p.frozen, sw = walking ? Math.sin(p.phase) * 0.65 : 0, bob = walking ? Math.abs(Math.sin(p.phase)) * 0.03 : 0, y = p.y + 0.16;
+      if (p.gone || Math.hypot(p.x - player.x, p.z - player.z) > SHOW) continue; if (p.__a && p.__a.p === p) continue; const walking = (p.state === 'walk' || p.state === 'cross') && !p.frozen, sw = walking ? Math.sin(p.phase) * 0.65 : 0, bob = walking ? Math.abs(Math.sin(p.phase)) * 0.03 : 0, y = p.y + 0.16;
       this.q.setFromAxisAngle(this.axisY, -p.yaw);
       const put = (im, px, py, pz, rz) => { this.q2.setFromAxisAngle(this.axisZ, rz); this.q2.premultiply(this.q); this.v.set(px, py, pz); this.m.compose(this.v, this.q2, this.one); im.setMatrixAt(n, this.m); };
       const fx = Math.cos(p.yaw), fz = Math.sin(p.yaw), sx = -fz, sz = fx, X = p.x - o.x, Z = p.z - o.z;                         // forward and sideways in the ground plane
@@ -64,5 +79,5 @@ export class Pedestrians {
     }
     for (const im of [this.torso, this.head, this.legL, this.legR]) { im.count = n; im.visible = n > 0; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
   }
-  dispose() { this.sim.clear(); this.scene.remove(this.group); for (const a of this.actors) a.mixer.stopAllAction(); for (const im of [this.torso, this.head, this.legL, this.legR]) im.dispose(); for (const g of this.geos) g.dispose(); for (const m of this.mats) m.dispose(); }
+  dispose() { this.rag.dispose(); this.sim.clear(); this.scene.remove(this.group); for (const a of this.actors) a.mixer.stopAllAction(); for (const im of [this.torso, this.head, this.legL, this.legR]) im.dispose(); for (const g of this.geos) g.dispose(); for (const m of this.mats) m.dispose(); }
 }
