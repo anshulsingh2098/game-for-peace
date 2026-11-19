@@ -39,7 +39,8 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 39 | Central Park | Rebuilt by eye from two aerial photos (docs/CP_LANDMARKS.md section 5): flower beds, the long green axis, the flag pole on the east side, a fountain or stage details, night look, a walking-spot comparison and frame cost are not done | No survey; the OSM polygon has no inner features | Owner side-by-side; more photos of the amphitheatre |
 | 40 | Statesman House | Map outline raised to 66 m with balcony ribs and an arch; not the stepped round plan, no glass bay, arch not centred in the photo sense, no night look, frame cost not measured | Outline from OSM | A photo of the front; night |
 | 41 | New Book Land | Kiosk stands 30 m from the OSM point (dense map); lettering not seen on the fascia in the one frame; real pavement spot not checked | Free-ground search | Owner photo of the pavement spot |
-| 42 | Landmarks | Other buildings that identify Delhi are not built: Hindustan Times House, Jeevan Bharati, Regal, Odeon, Rivoli fronts, metro entrances at CP | Only Statesman House and the cinema so far | Next batch |
+| 42 | Landmarks | Other buildings that identify Delhi still missing: Hindustan Times House (not in the map data; needs a position and a photo), the Regal cinema (not in the map data), the Rajiv Chowk metro entrances at CP; Odeyon, Rivolo and Jeevan Bharati are built generic (no photo of them was supplied; the Rivolo front stands on two wall edges of its corner block) | OSM has no Regal or HT House | Owner photos and positions |
+| 43 | Landmarks | Cinema fronts: the Odeyon and Rivolo fronts reuse the PVX kit with their own letters and canopy boards, so they look alike; the atlas grew by 224 px (about 1 MB); no night look; frame cost not measured | One kit | Individual fronts from photos |
 
 ## Closed
 | Item | Evidence |

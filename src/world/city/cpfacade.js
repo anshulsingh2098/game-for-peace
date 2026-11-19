@@ -12,8 +12,8 @@ const CELL_W = 256, CELL_H = 64, COLS = 4, ROWS = 8, ROWS_ALL = 9;      /* 8 row
 export const BRAND_COUNT = BRANDS.length;
 /* L2 (docs/CP_LANDMARKS.md): the named places of CP as extra boards. Atlas cells for them sit below the lamp row, 5 columns of 192 x 48; an index of 1000 + k means place k. */
 const PCELL_W = 192, PCELL_H = 48, PCOLS = 5, PLACE_NAMES = [], PLACE_KIND = [], PLACE_OF = new Map(); for (const [n, kind] of CP_PLACES) if (!PLACE_OF.has(n)) { PLACE_OF.set(n, PLACE_NAMES.length); PLACE_NAMES.push(n); PLACE_KIND.push(kind); }
-const PBASE_Y = 9 * 64, SP_Y = PBASE_Y + Math.ceil(PLACE_NAMES.length / PCOLS) * PCELL_H, ATLAS_H = SP_Y + 320;      /* L3: below the place cells a strip for the cinema: the big letters (1024 x 96), the canopy board (512 x 64), two solid cells (yellow, gold) and three film posters (128 x 160) */
-const SPECIAL = { letters: [0, SP_Y, 1024, 96], canopy: [0, SP_Y + 96, 512, 64], yellow: [520, SP_Y + 100, 16, 16], gold: [560, SP_Y + 100, 16, 16], poster0: [0, SP_Y + 160, 128, 160], poster1: [136, SP_Y + 160, 128, 160], poster2: [272, SP_Y + 160, 128, 160], palika: [600, SP_Y + 96, 400, 64], fuel: [410, SP_Y + 160, 400, 64], newbook: [410, SP_Y + 230, 400, 64], statesman: [600, SP_Y + 230, 400, 64] };
+const PBASE_Y = 9 * 64, SP_Y = PBASE_Y + Math.ceil(PLACE_NAMES.length / PCOLS) * PCELL_H, ATLAS_H = SP_Y + 320 + 64 * 2 + 48 * 2 + 64;      /* L3: below the place cells a strip for the cinema: the big letters (1024 x 96), the canopy board (512 x 64), two solid cells (yellow, gold) and three film posters (128 x 160) */
+const SPECIAL = { letters: [0, SP_Y, 1024, 96], canopy: [0, SP_Y + 96, 512, 64], yellow: [520, SP_Y + 100, 16, 16], gold: [560, SP_Y + 100, 16, 16], poster0: [0, SP_Y + 160, 128, 160], poster1: [136, SP_Y + 160, 128, 160], poster2: [272, SP_Y + 160, 128, 160], palika: [600, SP_Y + 96, 400, 64], fuel: [410, SP_Y + 160, 400, 64], newbook: [410, SP_Y + 230, 400, 64], statesman: [600, SP_Y + 230, 400, 64], letters_odeon: [0, SP_Y + 320, 1024, 64], letters_rivolo: [0, SP_Y + 384, 1024, 64], canopy_odeon: [0, SP_Y + 448, 512, 48], canopy_rivolo: [0, SP_Y + 496, 512, 48], jeevan: [600, SP_Y + 544, 400, 64] };
 export function specialUV(id) { const [x, y, w, h] = SPECIAL[id], W = 1024; return [(x + 1) / W, 1 - (y + h - 1) / ATLAS_H, (x + w - 1) / W, 1 - (y + 1) / ATLAS_H]; }
 /* a board style by kind and by name (a deterministic pick): cafes brown and cream, bars black with a neon colour, restaurants deep red, green or blue with cream, food counters red and yellow, the cinema black and gold */
 const PSTYLE = { cafe: [[0x4a2c1a, 0xf5e6c8], [0x1f5a3c, 0xf5e6c8], [0x2b1d14, 0xe8c27a]], bar: [[0x15161a, 0xff5fa8], [0x15161a, 0x5fd0ff], [0x1b1030, 0xffd45f]], restaurant: [[0x7a1a22, 0xf5e6b8], [0x1d3f6a, 0xf5ecd8], [0x2e5a2a, 0xf5ecd8], [0x3a2a24, 0xe8c27a]], food: [[0xc4202e, 0xffd23a], [0xe9791c, 0xffffff], [0xf2c230, 0x8a1c1c], [0x1f5bb8, 0xffffff]], cinema: [[0x111111, 0xe6b84a]] };
@@ -45,6 +45,9 @@ export function makeBrandAtlas() {
     { const [qx, qy, qw, qh] = SPECIAL.fuel; g.fillStyle = '#c4202e'; g.fillRect(qx, qy, qw, qh / 2); g.fillStyle = '#1d4a9a'; g.fillRect(qx, qy + qh / 2, qw, qh / 2); g.fillStyle = '#ffffff'; g.font = 'bold 34px Arial,Helvetica,sans-serif'; g.fillText('BHARAT PETROL', qx + qw / 2, qy + qh / 4 + 1); g.font = 'bold 22px Arial,Helvetica,sans-serif'; g.fillText('PETROL   DIESEL   CNG', qx + qw / 2, qy + qh * 0.75 + 1); }
     { const [qx, qy, qw, qh] = SPECIAL.newbook; g.fillStyle = '#f4f1ea'; g.fillRect(qx, qy, qw, qh); g.fillStyle = '#7a1a22'; g.font = 'bold 44px Arial,Helvetica,sans-serif'; g.fillText('NEW BOOK LAND', qx + qw / 2, qy + qh / 2 + 2); g.fillStyle = '#1d4a8a'; g.fillRect(qx, qy, qw, 5); g.fillRect(qx, qy + qh - 5, qw, 5); }
     { const [qx, qy, qw, qh] = SPECIAL.statesman; g.fillStyle = '#d8c9ac'; g.fillRect(qx, qy, qw, qh); g.fillStyle = '#2b2218'; g.font = 'bold 34px Georgia,serif'; g.fillText('STATESMAN HOUSE', qx + qw / 2, qy + qh / 2 + 2); g.strokeStyle = '#2b2218'; g.lineWidth = 3; g.strokeRect(qx + 4, qy + 4, qw - 8, qh - 8); }
+    for (const [id, text, fg, bg] of [['letters_odeon', 'O D E Y O N', '#e8b83a', '#17120d'], ['letters_rivolo', 'R I V O L O', '#e6d9a8', '#3a1214']]) { const [qx, qy, qw, qh] = SPECIAL[id]; g.fillStyle = bg; g.fillRect(qx, qy, qw, qh); g.fillStyle = fg; g.font = 'bold 54px Georgia,serif'; g.fillText(text, qx + qw / 2, qy + qh / 2 + 3); }
+    for (const [id, text, bg] of [['canopy_odeon', 'ODEYON CINEMA  TICKETS', '#d9e2ee'], ['canopy_rivolo', 'RIVOLO CINEMA  TICKETS', '#e8d6a0']]) { const [qx, qy, qw, qh] = SPECIAL[id]; g.fillStyle = bg; g.fillRect(qx, qy, qw, qh); g.fillStyle = '#1a1208'; g.font = 'bold 30px Arial,Helvetica,sans-serif'; g.fillText(text, qx + qw / 2, qy + qh / 2 + 2); }
+    { const [qx, qy, qw, qh] = SPECIAL.jeevan; g.fillStyle = '#1f2a3a'; g.fillRect(qx, qy, qw, qh); g.fillStyle = '#e9e2cf'; g.font = 'bold 36px Arial,Helvetica,sans-serif'; g.fillText('JEEVAN BHARATI', qx + qw / 2, qy + qh / 2 + 2); }
     g.fillStyle = '#f5c518'; g.fillRect(...SPECIAL.yellow); g.fillStyle = '#e8b83a'; g.fillRect(...SPECIAL.gold);
     const posters = [['#7a1c1c', '#f0b030', 'DHOOM', 'NIGHTS'], ['#12304f', '#8fd0ff', 'RAJA', 'RETURNS'], ['#3a1850', '#ff9ad0', 'CHAI', 'AUR PYAAR']];
     posters.forEach(([bg, fg, t1, t2], i) => { const [px, py, pw, ph] = SPECIAL['poster' + i], gr = g.createLinearGradient(px, py, px, py + ph); gr.addColorStop(0, bg); gr.addColorStop(1, '#0b0b10'); g.fillStyle = gr; g.fillRect(px, py, pw, ph);
@@ -245,9 +248,12 @@ export function makeLeafCanvas() {
 
 /* L3 (docs/CP_LANDMARKS.md, owner's photos P4 and P5): the cinema front of a CP block. OSM puts "PVR Plaza Cinema" at x 1044, z -2356; the game calls it PVX Plaza. The facade piece is built on the wall edge nearest to that point. */
 export const CINEMA = { x: 1044, z: -2356 };
+/* the cinemas of CP (OSM points; game names: PVX Plaza, Odeyon, Rivolo; the Regal is not in the map data): each gets this front on the wall edge nearest to its point, with its own letters and canopy board */
+export const CINEMAS = [{ x: 1044, z: -2356, letters: 'letters', canopy: 'canopy' }, { x: 1180, z: -2270, letters: 'letters_odeon', canopy: 'canopy_odeon' }, { x: 716, z: -1901, letters: 'letters_rivolo', canopy: 'canopy_rivolo' }];
 export function cinemaEdge(ax, az, bx, bz, l) {
-  if (l < 14) return null; const dx = bx - ax, dz = bz - az, tx = dx / l, tz = dz / l, u = (CINEMA.x - ax) * tx + (CINEMA.z - az) * tz, d = Math.abs(-(CINEMA.x - ax) * tz + (CINEMA.z - az) * tx);
-  return u > 4 && u < l - 4 && d < 14 ? { u } : null;
+  if (l < 14) return null; const dx = bx - ax, dz = bz - az, tx = dx / l, tz = dz / l;
+  for (const c of CINEMAS) { const u = (c.x - ax) * tx + (c.z - az) * tz, d = Math.abs(-(c.x - ax) * tz + (c.z - az) * tx); if (u > 4 && u < l - 4 && d < 14) return { u, letters: c.letters, canopy: c.canopy }; }
+  return null;
 }
 /* the front: a dark band with the gold letters across the top, three lit poster frames, a yellow canopy over the street front with its board, a lit strip, and a few air conditioner boxes on the roof. B: the building mesh (flat colours), m: the emissive board mesh (cpbrand). Spans about 26 m of the edge, centred on the cinema's point, clipped to the edge. */
 export function cinemaFront(B, m, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, cin) {
@@ -259,7 +265,7 @@ export function cinemaFront(B, m, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, c
   /* a blank wall panel over the windows (photos P4 and P5 show an unbroken white wall above the street front), 4 cm off the facade */
   solid(P(u0, 0.04, y0 + 4.3), P(u1, 0.04, y0 + 4.3), P(u1, 0.04, top), P(u0, 0.04, top), wc.clone().multiplyScalar(1.03), nx, 0, nz);
   /* the dark band with the letters, 1.8 m proud of nothing: 7 cm off the wall, 2.2 m tall, as wide as the front; the letters run across it */
-  quadSP('letters', P(u0, 0.08, yBand), P(u1, 0.08, yBand), P(u1, 0.08, top), P(u0, 0.08, top), 0);
+  quadSP(cin.letters || 'letters', P(u0, 0.08, yBand), P(u1, 0.08, yBand), P(u1, 0.08, top), P(u0, 0.08, top), 0);
   /* three poster frames of 3.6 x 4.7 m at 4 m storey height above the canopy: a dark frame behind each, the poster in front */
   const pw = 3.6, ph = 4.7, gap = (W - 3 * pw) / 4, yp = Math.max(y0 + 6.2, yBand - ph - 1.0), dark = new THREE.Color(0x1c1a18);
   for (let k = 0; k < 3; k++) { const a = u0 + gap + k * (pw + gap), b = a + pw; solid(P(a - 0.2, 0.05, yp - 0.2), P(b + 0.2, 0.05, yp - 0.2), P(b + 0.2, 0.05, yp + ph + 0.2), P(a - 0.2, 0.05, yp + ph + 0.2), dark, nx, 0, nz);
@@ -267,7 +273,7 @@ export function cinemaFront(B, m, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, c
   /* the yellow canopy: a slab 2.3 m out at 3.6 m, 0.55 m thick; its front carries the board; a lit strip under the posters */
   const yc = y0 + 3.6, yel = new THREE.Color(0xe8b520), D = 2.3;
   solid(P(u0, 0, yc), P(u1, 0, yc), P(u1, D, yc), P(u0, D, yc), yel.clone().multiplyScalar(0.7), 0, -1, 0); solid(P(u0, 0, yc + 0.55), P(u0, D, yc + 0.55), P(u1, D, yc + 0.55), P(u1, 0, yc + 0.55), yel, 0, 1, 0);
-  quadSP('canopy', P(u0, D + 0.02, yc), P(u1, D + 0.02, yc), P(u1, D + 0.02, yc + 0.55), P(u0, D + 0.02, yc + 0.55), 0);
+  quadSP(cin.canopy || 'canopy', P(u0, D + 0.02, yc), P(u1, D + 0.02, yc), P(u1, D + 0.02, yc + 0.55), P(u0, D + 0.02, yc + 0.55), 0);
   quadSP('yellow', P(u0, 0.1, yp - 0.9), P(u1, 0.1, yp - 0.9), P(u1, 0.1, yp - 0.7), P(u0, 0.1, yp - 0.7), 0);
   /* air conditioner boxes on the roof */
   const roof = new THREE.Color(0x8d9096); for (let k = 0; k < 4; k++) { const cu = u0 + 3 + k * (W - 6) / 3, hx = 0.9, hz = 0.7, y = y1; const q = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => P(cu + a * hx, -1.6 + b * hz, y)), qt = q.map(p => [p[0], y + 1.1, p[2]]);

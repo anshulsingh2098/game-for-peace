@@ -11,7 +11,7 @@ import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
 import { cpProps } from './cpprops.js';
 import { cpPark } from './cppark.js';
-import { isStatesman, statesmanDetail, STATESMAN } from './cplandmarks.js';
+import { towerAt, statesmanDetail } from './cplandmarks.js';
 import { islandInfo, dress as dressIsland } from './roundabout.js';
 import { hindiName } from './hindi.js';
 import { destsAt, adjOf } from './signdests.js';
@@ -496,12 +496,12 @@ export function* buildTileSteps(tile, ctx) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     if (ruled.has(b)) continue;
     const r = b.ring, n = r.length / 2; if (n < 3) continue; let L = b.landmark ? lm.get(b.landmark) : null, kit = L && L.type ? 'gov' : { office: 'off', hotel: 'off', civic: 'gov', religious: 'gov', transit: 'gov' }[b.use] || 'res', B = b.infill ? M.infill : kit === 'off' ? M.bldgO : kit === 'gov' ? M.bldgG : M.bldg, shopB = !L && (b.use === 'commercial' || b.use === 'retail') && (b.height || 9) >= 5, hgt = Math.max(3, (L && L.height) || cpLift(b, guessHeight(b, hash), hash)), y0 = gy + (b.minHeight || 0), y1 = gy + hgt;
-    const stm = isStatesman(r); if (stm) { hgt = STATESMAN.h; y1 = gy + hgt; B = M.bldg; }      /* STATESMAN HOUSE: a tall tower on the map's outline (cplandmarks.js) */
+    const stm = towerAt(r); if (stm) { hgt = stm.h; y1 = gy + hgt; B = M[stm.kit]; }      /* STATESMAN HOUSE: a tall tower on the map's outline (cplandmarks.js) */
     const cpF = !stm && !b.infill && (!L || L.type === 'district') && hgt >= 9 && !!(ctx.life && ctx.life.identity) && ctx.life.identity.areaNameAt(r[0], r[1]) === 'cp'; if (cpF) B = M.bldgCP;       /* a CP block: its own facade texture (cpFacadeTextures): arched and shuttered windows on 4.0 m storeys counted from the top of the arcade band, 7.3 m up */
     const vv = yy => cpF ? (yy - gy - 7.3) / 16 : (yy - gy) / 12.8;
     if (L && ctx.skip && ctx.skip.has(L.id)) continue;                                    // a landmark with its own model (landmarks/, D8) is not drawn as a plain block
     let wall; if (L && L.type) wall = LM_WALL[L.type] || (L.type.includes('station') ? LM_WALL.station : 0); else wall = 0;
-    if (stm) wall = STATESMAN.wall;
+    if (stm) wall = stm.wall;
     if (!wall) { let pal = WALLS[b.use] || WALLS.other; const A = ctx.life && ctx.life.identity && ['residential', 'commercial', 'retail', 'other', undefined].includes(b.use) ? ctx.life.identity.areaAt(r[0], r[1]) : null; if (A && A.walls && A.walls.length) pal = A.walls.map(h => parseInt(h.slice(1), 16));       // the area's own wall colours from identity.json (CP white, Lutyens cream, Old Delhi sandstone), for the ordinary buildings; offices, civic and religious keep the use palette
       const k = hash(b.id); wall = pal[Math.floor(k * pal.length) % pal.length]; }
     const wc = shade(wall, 0.9 + 0.2 * hash(b.id * 7 + 1)), rc = L && L.type ? shade(wall, 0.8) : shade(0x77726a, 0.85 + 0.3 * hash(b.id * 3)); let area = 0, cx = 0, cz = 0, x0 = Infinity, x1b = -Infinity, z0 = Infinity, z1b = -Infinity;
@@ -533,7 +533,7 @@ export function* buildTileSteps(tile, ctx) {
         let ox = -(ax / la + bx / lb), oz = -(az / la + bz / lb); const ol = Math.hypot(ox, oz) || 1; cornerPavilion(B, X, Z, r[i * 2], r[i * 2 + 1], ax / la, az / la, bx / lb, bz / lb, y1, wc); mine++; drumN++;      /* R7: the square corner pavilion replaces the drum dome (cpfacade.js; drumCorner stays in the file, unused) */
         { const uxn = ox / ol, uzn = oz / ol, pxn = -uzn, pzn = uxn, dcx = r[i * 2] - uxn * 1.815, dcz = r[i * 2 + 1] - uzn * 1.815, bx2 = dcx + uxn * 4.1, bz2 = dcz + uzn * 4.1;      /* paired corner columns under a lintel in front of the drum */
           for (const sg of [-1, 1]) roundColumn(M.colm, X, Z, bx2 + pxn * 1.6 * sg, y0, bz2 + pzn * 1.6 * sg, 5.6, wc); junkBox(M.colm, X, Z, bx2, y0 + 5.6, bz2, 3.9, 0.55, 0.9, Math.atan2(pzn, pxn), wc); } } }
-    if (stm) statesmanDetail(B, M.cpbrand, X, Z, r, y0, y1);
+    if (stm) statesmanDetail(B, M.cpbrand, X, Z, r, y0, y1, stm);
     const contour = []; for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(r[i * 2], r[i * 2 + 1])); const holes = (b.holes || []).map(h => { const a = []; for (let i = 0; i < h.length; i += 2) a.push(new THREE.Vector2(h[i], h[i + 1])); return a; });
     let tris = null; try { tris = THREE.ShapeUtils.triangulateShape(contour, holes); } catch (e) { tris = null; }
     if (tris) { const all = contour.concat(...holes), base = B.p.length / 3; for (const q of all) B.v(X(q.x), y1, Z(q.y), 0, 1, 0, rc, 0.06, 0.06); for (const t of tris) B.tri(base + t[0], base + t[1], base + t[2], 0, 1, 0); }
