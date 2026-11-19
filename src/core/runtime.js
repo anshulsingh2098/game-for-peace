@@ -20,6 +20,7 @@ export const EVENTS = Object.freeze([
   'sector:entered',        // { id }                  (N8) the player entered a streaming sector
   'entity:removed',        // { handle, type }        an entity was destroyed or released
   'activity:started',      // { id }                  (N15) a point-to-point activity began
+  'ped:hit',               // { hits: [{ speed, fatal }] }  the player's car hit walkers; they fall as ragdolls
   'activity:finished',     // { id, outcome, time, rating }  (N15) it ended: done, failed or cancelled
   'runtime:resumed'        // { }                     the clock was reset after a hidden tab or a pause
 ]);

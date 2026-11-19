@@ -35,7 +35,7 @@ export class PedSim {
   update(dt, player, time) {
     this.time = time; const g = this.g;
     // remove: far away, or the sidewalk they stand on unloaded
-    const keep = []; for (const p of this.list) { const far = Math.hypot(p.x - player.x, p.z - player.z) > DESPAWN, gone = !p.edge || !g.edges.has(p.edge.id); if (far || gone) { this.pool.release(p.handle); this.stats.removed++; } else keep.push(p); } this.list = keep;
+    const keep = []; for (const p of this.list) { const far = Math.hypot(p.x - player.x, p.z - player.z) > DESPAWN, gone = !p.edge || !g.edges.has(p.edge.id); if (far || gone || p.gone) { this.pool.release(p.handle); this.stats.removed++; } else keep.push(p); } this.list = keep;
     if (this.cap && dt > 0) {
       this.spawnT -= dt; if (this.spawnT <= 0 && this.list.length < this.cap) { this.spawnT = 0.4; this.spawn(player); }
       for (const p of this.list) this.step(p, dt, player);
