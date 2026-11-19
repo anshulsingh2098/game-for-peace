@@ -45,6 +45,11 @@ Branch: claude/delhi-main-phase-2 (from main 48e6dac, separate worktree)  Commit
 What changed: `src/world/city/cpfacade.js` (`cpFacadeTextures`, `roofCornice`, sill uv), `tilemesh.js` (new mesh and material `bldgCP`, wall mapping for CP blocks, the cornice call, the corner portico), `cityworld.js` (mesh name). Details in `docs/CP_MATCH_LOG.md`.
 Evidence: implemented; self-test 121; seen by day and by night at a drum corner; q=high frames equal to main (11.8 against 12.1 ms average). NOT done: phase 3 onward, a phone, the owner's scoring.
 For the other stream: nothing required.
+## 2026-11-21 14:00  A-2026-11-21-04  Delhi main region plan; phase 1 markings like real Delhi
+Branch: claude/delhi-main-phase-1 (from main 48e6dac, separate worktree)  Commit: see the PR
+What changed: new `docs/DELHI_MAIN_PLAN.md` (9 phases with gates, the main region defined, asset research), `docs/DECISIONS.md` (the 21 Nov decision), `src/world/city/tilemesh.js` (double yellow off, black and white kerbs).
+Evidence: implemented; self-test 121; seen: no yellow line at a junction. NOT seen: the painted kerb. NOT done: phases 2 to 9.
+For the other stream: nothing required; please read `docs/DELHI_MAIN_PLAN.md` before touching the CP or Lutyens' Delhi look, and say here if a phase overlaps your tasks (P/L series).
 Status: info
 
 ## 2026-11-21 12:00  A-2026-11-21-03  Frame times, desktop: PR 103 branch is as fast as main (phone still needed)

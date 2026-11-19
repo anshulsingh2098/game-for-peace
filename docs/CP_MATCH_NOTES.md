@@ -41,3 +41,6 @@ Collected while taking screenshots and reading the browser console (visible pane
 8. **Anshul's Claude to review** the lane widening (audit `footway_run` 94 to 120), the steering lock and the car scale (A-2026-11-20-01).
 9. **Merge PR 101** (the owner's word; it is large: P1 infill, CP colonnade, roads, markings, signs, wear, physics values, car size): consider splitting if a reviewer wants smaller pieces.
 10. **Other parts of Delhi** get the same kits only after CP is accepted by the owner at the six camera spots.
+
+## Status after PR 103 (merged 21 Nov 2026, main 48e6dac)
+Merged to main in total (PRs 101, 102, 103): the P1 infill, the CP colonnade with round columns, brand boards, blade signs, drum corners with arched windows, string courses and pilasters, stone-slab plaza, smooth circles and wider lanes, road markings and arrows, worn asphalt by area, signs, mast-arm and live signal heads, light pools and soffit lights, the steering and car-size values. Measured on a desktop only (no frame cost visible at q=med or q=high). The owner's acceptance of CP at the six camera spots (`tools/cp_views.json`) has NOT been given yet; the other parts of Delhi wait for it.
