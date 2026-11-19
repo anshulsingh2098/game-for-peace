@@ -1,3 +1,10 @@
+## 2026-11-21 11:00  A-2026-11-21-02  Light on the walk (PR 103)
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: `cpfacade.js` (`makeLightMaterial`, `lightPool`, `arcadePools`); hooks: `tilemesh.js` (mesh `cplight`, material, `setNight` toggle, one call in `arcade()`, pass to street life), `streetlife.js` (one more line at the lamp head), `cityworld.js` (mesh name and view range). Warm additive light pools under every arcade bay and every CP, Lutyens and business street lamp; off by day.
+Evidence: implemented; self-test 121; seen at night under the arcade (warm pools on the walk) and by day (invisible). NOT done: the lamp pools on a road, dusk, a visible-window frame time.
+For the other stream: nothing required.
+Status: info
+
 ## 2026-11-21 09:00  A-2026-11-21-01  CP facade refinement 2 on PR 103: soffit lights, lamp glow, window surrounds
 Branch: claude/cp-facade-detail  Commit: see PR 103
 What changed: `src/world/city/cpfacade.js` (lamp cell, `glowQuad`, `soffitLights`, drum surrounds, blade-sign orientation); one-line hooks in `tilemesh.js` (soffit call, `cpbrand` passed to street life) and `streetlife.js` (a glow quad under each lamp head of CP, Lutyens and business streets: shared file, 2 lines).

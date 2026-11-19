@@ -4,7 +4,7 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { CP_CIRCLE } from './smooth.js';
-import { brandBand, drumCorner, makeBrandMaterial, facadeBands, bladeSign, soffitLights } from './cpfacade.js';
+import { brandBand, drumCorner, makeBrandMaterial, facadeBands, bladeSign, soffitLights, makeLightMaterial, arcadePools } from './cpfacade.js';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
@@ -299,7 +299,7 @@ function roadArrow(m, X, Z, y, cx, cz, dx, dz, nx, nz, turn) {
   const k = Math.SQRT1_2, ex = dx * k + nx * turn * k, ez = dz * k + nz * turn * k, e1 = shaft(cx, cz, dx, dz, 1.5, 0.12), e2 = shaft(e1[0], e1[1], ex, ez, 1.1, 0.12); head(e2[0], e2[1], ex, ez);
 }
 export function* buildTileSteps(tile, ctx) {
-  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), rsign: new Mesher(), junk: new Mesher(), colm: new Mesher(), cpbrand: new Mesher(), wearD: new Mesher(), wearL: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
+  const { G, lm, gy, size } = ctx, ox = tile.tx * size, oz = tile.tz * size, M = { ground: new Mesher(), park: new Mesher(), lawn: new Mesher(), walk: new Mesher(), plaza: new Mesher(), rsign: new Mesher(), junk: new Mesher(), colm: new Mesher(), cpbrand: new Mesher(), cplight: new Mesher(), wearD: new Mesher(), wearL: new Mesher(), road: new Mesher(), mark: new Mesher(), bldg: new Mesher(), bldgO: new Mesher(), bldgG: new Mesher(), shop: new Mesher(), infill: new Mesher(), infillShop: new Mesher() };
   const out = { circles: [], decks: [], cuts: [], claims: [], labels: [], nBuildings: 0, nStreets: 0 }, X = x => x - ox, Z = z => z - oz;
   const flat = (m, ring, holes, c, y, uvs = 11) => {                                           // a polygon (ring and holes in metres) lying at height y; uvs: metres one texture repeat covers
     const clean = r => { const n = r.length / 2; if (n > 1 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) return r.slice(0, -2); return r; };
@@ -474,7 +474,7 @@ export function* buildTileSteps(tile, ctx) {
     const flat = (pts, y, c, up) => { const idx = pts.map(pt => B.v(X(pt[0]), y, Z(pt[1]), 0, up, 0, c, 0.06, 0.06)); const cr = (pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[1][1] - pts[0][1]) * (pts[2][0] - pts[0][0]); const o = (cr < 0) === (up > 0) ? 0 : 1; B.tri(idx[0], idx[o ? 2 : 1], idx[o ? 1 : 2], 0, up, 0); B.tri(idx[0], idx[o ? 3 : 2], idx[o ? 2 : 3], 0, up, 0); };
     const A0 = P(0, 0), A1 = P(l, 0), A2 = P(l, D), A3 = P(0, D), ye = y0 + H;
     const wv = (pt) => M.walk.v(X(pt[0]), gy + LIFT.walk + 0.012, Z(pt[1]), 0, 1, 0, pc, X(pt[0]) / TEX_WALK, Z(pt[1]) / TEX_WALK), w = [wv(A0), wv(A1), wv(A2), wv(A3)]; M.walk.tri(w[0], w[3], w[2], 0, 1, 0); M.walk.tri(w[0], w[2], w[1], 0, 1, 0);   // paved walk
-    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz); brandBand(M.cpbrand, X, Z, A3[0], A3[1], A2[0], A2[1], nx, nz, ye + TH, 1.1, 3.6, Math.floor(k * 1000)); if (y1) facadeBands(B, X, Z, ax, az, bx, bz, nx, nz, ye + TH + 1.2, y1, wc); soffitLights(M.cpbrand, X, Z, ax, az, tx, tz, nx, nz, l, D, ye, nb);      /* warm lights under the slab, glowing at night */      /* the brand-board band on the arcade front (cpfacade.js) */                                           // soffit, top of the slab and its front fascia
+    flat([A0, A1, A2, A3], ye, sc, -1); flat([A0, A1, A2, A3], ye + TH, wc, 1); face(A3, A2, ye, ye + TH, wc, nx, nz); brandBand(M.cpbrand, X, Z, A3[0], A3[1], A2[0], A2[1], nx, nz, ye + TH, 1.1, 3.6, Math.floor(k * 1000)); if (y1) facadeBands(B, X, Z, ax, az, bx, bz, nx, nz, ye + TH + 1.2, y1, wc); soffitLights(M.cpbrand, X, Z, ax, az, tx, tz, nx, nz, l, D, ye, nb); arcadePools(M.cplight, X, Z, ax, az, tx, tz, nx, nz, l, D, y0 + 0.07, nb);      /* warm lights under the slab, glowing at night */      /* the brand-board band on the arcade front (cpfacade.js) */                                           // soffit, top of the slab and its front fascia
     face(A0, A3, ye, ye + TH, wc, tx, tz); face(A1, A2, ye, ye + TH, wc, -tx, -tz);
     for (let q = 0; q <= nb; q++) { const u = q === 0 ? 0.5 : q === nb ? l - 0.5 : l * q / nb, rc = P(u, D - 0.55); roundColumn(M.colm, X, Z, rc[0], y0, rc[1], H, wc);       // the round column (near view)
       if (q > 0 && q < nb && q % 3 === 1) bladeSign(M.cpbrand, X, Z, rc[0], rc[1], nx, nz, tx, tz, y0 + 2.9, Math.floor(k * 1000) + q);      // a vertical blade sign on every third column (cpfacade.js)
@@ -526,7 +526,7 @@ export function* buildTileSteps(tile, ctx) {
   }
   void SAND;
   /* ---- street life (D7, streetlife.js): shop boards, ads, poles and wires, stalls, shelters, trees ---- */
-  if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow, cpbrand: M.cpbrand }, out); Object.assign(M, r.M); out.life = r.stats; }
+  if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow, cpbrand: M.cpbrand, cplight: M.cplight }, out); Object.assign(M, r.M); out.life = r.stats; }
   /* ---- the meshes ---- */
   return { M, out };
 }
@@ -569,7 +569,7 @@ export function makeMaterials() {
   const plaza = (() => { const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex(plazaTex), roughness: 0.6, metalness: 0, envMapIntensity: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); return m; })();
 const rsign = (() => { const A = makeSignAtlas(); const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: A.tex, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide, envMapIntensity: 0.4, alphaTest: 0.5 }); return m; })(), junk = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.2 });
   const wearMat = (opacity, lit) => { const o = { vertexColors: true, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -9 }; return lit ? new THREE.MeshStandardMaterial({ ...o, roughness: 1, metalness: 0, envMapIntensity: 0.1 }) : new THREE.MeshBasicMaterial(o); };
-  const mats = { ground: dirt, plaza, rsign, junk, colm: junk, cpbrand: makeBrandMaterial(), wearD: wearMat(0.16, false), wearL: wearMat(0.12, true), park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
-  mats.setNight = on => { mats.cpbrand.emissiveIntensity = on ? 1.0 : 0.12; for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
+  const mats = { ground: dirt, plaza, rsign, junk, colm: junk, cpbrand: makeBrandMaterial(), cplight: makeLightMaterial(), wearD: wearMat(0.16, false), wearL: wearMat(0.12, true), park: flat(-2, -3, noise), lawn, walk: (() => { const m = pbr('pavement', 1.55); m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; return m; })(), road: pbr('asphalt', 6), mark: flat(-5, -9), sky: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.25, emissive: 0xffd58a, emissiveIntensity: 0 }), bldg: kit('res'), bldgO: kit('off'), bldgG: kit('gov'), shop: kit('shop'), tex: noise };
+  mats.setNight = on => { mats.cpbrand.emissiveIntensity = on ? 1.0 : 0.12; mats.cplight.visible = !!on; for (const k of ['bldg', 'bldgO', 'bldgG', 'shop']) mats[k].emissiveIntensity = on ? 1.1 : 0; };
   return mats;
 }
