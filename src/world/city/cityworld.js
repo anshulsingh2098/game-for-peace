@@ -6,6 +6,7 @@ import { CityPack, footprintRect } from './pack.js';
 import { buildTileSteps, makeMaterials } from './tilemesh.js';
 import { CityTraffic } from './citytraffic.js';
 import { CityPeds } from './citypeds.js';
+import { StreetProps } from './breakables.js';
 import { CityTransit } from './transit.js';
 import { installCutHoles } from './cuts.js';
 import { buildSkyline } from './skyline.js';
@@ -39,7 +40,7 @@ export class CityWorld {
   }
   async init() {
     await this.pack.init(); const { landmarks } = this.pack;
-    await this.initLife(); this.traffic = new CityTraffic(this.scene, this.origin, this.pack.G, this.identity); this.peds = new CityPeds(this.scene, this.origin, this.traffic, this); this.traffic.peds = this.peds.list; this.transit = new CityTransit(this); await this.transit.init(); if (this.identity) { this.buses = new CityBuses(this).init(); this.traffic.buses = this.buses.list; this.traffic.onMode = m => this.buses.setMode(m); } const bs = this.transit.data && this.transit.data.bus && this.transit.data.bus.stops; if (bs) for (const q of bs) { const k = Math.floor(q[0] / this.pack.size) + '_' + Math.floor(q[1] / this.pack.size); let l = this.stops.get(k); if (!l) this.stops.set(k, l = []); l.push(q); }     // the Delhi Metro (transit*.js, D6)
+    await this.initLife(); this.traffic = new CityTraffic(this.scene, this.origin, this.pack.G, this.identity); this.peds = new CityPeds(this.scene, this.origin, this.traffic, this); this.props = new StreetProps(this.scene, this.origin, this.traffic); this.traffic.peds = this.peds.list; this.transit = new CityTransit(this); await this.transit.init(); if (this.identity) { this.buses = new CityBuses(this).init(); this.traffic.buses = this.buses.list; this.traffic.onMode = m => this.buses.setMode(m); } const bs = this.transit.data && this.transit.data.bus && this.transit.data.bus.stops; if (bs) for (const q of bs) { const k = Math.floor(q[0] / this.pack.size) + '_' + Math.floor(q[1] / this.pack.size); let l = this.stops.get(k); if (!l) this.stops.set(k, l = []); l.push(q); }     // the Delhi Metro (transit*.js, D6)
     for (const l of landmarks) if (l.footprint && l.footprint.length >= 6) { const station = (l.type || '').includes('station') || /station|terminal/.test(l.id); this.ko.add('city:lm:' + l.id, station ? 'station' : 'landmark', footprintRect(l.footprint, l.yaw || 0)); }       // landmarks and stations claim their ground
     this.lmx = new CityLandmarks(this).init();                                                                                                   // the landmark models (landmarks/, D8): they replace the plain extruded footprints
     this.pack.nearestStreet = (x, z) => this.nearestStreet(x, z); return this;
