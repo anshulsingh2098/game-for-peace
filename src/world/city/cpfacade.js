@@ -96,21 +96,24 @@ export function soffitLights(m, X, Z, ax, az, tx, tz, nx, nz, l, D, y, bays) {
 
 /* Light pools (owner: "light on the walk"). A real light per lamp is too costly for a city, so the warm light of the soffit panels and the street lamps is a soft round gradient ADDED onto the ground under each one (additive blending, no depth write). Off by day (the material is hidden), switched on at night by tilemesh.js setNight. Own gradient drawn in code. */
 export function makeLightMaterial() {
-  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 2, 64, 64, 64);
-  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.55)'); gr.addColorStop(0.7, 'rgba(255,255,255,0.14)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  const c = document.createElement('canvas'); c.width = 128; c.height = 256; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 192, 2, 64, 192, 64);      /* the bottom half (v 0 to 0.5): the round pool; the top half (v 0.5 to 1): a vertical wash, bright at the top and fading downward, soft at the sides (light spilling down a column or a wall) */
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.55)'); gr.addColorStop(0.7, 'rgba(255,255,255,0.14)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 128, 128, 128);
+  const vg = g.createLinearGradient(0, 0, 0, 128); vg.addColorStop(0, 'rgba(255,255,255,0.95)'); vg.addColorStop(0.5, 'rgba(255,255,255,0.35)'); vg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = vg; g.fillRect(0, 0, 128, 128);
+  g.save(); g.beginPath(); g.rect(0, 0, 128, 128); g.clip();      /* destination-in clears everything outside the shape, so it is confined to the top half or it would erase the pool below */
+  g.globalCompositeOperation = 'destination-in'; const hg = g.createLinearGradient(0, 0, 128, 0); hg.addColorStop(0, 'rgba(255,255,255,0)'); hg.addColorStop(0.3, 'rgba(255,255,255,1)'); hg.addColorStop(0.7, 'rgba(255,255,255,1)'); hg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = hg; g.fillRect(0, 0, 128, 128); g.globalCompositeOperation = 'source-over'; g.restore();
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
   const m = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -10, side: THREE.DoubleSide, toneMapped: false }); m.visible = false; return m;
 }
 const WARM = new THREE.Color(1.0, 0.76, 0.42);
 /* one pool: a square of `size` metres centred at (cx, y, cz) facing up; X and Z map world to mesh coordinates */
 export function lightPool(m, X, Z, cx, y, cz, size, sizeZ = size) {
-  const h = size / 2, hz = sizeZ / 2, P = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].map(([a, b, u, v]) => m.v(X(cx + a * h), y, Z(cz + b * hz), 0, 1, 0, WARM, u, v));
+  const h = size / 2, hz = sizeZ / 2, P = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 0.5], [-1, 1, 0, 0.5]].map(([a, b, u, v]) => m.v(X(cx + a * h), y, Z(cz + b * hz), 0, 1, 0, WARM, u, v));
   m.tri(P[0], P[1], P[2], 0, 1, 0); m.tri(P[0], P[2], P[3], 0, 1, 0); return 2;
 }
 /* the pools under an arcade's soffit lights: one a bay on the walk, oriented along the wall (a square footprint is rotated by using the wall's axes) */
 export function arcadePools(m, X, Z, ax, az, tx, tz, nx, nz, l, D, y, bays) {
   const W = WARM; let q = 0; for (let k = 0; k < bays; k++) { const u = (k + 0.5) * l / bays, cx = ax + tx * u + nx * D * 0.8, cz = az + tz * u + nz * D * 0.8, w = l / bays * 1.5, d = 6.6;
-    const P = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].map(([a, b, uu, vv]) => m.v(X(cx + tx * a * w / 2 + nx * b * d / 2), y, Z(cz + tz * a * w / 2 + nz * b * d / 2), 0, 1, 0, W, uu, vv)); m.tri(P[0], P[1], P[2], 0, 1, 0); m.tri(P[0], P[2], P[3], 0, 1, 0); q += 2; }
+    const P = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 0.5], [-1, 1, 0, 0.5]].map(([a, b, uu, vv]) => m.v(X(cx + tx * a * w / 2 + nx * b * d / 2), y, Z(cz + tz * a * w / 2 + nz * b * d / 2), 0, 1, 0, W, uu, vv)); m.tri(P[0], P[1], P[2], 0, 1, 0); m.tri(P[0], P[2], P[3], 0, 1, 0); q += 2; }
   return q;
 }
 
@@ -145,4 +148,15 @@ export function roofCornice(B, X, Z, ax, az, bx, bz, nx, nz, y1, wc) {
     const a0 = V(ax + nx * off, y, az + nz * off, 0, nx, nz, d), b0 = V(bx + nx * off, y, bz + nz * off, 0, nx, nz, d), b1 = V(bx + nx * off, y + h, bz + nz * off, 0, nx, nz, c), a1 = V(ax + nx * off, y + h, az + nz * off, 0, nx, nz, c); B.tri(a0, b0, b1, nx, 0, nz); B.tri(a0, b1, a1, nx, 0, nz);
     const t0 = V(ax, y + h, az, 1, 0, 0, c), t1 = V(bx, y + h, bz, 1, 0, 0, c); B.tri(a1, b1, t1, 0, 1, 0); B.tri(a1, t1, t0, 0, 1, 0); tris += 4; }
   return tris;
+}
+
+/* light spilling down a column (phase 3): a vertical additive wash in front of each arcade column, bright under the soffit light and fading toward the foot; (cx, cz) the column, (nx, nz) outward normal, (tx, tz) along the wall, y0 the ground. 2 triangles. */
+export function columnWash(m, X, Z, cx, cz, nx, nz, tx, tz, y0) {
+  const px = cx + nx * 0.46, pz = cz + nz * 0.46, w = 0.8, yb = y0 + 2.0, yt = y0 + 5.5, P = [[-1, yb, 0.5], [1, yb, 0.5], [1, yt, 1], [-1, yt, 1]].map(([a, y, v], i) => m.v(X(px + tx * a * w), y, Z(pz + tz * a * w), nx, 0, nz, WARM, i === 0 || i === 3 ? 0 : 1, v));
+  m.tri(P[0], P[1], P[2], nx, 0, nz); m.tri(P[0], P[2], P[3], nx, 0, nz); return 2;
+}
+/* the same on the wall behind the arcade: one wash a bay, from the soffit (height yTop) down 3.2 m, on the wall plane pushed 6 cm out. */
+export function wallWash(m, X, Z, ax, az, tx, tz, nx, nz, l, bays, yTop) {
+  let q = 0; for (let k = 0; k < bays; k++) { const u = (k + 0.5) * l / bays, cx = ax + tx * u + nx * 0.06, cz = az + tz * u + nz * 0.06, w = l / bays * 0.6, P = [[-1, yTop - 3.2, 0.5], [1, yTop - 3.2, 0.5], [1, yTop - 0.05, 1], [-1, yTop - 0.05, 1]].map(([a, y, v], i) => m.v(X(cx + tx * a * w), y, Z(cz + tz * a * w), nx, 0, nz, WARM, i === 0 || i === 3 ? 0 : 1, v)); m.tri(P[0], P[1], P[2], nx, 0, nz); m.tri(P[0], P[2], P[3], nx, 0, nz); q += 2; }
+  return q;
 }

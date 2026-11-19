@@ -1,3 +1,10 @@
+## 2026-11-21 18:00  A-2026-11-21-06  Delhi main plan phase 3: light spill, dusk preset changed (shared env file)
+Branch: claude/delhi-main-phase-3 (stacked on phase 2)  Commit: see the PR
+What changed: `cpfacade.js` (light texture with a vertical wash, `columnWash`, `wallWash`), `tilemesh.js` (3 lines in `arcade()`), and a SHARED file: `src/env/environment.js` dusk preset `li` 2.7 to 1.6 and `hi` 1.15 to 0.95 (so the city's night lights come on at dusk; the preset was nearly full day), plus the tuner help text for `times.*.li`.
+Evidence: implemented; self-test 121; seen at night and at dusk; q=high by day equal to main. NOT done: a night benchmark, the street lamp pool check.
+For the other stream: Anshul's Claude: the dusk preset touches your L6 (dusk, night and monsoon look); please check it in your own scenes and change `times.dusk` if it clashes (tuner: `times.dusk.li`, `times.dusk.hi`).
+Status: open
+
 ## 2026-11-21 16:00  A-2026-11-21-05  Delhi main plan phase 2: CP facade texture, roof cornice, corner columns
 Branch: claude/delhi-main-phase-2 (from main 48e6dac, separate worktree)  Commit: see the PR
 What changed: `src/world/city/cpfacade.js` (`cpFacadeTextures`, `roofCornice`, sill uv), `tilemesh.js` (new mesh and material `bldgCP`, wall mapping for CP blocks, the cornice call, the corner portico), `cityworld.js` (mesh name). Details in `docs/CP_MATCH_LOG.md`.
