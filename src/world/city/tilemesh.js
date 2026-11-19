@@ -9,6 +9,7 @@ import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './p
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
 import { buildStreetLife } from './streetlife.js';
+import { cpProps } from './cpprops.js';
 import { islandInfo, dress as dressIsland } from './roundabout.js';
 import { hindiName } from './hindi.js';
 import { destsAt, adjOf } from './signdests.js';
@@ -540,6 +541,8 @@ export function* buildTileSteps(tile, ctx) {
   }
   void SAND;
   /* ---- street life (D7, streetlife.js): shop boards, ads, poles and wires, stalls, shelters, trees ---- */
+  { const yawAt = (x, z) => { let best = 1e9, yaw = 0; for (const s of tile.streets) { const p = s.pts; for (let i = 0; i + 3 < p.length; i += 2) { const dx = p[i + 2] - p[i], dz = p[i + 3] - p[i + 1], L2 = dx * dx + dz * dz; if (L2 < 1e-6) continue; const f = Math.max(0, Math.min(1, ((x - p[i]) * dx + (z - p[i + 1]) * dz) / L2)), d = Math.hypot(p[i] + dx * f - x, p[i + 1] + dz * f - z); if (d < best) { best = d; yaw = Math.atan2(dz, dx); } } } yawAt.d = best; return yaw; };
+    cpProps(M.junk, M.cpbrand, X, Z, gy, ox, oz, size, tile, junkBox, yawAt, out); }      /* L6: petrol stations, Palika Bazaar gates and the Hanuman shrine at their OSM points (cpprops.js) */
   if (ctx.life) { const r = yield* buildStreetLife(tile, { G, gy, size, ...ctx.life, Mesher, yieldNow: ctx.yieldNow, cpbrand: M.cpbrand, cplight: M.cplight }, out); Object.assign(M, r.M); out.life = r.stats; }
   /* ---- the meshes ---- */
   return { M, out };
