@@ -1394,4 +1394,13 @@ test('CP street furniture (cpstreet.js): bins, bollards, drains, barricades, CCT
   assert.equal(Object.values(run(mk(6, 10, 2)).n).reduce((x, y) => x + y, 0), 0, 'a short piece gets nothing'); assert.equal(Object.values(run(mk(7, 120, 0)).n).reduce((x, y) => x + y, 0), 0, 'a street without a walk gets nothing');
   let kinds = new Set(); for (let id = 1; id < 60; id++) for (const [k, v] of Object.entries(run(mk(id, 90, 2)).n)) if (v) kinds.add(k); assert.equal(kinds.size, 6, 'all six kinds occur: ' + [...kinds]);
 });
+test('Delhi QA test adapter (T1): inert without the dev flags and imported by nothing in the game', async () => {
+  const m = await import('../src/debug/delhi_test_adapter.js'); assert.equal(m.status.installed, false, 'no ?dev&testdrive=1 in node, so it installs nothing');
+  const { readdirSync, statSync } = await import('node:fs'); const files = []; const walk = d => { for (const f of readdirSync(d)) { const q = d + '/' + f; if (statSync(q).isDirectory()) walk(q); else if (/\.m?js$/.test(f)) files.push(q); } }; walk(new URL('../src', import.meta.url).pathname);
+  const hits = files.filter(f => !f.endsWith('delhi_test_adapter.js') && readFileSync(f, 'utf8').includes('delhi_test_adapter')); assert.deepEqual(hits, [], 'the game must not import the test adapter: ' + hits);
+});
+test('Delhi QA runner (T2/T3): every verified fixture routes on the pack, no wrong-way edge, continuous surface heights', async () => {
+  const { execFileSync } = await import('node:child_process'); const out = execFileSync(process.execPath, [new URL('../tools/run_delhi_test.mjs', import.meta.url).pathname, '--no-write'], { encoding: 'utf8' });
+  assert.ok(!/^FAIL /m.test(out), 'a fixture failed:\n' + out.split('\n').filter(l => /FAIL/.test(l)).join('\n')); assert.ok(/PASS +cp-india-gate/.test(out) && /PASS +flyover-rani-jhansi/.test(out) && /PASS +todarmal-replay/.test(out), 'the CP, flyover and Todarmal fixtures pass');
+});
 console.log(`\n${passed} checks passed`);
