@@ -2,6 +2,14 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-21  Spot check k3 to k5 (Kartavya Path and Lutyens' Delhi)
+Method: the game teleported to each spot, a second camera rendered once into an overlay (`window.__view` in the page, not committed), `__where()` for street and area.
+k3 (x 1100, z 60, looking west, day): wide road, double yellow line, red and yellow kerb, gravel walks, lawns, a regular jamun avenue; Rashtrapati Bhavan far end is only a pale arcade-like block. Close, not accurate: the real avenue has two carriageways, canals and red sandstone.
+k4 (x 1200, z 60, looking east, dusk): warm lamp pool on the lawn and the walk, the India Gate arch glowing white at the far end, trees dark. Close.
+k5 (x 700, z 300): `__where()` says Kartavya Path zone, but the view is an 8 storey glass slab and lawn: the 950 m zone is too wide on the west side (OPEN_ITEMS 20).
+Lutyens (x 900, z 1000, Janpath, day): found a large bare sand patch, not a Lutyens look. Cause: a 7 percent hash left some blocks as dusty earth and a long block took its area from its centre. Fixed in `tilemesh.js` (all Lutyens and Kartavya blocks are lawn; a block takes the area most of its outline lies in); seen after: lawn.
+k6 not done (no roundabout found). Self-test 121 checks.
+
 ## 2026-11-21  Phase 7 follow-up 2: drum corner caps
 Before: from a low street angle the tower caps looked like thin slanted white flaps. Cause found by looking: the cornice ring (a collar 0.45 m wider than the shaft) was made of vertical faces only, so from below it was open. Built: a face under the collar, a dome in four tiers (drum, shoulder, crown, tip) and a small four-sided finial, in `drumCorner` (`cpfacade.js`). Seen after: low camera, the collar is closed (its underside is dark, lit from above); roof-high camera, domes with a collar and a point. Verdict: close; proportions against a photo of CP's corner domes not compared. Triangles per tower up from 12 to about 100.
 Self-test 121 checks.
