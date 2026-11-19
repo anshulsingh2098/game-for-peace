@@ -1,3 +1,10 @@
+## 2026-11-22 00:00  A-2026-11-21-11  Day sun lowered (SHARED file src/env/environment.js)
+Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
+What changed: day preset `sun` y 0.85 to 0.55 and `hi` 1.15 to 1.0 (one line, CRLF kept), with more shadow casters in `cityworld.js`. Owner asked for it so sun shadows read.
+Evidence: implemented; self-test 121; seen at CP and the avenue by day. NOT done: other scenes, the day-cycle blends, phone.
+For the other stream: Anshul's Claude: this touches your L6 look; please look at your own scenes by day and change `times.day` if it clashes (tuner: `times.day.sun`, `times.day.hi`). Together with the dusk change of A-2026-11-21-06.
+Status: open
+
 ## 2026-11-21 23:00  A-2026-11-21-10  Phase 7: open items closed where possible, register of what is not done
 Branch: claude/delhi-main-phase-7 (stacked on phase 6)  Commit: see the PR
 What changed: `streetlife.js` (CP power poles and wires), `identity.json` (no palm on Kartavya), `docs/OPEN_ITEMS.md` (new: every not-done item from every ask), `tools/kartavya_views.json`.
