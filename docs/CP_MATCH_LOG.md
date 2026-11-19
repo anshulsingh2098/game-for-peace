@@ -2,6 +2,12 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-21  Phase 1 of the Delhi main plan: markings and kerbs like real Delhi (owner decision)
+Changed (`tilemesh.js`): `DOUBLE_YELLOW = false` (the double solid yellow centre line is off: a two-way road gets Delhi's white broken centre line; the switch keeps the code for no-overtaking stretches if the map ever gives them); the painted kerbs on trunk, primary and secondary roads are now black and white (were red and white). Edge lines, zebra, stop lines and arrows stay white. Plan and decisions: `docs/DELHI_MAIN_PLAN.md`, `docs/DECISIONS.md`.
+Seen (game, daylight): the signalled junction near x 794, z -2263 from 30 m up: white zebra, stop lines, white arrows, no yellow line anywhere. NOT seen: a black and white kerb stripe in any frame (the corner I looked at has no painted kerb piece in view): that part is a one-line colour change and is **unverified by eye**. Not checked: a two-way undivided road with its white broken centre line (the radial I know is one-way in the data).
+Asset research for phase 7 (web only, nothing downloaded) is in the plan: no CC0 auto-rickshaw exists in the sources checked, so it is built in Blender; palms are CC0 on OpenGameArt in a low-poly style; the free cars and people are low-poly or toy-style.
+Self-test 121 checks.
+
 ## 2026-11-21  Frame measurement, desktop (visible pane): PR 103 branch against main
 Setup: the Claude desktop app's Browser pane displayed (page visible; the page reports no keyboard focus), Chrome 156 engine, a Mac (GPU not read), `?play&city=delhi&q=<tier>&bench=30` (the autodrive route from the Connaught Place start, 30 s), the branch served from its own worktree on port 8796 and `main` as the shared checkout on port 8791, run back to back. Single runs, not repeated.
 | | branch (PR 103) | main |
