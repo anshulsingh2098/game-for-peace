@@ -25,8 +25,9 @@ export class CityPeds {
     return null;
   }
   update(dt, px, pz, gy) {
-    this.gy = gy; const tr = this.traffic, L = this.list; while (L.length > this.cap) L.pop();
-    if (L.length < this.cap && tr.pieces.size && dt > 0) { const p = this.spawn(px, pz); if (p) L.push(p); }
+    this.gy = gy; const tr = this.traffic, L = this.list, ID = this.city && this.city.identity, capNow = ID && ID.areaNameAt && this.cap > 0 && ID.areaNameAt(px, pz) === 'cp' ? Math.min(60, Math.round(this.cap * 1.5)) : this.cap;      /* F4: Connaught Place is crowded: half as many people again (up to 60) */
+    while (L.length > capNow) L.pop();
+    if (L.length < capNow && tr.pieces.size && dt > 0) { const p = this.spawn(px, pz); if (p) L.push(p); }
     const o = {};
     for (let n = 0; n < L.length; n++) { const p = L[n];
       if (!p.pc.alive || Math.hypot(p.x - px, p.z - pz) > DESPAWN) { const r = this.spawn(px, pz); if (r) L[n] = r; else L.splice(n--, 1); continue; }

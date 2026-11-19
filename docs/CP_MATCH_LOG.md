@@ -2,6 +2,9 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-22  F4 street life, first pass
+See `docs/CP_FIX_PLAN.md` Progress. More parked cars and scooters at CP kerbs (54 within 150 m of the start), half as many again pedestrians at CP, pedestrian pool 48 to 96, varied roundabout hedge greens. Seen (game, day): a parked car and a scooter with its rider at the Outer Circle kerb. NOT seen: the roundabout hedges, the extra pedestrians in a frame (12 present 20 s after the teleport, cap 36 at CP once they spawn); frame cost; the pane was hidden for the numbers (counts, not timings). Self-test 122.
+
 ## 2026-11-22  F3 light and weather, first pass
 See `docs/CP_FIX_PLAN.md` Progress. Wet weather for the city's surfaces (`setWet`, one added call in `src/main.js`) and baked AO at the arcade wall foot. Seen (game, day, rain at CP): wet 0.82 after 16 s, darker glossier road and paving; back to dry after setting clear. NOT seen: the AO strips in a frame; night rain; the sky. Self-test 122.
 
