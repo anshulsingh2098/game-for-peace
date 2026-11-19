@@ -2,6 +2,9 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-22  F3 light and weather, first pass
+See `docs/CP_FIX_PLAN.md` Progress. Wet weather for the city's surfaces (`setWet`, one added call in `src/main.js`) and baked AO at the arcade wall foot. Seen (game, day, rain at CP): wet 0.82 after 16 s, darker glossier road and paving; back to dry after setting clear. NOT seen: the AO strips in a frame; night rain; the sky. Self-test 122.
+
 ## 2026-11-22  F2 boards, first pass
 See `docs/CP_FIX_PLAN.md` Progress. Fronts inset 0.9 m at both ends, a neighbour dedupe, catch radius 24 m (84 distinct places claimed, was 68). Seen (game, day): the corner that showed SPICE ROUTE twice now shows it once, no overlapping boards, WENZEL'S DELI on its stretch. NOT done: snapping to real shopfronts, multi-bay boards, night, frame cost, atlas half-size tier (atlas 1024 x 2224 px, about 12 MB with mips). Self-test 122.
 

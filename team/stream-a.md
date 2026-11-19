@@ -1,3 +1,10 @@
+## 2026-11-22 20:00  A-2026-11-22-14  SHARED file src/main.js: one call added for wet city surfaces (F3)
+Branch: claude/cp-fix-3 (stacked on the F1 and F2 branches, PR 121 and 123)  Commit: see the PR
+What changed: `src/main.js` city frame line: `city.setWet(env.w.wet);` after `city.setNight(...)`; `cityworld.js` `setWet`; `tilemesh.js` AO strips. No change to `environment.js`.
+Evidence: implemented; self-test 122; seen in rain at CP (road and paving darker and glossier, dry again after clear). NOT done: night rain, frame cost, phone.
+For the other stream: nothing required; if you touch the weather values in `environment.js` (`WX.*.wet`), the city follows them now.
+Status: info
+
 ## 2026-11-22 16:00  A-2026-11-22-12  Deploy of main 97ab81b (PR 113 included) to the owner's account
 Branch: main  Commit: 97ab81b
 What changed: nothing in the code. Clean `git archive` of origin/main, self-test 121, staged with `tools/stage_cloudflare.py`, bundled (`bundle: dist/game.js 3.86 MB`; one esbuild warning for a duplicate key `tx` in an object literal), `wrangler whoami` named mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy` gave version ac75b6a8-8d85-4bd1-9657-0c2005c7e646 at https://game-for-peace.mailrajulsingh-in.workers.dev. The earlier deploy of the fork session was df302bca (PRs 111 and 112).
