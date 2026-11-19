@@ -28,17 +28,30 @@ function box(m, cx, y0, cz, sx, sy, sz, ux, uz, c, cTop) {
   quad(m, P(1, 1, y0), P(1, -1, y0), P(1, -1, y1), P(1, 1, y1), ux, 0, uz, c); quad(m, P(-1, -1, y0), P(-1, 1, y0), P(-1, 1, y1), P(-1, -1, y1), -ux, 0, -uz, c);
   quad(m, P(-1, -1, y1), P(1, -1, y1), P(1, 1, y1), P(-1, 1, y1), 0, 1, 0, cTop || c);
 }
+/* a clipped hedge (GTA gap list item 2): not one smooth box but pieces of about 1.1 m, each with its own height (plus or minus 10 percent), a slightly different green and a chamfered top (the top is 70 percent of the foot width), so it reads as foliage; ends are closed. c and cTop are Colors. */
+function hedge(m, cx, y0, cz, len, h, w, ux, uz, seed, c, cTop) {
+  const n = Math.max(2, Math.round(len / 1.1)), fx = -uz, fz = ux, hw = w / 2, tw = hw * 0.7, sl = len / n; let prevH = 0;
+  for (let i = 0; i < n; i++) {
+    const r1 = (Math.sin((seed + i) * 12.9898) * 43758.5453) % 1, r2 = (Math.sin((seed * 1.7 + i) * 78.233) * 24634.6345) % 1, f = 1 + 0.12 * (r1 - Math.floor(r1) - 0.5) * 2, g = 1 + 0.18 * (r2 - Math.floor(r2) - 0.5) * 2, yt = y0 + h * f, u0 = -len / 2 + i * sl, u1 = u0 + sl;
+    const cc = c.clone().multiplyScalar(g), ct = cTop.clone().multiplyScalar(g), P = (u, j, y) => [cx + ux * u + fx * hw * j, y, cz + uz * u + fz * hw * j], T = (u, j, y) => [cx + ux * u + fx * tw * j, y, cz + uz * u + fz * tw * j];
+    const uA = (seed + i * 1.1) % 7, uB = uA + sl / 1.4, vH = (yt - y0) / 1.4; quad(m, P(u0, 1, y0), P(u1, 1, y0), T(u1, 1, yt), T(u0, 1, yt), fx * 0.87, 0.5, fz * 0.87, cc, [uA, 0, uB, vH]); quad(m, P(u1, -1, y0), P(u0, -1, y0), T(u0, -1, yt), T(u1, -1, yt), -fx * 0.87, 0.5, -fz * 0.87, cc, [uB, 0, uA, vH]);
+    quad(m, T(u0, -1, yt), T(u1, -1, yt), T(u1, 1, yt), T(u0, 1, yt), 0, 1, 0, ct, [uA, 0, uB, 0.7]);
+    if (i === 0) quad(m, P(u0, -1, y0), P(u0, 1, y0), T(u0, 1, yt), T(u0, -1, yt), -ux, 0, -uz, cc); if (i === n - 1) quad(m, P(u1, 1, y0), P(u1, -1, y0), T(u1, -1, yt), T(u1, 1, yt), ux, 0, uz, cc);
+    if (i > 0 && yt > prevH) quad(m, P(u0, 1, prevH), P(u0, -1, prevH), T(u0, -1, yt), T(u0, 1, yt), -ux, 0, -uz, cc); else if (i > 0 && yt < prevH) quad(m, P(u0, -1, yt), P(u0, 1, yt), T(u0, 1, prevH), T(u0, -1, prevH), ux, 0, uz, cc);
+    prevH = yt;
+  }
+}
 /* a tree: a trunk and a broad crown of one or two lathed blobs (neem, peepal and jamun in Delhi are 12 to 25 m with wide spreading crowns, so the sizes of identity.json are scaled up, and the crown has a second blob to the side so it is not one ball); `big` scales a whole tree (scrub and forest trees are smaller) */
 /* the crown shapes of the main Delhi trees as extra blobs: [dx in crown radii, dy in crown heights, dz, radius scale, height scale]: neem a wide dome of clumps, peepal very broad and low, jamun tall and dense, kikar a flat umbrella */
 const BLOBS = { neem: { main: 1, more: [[0.55, 0.12, 0.2, 0.62, 0.7], [-0.5, 0.1, -0.3, 0.6, 0.68], [0.1, 0.32, -0.5, 0.5, 0.6]] }, peepal: { main: 1.05, more: [[0.65, 0.05, 0.1, 0.7, 0.6], [-0.65, 0.05, 0.1, 0.7, 0.6], [0.0, 0.25, 0.55, 0.55, 0.5]] }, jamun: { main: 0.9, more: [[0.3, 0.3, 0.15, 0.55, 0.7], [-0.25, 0.45, -0.2, 0.45, 0.5]] }, gulmohar: { main: 1, more: [[0.6, 0.05, 0.1, 0.65, 0.5], [-0.6, 0.05, -0.1, 0.65, 0.5]] }, amaltas: { main: 0.9, more: [[0.5, 0.1, 0.2, 0.55, 0.6]] } };
-const WHITE_C = new THREE.Color(0xffffff), TREE_PIC = { neem: 'delhi_neem', peepal: 'delhi_peepal', jamun: 'delhi_jamun', gulmohar: 'delhi_gulmohar', amaltas: 'delhi_amaltas', kikar: 'delhi_kikar' };
+const WHITE_C = new THREE.Color(0xffffff), TREE_PIC = { neem: 'delhi_neem', peepal: 'delhi_peepal', jamun: 'delhi_jamun', gulmohar: 'delhi_gulmohar', amaltas: 'delhi_amaltas', kikar: 'delhi_kikar', palm: 'delhi_palm' };
 /* a smooth 0..1 field over the ground (two slow waves): where it is high trees stand in clumps, where it is low there are lawns */
 const clump = (x, z) => 0.5 + 0.25 * Math.sin(x * 0.021 + 1.3) * Math.cos(z * 0.017) + 0.25 * Math.sin((x + z) * 0.033 + 0.7);
 function tree(m, x, y0, z, sp, k, bloom, big = 1, cards = null) {
   const S = 1.4 * big, bu = sp.id === 'bougainvillea', h = sp.h * S * (0.8 + 0.4 * k), r = sp.r * S * (0.8 + 0.4 * ((k * 7) % 1)), th = bu ? 0 : h * 0.4, prof = PROFILE[sp.shape] || PROFILE.round, base = C(bloom && sp.bloom ? sp.bloom : sp.canopy).clone().multiplyScalar(0.85);
   if (cards && !bu) {          // leaf cards: a real-scan tree picture on three crossed planes (6 triangles, not 160), tinted by species; cone trees (ashoka) use the fir card
     const cone = sp.shape === 'cone', key = cone ? 'fir_sapling_0' : TREE_PIC[sp.id] || 'delhi_neem', t = (cone ? base.clone().lerp(WHITE_C, 0.45) : WHITE_C.clone().multiplyScalar(0.92 + 0.12 * ((k * 9) % 1))),
-      W = cone ? 2 * r * 0.95 * (1.405 / 0.861) : 2 * r / 0.88, H = cone ? h * (1.405 / 1.301) : h / 0.85, off = cone ? 0.04 * H : 0.05 * H;      // the Delhi pictures are drawn with the crown at 88 percent of the width, the tree 85 percent of the height and the foot 5 percent up (tools/make_tree_cards.py)
+      palm = sp.shape === 'palm', W = cone ? 2 * r * 0.95 * (1.405 / 0.861) : palm ? 2 * r / 0.86 : 2 * r / 0.88, H = cone ? h * (1.405 / 1.301) : palm ? h / 0.86 : h / 0.85, off = cone ? 0.04 * H : palm ? 0.02 * H : 0.05 * H;      /* the palm picture (cpfacade.js makePalmCanvas): crown 86 percent of the width, tree 86 percent of the height, foot 2 percent up */      // the Delhi pictures are drawn with the crown at 88 percent of the width, the tree 85 percent of the height and the foot 5 percent up (tools/make_tree_cards.py)
     (cards[key] || (cards[key] = [])).push(x, y0 - off, z, W, H, t.r, t.g, t.b, k * 6.2832); (cards.shadow || (cards.shadow = [])).push(x, y0, z, r * 1.7); return;
   }
   if (!bu) { const tw = 0.32 + 0.012 * h; box(m, x, y0, z, tw, th + 0.8, tw, 1, 0, C(PALE.wood)); }
@@ -52,16 +65,16 @@ function tree(m, x, y0, z, sp, k, bloom, big = 1, cards = null) {
   if (!bu && sp.shape !== 'cone') { const t = k * 6.2832, B = BLOBS[sp.id] ? BLOBS[sp.id].more : [[Math.cos(t) * 0.5, 0.1, Math.sin(t) * 0.5, 0.62, 0.72]]; B.forEach((b, q) => crown(x + b[0] * r * Math.cos(t) - b[2] * r * Math.sin(t), z + b[0] * r * Math.sin(t) + b[2] * r * Math.cos(t), y1 + ch * b[1], ch * b[4], r * b[3], k + 0.37 * (q + 1), 6, 0.86 + 0.26 * ((k * 5 + q * 0.3) % 1))); }
 }
 /* a wire from (x0, y0, z0) to (x1, y1, z1) sagging by `sag`, as a vertical and a flat ribbon of 4 pieces */
-function wire(m, x0, y0, z0, x1, y1, z1, sag, c) {
-  const n = 4; let px = x0, py = y0, pz = z0; for (let i = 1; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t, y = y0 + (y1 - y0) * t - sag * 4 * t * (1 - t), dx = x - px, dz = z - pz, l = Math.hypot(dx, dz) || 1, sx = -dz / l * 0.03, sz = dx / l * 0.03;
-    quad(m, [px, py, pz], [x, y, z], [x, y + 0.05, z], [px, py + 0.05, pz], sx * 33, 0, sz * 33, c); quad(m, [px - sx, py, pz - sz], [x - sx, y, z - sz], [x + sx, y, z + sz], [px + sx, py, pz + sz], 0, 1, 0, c); px = x; py = y; pz = z; }
+function wire(m, x0, y0, z0, x1, y1, z1, sag, c, th = 1, n = 4) {      /* th: thickness factor (1 = a 6 cm ribbon; the CP spans use 2.4 so they read beyond 30 m), n: pieces */
+  let px = x0, py = y0, pz = z0; for (let i = 1; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t, y = y0 + (y1 - y0) * t - sag * 4 * t * (1 - t), dx = x - px, dz = z - pz, l = Math.hypot(dx, dz) || 1, sx = -dz / l * 0.03 * th, sz = dx / l * 0.03 * th;
+    quad(m, [px, py, pz], [x, y, z], [x, y + 0.05 * th, z], [px, py + 0.05 * th, pz], sx * 33, 0, sz * 33, c); quad(m, [px - sx, py, pz - sz], [x - sx, y, z - sz], [x + sx, y, z + sz], [px + sx, py, pz + sz], 0, 1, 0, c); px = x; py = y; pz = z; }
 }
 function inPoly(r, x, z) { let ins = false; const n = r.length / 2; for (let i = 0, j = n - 1; i < n; j = i++) { const xi = r[i * 2], zi = r[i * 2 + 1], xj = r[j * 2], zj = r[j * 2 + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) ins = !ins; } return ins; }
 
 /* tile: the decoded tile; ctx: { G, gy, size, identity, art, month, stops, Mesher, yieldNow }; out: the tile's `out` (circles are added). Returns { sign, ad, ban, prop, stats }. */
 export function* buildStreetLife(tile, ctx, out) {
   const { G, gy, size, identity: ID, art, Mesher } = ctx, ox = tile.tx * size, oz = tile.tz * size, seed = tile.tx * 7919 + tile.tz * 104729, rnd = (i, k = 0) => hash(seed + i * 31 + k * 977);
-  const M = { sign: new Mesher(), ad: new Mesher(), ban: new Mesher(), prop: new Mesher() }, st = { signs: 0, stacked: 0, awnings: 0, stalls: 0, kiosks: 0, hoardings: 0, shelters: 0, poles: 0, trees: 0, spans: 0 };
+  const M = { sign: new Mesher(), ad: new Mesher(), ban: new Mesher(), prop: new Mesher(), hedge: new Mesher() }, st = { signs: 0, stacked: 0, awnings: 0, stalls: 0, kiosks: 0, hoardings: 0, shelters: 0, poles: 0, trees: 0, spans: 0 };
   const CARDS = ctx.cards === false ? null : {}; out.cards = CARDS; const plant = (lx, y0, lz, spc, kk, bloom, big) => tree(M.prop, lx, y0, lz, spc, kk, bloom, big, CARDS);
   /* local frame in, circles absolute out */
   const L = (x, z) => [x - ox, z - oz], circle = (x, z, r) => out.circles.push(x, z, r), WHITE = C(0xffffff);
@@ -107,9 +120,9 @@ export function* buildStreetLife(tile, ctx, out) {
   for (const pc of pieces) {
     if (ctx.yieldNow && ctx.yieldNow()) yield;
     if (pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 14) { if (pc.lay > 0 && pc.len > 20) deckLife(pc); continue; }
-    const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z), A = ID.area(an), edge = pc.hw + (pc.walk > 0 ? 1.7 : 0.7), lamp = an === 'cp' || an === 'lutyens' || an === 'business';
+    const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z), A = ID.area(an), edge = pc.hw + (pc.walk > 0 ? 1.7 : 0.7), lamp = an === 'cp' || an === 'lutyens' || an === 'kartavya' || an === 'business';
     /* poles */
-    let prev = null, prevSide = 0; const step = lamp ? 32 : 28, sd = rnd(pc.id, 5) < 0.5 ? 1 : -1;
+    let prev = null, prevPow = null, pi = 0, prevSide = 0; const step = lamp ? 32 : 28, sd = rnd(pc.id, 5) < 0.5 ? 1 : -1;
     for (let s = 6 + rnd(pc.id, 6) * 6; s < pc.len - 6 && st.poles < cap.poles; s += step) {
       const o = at(pc, s), px = o.x + -o.tz * edge * sd, pz = o.z + o.tx * edge * sd; if (insideBuilding(px, pz, 0.4) || inRoad(px, pz, 0.4)) { prev = null; continue; }
       const [lx, lz] = L(px, pz); st.poles++; circle(px, pz, 0.25);
@@ -120,6 +133,8 @@ export function* buildStreetLife(tile, ctx, out) {
         if (A.shop.wires > 0.6 && rnd(pc.id, s | 0, 3) < 0.5) { const ox2 = px + o.tz * (edge * 2 + pc.hw) * sd, oz2 = pz - o.tx * (edge * 2 + pc.hw) * sd; wire(M.prop, px - ox, gy + 6.0, pz - oz, ox2 - ox, gy + 5.2, oz2 - oz, 0.5, C(PALE.wire)); wire(M.prop, px - ox, gy + 5.7, pz - oz, ox2 - ox, gy + 4.9, oz2 - oz, 0.7, C(PALE.wire)); st.spans++; } }
       if (A.ads > 0.4 && rnd(pc.id, (s | 0) + 3) < A.ads * 0.7) { const c = art.bannerFor(rnd(pc.id, (s | 0) + 7)); for (const f of [1, -1]) board(M.ban, lx + o.tz * sd * 0.5 + o.tx * 0.05 * f, gy + 5.0, lz - o.tx * sd * 0.5 + o.tz * 0.05 * f, o.tx * f, o.tz * f, 0.8, 1.6, WHITE, [c.u0, c.v0, c.u1, c.v1]); }
       prev = { x: px, z: pz }; prevSide = sd; void prevSide;
+      /* CP (owner 21 Nov, phase 5 list): a power pole 2.2 m beside every second lamp post (every third gave one pole to a short street piece and so no wire span, seen 21 Nov), a cross-arm and three wires to the last one, so the walk is not bare of overhead cables */
+      if (an === 'cp' && (pi++ & 1) === 0) { const qx = px + o.tx * 2.2, qz = pz + o.tz * 2.2; if (!insideBuilding(qx, qz, 0.4) && !inRoad(qx, qz, 0.4)) { const [mx, mz] = L(qx, qz); box(M.prop, mx, gy, mz, 0.22, 8.2, 0.22, 1, 0, C(PALE.pole)); box(M.prop, mx, gy + 7.2, mz, 1.6, 0.1, 0.12, -o.tz, o.tx, C(PALE.pole)); if (prevPow) { for (let k = 0; k < 3; k++) wire(M.prop, prevPow.x - ox, gy + 7.3 - k * 0.3, prevPow.z - oz, qx - ox, gy + 7.3 - k * 0.3, qz - oz, 0.7 + 0.2 * k, C(PALE.wire), 2.4, 8); st.spans++; } prevPow = { x: qx, z: qz }; } }
     }
     /* street trees */
     const dens = (veg.classDensity[pc.cls] || 0.5) * A.trees.density; if (dens > 0.03) {
@@ -163,8 +178,8 @@ export function* buildStreetLife(tile, ctx, out) {
         const forest = p.class === 'forest' || p.class === 'scrub', list = forest ? ['neem', 'peepal', 'jamun'] : A.trees.species, id = list[Math.floor(rnd(904, key) * list.length)], spc = ID.species.get(id); if (!spc || spc.id === 'bougainvillea') continue; const [lx, lz] = L(px, pz); plant(lx, gy, lz, spc, rnd(905, key), bloomOnP(spc), big * (forest ? 0.8 + 0.4 * rnd(906, key) : 1)); np++; if (p.class === 'colony') nc++; st.trees++; circle(px, pz, 0.4); } }
   }
   /* ---- hedges: a low clipped hedge along the outer edge of the avenues of Lutyens' Delhi, DDA colonies and Connaught Place ---- */
-  { let nh = 0; for (const pc of pieces) { if (nh > 260 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 24) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if (an !== 'lutyens' && an !== 'dda' && an !== 'cp') continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
-      for (const side of [1, -1]) { if (rnd(pc.id, 70 + side) > 0.55) continue; for (let s = 6; s < pc.len - 6 && nh < 260; s += 6) { const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 3.4 : 2.4), px = o.x + -o.tz * off * side, pz = o.z + o.tx * off * side; if (insideBuilding(px, pz, 1.2) || inRoad(px, pz, 0.8) || [-3.1, 3.1].some(e => inRoad(px + o.tx * e, pz + o.tz * e, 1.1) || insideBuilding(px + o.tx * e, pz + o.tz * e, 0.5))) continue; /* both ends too: a 5.6 m hedge no longer reaches across the mouth of a side street (seen from above at Radial Road 7, CP match log) */ const [lx, lz] = L(px, pz); box(M.prop, lx, gy, lz, 5.6, 0.85, 0.9, o.tx, o.tz, C(0x3a6a2a), C(0x4f8236)); nh++; } } }
+  { let nh = 0; for (const pc of pieces) { if (nh > 260 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 24) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if (an !== 'lutyens' && an !== 'kartavya' && an !== 'dda' && an !== 'cp') continue; if (ctx.yieldNow && ctx.yieldNow()) yield;
+      for (const side of [1, -1]) { if (rnd(pc.id, 70 + side) > 0.55) continue; for (let s = 6; s < pc.len - 6 && nh < 260; s += 6) { const o = at(pc, s), off = pc.hw + (pc.walk > 0 ? 3.4 : 2.4), px = o.x + -o.tz * off * side, pz = o.z + o.tx * off * side; if (insideBuilding(px, pz, 1.2) || inRoad(px, pz, 0.8) || [-3.1, 3.1].some(e => inRoad(px + o.tx * e, pz + o.tz * e, 1.1) || insideBuilding(px + o.tx * e, pz + o.tz * e, 0.5))) continue; /* both ends too: a 5.6 m hedge no longer reaches across the mouth of a side street (seen from above at Radial Road 7, CP match log) */ const [lx, lz] = L(px, pz); hedge(M.hedge, lx, gy, lz, 5.6, 0.85, 0.95, o.tx, o.tz, nh * 3.1 + pc.id, C(0x3a6a2a), C(0x4f8236)); nh++; } } }
     st.hedges = nh; }
   /* ---- compound walls: a low plastered wall with a coping along the plot edge of the residential streets of Lutyens' Delhi and the DDA colonies, in gaps and not through anything ---- */
   { let nw = 0; for (const pc of pieces) { if (nw > 220 || pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 20) continue; const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z); if ((an !== 'lutyens' && an !== 'dda') || (pc.cls !== 'residential' && pc.cls !== 'tertiary')) continue; if (ctx.yieldNow && ctx.yieldNow()) yield;

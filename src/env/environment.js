@@ -8,9 +8,9 @@ import { alea } from '../core/rng.js';
 
 const lerp = (a, b, t) => a + (b - a) * t, smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 export const TIMES = {
-  day:   { top: '#2f6fd6', mid: '#78b4ef', bot: '#cfe6ff', sun: [-0.30, 0.85, -0.45], sunCol: [1, 0.95, 0.8], light: '#fff2dc', li: 3.2, hs: '#cfe2ff', hg: '#7d7a6a', hi: 1.15, stars: 0, cc: [1, 1, 1], ca: 0.6 },
+  day:   { top: '#2f6fd6', mid: '#78b4ef', bot: '#cfe6ff', sun: [-0.55, 0.55, -0.65], sunCol: [1, 0.95, 0.8], light: '#fff2dc', li: 3.2, hs: '#cfe2ff', hg: '#7d7a6a', hi: 1.0, stars: 0, cc: [1, 1, 1], ca: 0.6 },
   dawn:  { top: '#3d5a96', mid: '#b99ab8', bot: '#f6c9a0', sun: [-0.35, 0.10, -0.9], sunCol: [1, 0.78, 0.55], light: '#ffc79a', li: 2.8, hs: '#cfd8ff', hg: '#7d7566', hi: 1.15, stars: 0.1, cc: [1, 0.80, 0.72], ca: 0.8 },
-  dusk:  { top: '#27305e', mid: '#9d6a8a', bot: '#f2a36e', sun: [-0.35, 0.06, -0.9], sunCol: [1, 0.6, 0.35], light: '#ffa468', li: 2.7, hs: '#aaa6e4', hg: '#66565e', hi: 1.15, stars: 0.45, cc: [0.96, 0.58, 0.48], ca: 0.75 },
+  dusk:  { top: '#27305e', mid: '#9d6a8a', bot: '#f2a36e', sun: [-0.35, 0.06, -0.9], sunCol: [1, 0.6, 0.35], light: '#ffa468', li: 1.6, hs: '#aaa6e4', hg: '#66565e', hi: 0.95, stars: 0.45, cc: [0.96, 0.58, 0.48], ca: 0.75 },
   night: { top: '#03050d', mid: '#0b1230', bot: '#1f2c5c', sun: [-0.3, 0.55, -0.7], sunCol: [0.25, 0.3, 0.5], light: '#8fa6ff', li: 0.7, hs: '#2a3a78', hg: '#0b0c16', hi: 0.9, stars: 1, cc: [0.10, 0.13, 0.22], ca: 0.35 }
 };
 const CYCLE = 360, TOD_KEYS = [[0, 'night'], [0.20, 'night'], [0.27, 'dawn'], [0.36, 'day'], [0.64, 'day'], [0.73, 'dusk'], [0.82, 'night'], [1, 'night']];

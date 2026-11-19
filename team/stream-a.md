@@ -1,3 +1,55 @@
+## 2026-11-22 00:00  A-2026-11-21-11  Day sun lowered (SHARED file src/env/environment.js)
+Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
+What changed: day preset `sun` y 0.85 to 0.55 and `hi` 1.15 to 1.0 (one line, CRLF kept), with more shadow casters in `cityworld.js`. Owner asked for it so sun shadows read.
+Evidence: implemented; self-test 121; seen at CP and the avenue by day. NOT done: other scenes, the day-cycle blends, phone.
+For the other stream: Anshul's Claude: this touches your L6 look; please look at your own scenes by day and change `times.day` if it clashes (tuner: `times.day.sun`, `times.day.hi`). Together with the dusk change of A-2026-11-21-06.
+Status: open
+
+## 2026-11-21 23:00  A-2026-11-21-10  Phase 7: open items closed where possible, register of what is not done
+Branch: claude/delhi-main-phase-7 (stacked on phase 6)  Commit: see the PR
+What changed: `streetlife.js` (CP power poles and wires), `identity.json` (no palm on Kartavya), `docs/OPEN_ITEMS.md` (new: every not-done item from every ask), `tools/kartavya_views.json`.
+Evidence: night q=high 12.4 ms against main 11.9 ms (desktop, visible); dusk 12.2 ms; self-test 121. NOT done: phone, spots k3 to k6, Lutyens kit; the full list is in `docs/OPEN_ITEMS.md`.
+For the other stream: Anshul's Claude: please read item 3 and 14 in `docs/OPEN_ITEMS.md` (dusk preset, lane widening audit).
+Status: open
+
+## 2026-11-21 22:00  A-2026-11-21-09  Delhi main plan phase 6: Kartavya Path area rules
+Branch: claude/delhi-main-phase-6 (stacked on phase 5)  Commit: see the PR
+What changed: `identity.json` (zone and area `kartavya`), small hooks in `infill.js`, `tilemesh.js`, `streetlife.js` (world files, edited under the 17 Nov Delhi override), `tools/kartavya_views.json`.
+Evidence: implemented; self-test 121; one spot seen by day. NOT done: spots k2 to k6, dusk, frame cost, phone.
+For the other stream: Anshul's Claude: the zone centre and radius are a guess; correct them from the map if you know better.
+Status: info
+
+## 2026-11-21 21:00  A-2026-11-21-08  Delhi main plan phase 5: palms and wide pavements
+Branch: claude/delhi-main-phase-5 (stacked on phase 4)  Commit: see the PR
+What changed: `cpfacade.js` (`makePalmCanvas`), `cityworld.js` (palm card hook), `streetlife.js` (palm sizing), `assets/cities/delhi/identity.json` (palm species), `tilemesh.js` (4.2 m pavements near CP). Own work, no licence needed.
+Evidence: implemented; self-test 121; seen by day and night. NOT done: frame cost, phone test, power poles.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-21 20:00  A-2026-11-21-07  Delhi main plan phase 4: wet reflections on the paving at night
+Branch: claude/delhi-main-phase-4 (stacked on phase 3)  Commit: see the PR
+What changed: `cpfacade.js` (`boardReflections`, `brandIndex`), `tilemesh.js` (one call in `arcade()`, glossier paving in `setNight`). Night only.
+Evidence: implemented; self-test 121; seen at night; night frames 0.7 ms (4 percent) above main on a desktop at q=high, same as phase 3 alone. NOT done: a phone night benchmark.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-21 18:00  A-2026-11-21-06  Delhi main plan phase 3: light spill, dusk preset changed (shared env file)
+Branch: claude/delhi-main-phase-3 (stacked on phase 2)  Commit: see the PR
+What changed: `cpfacade.js` (light texture with a vertical wash, `columnWash`, `wallWash`), `tilemesh.js` (3 lines in `arcade()`), and a SHARED file: `src/env/environment.js` dusk preset `li` 2.7 to 1.6 and `hi` 1.15 to 0.95 (so the city's night lights come on at dusk; the preset was nearly full day), plus the tuner help text for `times.*.li`.
+Evidence: implemented; self-test 121; seen at night and at dusk; q=high by day equal to main. NOT done: a night benchmark, the street lamp pool check.
+For the other stream: Anshul's Claude: the dusk preset touches your L6 (dusk, night and monsoon look); please check it in your own scenes and change `times.dusk` if it clashes (tuner: `times.dusk.li`, `times.dusk.hi`).
+Status: open
+
+## 2026-11-21 16:00  A-2026-11-21-05  Delhi main plan phase 2: CP facade texture, roof cornice, corner columns
+Branch: claude/delhi-main-phase-2 (from main 48e6dac, separate worktree)  Commit: see the PR
+What changed: `src/world/city/cpfacade.js` (`cpFacadeTextures`, `roofCornice`, sill uv), `tilemesh.js` (new mesh and material `bldgCP`, wall mapping for CP blocks, the cornice call, the corner portico), `cityworld.js` (mesh name). Details in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121; seen by day and by night at a drum corner; q=high frames equal to main (11.8 against 12.1 ms average). NOT done: phase 3 onward, a phone, the owner's scoring.
+For the other stream: nothing required.
+## 2026-11-21 14:00  A-2026-11-21-04  Delhi main region plan; phase 1 markings like real Delhi
+Branch: claude/delhi-main-phase-1 (from main 48e6dac, separate worktree)  Commit: see the PR
+What changed: new `docs/DELHI_MAIN_PLAN.md` (9 phases with gates, the main region defined, asset research), `docs/DECISIONS.md` (the 21 Nov decision), `src/world/city/tilemesh.js` (double yellow off, black and white kerbs).
+Evidence: implemented; self-test 121; seen: no yellow line at a junction. NOT seen: the painted kerb. NOT done: phases 2 to 9.
+For the other stream: nothing required; please read `docs/DELHI_MAIN_PLAN.md` before touching the CP or Lutyens' Delhi look, and say here if a phase overlaps your tasks (P/L series).
 ## 2026-11-21 18:00  A-2026-11-21-07  Owner's scores for the CP spots (3, 3, 2, 3, 3), iPhone 14 Pro, a 3D royal palm asset
 Branch: claude/delhi-p1-infill  Commit: see the PR
 What changed: new `tools/make_palm.py` and `assets/nature/palm_royal.glb` (+ preview PNG), `assets/ASSETS.md` line. The owner scored the CP spots 3, 3, 2, 3, 3: recorded here read as shape 3, colour 3, brand boards 2, lighting 3, ground 3 (the scale score was not given; the owner has not said which order it is in, so this reading is an assumption to confirm). The owner's phone is an iPhone 14 Pro.

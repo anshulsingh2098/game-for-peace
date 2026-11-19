@@ -91,7 +91,7 @@ export const DOCS = {
   'times.*.sun': ['Direction the sunlight comes from, as x, y, z (y is height). A low y gives long shadows; the sun disc is drawn in the sky there.', 'y between 0.05 (sunset) and 0.9 (noon); x and z between -1 and 1'],
   'times.*.sunCol': ['Colour of the sun disc as red, green, blue. Above 1 makes it glow.', '0 to 1.2 each'],
   'times.*.light': ['Colour of the main (sun) light on the world.', 'any colour; warm at dawn and dusk, pale blue at night'],
-  'times.*.li': ['Strength of the main light. Higher = brighter, stronger shadows, more contrast.', 'day 2.5 to 4, dawn and dusk 2 to 3, night 0.3 to 1'],
+  'times.*.li': ['Strength of the main light. Higher = brighter, stronger shadows, more contrast.', 'day 2.5 to 4, dawn 2 to 3, dusk 1.3 to 2 (below 1.8 the night lights of the city come on), night 0.3 to 1'],
   'times.*.hs': ['Colour of the soft sky light that lights surfaces facing up.', 'any colour'],
   'times.*.hg': ['Colour of the bounced ground light that lights surfaces facing down.', 'any colour'],
   'times.*.hi': ['Strength of the soft sky and ground light. Higher = fewer dark shadows.', '0.8 to 1.4'],
