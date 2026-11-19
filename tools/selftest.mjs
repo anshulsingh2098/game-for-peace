@@ -340,7 +340,7 @@ test('saved choices: rubbish in storage never gets into the game (null, text, wr
     for (const k of ['radioVol', 'vehicle', 'time', 'weather', 'lights', 'muted']) assert.ok(!(k in s), k + ' dropped for ' + JSON.stringify(bad));
   }
   const good = sanitiseSaved({ time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 3, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C', truck: 'red', ghost: '#ffffff', bike: '#12' }, extra: 'ignored' }, ctx);
-  assert.deepEqual(good, { time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 1, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C' }, progress: { activities: {} } });
+  assert.deepEqual(good, { time: 'dusk', weather: 'rain', lights: 'on', vehicle: 2, muted: true, rumble: 'off', radioVol: 1, station: 'kexp-90-3-seattle', camBefore: 'far', location: 'alps', paint: { car: '#C8101C' }, progress: { activities: {} }, cash: 0, missions: {} });
   assert.equal(sanitiseSaved({ location: 'atlantis' }, ctx).location, undefined);
   assert.equal(sanitiseSaved({ traffic: 'mid' }, ctx).traffic, 'mid'); assert.equal(sanitiseSaved({ traffic: 'light' }, ctx).traffic, 'low'); assert.equal(sanitiseSaved({ traffic: 'busy' }, ctx).traffic, 'high'); assert.equal(sanitiseSaved({ traffic: 'lots' }, ctx).traffic, undefined);
 });
@@ -1408,5 +1408,18 @@ test('carjacking (C2): every garage car a taken NPC car becomes exists, and ever
   const m = src.match(/GARAGE_OF = \{([^}]*)\}/); assert.ok(m, 'GARAGE_OF is in vehicles.js'); const pairs = [...m[1].matchAll(/'?([\w-]+)'?: ('?[\w-]+'?|null)/g)].map(x => [x[1], x[2].replace(/'/g, '')]); assert.ok(pairs.length >= 10);
   for (const [k, v] of pairs) if (v !== 'null') assert.ok(ids.has(v), 'GARAGE_OF ' + k + ' -> ' + v + ' is a garage car');
   const sets = [...src.matchAll(/^  '([\w-]+)': \{ (?:pack: '[\w-]+', )?base: '(\w+)'/gm)].map(x => x[1]); assert.ok(sets.length >= 10); for (const k of sets) assert.ok(pairs.some(([a, b]) => a === k && b !== 'null'), k + ' (a model kind) can be taken');
+});
+test('missions (M1): Indian digit grouping, the dealer pays by condition and time, cases are valid and point at real landmarks, the wallet survives rubbish', async () => {
+  const M = await import('../src/missions/missions.js'), { sanitiseSaved } = await import('../src/core/saved.js');
+  assert.equal(M.rupees(450000), '\u20b94,50,000'); assert.equal(M.rupees(12345678), '\u20b91,23,45,678'); assert.equal(M.rupees(999), '\u20b9999'); assert.equal(M.rupees(-5), '\u20b90');
+  const LM = new Set(JSON.parse(readFileSync(new URL('../assets/cities/delhi/landmarks.json', import.meta.url))).landmarks.map(l => l.id)); assert.ok(LM.has(M.MARKET.id), 'the market is a landmark');
+  for (const c of M.CASES) assert.deepEqual(M.validateCase(c, LM), [], c.id); assert.ok(M.validateCase({ ...M.CASES[0], at: 'nowhere' }, LM).length, 'a bad landmark is caught'); assert.equal(new Set(M.CASES.map(c => c.id)).size, M.CASES.length);
+  const c = M.CASES[0], clean = M.priceOf(c, { damage: { state: 'ok', frame: 1 }, seconds: c.par }), slow = M.priceOf(c, { damage: { state: 'ok', frame: 1 }, seconds: c.limit });
+  assert.equal(clean.total, Math.round(c.base * 1.2 / 100) * 100, 'a clean fast job earns 20 percent more'); assert.equal(slow.total, c.base, 'a job at the limit earns the base price');
+  assert.ok(M.priceOf(c, { damage: { state: 'ok', frame: 0.7 }, seconds: c.limit }).total < slow.total && M.priceOf(c, { damage: { state: 'smoking', frame: 0.5 }, seconds: c.limit }).total < c.base / 2 && M.priceOf(c, { damage: { state: 'wrecked', frame: 0 }, seconds: c.par }).total === 0, 'damage cuts the price, a burnt-out car is scrap');
+  const r = new M.Run(c); assert.equal(r.phase, 'find'); assert.equal(r.sell({ state: 'ok', frame: 1 }), null, 'cannot sell before taking it'); assert.ok(r.taken(3)); assert.equal(r.phase, 'deliver'); r.tick(5); const pay = r.sell({ state: 'ok', frame: 1 }); assert.ok(pay.total > c.base && r.phase === 'sold');
+  const r2 = new M.Run(c); r2.tick(c.limit + 1); assert.equal(r2.phase, 'failed');
+  const w = sanitiseSaved({ cash: 'lots', missions: { 'a-b': { done: 2, best: 5e5 }, 'BAD ID': {}, x: 5 } }, {}); assert.equal(w.cash, 0); assert.deepEqual(w.missions, { 'a-b': { done: 2, best: 500000 } });
+  assert.equal(sanitiseSaved({ cash: 1e12 }, {}).cash, 1e9); assert.equal(sanitiseSaved({ cash: 1234.6 }, {}).cash, 1235);
 });
 console.log(`\n${passed} checks passed`);
