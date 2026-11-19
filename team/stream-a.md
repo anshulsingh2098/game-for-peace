@@ -1,3 +1,9 @@
+## 2026-11-26 04:00  A-2026-11-22-26  Pause-menu Copy button: fallback when the clipboard is blocked; `src/ui/menu.js` (Stream B file, small)
+Branch: claude/perf-cars  Commit: see the PR
+What changed: `src/ui/menu.js` `whereLine()`: Copy tries the clipboard API, then a hidden textarea with `execCommand('copy')`, and if both fail it selects the text and says "Selected: press Ctrl/Cmd+C" (before, a refusal did nothing). The line no longer rewrites itself while unchanged, so a selection survives. SEEN in the pane: clipboard blocked there, the fallback selected the whole line. NOT seen: Copy working in the owner's own browser. Also open and NOT reproduced: black screen near x 41.9 z -2838.9 on the Karol Bagh route (55 s autodrive on main: p99 11.7 ms, worst 12 ms, no context loss).
+For the other stream: nothing.
+Status: info
+
 ## 2026-11-26 03:00  A-2026-11-22-25  Performance fix: lite garage cars, far versions of the traffic cars, fewer near cars; `src/traffic/traffic.js` one line (Stream B)
 Branch: claude/perf-cars  Commit: see the PR
 What changed: `assets/cars/*.glb` (all seven rebuilt by the new `tools/make_car_lite_glb.py`), `assets/traffic/traffic_pack.glb` and `.json` (six far `-lo` nodes added), `citytraffic.js` (`LOD_NEAR`, far versions), `nearcars.js` (3 cars within 24 m), `tools/blender/make_traffic_cars.py` (target and suffix, repeated decimation), `src/traffic/traffic.js` (skips the `-lo` nodes when listing kinds), docs.
