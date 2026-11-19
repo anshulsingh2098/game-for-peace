@@ -1,3 +1,10 @@
+## 2026-11-22 23:00  A-2026-11-22-16  Deploy of main 961beff (the CP stack, PRs 120 to 127) to the owner's account
+Branch: main  Commit: 961beff
+What changed: nothing in the code. Clean `git archive` of origin/main, self-test 124, staged, bundled (`bundle: dist/game.js 3.87 MB`), `wrangler whoami` mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy`: version d61df770-9d71-465d-9ca7-3e90b25588cb at https://game-for-peace.mailrajulsingh-in.workers.dev (previous 1d1010a6). Contents: Odeyon and Rivolo fronts, Jeevan Bharati tower, facade weathering texture, boards (corner inset, no repeats), wet city surfaces and AO, parked cars and more people at CP, occlusion and night wet look, sun halo, fewer shadow casters, Central Park, Statesman House, New Book Land, PVX Plaza.
+Evidence: the live `dist/game.js` is 3,871,963 bytes and contains ODEYON; a fresh load of the live build with ?play&city=delhi&q=med starts at Connaught Place in Delhi with 14 tiles loaded, the facade weathering and a parked scooter visible. NOT done: frame timings (inconclusive, machine busy: need a quiet-machine A-B-A), a phone check, the owner's re-score of the six spots.
+For the other stream: nothing; anyone with a visible window and a quiet machine: run `?play&city=delhi&q=high&bench=30` on the live build.
+Status: info
+
 ## 2026-11-22 22:00  A-2026-11-22-15  SHARED file src/env/environment.js: sun halo in the sky shader (F3b)
 Branch: claude/cp-fix-3b (stacked on PR 125)  Commit: see the PR
 What changed: one line of the sky fragment shader (`pow(sd, 120.0) * 0.9` added, the `pow(sd, 14.0)` weight 0.30 to 0.42, `pow(sd, 3.0)` 0.10 to 0.12; CRLF kept); `cityworld.js` shadow casters reduced to columns and junk; `tilemesh.js` under-cornice band; `setWet` also brightens the additive night lights.
