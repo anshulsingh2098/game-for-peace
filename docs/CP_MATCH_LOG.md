@@ -2,6 +2,10 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-21  Phase 7 follow-up 2: drum corner caps
+Before: from a low street angle the tower caps looked like thin slanted white flaps. Cause found by looking: the cornice ring (a collar 0.45 m wider than the shaft) was made of vertical faces only, so from below it was open. Built: a face under the collar, a dome in four tiers (drum, shoulder, crown, tip) and a small four-sided finial, in `drumCorner` (`cpfacade.js`). Seen after: low camera, the collar is closed (its underside is dark, lit from above); roof-high camera, domes with a collar and a point. Verdict: close; proportions against a photo of CP's corner domes not compared. Triangles per tower up from 12 to about 100.
+Self-test 121 checks.
+
 ## 2026-11-21  Phase 7 follow-up: power poles and lamp pool inspected
 Method: the game page with a second camera rendered once into an overlay (the game's own camera cannot look up from the road), spots on the Outer Circle near x 932, z -2030 and x 811, z -2073.
 Seen, day: a grey power pole with a cross-arm 2.2 m beside a lamp post; three wires across a street between two poles 64 m apart. First version (a pole at every third lamp) made no wires at all (80 spans appear after the change to every second lamp, counted by a temporary counter, removed).

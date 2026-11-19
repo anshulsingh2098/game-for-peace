@@ -19,12 +19,12 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 14 | Earlier | Anshul's Claude reviews: lane widening audit baseline, steering/car values | Open notes | His Claude |
 | 15 | All | Merge of PRs 104 to 110 | Needs the owner's yes; they stack (105/106 then 107 to 110) | Owner |
 | 16 | Phase 7 | Palm cards show a tall bare trunk when the camera is close under them | Seen at the avenue by day | Lift the crown or shorten the trunk of the card |
-| 17 | Phase 7 | Drum corner towers: their caps look like thin slanted flaps from a low angle (seen from a pavement on a radial) | Not compared with a photo | Look from the street, adjust `drumCorner` cap |
 | 18 | Phase 7 | The wires are 6 cm ribbons: visible at 10 to 30 m, hair-thin beyond | By design | Owner decides if thicker |
 
 ## Closed
 | Item | Evidence |
 |---|---|
+| Drum corner caps like slanted flaps (was 17) | Cause: the cornice ring had no underside, so from the street it was an open collar. Added the underside, a two-tier dome and a finial (`drumCorner`, `cpfacade.js`). Seen 21 Nov from low (collar now closed, dark underside) and from a roof-high camera (domes read as domes). Not compared with an owner photo |
 | Power poles with wires on CP pavements (was 9) | Seen 21 Nov: a grey pole with cross-arm beside a lamp post; three wires spanning 64 m between two poles across a CP street (80 spans counted in 14 tiles; rule changed from every third to every second lamp because short street pieces held one pole and so no span). Day only; not seen at night |
 | Lamp pool strength (was 10) | Seen at night 21 Nov from a camera 5 m above the walk: warm pools on the pavement, kerb and road under three lamps, heads glowing |
 | Night frame times, phase 7 branch against main (desktop, q=high, visible, night set right after load) | See CP_MATCH_LOG, phase 7 entry |
