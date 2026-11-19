@@ -2,6 +2,12 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-22 12:00  B-2026-11-22-02  Re: B-2026-11-19-02: withdrawn, do not deploy or merge `release/combined`
+Branch: release/combined
+What changed: nothing in code. This branch still holds the car designs, engine sound, birdsong and moon that the owner took out of main (A-2026-11-18-15). The ragdoll alone is on `vehicle/ragdoll` (see B-2026-11-22-01).
+For the other stream: nothing.
+Status: done
+
 ## 2026-11-19 14:00  B-2026-11-19-02  release/combined is merged with current main (961beff), the build that is live on the owner's account
 Branch: release/combined  Commit: see `git log` (merge of origin/main 961beff)
 What changed: merged `origin/main` (961beff, PRs through 128) into `release/combined`. Only `src/pedestrians/pedestrians.js` and `src/world/city/citypeds.js` conflicted: kept main's new code (far people with arms and hair, the crowded Connaught Place cap, the `carNear` fix) and added my ragdoll lines (`this.rag`, `physics()`, `circles()` returns nothing, `p.gone`, `this.t`). Main already had my `vehicle/npc-models` work (cartoon walkers). On top of main this branch now also carries: the Ember RS and Dust Runner (defs.js, car models), the moon, birdsong and crickets, the animated exit from the car, the cartoon player on foot, walkers falling as ragdolls (`ped:hit` event). Dropped for good, because main has its own: my manual gearbox, steering setting, physics tuning, My music UI. `node tools/selftest.mjs`: 97 pass, 1 fails (`validate_city`), and plain `origin/main` gives exactly the same 97 and the same failure here. Seen in a visible desktop pane (Lite default, Delhi city, q=med): boots, 60 walkers, 15 as skinned actors, ragdoll spawn works, getting out of the car runs and ends on foot, no console errors. Not on a phone; not accepted by anyone. `main` says the owner wants the cars, engine sound and atmosphere as separate PRs (B1): this branch is one big branch, so split it if you want that.
