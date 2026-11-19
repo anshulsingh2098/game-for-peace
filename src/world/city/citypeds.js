@@ -13,7 +13,7 @@ export class CityPeds {
     this.rnd = makeRnd(777);
     this.city = city; this.extra = []; this.extraT = 0; this.snapCache = new Map(); this.traffic = traffic; this.cap = 0; this.list = []; this.gy = 0; this.t = 0;
     this.sim = { list: this.list, level: 'mid', update() {}, setLevel() {}, clear() {} };
-    this.view = new Pedestrians(scene, { graph: { edges: new Map() } }, 'city', origin, { density: 1, level: 'high' }); this.view.sim = this.sim;
+    this.view = new Pedestrians(scene, { graph: { edges: new Map() } }, 'city', origin, { density: 1, level: 'high' }); this.view.sim = this.sim; this.hitSpots = []; this.view.onRemove = p => this.hitSpots.push({ x: p.x, z: p.z, t: this.t });
   }
   setMode(m) { this.cap = Math.min(44, MODES[m] === undefined ? 10 : MODES[m]); }
   pos(p, s, out) { const pc = p.pc, c = pc.cum, pts = pc.s.pts; let i = 0; while (i + 2 < c.length && c[i + 1] < s) i++; const f = Math.max(0, Math.min(1, (s - c[i]) / Math.max(0.01, c[i + 1] - c[i]))), dx = pts[i * 2 + 2] - pts[i * 2], dz = pts[i * 2 + 3] - pts[i * 2 + 1], L = Math.hypot(dx, dz) || 1; out.x = pts[i * 2] + dx * f; out.z = pts[i * 2 + 1] + dz * f; out.tx = dx / L; out.tz = dz / L; return out; }
@@ -25,12 +25,12 @@ export class CityPeds {
     return null;
   }
   update(dt, px, pz, gy) {
-    this.gy = gy; const tr = this.traffic, L = this.list, ID = this.city && this.city.identity, capNow = ID && ID.areaNameAt && this.cap > 0 && ID.areaNameAt(px, pz) === 'cp' ? Math.min(60, Math.round(this.cap * 1.5)) : this.cap;      /* F4: Connaught Place is crowded: half as many people again (up to 60) */
+    this.gy = gy; this.t += dt; const tr = this.traffic, L = this.list, ID = this.city && this.city.identity, capNow = ID && ID.areaNameAt && this.cap > 0 && ID.areaNameAt(px, pz) === 'cp' ? Math.min(60, Math.round(this.cap * 1.5)) : this.cap;      /* F4: Connaught Place is crowded: half as many people again (up to 60) */
     while (L.length > capNow) L.pop();
     if (L.length < capNow && tr.pieces.size && dt > 0) { const p = this.spawn(px, pz); if (p) L.push(p); }
     const o = {};
     for (let n = 0; n < L.length; n++) { const p = L[n];
-      if (!p.pc.alive || Math.hypot(p.x - px, p.z - pz) > DESPAWN) { const r = this.spawn(px, pz); if (r) L[n] = r; else L.splice(n--, 1); continue; }
+      if (p.gone || !p.pc.alive || Math.hypot(p.x - px, p.z - pz) > DESPAWN) { const r = this.spawn(px, pz); if (r) L[n] = r; else L.splice(n--, 1); continue; }
       if (p.state === 'cross') { p.cross += dt * 1.4 / Math.max(4, p.pc.w + 1.8); p.phase += dt * 7; if (p.cross >= 1) { p.cross = 0; p.side = -p.side; p.state = 'walk'; } }
       else if (p.state === 'wait') { p.wait -= dt; p.phase = 0; if (p.wait <= 0 && !this.carNear(p.x, p.z, 22)) { p.state = 'cross'; p.cross = 0; } }
       else { p.s += p.dir * p.v * dt; p.phase += dt * 6;
@@ -55,8 +55,9 @@ export class CityPeds {
     if (c.buses && c.buses.ok) for (const s of c.buses.stopsNear(px, pz, 130)) { const q = this.snap('b' + s.id, s.x, s.z), n = Math.floor(hash(s.id) * 4); for (let i = 0; i < n; i++) { const k = hash(s.id * 13 + i); mk(q.x + Math.cos(q.yaw + 1.57) * (i - n / 2) * 0.6, q.z + Math.sin(q.yaw + 1.57) * (i - n / 2) * 0.6, q.yaw, k, parseInt(cl[Math.floor(k * cl.length)].slice(1), 16)); } }
     const st = c.transit && c.transit.data && c.transit.data.metro && c.transit.data.metro.stations; if (st) for (const s of st) { if (!s.entrances) continue; for (const [ex, ez] of s.entrances) { if (Math.abs(ex - px) > 130 || Math.abs(ez - pz) > 130) continue; const n = 2 + Math.floor(hash(ex * 3 + ez) * 3); for (let i = 0; i < n; i++) { const k = hash(ex * 7 + ez * 5 + i); mk(ex + (k - 0.5) * 5, ez + (hash(k * 91) - 0.5) * 5, k * 6.28, k, parseInt(cl[Math.floor(k * cl.length)].slice(1), 16)); } } }
     for (const t of c.tiles.values()) { const sp = t.stalls; if (!sp) continue; for (let i = 0; i < sp.length; i += 2) { if (Math.abs(sp[i] - px) > 110 || Math.abs(sp[i + 1] - pz) > 110) continue; const k = hash(sp[i] * 5 + sp[i + 1]); mk(sp[i] + 1.3, sp[i + 1] + 0.4, k * 6.28, k, vend[Math.floor(k * vend.length) % vend.length]); } }
-    this.extra = E.slice(0, 120);
+    const hs = this.hitSpots; this.hitSpots = hs.filter(h => this.t - h.t < 120);         // a standing person who was knocked down does not reappear at the next refresh
+    this.extra = E.filter(e => !this.hitSpots.some(h => Math.hypot(h.x - e.x, h.z - e.z) < 1.6)).slice(0, 120);
   }
   carNear(x, z, r) { for (const c of this.traffic.cars) if (Math.abs(c.h || 0) < 3 && Math.hypot(c.x - x, c.z - z) < r) return true; return false; }
-  circles(x, z, r) { const out = []; for (const p of this.list) if (Math.abs(p.x - x) < r + 2 && Math.abs(p.z - z) < r + 2) out.push({ x: p.x, z: p.z, r: 0.35, y: this.gy, ped: true }); return out; }
+  circles() { return []; }            // walkers are no longer solid for the car: a hit makes them fall as a ragdoll (pedestrians/ragdoll.js)
 }
