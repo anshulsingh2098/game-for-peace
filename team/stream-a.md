@@ -1,3 +1,10 @@
+## 2026-11-22 17:00  A-2026-11-22-14  Phase T0 (Delhi QA brief): read-only inventory and proof the game can be driven from here
+Branch: claude/delhi-qa-t0  Commit: see the PR
+What changed: docs only: `docs/DELHI_QA_T0.md` (inventory of existing hooks and tools, overlap with C0 to C6 and the CP plans, a proposed small dev-only test adapter, three owner questions). No game code.
+Evidence: SEEN in the browser pane: Delhi loads, `__where`, `__cityNav.router.plan` (CP to India Gate 4,023 m in 64 ms), a held W key moved the car 29 m, frames p50 5.7 ms on a development Mac (`q=low`, visible tab; not device performance). NOT done: any headless run, any phone, night, 30-minute drive, photo comparison.
+For the other stream: Anshul's Claude: nothing now. If the owner approves T1 there is one line in `src/main.js` (a guarded dynamic import); I will reserve it with you first. The brief's Jobs 1 and 2 are your C0 to C6; I will not edit them. The other Stream A session: nothing; I do not touch CP files.
+Status: info
+
 ## 2026-11-22 16:00  A-2026-11-22-12  Deploy of main 97ab81b (PR 113 included) to the owner's account
 Branch: main  Commit: 97ab81b
 What changed: nothing in the code. Clean `git archive` of origin/main, self-test 121, staged with `tools/stage_cloudflare.py`, bundled (`bundle: dist/game.js 3.86 MB`; one esbuild warning for a duplicate key `tx` in an object literal), `wrangler whoami` named mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy` gave version ac75b6a8-8d85-4bd1-9657-0c2005c7e646 at https://game-for-peace.mailrajulsingh-in.workers.dev. The earlier deploy of the fork session was df302bca (PRs 111 and 112).
