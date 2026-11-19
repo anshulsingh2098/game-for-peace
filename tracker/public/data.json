@@ -1,5 +1,5 @@
 {
- "commit": "6f4258f",
+ "commit": "21f0a0c",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -691,14 +691,6 @@
   [
    "Open pull requests",
    [
-    {
-     "id": "ad80cb87",
-     "t": "PR 138: Plan: Karol Bagh Run (mission game), docs only",
-     "d": "Open pull request on branch claude/mission-plan. Waiting for review and the owner's merge.",
-     "s": "doing",
-     "w": "Rajul",
-     "r": "PR 138"
-    },
     {
      "id": "ac20be42",
      "t": "PR 135: Log: deploy of main 433bd3d (release/damage and the new cars)",
@@ -1657,6 +1649,11 @@
  ],
  "prs": [
   [
+   "140",
+   "Mission M1 and M2: Repo Man (wallet, Missions card, pins, target car, sale in Karol Bagh)",
+   "merged"
+  ],
+  [
    "139",
    "Near traffic cars in full graphics; tougher cars (toughness, debris, fuse) with tuner settings; includes the traffic fix of PR 137",
    "merged"
@@ -1664,7 +1661,7 @@
   [
    "138",
    "Plan: Karol Bagh Run (mission game), docs only",
-   "open"
+   "merged"
   ],
   [
    "137",
@@ -1850,57 +1847,52 @@
    "101",
    "Delhi: Lite (Delhi only) build and Download button, P1 interiors and paved forecourts",
    "merged"
-  ],
-  [
-   "100",
-   "Trees by species (clumps, shadows), Metro through buildings fixed, asset cache, engine sound start",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 210 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 216 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 261 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 267 behind main)"
   ],
   [
    "vehicle/damage-1",
-   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 25 behind main)"
+   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 31 behind main)"
   ],
   [
    "vehicle/damage-3",
-   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 24 behind main)"
+   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 30 behind main)"
   ],
   [
    "vehicle/damage-4",
-   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 23 behind main)"
+   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 29 behind main)"
   ],
   [
    "vehicle/damage-5",
-   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 22 behind main)"
+   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 28 behind main)"
   ],
   [
    "vehicle/damage-6",
-   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 21 behind main)"
+   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 27 behind main)"
   ],
   [
    "vehicle/damage-7",
-   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 20 behind main)"
+   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 26 behind main)"
   ],
   [
    "vehicle/damage-8",
-   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 19 behind main)"
+   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 25 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 259 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 265 behind main)"
   ],
   [
    "vehicle/ragdoll",
-   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 26 behind main)"
+   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 32 behind main)"
   ]
  ],
  "tests": "126",
@@ -1914,5 +1906,5 @@
    "126 checks passing"
   ]
  ],
- "generated": "2026-11-19T20:50:05.402Z"
+ "generated": "2026-11-19T21:17:27.686Z"
 }

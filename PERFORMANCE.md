@@ -32,3 +32,13 @@ The pane's display refresh caps frames at about 180 per second (5.6 ms), so a 5.
 ## Crash damage and the new cars, 20 Nov 2026 (desktop, Claude app browser pane, 905 x 664, `q=med`, fly camera so the draw call counts are not comparable with the street view)
 The Nissan GT-R LB Works, p50 frame time: fresh 12.5 ms, dented (four 16 m/s hits) 13.4 ms, burning (eight more at 25 m/s) 13.4 ms; draw calls 1,183, 1,195, 1,196. So crash damage costs about 1 ms and 12 draw calls on this machine. **Not measured on a phone.** To measure on an iPhone: open the live address with `&bench=30` on a fresh start and note the average and the 95th percentile; then get out, take one of the new cars (carjack), hit a wall at 50 km/h until it smokes and run `&bench=30` again on that car (use `?damage=cosmetic` to compare dents only, `?damage=off` for none). Record the iPhone model, the iOS version, the tier and both results here.
 
+## Lag after the new cars, and the fix (20 Nov 2026; desktop, Claude app browser pane, `q=med`, Delhi start, the same spot each time)
+| | Live build before the fix (`21f0a0c`) | Lite cars, two traffic detail levels, 3 near cars |
+|---|---|---|
+| Draw calls per frame | 828 | 538 |
+| Triangles per frame | 1.63 M | 1.02 M |
+| Geometries | 574 | 365 |
+| JS heap | 640 MB | 610 MB |
+What was heavy: the seven new garage cars (38,000 to 110,000 triangles, 15 to 22 materials each), the traffic versions of them (about 3,000 triangles, 260 parked cars around the player, about 0.6 M triangles in all), and five nearby cars drawn as the full garage model (0.3 M more, plus a stall the first time each model loaded). Walking up to the parked mission car: worst frame 17 ms and none over 50 ms with the fix.
+The fix: `tools/make_car_lite_glb.py` rebuilt the seven garage cars as about 20,000 triangles (13,000 body, 4 wheels of 1,500), 7 draw calls and 0.8 to 1 MB each (were 2 to 3 MB), with vertex colours instead of pictures; the traffic pack has a far version of each model (about 700 triangles) used beyond 45 m (`LOD_NEAR` in `citytraffic.js`); the near full-model cars are 3 within 24 m (tuner: `traffic.near.count`, `traffic.near.range`). The frame time itself stayed at about 11 ms in this pane (its refresh), so the measure that moved is the work per frame, not the pane's rate. **Not measured on a phone or a slower laptop.**
+

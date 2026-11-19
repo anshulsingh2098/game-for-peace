@@ -1,3 +1,16 @@
+## 2026-11-26 04:00  A-2026-11-22-26  Pause-menu Copy button: fallback when the clipboard is blocked; `src/ui/menu.js` (Stream B file, small)
+Branch: claude/perf-cars  Commit: see the PR
+What changed: `src/ui/menu.js` `whereLine()`: Copy tries the clipboard API, then a hidden textarea with `execCommand('copy')`, and if both fail it selects the text and says "Selected: press Ctrl/Cmd+C" (before, a refusal did nothing). The line no longer rewrites itself while unchanged, so a selection survives. SEEN in the pane: clipboard blocked there, the fallback selected the whole line. NOT seen: Copy working in the owner's own browser. Also open and NOT reproduced: black screen near x 41.9 z -2838.9 on the Karol Bagh route (55 s autodrive on main: p99 11.7 ms, worst 12 ms, no context loss).
+For the other stream: nothing.
+Status: info
+
+## 2026-11-26 03:00  A-2026-11-22-25  Performance fix: lite garage cars, far versions of the traffic cars, fewer near cars; `src/traffic/traffic.js` one line (Stream B)
+Branch: claude/perf-cars  Commit: see the PR
+What changed: `assets/cars/*.glb` (all seven rebuilt by the new `tools/make_car_lite_glb.py`), `assets/traffic/traffic_pack.glb` and `.json` (six far `-lo` nodes added), `citytraffic.js` (`LOD_NEAR`, far versions), `nearcars.js` (3 cars within 24 m), `tools/blender/make_traffic_cars.py` (target and suffix, repeated decimation), `src/traffic/traffic.js` (skips the `-lo` nodes when listing kinds), docs.
+Evidence: SEEN in the desktop pane: draw calls 828 to 538, triangles 1.63 M to 1.02 M, geometries 574 to 365, walking up to the parked mission car: no frame over 50 ms; damage on the lite R35 (no errors, glass cracks). NOT done: a phone or slower laptop, a look at every lite car beside the full one (the R35 looks the same at play distance).
+For the other stream: Anshul's Claude: one line in `traffic.js` (the `-lo` filter); your damage code works unchanged on the lite cars.
+Status: info
+
 ## 2026-11-25 20:00  A-2026-11-22-24  Mission M1 and M2: Repo Man (wallet, Missions card, pins, parked target, sale in Karol Bagh); STREAM B FILE TOUCHED (`main.js`)
 Branch: claude/mission-m1  Commit: see the PR
 What changed: new `src/missions/missions.js` (pure) and `missionrun.js` (DOM and world); `src/main.js` (Stream B): one import, `createMissions({...})` before `carjack`, `missions.update(dt)` beside `updateCarjack()`, and in `carjack` a call `missions.taken(car.mission, wasVehicle)` after `takeCar`, plus `missions` in `window.__next`; `index.html` a Missions button; `src/core/saved.js` `cash` and `missions`; `citytraffic.js` `takeCar` returns `mission`; self-test 126 (one existing save test now expects `cash: 0, missions: {}`).
