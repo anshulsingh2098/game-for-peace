@@ -4,7 +4,7 @@
    the pack are guesses (docs/CITY_PACK.md 5a): the look is a style, not data. */
 import * as THREE from 'three';
 import { CP_CIRCLE } from './smooth.js';
-import { brandBand, drumCorner, makeBrandMaterial, facadeBands, bladeSign, soffitLights, makeLightMaterial, arcadePools, cpFacadeTextures, roofCornice, makeLeafCanvas, cinemaEdge, cinemaFront, columnWash, wallWash, boardReflections } from './cpfacade.js';
+import { brandBand, drumCorner, makeBrandMaterial, facadeBands, bladeSign, soffitLights, makeLightMaterial, arcadePools, cpFacadeTextures, roofCornice, makeLeafCanvas, cinemaEdge, cinemaFront, pavilion, columnWash, wallWash, boardReflections } from './cpfacade.js';
 import { deckHeight, underDepth, OPEN_CUT, pieceWidth, pieceSidewalk } from './pack.js';
 import { infillSteps } from './infill.js';
 import { buildingsToSkip } from './rules.js';
@@ -467,7 +467,7 @@ export function* buildTileSteps(tile, ctx) {
   let infill = []; if (ctx.infill !== false) infill = yield* infillSteps(tile, { size, G, widthOf: s => pieceWidth(G, s), yieldNow: ctx.yieldNow, styleAt: (x, z) => ctx.life && ctx.life.identity ? ctx.life.identity.areaNameAt(x, z) : 'default' }); out.nInfill = infill.length; tile.buildings = tile.buildings.concat(infill); yield;
   /* P1 part 3 (infill.js `yards`): open ground left inside the dense blocks is paved, so a forecourt reads as one; own cells of the pavement mesh, same height and texture as the pavements */
   if (infill.yards) { for (const y of infill.yards) { const v = hash(y[0] * 7 + y[1] * 13), c = shade(0x8a867c, 0.85 + 0.3 * v), q = (x, z) => M.walk.v(X(x), gy + LIFT.walk, Z(z), 0, 1, 0, c, X(x) / TEX_WALK, Z(z) / TEX_WALK), a0 = q(y[0], y[1]), a1 = q(y[2], y[1]), a2 = q(y[2], y[3]), a3 = q(y[0], y[3]); M.walk.tri(a0, a3, a2, 0, 1, 0); M.walk.tri(a0, a2, a1, 0, 1, 0); } out.nYards = infill.yards.length; }
-  let cornN = 0, arcN = 0, nArc = 0, drumN = 0;
+  let cornN = 0, arcN = 0, nArc = 0, drumN = 0, pavN = 0;
   /* the CP colonnade (reference N19: white columns, a continuous shaded walk, shop bays behind): a paved walk D m deep along the wall, square columns every ~3.6 m at its outer edge, and a slab over it at 5.6 m (the photos R2 and R4: columns about 3 persons high, about 0.7 m across; an estimate) whose underside is darker; one wall is about 20 triangles per bay */
   const arcade = (B, ax, az, bx, bz, nx, nz, l, y0, D, k, y1) => {
     const wc = shade(0xf1ede2, 0.94 + 0.08 * k), sc = wc.clone().multiplyScalar(0.62), pc = shade(0x9c978c, 0.9 + 0.2 * k), H = 5.6, T = 0.5, TH = 0.5, tx = (bx - ax) / l, tz = (bz - az) / l, nb = Math.max(2, Math.round(l / 3.6)), P = (u, d) => [ax + tx * u + nx * d, az + tz * u + nz * d];
@@ -513,6 +513,7 @@ export function* buildTileSteps(tile, ctx) {
       const cin = arc ? cinemaEdge(ax, az, bx, bz, l) : null; if (cin) cinemaFront(B, M.cpbrand, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, cin);      /* L3: the PVX Plaza cinema front instead of an arcade (cpfacade.js) */
       if (!cin && arc && l >= 8 && arcN < 200 && infill.streetClear) { const D = 3.4, ok = [0.08, 0.5, 0.92].every(t => infill.streetClear(ax + dx * t + nx * (D + 0.6), az + dz * t + nz * (D + 0.6), 0.6) && infill.streetClear(ax + dx * t + nx * (D * 0.5), az + dz * t + nz * (D * 0.5), 0.4));
         if (ok) { arcN++; arcade(B, ax, az, bx, bz, nx, nz, l, y0, D, hash(b.id * 29 + i), y1); } }
+      if (arc && !cin && l >= 26 && pavN < 14 && hash(b.id * 31 + i) < 0.55 && y1 - y0 > 11) { pavN++; try { pavilion(B, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, Math.floor(hash(b.id * 17 + i) * 1000)); } catch (e) { console.error('PAVILION', e && e.message, e && e.stack && e.stack.split('\n')[1]); } }      /* L4: the pavilion of a long CP front (cpfacade.js) */
       if (arc && l > 4) roofCornice(B, X, Z, ax, az, bx, bz, nx, nz, y1, wc);      /* the deep roof cornice of the CP blocks (cpfacade.js) */
       if (hgt < 60 || i % 2 === 0) { const mx = (ax + bx) / 2 - nx * 0.7, mz = (az + bz) / 2 - nz * 0.7; for (let s = 0; s < l; s += 2) { const t = (s + 1) / l; if (t > 1) break; out.circles.push(ax + dx * t - nx * WALL_R, az + dz * t - nz * WALL_R, WALL_R); } void mx; void mz; }
     }

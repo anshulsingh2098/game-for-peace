@@ -269,3 +269,37 @@ export function cinemaFront(B, m, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, c
   const roof = new THREE.Color(0x8d9096); for (let k = 0; k < 4; k++) { const cu = u0 + 3 + k * (W - 6) / 3, hx = 0.9, hz = 0.7, y = y1; const q = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => P(cu + a * hx, -1.6 + b * hz, y)), qt = q.map(p => [p[0], y + 1.1, p[2]]);
     for (let e = 0; e < 4; e++) { const a = q[e], b = q[(e + 1) % 4], at = qt[e], bt = qt[(e + 1) % 4], nx2 = (b[2] - a[2]), nz2 = -(b[0] - a[0]), nl = Math.hypot(nx2, nz2) || 1; solid(a, b, bt, at, roof, nx2 / nl, 0, nz2 / nl); } solid(qt[0], qt[1], qt[2], qt[3], roof.clone().multiplyScalar(1.1), 0, 1, 0); }
 }
+
+/* L4 (docs/CP_LANDMARKS.md, owner's photos P2 and P3): the pavilion of a long CP front. A central block 14 m wide that stands 0.9 m proud of the wall, with paired pilasters at both ends, a round-headed gate in the ground floor, a large arched window with a fan light and a balustrade band on the first floor, an attic over the roof line with its own small arched window and a triangular pediment; a railing along the whole roof edge (P2) and three small roof-garden trees (P3). All flat colours on the building mesh B. (ax, az)-(bx, bz) the wall edge, (nx, nz) outward, l its length, y0 the ground, y1 the roof line, wc the wall colour. */
+export function pavilion(B, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, key) {
+  const tx = (bx - ax) / l, tz = (bz - az) / l, uc = l / 2, hw = 7, P = (u, d, y) => [ax + tx * u + nx * d, y, az + tz * u + nz * d];
+  const solid = (a, b, c, dd, col, n0, n1, n2) => { const v0 = B.v(X(a[0]), a[1], Z(a[2]), n0, n1, n2, col, 0.06, 0.06), v1 = B.v(X(b[0]), b[1], Z(b[2]), n0, n1, n2, col, 0.06, 0.06), v2 = B.v(X(c[0]), c[1], Z(c[2]), n0, n1, n2, col, 0.06, 0.06), v3 = B.v(X(dd[0]), dd[1], Z(dd[2]), n0, n1, n2, col, 0.06, 0.06); B.tri(v0, v1, v2, n0, n1, n2); B.tri(v0, v2, v3, n0, n1, n2); };
+  const front = (u0, u1, d, ya, yb, col) => solid(P(u0, d, ya), P(u1, d, ya), P(u1, d, yb), P(u0, d, yb), col, nx, 0, nz);
+  const side = (u, d0, d1, ya, yb, col, sg) => solid(P(u, d0, ya), P(u, d1, ya), P(u, d1, yb), P(u, d0, yb), col, tx * sg, 0, tz * sg);
+  const arch = (uc2, d, yb, w, h, col) => {      /* a round-headed opening: a rectangle up to h - w/2, then a half circle of radius w/2 (8 steps) */
+    const r = w / 2, yr = yb + h - r; front(uc2 - r, uc2 + r, d, yb, yr, col); const c = P(uc2, d, yr);
+    for (let k = 0; k < 8; k++) { const a0 = Math.PI * k / 8, a1 = Math.PI * (k + 1) / 8, p0 = P(uc2 + Math.cos(a0) * r, d, yr + Math.sin(a0) * r), p1 = P(uc2 + Math.cos(a1) * r, d, yr + Math.sin(a1) * r), v0 = B.v(X(c[0]), c[1], Z(c[2]), nx, 0, nz, col, 0.06, 0.06), v1 = B.v(X(p0[0]), p0[1], Z(p0[2]), nx, 0, nz, col, 0.06, 0.06), v2 = B.v(X(p1[0]), p1[1], Z(p1[2]), nx, 0, nz, col, 0.06, 0.06); B.tri(v0, v1, v2, nx, 0, nz); } };
+  const white = wc.clone().multiplyScalar(1.12), pale = wc.clone().multiplyScalar(1.04), dark = new THREE.Color(0x141c2c), gate = new THREE.Color(0x120f0c), ys = y0 + 6.1, D = 0.9;
+  /* the projecting block and its sides */
+  front(uc - hw, uc + hw, D, ys, y1, pale); side(uc - hw, 0, D, ys, y1, pale, -1); side(uc + hw, 0, D, ys, y1, pale, 1);
+  /* paired pilasters at both ends, on the front, 0.5 m wide, a little proud */
+  for (const sg of [-1, 1]) for (const o of [0.75, 1.6]) { const u = uc + sg * (hw - o); front(u - 0.25, u + 0.25, D + 0.22, ys, y1 + 0.2, white); side(u - 0.25, D, D + 0.22, ys, y1 + 0.2, white, -1); side(u + 0.25, D, D + 0.22, ys, y1 + 0.2, white, 1); }
+  /* the round-headed gate in the ground floor (on the arcade's back wall) with a white surround */
+  arch(uc, 0.05, y0, 4.2, 4.9, white); arch(uc, 0.09, y0, 3.6, 4.5, gate);
+  /* the large arched window with the fan light on the first floor, white surround, dark glass, five spokes, a balustrade band under it */
+  const yw = ys + 1.5; arch(uc, D + 0.04, yw, 4.1, 4.9, white); arch(uc, D + 0.08, yw + 0.25, 3.5, 4.4, dark);
+  const cy = yw + 0.25 + 4.4 - 1.75; for (let k = 1; k <= 5; k++) { const a = Math.PI * k / 6, p0 = [uc, cy], p1 = [uc + Math.cos(a) * 1.75, cy + Math.sin(a) * 1.75]; const w2 = 0.05, dx = p1[0] - p0[0], dy = p1[1] - p0[1], dl = Math.hypot(dx, dy), ox = -dy / dl * w2, oy = dx / dl * w2; solid(P(p0[0] - ox, D + 0.12, p0[1] - oy), P(p1[0] - ox, D + 0.12, p1[1] - oy), P(p1[0] + ox, D + 0.12, p1[1] + oy), P(p0[0] + ox, D + 0.12, p0[1] + oy), white, nx, 0, nz); }
+  front(uc - 2.4, uc + 2.4, D + 0.1, ys + 0.3, ys + 1.3, white); for (let k = 0; k < 9; k++) { const u = uc - 2.2 + k * 0.55; front(u - 0.08, u + 0.08, D + 0.12, ys + 0.3, ys + 1.2, dark); }
+  /* the attic: 2.6 m over the roof line with a small arched window, a cornice slab and a triangular pediment */
+  const ya = y1; front(uc - hw + 1, uc + hw - 1, D, ya, ya + 2.6, pale); side(uc - hw + 1, 0, D, ya, ya + 2.6, pale, -1); side(uc + hw - 1, 0, D, ya, ya + 2.6, pale, 1);
+  arch(uc, D + 0.04, ya + 0.3, 2.2, 2.1, white); arch(uc, D + 0.07, ya + 0.45, 1.8, 1.8, dark);
+  const cu0 = uc - hw + 0.6, cu1 = uc + hw - 0.6; front(cu0, cu1, D + 0.45, ya + 2.6, ya + 2.95, white); solid(P(cu0, 0, ya + 2.95), P(cu1, 0, ya + 2.95), P(cu1, D + 0.45, ya + 2.95), P(cu0, D + 0.45, ya + 2.95), white, 0, 1, 0);
+  { const a0 = P(cu0, D + 0.3, ya + 2.95), a1 = P(cu1, D + 0.3, ya + 2.95), ap = P(uc, D + 0.3, ya + 4.7), v0 = B.v(X(a0[0]), a0[1], Z(a0[2]), nx, 0, nz, pale, 0.06, 0.06), v1 = B.v(X(a1[0]), a1[1], Z(a1[2]), nx, 0, nz, pale, 0.06, 0.06), v2 = B.v(X(ap[0]), ap[1], Z(ap[2]), nx, 0, nz, pale, 0.06, 0.06); B.tri(v0, v1, v2, nx, 0, nz); }
+  /* the roof railing along the whole edge, outside the pavilion: a top rail and posts every 2.4 m */
+  const rail = new THREE.Color(0x5b5e63); front(0.4, uc - hw - 0.2, 0.15, y1 + 0.95, y1 + 1.03, rail); front(uc + hw + 0.2, l - 0.4, 0.15, y1 + 0.95, y1 + 1.03, rail);
+  for (let u = 0.4; u < l - 0.3; u += 2.4) { if (u > uc - hw - 0.3 && u < uc + hw + 0.3) continue; front(u - 0.05, u + 0.05, 0.15, y1, y1 + 1.0, rail); }
+  /* three small roof-garden trees behind the railing: a trunk and a green octahedron each */
+  const trunk = new THREE.Color(0x5a4630), leaf = new THREE.Color(0x3f7a38);
+  for (let k = 0; k < 3; k++) { const u = uc + (k - 1) * 9.5 + ((key * 7 + k * 3) % 5 - 2) * 0.4, c = P(u, -1.8, y1 + 1.6), r = 1.1 + ((key + k) % 3) * 0.25, E = [P(u + r, -1.8, y1 + 1.6), P(u, -1.8 + r, y1 + 1.6), P(u - r, -1.8, y1 + 1.6), P(u, -1.8 - r, y1 + 1.6)], T = P(u, -1.8, y1 + 1.6 + r), Bo = P(u, -1.8, y1 + 1.6 - r);
+    front(u - 0.08, u + 0.08, -1.8, y1, y1 + 1.6, trunk); for (let e = 0; e < 4; e++) { const a = E[e], b = E[(e + 1) % 4]; for (const apex of [T, Bo]) { const nn = [(a[0] + b[0]) / 2 - c[0], (apex[1] - c[1]), (a[2] + b[2]) / 2 - c[2]], nl = Math.hypot(...nn) || 1, v0 = B.v(X(a[0]), a[1], Z(a[2]), nn[0] / nl, nn[1] / nl, nn[2] / nl, leaf, 0.06, 0.06), v1 = B.v(X(b[0]), b[1], Z(b[2]), nn[0] / nl, nn[1] / nl, nn[2] / nl, leaf, 0.06, 0.06), v2 = B.v(X(apex[0]), apex[1], Z(apex[2]), nn[0] / nl, nn[1] / nl, nn[2] / nl, leaf, 0.06, 0.06); B.tri(v0, v1, v2, nn[0] / nl, nn[1] / nl, nn[2] / nl); B.tri(v0, v2, v1, -nn[0] / nl, -nn[1] / nl, -nn[2] / nl); } } }
+}
