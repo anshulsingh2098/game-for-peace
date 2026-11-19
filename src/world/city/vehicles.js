@@ -28,6 +28,8 @@ export const MODEL_SETS = {
   'endeavour-suv': { base: 'suv', share: 0.45, speed: 0.95 },
   'gtr-sports': { base: 'hatch', share: 0.012, speed: 1.15 },       // one car in eighty: a supercar is rare on a Delhi road
 };
+/* which garage car a taken NPC car becomes (null: it cannot be driven by the player: auto rickshaws, e-rickshaws, cycle rickshaws) */
+export const GARAGE_OF = { hatch: 'sx4', 'sx4-hatch': 'sx4', suv: 'everest', 'endeavour-suv': 'everest', 'gtr-sports': 'r35', taxi: 'sx4', two: 'bike', tempo: 'truck', truck: 'truck', auto: null, erick: null, cyclerick: null };
 export const baseKind = k => (MODEL_SETS[k] ? MODEL_SETS[k].base : k);
 
 function merge(parts) {

@@ -98,6 +98,18 @@ export class CityTraffic {
   leaderAhead(ph, range) { const fx = Math.cos(ph.yaw), fz = Math.sin(ph.yaw); let best = null; for (const c of this.cars) { if (ph.y !== undefined && Math.abs((c.h || 0) + (this.gy || 0) - ph.y) > 3) continue; const dx = c.x - ph.x, dz = c.z - ph.z, ahead = dx * fx + dz * fz, side = Math.abs(-dx * fz + dz * fx); if (ahead > 0 && ahead < range && side < 2.3 && (!best || ahead < best.gap)) best = { gap: ahead - 2.1, speed: c.v }; } return best; }
   /* obstacle circles near (x, z) for the vehicle physics (front and rear of each car) */
   /* parked cars within 220 m of the player (at most PARK_MAX) */
+  /* carjacking (docs/NEW_CARS_PLAN.md, phase C2): the car nearest to (x, z) within r metres of its body that a person could drive off with: a moving one or a parked one, never a wreck or a bus. Returns { c, parked, d } or null. */
+  nearestCar(x, z, r = 3.2) {
+    let best = null; const test = (c, parked) => { if (c.wreck || c.kind === 'bus') return; const D = DIM[c.kind]; if (!D) return; const dx = c.x - x, dz = c.z - z, d = Math.hypot(dx, dz) - Math.min(D.len, 5) * 0.32; if (d < r && (!best || d < best.d)) best = { c, parked, d }; };
+    for (const c of this.cars) test(c, false); for (const l of this.parked.values()) for (const c of l) if (Math.abs(c.x - x) < 12 && Math.abs(c.z - z) < 12) test(c, true);
+    return best;
+  }
+  /* the car is taken: it leaves the traffic (a parked one leaves its street for good). Returns what the player needs to drive it: { kind, paint, x, z, yaw (travel direction in the game plane), v (m/s) } */
+  takeCar(ref) {
+    const c = ref.c, out = { kind: c.kind, paint: c.paint, x: c.x, z: c.z, yaw: c.yaw, v: ref.parked ? 0 : (c.v || 0) };
+    if (ref.parked) { for (const l of this.parked.values()) { const i = l.indexOf(c); if (i >= 0) { l.splice(i, 1); break; } } } else { const i = this.cars.indexOf(c); if (i >= 0) this.cars.splice(i, 1); }
+    return out;
+  }
   parkedNear() { const out = []; for (const l of this.parked.values()) for (const c of l) if (Math.abs(c.x - this.px) < 220 && Math.abs(c.z - this.pz) < 220) { out.push(c); if (out.length >= PARK_MAX) return out; } return out; }
   circles(x, z, r) {
     const out = [], put = (c, tr) => { const d = DIM[c.kind || 'hatch'], rr = d.wid / 2 + 0.15, h = Math.max(0, d.len / 2 - rr), cx = Math.cos(c.yaw), sz = Math.sin(c.yaw); if (h < 0.3) out.push({ x: c.x, z: c.z, r: rr, y: this.gy + (c.h || 0), traffic: tr, car: c }); else out.push({ x: c.x + cx * h, z: c.z + sz * h, r: rr, y: this.gy + (c.h || 0), traffic: tr, car: c }, { x: c.x - cx * h, z: c.z - sz * h, r: rr, y: this.gy + (c.h || 0), traffic: tr, car: c }); };
