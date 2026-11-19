@@ -14,8 +14,10 @@
 import * as THREE from 'three';
 import { FireFx } from './fire.js';
 
-export const HEALTH = { lossK: 0.0048, lossPow: 1.35, maxHit: 0.45, engFront: 0.9, engSide: 0.25, engRear: 0.15, engMin: 5, smoke: 0.5, smokeBlack: 0.25, dead: 0.05, fireEngine: 0.2, fireFrame: 0.35, fireMinHit: 8, fuse: [10, 16], burnSeconds: 45, smokeSeconds: 140,
-  glassK: 0.025, glassPow: 1.2, doorOff: 14, bumperOff: 14, tyreK: 0.1, tyreNear: 0.95 };
+export const HEALTH = { lossK: 0.0048, lossPow: 1.35, maxHit: 0.45, engFront: 0.9, engSide: 0.25, engRear: 0.15, engMin: 5, smoke: 0.5, smokeBlack: 0.25, dead: 0.05, fireEngine: 0.2, fireFrame: 0.35, fireMinHit: 8, fuse: [20, 30], burnSeconds: 75, smokeSeconds: 220,
+  glassK: 0.025, glassPow: 1.2, doorOff: 14, bumperOff: 14, tyreK: 0.1, tyreNear: 0.95,
+  /* owner, 20 Nov 2026: "the car gets wrecked too easily; longer blast; less wreckage per impact". toughness divides every kind of damage (frame, engine, glass, tyres; doors and bumpers need a harder hit by its square root): 1 is the old behaviour, 1.8 about two thirds more knocks; fuse is the seconds from catching fire to the blast; burnSeconds and smokeSeconds how long the wreck burns and smokes; debris is the share of the pieces (glass shards, doors, bumpers) that fly off per impact, 1 = all */
+  toughness: 1.8, debris: 0.4 };
 export const DENT = { soft: 2.0, k: 0.055, pow: 1.2, maxHit: 0.34, maxTotal: 0.5, r0: 0.45, rk: 0.07, noise: 0.3 };
 const hashf = i => { let h = (i | 0) * 374761393 + 668265263; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const V = new THREE.Vector3(), V2 = new THREE.Vector3(), Q = new THREE.Quaternion(), M = new THREE.Matrix4();
@@ -84,17 +86,17 @@ export class CarDamage {
   }
   /* what this hit does beyond the dent: frame, engine, glass, doors, bumpers, tyres, and (rarely, last) the fire */
   consequences(h, c, side) {
-    const vn = h.vn, loss = Math.min(HEALTH.maxHit, HEALTH.lossK * Math.pow(vn - DENT.soft, HEALTH.lossPow)), mid = this.view.def && this.view.def.id === 'sport'; this.takeMaterials();
+    const vn = h.vn, loss = Math.min(HEALTH.maxHit, HEALTH.lossK * Math.pow(vn - DENT.soft, HEALTH.lossPow)) / HEALTH.toughness, mid = this.view.def && this.view.def.id === 'sport'; this.takeMaterials();
     this.frame = Math.max(0, this.frame - loss);
     if (vn >= HEALTH.engMin) { const front = mid ? side === 'rear' : side === 'front', rear = mid ? side === 'front' : side === 'rear'; this.engine = Math.max(0, this.engine - loss * (front ? HEALTH.engFront : rear ? HEALTH.engRear : HEALTH.engSide)); }
     if (vn > 4) {                                                                                                          // glass: the pane nearest the hit cracks (more for a harder hit); a hit high up shakes them all
-      const g = HEALTH.glassK * Math.pow(vn - 4, HEALTH.glassPow), near = [side === 'front' ? 1 : 0.15, side === 'rear' ? 1 : 0.15, side === 'left' ? 1 : 0.15, side === 'right' ? 1 : 0.15]; if (c.y > 0.55) for (let i = 0; i < 4; i++) near[i] = Math.max(near[i], 0.4);
+      const g = HEALTH.glassK * Math.pow(vn - 4, HEALTH.glassPow) / HEALTH.toughness, near = [side === 'front' ? 1 : 0.15, side === 'rear' ? 1 : 0.15, side === 'left' ? 1 : 0.15, side === 'right' ? 1 : 0.15]; if (c.y > 0.55) for (let i = 0; i < 4; i++) near[i] = Math.max(near[i], 0.4);
       for (let i = 0; i < 4; i++) { const was = this.glass[i]; this.glass[i] = Math.min(1, was + g * near[i] * (vn > 10 ? 1.4 : 1)); if (this.glass[i] > 0.02 && was <= 0.02) this.crack.copy(c); if (this.glass[i] >= 0.8 && was < 0.8) this.shatter(i); }
       this.U.uGlass.value.set(this.glass[0], this.glass[1], this.glass[2], this.glass[3]); this.U.uCrack.value.copy(this.crack);
     }
-    if (side === 'right' && this.doors.R && vn >= HEALTH.doorOff) this.tearDoor('R'); else if (side === 'left' && this.doors.L && vn >= HEALTH.doorOff) this.tearDoor('L');          // doors and bumpers come off in a hard hit on their side
-    if (side === 'front' && this.bumpers.F && vn >= HEALTH.bumperOff) this.tearBumper('F'); else if (side === 'rear' && this.bumpers.R && vn >= HEALTH.bumperOff) this.tearBumper('R');
-    if (vn > 4) for (let i = 0; i < this.wheelsInfo.length; i++) { const w = this.wheelsInfo[i]; if (Math.hypot(c.x - w.x, c.z - w.z) < HEALTH.tyreNear) { const was = this.tyre[i]; this.tyre[i] = Math.min(1, was + HEALTH.tyreK * Math.pow(vn - 3, 1.1)); if (this.tyre[i] >= 1 && was < 1) this.popTyre(i); } }     // tyres: bent, flat, burst
+    if (side === 'right' && this.doors.R && vn >= HEALTH.doorOff * Math.sqrt(HEALTH.toughness)) this.tearDoor('R'); else if (side === 'left' && this.doors.L && vn >= HEALTH.doorOff * Math.sqrt(HEALTH.toughness)) this.tearDoor('L');          // doors and bumpers come off in a hard hit on their side
+    if (side === 'front' && this.bumpers.F && vn >= HEALTH.bumperOff * Math.sqrt(HEALTH.toughness)) this.tearBumper('F'); else if (side === 'rear' && this.bumpers.R && vn >= HEALTH.bumperOff * Math.sqrt(HEALTH.toughness)) this.tearBumper('R');
+    if (vn > 4) for (let i = 0; i < this.wheelsInfo.length; i++) { const w = this.wheelsInfo[i]; if (Math.hypot(c.x - w.x, c.z - w.z) < HEALTH.tyreNear) { const was = this.tyre[i]; this.tyre[i] = Math.min(1, was + HEALTH.tyreK * Math.pow(vn - 3, 1.1) / HEALTH.toughness); if (this.tyre[i] >= 1 && was < 1) this.popTyre(i); } }     // tyres: bent, flat, burst
     this.stage(vn);
   }
   /* the state machine: ok, smoking, dead (stops, smokes, does not burn), burning, wrecked */
@@ -152,7 +154,7 @@ export class CarDamage {
     }
     return chunks;
   }
-  spawn(chunks) { if (chunks.length && this.onChunks) this.onChunks({ x: chunks[0].cx, y: chunks[0].cy, z: chunks[0].cz }, chunks); }
+  spawn(chunks) { const keep = chunks.filter((c, i) => i === 0 || hashf(i * 131 + (this.hits | 0) * 17) < HEALTH.debris); if (keep.length && this.onChunks) this.onChunks({ x: keep[0].cx, y: keep[0].cy, z: keep[0].cz }, keep); }       // debris: fewer pieces fly off per impact (settings: damage.health.debris)
   doorBox(side) { const b = this.box, hw = b.max.x, zc = ((this.view.def.eye && this.view.def.eye[2]) || 0) - 0.02, s = side === 'L' ? 1 : -1, a = s * (hw - 0.4), c = s * (hw + 0.08); return [Math.min(a, c), 0.28, zc - 0.62, Math.max(a, c), b.max.y, zc + 0.58]; }
   tearDoor(side) { if (!this.doors[side] || this.view.def.id === 'bike') return; this.doors[side] = false; this.spawn(this.takeTriangles(this.doorBox(side), () => true, 0.7)); this.ev('metal'); }
   tearBumper(end) { if (!this.bumpers[end]) return; this.bumpers[end] = false; const b = this.box, z = end === 'F' ? [b.max.z - 0.55, b.max.z + 0.1] : [b.min.z - 0.1, b.min.z + 0.55]; this.spawn(this.takeTriangles([b.min.x - 0.1, 0.12, z[0], b.max.x + 0.1, 0.62, z[1]], n => !NAME_RE.test(n), 0.8)); this.ev('metal'); }

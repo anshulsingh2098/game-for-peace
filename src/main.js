@@ -30,7 +30,9 @@ import { Pedestrians } from './pedestrians/pedestrians.js';
 import { WALL, ARCH } from './world/tunnels.js';
 import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
-import { GARAGE_OF } from './world/city/vehicles.js';       // carjacking: which garage car a taken NPC car becomes
+import { GARAGE_OF } from './world/city/vehicles.js';
+import { HEALTH, DENT } from './vehicle/damage.js';       // settings: the tuner's damage tab
+import { NEAR } from './world/city/nearcars.js';       // carjacking: which garage car a taken NPC car becomes
 import { VehiclePhysics, vehicleParams, SURFACES } from './vehicle/physics.js';
 import { RapierVehicle, initRapier, ARCADE } from './vehicle/rapier-vehicle.js';
 import { VehicleView, loadModel } from './vehicle/vehicle.js';
@@ -137,7 +139,7 @@ if (indiaRoute && q.get('real') !== 'off') {
   } catch (e) { console.warn('real elevation not loaded, using the procedural land', e); }
 }           // main highways get the six-lane national highway look
 /* tuner settings (core/tuning.js): the published settings.json first, then live changes sent by tuner.html */
-registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES); registerRoot('handling', ARCADE); registerRoot('camera', CAMFX); registerRoot('look', LOOK);
+registerRoot('vehicles', VEHICLES); registerRoot('times', TIMES); registerRoot('weather', WX); registerRoot('surfaces', SURFACES); registerRoot('handling', ARCADE); registerRoot('camera', CAMFX); registerRoot('look', LOOK); registerRoot('damage', { health: HEALTH, dent: DENT }); registerRoot('traffic', { near: NEAR });
 for (const url of ['api/settings', 'settings.json']) {             // the published settings (tuner Publish), else a settings.json committed with the site
   try { const r = await fetch(url); if (r.ok) { const j = await r.json(); if (j && j.overrides) { setOverrides(j.overrides); break; } } } catch (e) { /* not there: carry on */ }
 }

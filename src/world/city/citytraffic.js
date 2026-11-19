@@ -16,7 +16,7 @@ export class CityTraffic {
   constructor(scene, origin, G, identity = null) {
     this.rnd = makeRnd(12345);
     this.identity = identity; this.buses = []; this.origin = origin; this.G = G; this.max = 34 + PARK_MAX; this.parked = new Map(); this.px = 0; this.pz = 0; this.scA = new THREE.Vector3(0.78, 0.95, 0.62); this.want = 0; this.cars = []; this.pieces = new Map(); this.ends = new Map(); this.tile = new Map();
-    this.fleet = new Fleet(scene); this.models = {}; this.loadModels();       // the real car models (traffic pack) join in when they arrive
+    this.fleet = new Fleet(scene); this.near = new NearCars(this.fleet.group); this.models = {}; this.loadModels();       // the real car models (traffic pack) join in when they arrive
     this.sig = new Map(); this.xing = new Map(); this.peds = null; this.time = 0; { const xz = G.xz, f = G.nodeFlags; for (let i = 0; i < G.nodes; i++) { const k = Math.floor(xz[i * 2] / 12) + ',' + Math.floor(xz[i * 2 + 1] / 12); if (f[i] & 1) { let l = this.sig.get(k); if (!l) this.sig.set(k, l = []); l.push(i); } else if (f[i] & 2) { let l = this.xing.get(k); if (!l) this.xing.set(k, l = []); l.push(i); } } }       // the signalised nodes (flag 1) by 12 m cell
     this.col = new THREE.Color(); this.m4 = new THREE.Matrix4(); this.q = new THREE.Quaternion(); this.up = new THREE.Vector3(0, 1, 0); this.sc = new THREE.Vector3(1, 1, 1); this.pos = new THREE.Vector3();
   }
@@ -67,7 +67,7 @@ export class CityTraffic {
     return { pc, dir, s, h: this.hOf(pc, o.x, o.z), v: pc.speed * (0.6 + 0.4 * this.rnd()), kind, k: DIM[kind].speed, paint: this.paintOf(kind), x: o.x, z: o.z, yaw: 0, lat: 0, wait: 0 };
   }
   update(dt, px, pz, pyaw, py) {
-    this.px = px; this.pz = pz; const ph = py === undefined ? undefined : py - (this.gy || 0);       // ph: the player's height above the ground, so a car on a flyover does not stop for someone driving underneath
+    this.px = px; this.pz = pz; this.dtLast = dt; const ph = py === undefined ? undefined : py - (this.gy || 0);       // ph: the player's height above the ground, so a car on a flyover does not stop for someone driving underneath
     const cars = this.cars; this.time += dt; const inCP = !!(this.identity && this.identity.areaNameAt && this.identity.areaNameAt(px, pz) === 'cp'), want = Math.round(this.want * (inCP ? 1.7 : 1)); this.minD = inCP ? 40 : 90;      /* Connaught Place is busy: 70 percent more cars round the player, and they may appear from 40 m (not 90 m) away (GTA gap list item 6, phase 11) */
     while (cars.length > want) cars.pop();
     if (cars.length < want && this.pieces.size) { const c = this.spawn(px, pz); if (c) cars.push(c); }
@@ -90,8 +90,14 @@ export class CityTraffic {
   }
   draw() {
     const gy = this.gy || 0, pk = this.parkedNear(), F = this.fleet, ox = this.origin.x, oz = this.origin.z; F.begin();
-    for (const c of this.cars) if (!c.wreck) F.add(c.kind, c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint);
-    for (const c of pk) if (!c.wreck) F.add(c.kind, c.x - ox, gy, c.z - oz, c.yaw, c.paint);
+    /* the nearest cars with a supplied model are drawn as that full model (nearcars.js); the rest as the cheap instance */
+    const full = new Set(), N = this.near; N.begin(this.dtLast);
+    if (NEAR.count > 0) { const cand = [], px = this.px, pz = this.pz, R2 = NEAR.range * NEAR.range; const take = (c, parked) => { if (c.wreck || c.dmg || !FULL[c.kind]) return; const d2 = (c.x - px) ** 2 + (c.z - pz) ** 2; if (d2 < R2) cand.push([d2, c, parked]); };
+      for (const c of this.cars) take(c, false); if (NEAR.parked) for (const c of pk) take(c, true); cand.sort((a, b) => a[0] - b[0]);
+      for (let i = 0; i < cand.length && full.size < NEAR.count; i++) { const [, c, parked] = cand[i]; if (N.add(c.kind, c.x - ox, gy + (parked ? 0 : (c.h || 0)), c.z - oz, c.yaw, c.paint, parked ? 0 : c.v)) full.add(c); } }
+    N.end();
+    for (const c of this.cars) if (!c.wreck && !full.has(c)) F.add(c.kind, c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint);
+    for (const c of pk) if (!c.wreck && !full.has(c)) F.add(c.kind, c.x - ox, gy, c.z - oz, c.yaw, c.paint);
     F.end();
   }
   /* the nearest car in front of `ph` ({ x, z, yaw }) within `range` m and 2.3 m either side of its heading: { gap, speed } or null (autodrive's leader) */

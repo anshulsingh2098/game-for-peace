@@ -60,7 +60,7 @@ export class TrafficDamage {
     d.g.attributes.position.needsUpdate = true; d.g.computeVertexNormals(); d.g.computeBoundingSphere(); d.hits++; this.stats.hit++;
     car.hold = Math.max(car.hold || 0, 4 + 0.4 * h.vn);                                                                // a shaken driver stops for a while
     if (!this.cosmetic && d.state !== 'wrecked') {
-      const front = L.z > d.len * 0.2, rear = L.z < -d.len * 0.2, loss = Math.min(HEALTH.maxHit, HEALTH.lossK * Math.pow(h.vn - DENT.soft, HEALTH.lossPow));
+      const front = L.z > d.len * 0.2, rear = L.z < -d.len * 0.2, loss = Math.min(HEALTH.maxHit, HEALTH.lossK * Math.pow(h.vn - DENT.soft, HEALTH.lossPow)) / HEALTH.toughness;
       d.health = Math.max(0, d.health - loss); if (h.vn >= HEALTH.engMin) d.engine = Math.max(0, d.engine - loss * (front ? HEALTH.engFront : rear ? HEALTH.engRear : HEALTH.engSide));
       if (d.health < 0.3) car.hold = Infinity;                                                                          // too hurt to drive on
       if (d.state === 'ok' && d.engine < HEALTH.smoke) d.state = 'smoking';
