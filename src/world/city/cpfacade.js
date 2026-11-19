@@ -20,9 +20,11 @@ const PSTYLE = { cafe: [[0x4a2c1a, 0xf5e6c8], [0x1f5a3c, 0xf5e6c8], [0x2b1d14, 0
 const pstyle = (name, kind) => { let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0; const l = PSTYLE[kind] || PSTYLE.restaurant; return l[h % l.length]; };
 /* which board of an arcade front shows which place: a place belongs to the board nearest to it when it lies within 18 m of the board line and between its ends; the other boards keep the invented generic brands. Returns an array of n brand indices (generic 0..31 or 1000 + place). */
 export function assignBoards(ax, az, bx, bz, n, key) {
-  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1, tx = dx / L, tz = dz / L, out = new Array(n), best = new Array(n).fill(18);
+  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1, tx = dx / L, tz = dz / L, out = new Array(n), best = new Array(n).fill(24);
   for (let k = 0; k < n; k++) out[k] = brandIndex(key, k);
-  for (const [name, , x, z] of CP_PLACES) { const u = (x - ax) * tx + (z - az) * tz, d = Math.abs(-(x - ax) * tz + (z - az) * tx); if (u < 0 || u > L || d > 18) continue; const k = Math.min(n - 1, Math.floor(u / L * n)); if (d < best[k]) { best[k] = d; out[k] = 1000 + PLACE_OF.get(name); } }
+  for (const [name, , x, z] of CP_PLACES) { const u = (x - ax) * tx + (z - az) * tz, d = Math.abs(-(x - ax) * tz + (z - az) * tx); if (u < 0 || u > L || d > 24) continue; const k = Math.min(n - 1, Math.floor(u / L * n)); if (d < best[k]) { best[k] = d; out[k] = 1000 + PLACE_OF.get(name); } }
+  /* F2: no two neighbouring boards read the same (a repeated generic brand, or two branches of one chain side by side): the second becomes another generic brand that differs from both its neighbours */
+  for (let k = 1; k < n; k++) if (out[k] === out[k - 1]) { for (let t = 1; t < 40; t++) { const g = brandIndex(key + 17 * t, k + 5 * t); if (g !== out[k - 1] && g !== out[k + 1] && g !== out[k]) { out[k] = g; break; } } }
   return out;
 }
 export function boardColour(i) { return i >= 1000 ? pstyle(PLACE_NAMES[i - 1000], PLACE_KIND[i - 1000])[0] : BRANDS[i][1]; }
@@ -68,7 +70,8 @@ export function makeBrandMaterial() {
 }
 
 /* the brand-board band along one arcade front: from point a to point b (x, z), at height y0, `h` tall, facing (nx, nz), one board a bay of about `bay` metres, each a different brand. `key` varies the choice by building. */
-export function brandBand(m, X, Z, ax, az, bx, bz, nx, nz, y0, h, bay, key, upper = false) {      /* upper: the second row of boards on the wall over the arcade (photos P1 and P2): generic brands only, every second bay, set 7 cm off the wall */
+export function brandBand(m, X, Z, ax, az, bx, bz, nx, nz, y0, h, bay, key, upper = false) {
+  { const l0 = Math.hypot(bx - ax, bz - az); if (l0 > 8) { const ux = (bx - ax) / l0, uz = (bz - az) / l0; ax += ux * 0.9; az += uz * 0.9; bx -= ux * 0.9; bz -= uz * 0.9; } }      /* F2: 0.9 m in from both ends, so the boards of two fronts meeting at a corner do not overlap (SPICE ROUTE twice, 22 Nov) */      /* upper: the second row of boards on the wall over the arcade (photos P1 and P2): generic brands only, every second bay, set 7 cm off the wall */
   const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 3) return 0; const n = Math.max(1, Math.round(L / bay)), tx = dx / L, tz = dz / L, w = L / n - 0.25, IDX = upper ? Array.from({ length: n }, (_, k) => brandIndex(key + 77, k)) : assignBoards(ax, az, bx, bz, n, key); let q = 0;
   for (let k = 0; k < n; k++) { if (upper && k % 2) continue; const uMid = (k + 0.5) * L / n, cx = ax + tx * uMid + nx * (upper ? 0.32 : 0.06), cz = az + tz * uMid + nz * (upper ? 0.32 : 0.06), uv0 = brandUV(IDX[k]), uv = (tx * nz - tz * nx) < 0 ? [uv0[2], uv0[1], uv0[0], uv0[3]] : uv0;      /* seen from outside the wall the texture must run left to right: the viewer's right is (nz, -nx), so a wall running the other way gets the picture turned round (it read mirrored on half the walls) */ const W = new THREE.Color(0xffffff);
     const v0 = m.v(X(cx - tx * w / 2), y0, Z(cz - tz * w / 2), nx, 0, nz, W, uv[0], uv[1]), v1 = m.v(X(cx + tx * w / 2), y0, Z(cz + tz * w / 2), nx, 0, nz, W, uv[2], uv[1]), v2 = m.v(X(cx + tx * w / 2), y0 + h, Z(cz + tz * w / 2), nx, 0, nz, W, uv[2], uv[3]), v3 = m.v(X(cx - tx * w / 2), y0 + h, Z(cz - tz * w / 2), nx, 0, nz, W, uv[0], uv[3]); m.tri(v0, v1, v2, nx, 0, nz); m.tri(v0, v2, v3, nx, 0, nz); q++; }
@@ -220,6 +223,7 @@ export function brandIndex(key, k) { return Math.floor(((key * 7 + k * 5 + Math.
 
 /* Wet reflections on the paving at night (phase 4 of docs/DELHI_MAIN_PLAN.md): in front of every board, a soft streak of the board's own colour on the plaza, brightest at the arcade and fading outward, as the glowing board would shine on wet stone. Additive, night only (the `cplight` mesh). From a to b along the arcade front, outward normal (nx, nz), at ground height y, `reach` metres out, a streak a board wide (same bays as brandBand). 2 triangles a board. */
 export function boardReflections(m, X, Z, ax, az, bx, bz, nx, nz, y, bay, key, reach = 8) {
+  { const l0 = Math.hypot(bx - ax, bz - az); if (l0 > 8) { const ux = (bx - ax) / l0, uz = (bz - az) / l0; ax += ux * 0.9; az += uz * 0.9; bx -= ux * 0.9; bz -= uz * 0.9; } }      /* F2: 0.9 m in from both ends, so the boards of two fronts meeting at a corner do not overlap (SPICE ROUTE twice, 22 Nov) */
   const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 3) return 0; const n = Math.max(1, Math.round(L / bay)), tx = dx / L, tz = dz / L, w = L / n - 0.25, IDX = assignBoards(ax, az, bx, bz, n, key); let q = 0;
   for (let k = 0; k < n; k++) { const bg = boardColour(IDX[k]), col = new THREE.Color(bg).multiplyScalar(1.7), u = (k + 0.5) * L / n, cx = ax + tx * u, cz = az + tz * u;
     const P = [[-1, 0, 0.5], [1, 0, 0.5], [1, 1, 1], [-1, 1, 1]].map(([a, d, v], i) => { const off = d ? 0.4 : 0.4 + reach; return m.v(X(cx + tx * a * w / 2 + nx * off), y, Z(cz + tz * a * w / 2 + nz * off), 0, 1, 0, col, i === 0 || i === 3 ? 0 : 1, v); });      // d 1 = the edge at the arcade (bright), d 0 = the far edge (faded)
