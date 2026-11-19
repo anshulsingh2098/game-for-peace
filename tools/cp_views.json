@@ -1,0 +1,105 @@
+{
+ "about": "Six fixed camera spots for the Connaught Place match (docs/CP_MATCH_PLAN.md). x, z in game metres, yaw as the game uses it (atan2 of the look direction in x, z). Centre of the Inner Circle (fitted, tools/measure_cp.mjs): 1044.2, -2100.4, radius 125.7. Spots are first guesses from geometry; adjust after looking and record the change in docs/CP_MATCH_LOG.md. Move the car with window.__next.city.transit.onTeleport(x, z, yaw).",
+ "spots": [
+  {
+   "id": "cp1-corner",
+   "photo": 1,
+   "what": "corner block at a radial road mouth (Radial Road 2), seen from the Inner Circle road",
+   "x": 947.8,
+   "z": -2013.6,
+   "yaw": -3.062,
+   "time": "day",
+   "note": ""
+  },
+  {
+   "id": "cp2-arcade",
+   "photo": 2,
+   "what": "inside the arcade walk looking along the colonnade, inner ring",
+   "x": 1020.3,
+   "z": -1964.8,
+   "yaw": -2.845,
+   "time": "day",
+   "note": ""
+  },
+  {
+   "id": "cp3-across",
+   "photo": 3,
+   "what": "from the central park side across the road at the hedge and the facade",
+   "x": 1116.1,
+   "z": -2028.5,
+   "yaw": 0.785,
+   "time": "day",
+   "note": ""
+  },
+  {
+   "id": "cp4-dusk",
+   "photo": 4,
+   "what": "the arcade at dusk, looking along the walk",
+   "x": 997.1,
+   "z": -2229.8,
+   "yaw": 2.67,
+   "time": "dusk",
+   "note": ""
+  },
+  {
+   "id": "cp5-radial",
+   "photo": 5,
+   "what": "down Radial Road 7 from the circle, looking inward",
+   "x": 1170.0,
+   "z": -2018.7,
+   "yaw": -2.566,
+   "time": "day",
+   "note": ""
+  },
+  {
+   "id": "cp6-drive",
+   "photo": 6,
+   "what": "driving the Inner Circle at 50 km/h (start of the scripted lap)",
+   "x": 1169.9,
+   "z": -2100.4,
+   "yaw": 1.676,
+   "time": "day",
+   "note": "lap: auto drive"
+  },
+  {
+   "id": "cp7-pvx",
+   "photo": "P4,P5",
+   "what": "PVX Plaza cinema front, from the Outer Circle road 45 m east of it (the front faces east)",
+   "x": 1080,
+   "z": -2352,
+   "yaw": 3.1416,
+   "time": "dusk",
+   "note": "x 1036, z -2358 is the front; see docs/CP_LANDMARKS.md L3"
+  },
+  {
+   "id": "cp8-statesman",
+   "photo": "Statesman House photos",
+   "what": "Statesman House tower on Barakhamba Road, from the road to the south-west",
+   "x": 1290,
+   "z": -1785,
+   "yaw": -0.4,
+   "time": "day",
+   "note": "tower centre x 1321, z -1828, 66 m"
+  },
+  {
+   "id": "cp9-newbookland",
+   "photo": "New Book Land photos",
+   "what": "the round book kiosk on Janpath Market's pavement",
+   "x": 1034,
+   "z": -1635,
+   "yaw": -1.57,
+   "time": "day",
+   "note": "kiosk x 1034, z -1650 (30 m from its OSM point)"
+  },
+  {
+   "id": "cp10-centralpark",
+   "photo": "Central Park aerial photos",
+   "what": "Central Park from the south edge looking at the amphitheatre bowl; for the aerial view use a camera 330 m up over x 1042, z -2104",
+   "x": 1042,
+   "z": -2175,
+   "yaw": -1.5708,
+   "time": "day",
+   "note": "cppark.js; layout by eye from two photos"
+  }
+ ]
+}

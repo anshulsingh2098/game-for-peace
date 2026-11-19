@@ -1,6 +1,6 @@
 """Start-of-day check: runs every automatic check in CHECKLIST.md and prints PASS / WARN / FAIL for each.
 Usage: python tools/daily_check.py          (from anywhere; needs git, node and python on the path)
-It never changes anything: no commits, no staging, no deploys. The manual checks (looking at the game, a phone) are in CHECKLIST.md."""
+It changes no project file and makes no commits or deploys; the one thing it updates is git's own record of the remote branches (`git fetch`), so it can say whether you are behind. The manual checks (looking at the game, a phone) are in CHECKLIST.md."""
 import os, re, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,6 +28,20 @@ else:
 code, out = run('git', 'status', '--short'); changed = [l for l in out.splitlines() if l.strip()]
 note('PASS' if not changed else 'WARN', 'nothing uncommitted', f'{len(changed)} changed files' if changed else '')
 code, out = run('git', 'log', '-1', '--format=%h %s', 'origin/main'); note('PASS' if code == 0 else 'WARN', 'main on GitHub', out[:70])
+
+# 1b. the release file list must hold what the game fetches at run time (audit R01)
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+try:
+    import stage_cloudflare
+    staged = set(stage_cloudflare.wanted()); need = [f for f in ('assets/india/terrain.bin', 'assets/india/terrain.bin.gz', 'assets/india/terrain.json', 'assets/cities/delhi/ATTRIBUTION.txt', 'licenses.html') if os.path.isfile(os.path.join(ROOT, f))]
+    missing = [f for f in need if f not in staged]
+    note('PASS' if not missing else 'FAIL', 'stage script includes terrain, data and attribution files', ', '.join(missing) if missing else f'{len(staged)} files')
+except Exception as e:
+    note('WARN', 'stage script check', str(e)[:80])
+
+# 1c. the tracker page's live part must follow the plans, the team logs, the checklist and the pull requests (tools/build_tracker.mjs)
+code, out = run('node', 'tools/build_tracker.mjs', '--check', timeout=120)
+note('PASS' if code == 0 else 'WARN', 'tracker page is up to date with its sources', 'run node tools/build_tracker.mjs, then (owner account) node tools/build_tracker.mjs --deploy' if code != 0 else '')
 
 # 2. self-test
 code, out = run('node', 'tools/selftest.mjs')

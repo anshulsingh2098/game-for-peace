@@ -1,0 +1,52 @@
+/* Landmark buildings of Connaught Place that make Delhi recognisable (owner's request 22 Nov 2026), built on the map's own building outlines instead of new footprints: STATESMAN HOUSE on Barakhamba Road (OSM relation 15879906, centre x 1321, z -1828; the owner's photos show a tall stepped brown tower with deep rounded balcony ribs and a huge semicircular arched entrance with the name above it) and the NEW BOOK LAND kiosk in Janpath Market (OSM node 5810594586, x 1004, z -1670; photos show a round glazed kiosk with a blue roof rim, a white fascia with maroon letters and a red-brown base). The names are used as plain lettering (the owner's decision of 19 Nov). Everything is flat colours on the building and junk meshes; boards are on the emissive cpbrand mesh. */
+import * as THREE from 'three';
+import { specialUV } from './cpfacade.js';
+
+export const STATESMAN = { x: 1321, z: -1828, h: 66, wall: 0xb39878 };
+export const NEWBOOK = { x: 1004, z: -1670 };
+/* the tower landmarks built on the map's own outlines: the building that holds the point is raised to h, coloured, given the plaster kit ('bldg') or the office glass kit ('bldgO'), and detailed (detail: 'statesman' = deep balcony ribs and the arch, 'jeevan' = shallow ribs and a name board on the top). Jeevan Bharati (OSM way 352733869, centre x 922, z -1741, the Life Insurance building on Tolstoy Marg): a grey-buff concrete and glass tower, 17 floors; the height and colour are by eye, no photo of it was supplied. Hindustan Times House is not in the map data. */
+export const TOWERS = [{ id: 'statesman', x: 1321, z: -1828, h: 66, wall: 0xb39878, kit: 'bldg', detail: 'statesman' }, { id: 'jeevan', x: 922, z: -1741, h: 58, wall: 0xa9a08f, kit: 'bldgO', detail: 'jeevan' }];
+export const towerAt = ring => { for (const t of TOWERS) if (inRing(ring, t.x, t.z)) return t; return null; };
+const inRing = (r, x, z) => { let ins = false; const n = r.length / 2; for (let i = 0, j = n - 1; i < n; j = i++) { const xi = r[i * 2], zi = r[i * 2 + 1], xj = r[j * 2], zj = r[j * 2 + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) ins = !ins; } return ins; };
+/* is this building outline Statesman House (it holds the OSM point) */
+export const isStatesman = ring => inRing(ring, STATESMAN.x, STATESMAN.z);
+
+/* the tower's detail on its outline r (x, z pairs): a balcony rib every 3.4 m on every edge (a slab 0.7 m out, a darker parapet), and on the longest edge a deep semicircular entrance arch 13 m wide over the ground floor with a board carrying the name. B the building mesh, m the board mesh. */
+export function statesmanDetail(B, m, X, Z, r, y0, y1, tw) {
+  const jv = tw && tw.detail === 'jeevan', RIB = jv ? 0.3 : 0.7, STEP = jv ? 3.4 : 3.4;
+  const n = r.length / 2; let area = 0; for (let i = 0; i < n; i++) { const j = (i + 1) % n; area += r[i * 2] * r[j * 2 + 1] - r[j * 2] * r[i * 2 + 1]; } const sg = area > 0 ? 1 : -1;
+  const slab = new THREE.Color(0x8a7254), rail = new THREE.Color(0x6f5a42), dark = new THREE.Color(0x1a140e), band = new THREE.Color(0xd8c9ac), V = (x, y, z, nx, ny, nz, c) => B.v(X(x), y, Z(z), nx, ny, nz, c, 0.06, 0.06);
+  let best = -1, bl = 0; for (let i = 0; i < n; i++) { const j = (i + 1) % n, l = Math.hypot(r[j * 2] - r[i * 2], r[j * 2 + 1] - r[i * 2 + 1]); if (l > bl) { bl = l; best = i; } }
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n, ax = r[i * 2], az = r[i * 2 + 1], bx = r[j * 2], bz = r[j * 2 + 1], l = Math.hypot(bx - ax, bz - az); if (l < 4) continue; const tx = (bx - ax) / l, tz = (bz - az) / l, nx = tz * sg, nz = -tx * sg, d = RIB;
+    for (let y = y0 + 6.8; y < y1 - 1.5; y += 3.4) { const a = [ax + tx * 0.3, az + tz * 0.3], b = [bx - tx * 0.3, bz - tz * 0.3], a2 = [a[0] + nx * d, a[1] + nz * d], b2 = [b[0] + nx * d, b[1] + nz * d];
+      const v0 = V(a2[0], y, a2[1], nx, 0, nz, slab), v1 = V(b2[0], y, b2[1], nx, 0, nz, slab), v2 = V(b2[0], y + 0.38, b2[1], nx, 0, nz, slab), v3 = V(a2[0], y + 0.38, a2[1], nx, 0, nz, slab); B.tri(v0, v1, v2, nx, 0, nz); B.tri(v0, v2, v3, nx, 0, nz);
+      const u0 = V(a2[0], y + 0.38, a2[1], 0, 1, 0, rail), u1 = V(b2[0], y + 0.38, b2[1], 0, 1, 0, rail), u2 = V(b[0], y + 0.38, b[1], 0, 1, 0, rail), u3 = V(a[0], y + 0.38, a[1], 0, 1, 0, rail); B.tri(u0, u1, u2, 0, 1, 0); B.tri(u0, u2, u3, 0, 1, 0); } }
+  if (jv) { const i = best, j = (i + 1) % n, ax = r[i * 2], az = r[i * 2 + 1], bx = r[j * 2], bz = r[j * 2 + 1], l = Math.hypot(bx - ax, bz - az), tx = (bx - ax) / l, tz = (bz - az) / l, nx = tz * sg, nz = -tx * sg, uc = l / 2, bw = Math.min(16, l - 2), by = y1 - 5, uv = specialUV('jeevan'), WH = new THREE.Color(0xffffff), flip = sg < 0, uu = flip ? [uv[2], uv[0]] : [uv[0], uv[2]], P = (u, d, y) => [ax + tx * u + nx * d, y, az + tz * u + nz * d], a = P(uc - bw / 2, 0.5, by), b = P(uc + bw / 2, 0.5, by); const v0 = m.v(X(a[0]), by, Z(a[2]), nx, 0, nz, WH, uu[0], uv[1]), v1 = m.v(X(b[0]), by, Z(b[2]), nx, 0, nz, WH, uu[1], uv[1]), v2 = m.v(X(b[0]), by + 2.2, Z(b[2]), nx, 0, nz, WH, uu[1], uv[3]), v3 = m.v(X(a[0]), by + 2.2, Z(a[2]), nx, 0, nz, WH, uu[0], uv[3]); m.tri(v0, v1, v2, nx, 0, nz); m.tri(v0, v2, v3, nx, 0, nz); return; }
+  { const i = best, j = (i + 1) % n, ax = r[i * 2], az = r[i * 2 + 1], bx = r[j * 2], bz = r[j * 2 + 1], l = Math.hypot(bx - ax, bz - az), tx = (bx - ax) / l, tz = (bz - az) / l, nx = tz * sg, nz = -tx * sg, uc = l / 2, W = Math.min(13, l - 3), P = (u, d, y) => [ax + tx * u + nx * d, y, az + tz * u + nz * d];
+    const arch = (d, w, h, c) => { const rr = w / 2, yr = h - rr, q = (a, b, cc) => V(a[0], a[1], a[2], nx, 0, nz, cc); const bl = [P(uc - rr, d, y0), P(uc + rr, d, y0), P(uc + rr, d, y0 + yr), P(uc - rr, d, y0 + yr)]; const f = bl.map(p => q(p, 0, c)); B.tri(f[0], f[1], f[2], nx, 0, nz); B.tri(f[0], f[2], f[3], nx, 0, nz);
+      const ce = P(uc, d, y0 + yr), cv = q(ce, 0, c); for (let k = 0; k < 10; k++) { const a0 = Math.PI * k / 10, a1 = Math.PI * (k + 1) / 10, p0 = P(uc + Math.cos(a0) * rr, d, y0 + yr + Math.sin(a0) * rr), p1 = P(uc + Math.cos(a1) * rr, d, y0 + yr + Math.sin(a1) * rr); B.tri(cv, q(p0, 0, c), q(p1, 0, c), nx, 0, nz); } };
+    arch(0.9, W + 1.2, 12.4, band); arch(1.0, W, 11.6, dark);
+    /* the name board over the arch: a wide plate, lit at night */
+    const bw = W + 3, by = y0 + 13.2, uv = specialUV('statesman'), WH = new THREE.Color(0xffffff), flip = sg > 0 ? false : true, uu = flip ? [uv[2], uv[0]] : [uv[0], uv[2]];
+    const a = P(uc - bw / 2, 1.1, by), b = P(uc + bw / 2, 1.1, by), v0 = m.v(X(a[0]), by, Z(a[2]), nx, 0, nz, WH, uu[0], uv[1]), v1 = m.v(X(b[0]), by, Z(b[2]), nx, 0, nz, WH, uu[1], uv[1]), v2 = m.v(X(b[0]), by + 1.6, Z(b[2]), nx, 0, nz, WH, uu[1], uv[3]), v3 = m.v(X(a[0]), by + 1.6, Z(a[2]), nx, 0, nz, WH, uu[0], uv[3]); m.tri(v0, v1, v2, nx, 0, nz); m.tri(v0, v2, v3, nx, 0, nz); }
+}
+
+/* the New Book Land kiosk: a 12-sided glazed kiosk 5 m across at (x, z): a red-brown base 0.9 m, pale glass with cream mullions and coloured book spines 0.9 to 2.4 m, a white fascia 0.8 m with the name on two opposite faces, a blue roof plate 5.8 m across and a small cap. J the junk mesher, m the board mesher, junkBox from tilemesh.js. */
+export function newBookLand(J, m, X, Z, y0, x, z, yaw, junkBox) {
+  const N = 12, R = 2.5, col = h => new THREE.Color(h), base = col(0x8a3c2c), glass = col(0xb9ccd6), mull = col(0xe6dfcd), fascia = col(0xf4f1ea), blue = col(0x1d4a8a), cap = col(0x6d7378);
+  const P = (r, t) => [x + Math.cos(t + yaw) * r, z + Math.sin(t + yaw) * r], V = (p, y, nx, ny, nz, c, u = 0, v = 0) => J.v(X(p[0]), y, Z(p[1]), nx, ny, nz, c, u, v), Q = (p0, p1, ya, yb, nx, nz, c) => { const a = V(p0, ya, nx, 0, nz, c), b = V(p1, ya, nx, 0, nz, c), d = V(p1, yb, nx, 0, nz, c), e = V(p0, yb, nx, 0, nz, c); J.tri(a, b, d, nx, 0, nz); J.tri(a, d, e, nx, 0, nz); };
+  const spines = [0xc4202e, 0x1d5bb8, 0xe9b418, 0x2f8f5b, 0xf2efe6, 0x7a3a8a, 0xe9791c], uvF = specialUV('newbook'), WH = new THREE.Color(0xffffff);
+  for (let k = 0; k < N; k++) { const t0 = k * Math.PI * 2 / N, t1 = (k + 1) * Math.PI * 2 / N, tm = (t0 + t1) / 2 + yaw, nx = Math.cos(tm), nz = Math.sin(tm), a = P(R, t0), b = P(R, t1);
+    Q(a, b, y0, y0 + 0.9, nx, nz, base); const ai = P(R + 0.04, t0), bi = P(R + 0.04, t1); Q(ai, bi, y0 + 0.9, y0 + 2.4, nx, nz, glass);
+    for (let s = 0; s < 6; s++) { const f0 = 0.1 + s * 0.14, f1 = f0 + 0.1, p = [ai[0] + (bi[0] - ai[0]) * f0, ai[1] + (bi[1] - ai[1]) * f0], q = [ai[0] + (bi[0] - ai[0]) * f1, ai[1] + (bi[1] - ai[1]) * f1], o = [nx * 0.03, nz * 0.03]; for (const [ya, yb] of [[y0 + 1.0, y0 + 1.55], [y0 + 1.7, y0 + 2.3]]) Q([p[0] + o[0], p[1] + o[1]], [q[0] + o[0], q[1] + o[1]], ya, yb, nx, nz, col(spines[(k * 3 + s * 2 + (ya > y0 + 1.5 ? 1 : 0)) % spines.length])); }
+    Q([ai[0] - Math.sin(tm) * 0.04 + nx * 0.06, ai[1] + Math.cos(tm) * 0.04 + nz * 0.06], [ai[0] + Math.sin(tm) * 0.04 + nx * 0.06, ai[1] - Math.cos(tm) * 0.04 + nz * 0.06], y0 + 0.9, y0 + 2.4, nx, nz, mull);      /* the mullion at the left edge of the face */
+    Q(a, b, y0 + 2.4, y0 + 3.2, nx, nz, fascia); }
+  /* the lettering on two opposite faces: a quad on the fascia of faces 0 and 6 */
+  for (const k of [1, 7]) { const t0 = k * Math.PI * 2 / N, t1 = (k + 1) * Math.PI * 2 / N, tm = (t0 + t1) / 2 + yaw, nx = Math.cos(tm), nz = Math.sin(tm), a = P(R + 0.05, t0), b = P(R + 0.05, t1), mid0 = P(R + 0.05, t0 - Math.PI * 2 / N * 0.9), mid1 = P(R + 0.05, t1 + Math.PI * 2 / N * 0.9);
+    const A = P(R + 0.05, t0 - 0.35), Bp = P(R + 0.05, t1 + 0.35), v0 = m.v(X(A[0]), y0 + 2.45, Z(A[1]), nx, 0, nz, WH, uvF[0], uvF[1]), v1 = m.v(X(Bp[0]), y0 + 2.45, Z(Bp[1]), nx, 0, nz, WH, uvF[2], uvF[1]), v2 = m.v(X(Bp[0]), y0 + 3.15, Z(Bp[1]), nx, 0, nz, WH, uvF[2], uvF[3]), v3 = m.v(X(A[0]), y0 + 3.15, Z(A[1]), nx, 0, nz, WH, uvF[0], uvF[3]); m.tri(v0, v1, v2, nx, 0, nz); m.tri(v0, v2, v3, nx, 0, nz); void a; void b; void mid0; void mid1; }
+  /* the roof plate and cap */
+  junkBox(J, X, Z, x, y0 + 3.2, z, 5.9, 0.22, 5.9, yaw, blue); junkBox(J, X, Z, x, y0 + 3.2, z, 5.9, 0.22, 5.9, yaw + Math.PI / 4, blue); junkBox(J, X, Z, x, y0 + 3.42, z, 2.2, 0.3, 2.2, yaw, cap);
+  /* the magazine rack leaning on the side: a frame with coloured covers */
+  { const c = Math.cos(yaw), s = Math.sin(yaw), rx = x + (R + 0.55) * c, rz = z + (R + 0.55) * s; junkBox(J, X, Z, rx, y0, rz, 0.12, 1.9, 1.5, yaw, col(0x6a4a2a)); for (let k = 0; k < 6; k++) junkBox(J, X, Z, rx + c * 0.1, y0 + 0.35 + (k % 3) * 0.5, rz + s * 0.1 - (k < 3 ? 0.4 : -0.4) * c, 0.05, 0.42, 0.62, yaw, col(spines[k]));
+  }
+}

@@ -84,4 +84,6 @@ meta = {'version': 1, 'scale': SCALE, 'cell': CELL, 'x0': X0, 'z0': Z0, 'nx': NX
         'sources': {'elevation': 'AWS Terrain Tiles (Mapzen/Tilezen terrarium, zoom 8): SRTM, GMTED2010, ETOPO1 and others (USGS, NOAA), https://github.com/tilezen/joerd/blob/master/docs/attribution.md',
                     'landcover': 'Esri / Impact Observatory / Microsoft 10 m Land Cover (Sentinel-2), CC BY 4.0, Esri public ImageServer Sentinel2_10m_LandCover'}, 'built': time.strftime('%Y-%m-%d')}
 json.dump(meta, open(os.path.join(OUT, 'terrain.json'), 'w'), indent=1)
+import gzip, shutil
+with open(os.path.join(OUT, 'terrain.bin'), 'rb') as src, gzip.open(os.path.join(OUT, 'terrain.bin.gz'), 'wb', compresslevel=9) as dst: shutil.copyfileobj(src, dst)          # the game loads this smaller copy (src/core/gzfetch.js)
 print('done', os.path.getsize(os.path.join(OUT, 'terrain.bin')) // 1024, 'KB; cells without data', missing, flush=True)

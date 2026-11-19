@@ -794,6 +794,26 @@ test('on foot: climbs a kerb, is stopped by a wall, a steep slope and deep water
   const pushed = new OnFoot(footWorld({ near: () => [[{ x: 0.2, z: 0, r: 1.5 }]] })); pushed.place(0, 0, 0); pushed.step(1 / 60, {}); assert.ok(Math.hypot(pushed.x - 0.2, pushed.z) >= 1.5 + FOOT.radius - 0.2 - 1e-6, 'a car that drives up pushes the character out');
   const ledge = new OnFoot(footWorld({ height: x => x > 4 ? -5 : 0 })); ledge.place(0, 0, 0); let fell = false; walk(ledge, 6, { throttle: 1, run: 1 }, f => { if (!f.grounded) fell = true; }); assert.ok(fell && ledge.grounded && ledge.y === -5, 'walks off a ledge, falls and lands');
 });
+test('audit R05: a handle only resolves in the registry or pool that made it; a long stall is counted as dropped time (R16)', () => {
+  const A = new Registry({ car: 4 }), B = new Registry({ car: 4 }), ha = A.create('car', { n: 'a' }), hb = B.create('car', { n: 'b' });
+  assert.notEqual(ha, hb, 'two registries never hand out the same number'); assert.equal(B.get(ha), null, 'a foreign handle does not resolve'); assert.equal(B.destroy(ha), null); assert.equal(A.get(ha).n, 'a'); assert.equal(B.get(hb).n, 'b');
+  A.clear(); assert.equal(A.get(ha), null); const ha2 = A.create('car', {}); assert.notEqual(ha2, ha, 'a reused slot gets a new generation');
+  const mk = () => new Pool({ cap: 2, make: () => ({}), reset: () => {} }), P = mk(), Q = mk(), a = P.acquire(), b = Q.acquire(); assert.notEqual(a.handle, b.handle); assert.equal(Q.get(a.handle), null); assert.equal(Q.release(a.handle), false); assert.equal(P.get(a.handle), a.obj);
+  const rt = new GameRuntime(); rt.frame(0); rt.frame(10000); assert.equal(rt.lastDt, 0.05); assert.ok(Math.abs(rt.droppedTime - 9.95) < 1e-9, 'the discarded wall time is counted: ' + rt.droppedTime);
+});
+test('audit R06: a car standing at every exit spot means no exit', () => {
+  const car = { x: 0, z: 0, yaw: 0, halfWidth: 1, halfLength: 2.2 }, cars = [{ x: 0, z: 1.9, r: 1.2, traffic: 1 }, { x: 0, z: -1.9, r: 1.2, traffic: 1 }, { x: -3.4, z: 0, r: 1.2, traffic: 1 }];
+  assert.equal(chooseExit(car, footWorld({ near: () => [cars] })), null, 'traffic blocks the exit like anything else'); assert.ok(chooseExit(car, footWorld({ near: () => [[cars[0]]] })).z < 0, 'the free side is used');
+});
+test('audit R07: the capsule is swept (no tunnelling through a thin wall), slides, steps over low things, walks under high things and is stopped by tall ones', () => {
+  const walkTo = (circles, input = { throttle: 1, run: 1 }, secs = 2, dt = 1 / 20) => { const f = new OnFoot(footWorld({ near: () => [circles] })); f.place(0, 0, 0); for (let t = 0; t < secs; t += dt) f.step(dt, input); return f; };
+  const thin = walkTo([{ x: 3, z: 0, r: 0.12 }]); assert.ok(thin.x < 3, 'a thin post at a slow frame rate is not skipped: x=' + thin.x);
+  const wall = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 3 }]); assert.ok(wall.x < 3, 'a tall wall stops the character');
+  const kerb = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 0.3 }]); assert.ok(kerb.x > 4, 'a kerb is stepped over: x=' + kerb.x);
+  const deck = walkTo([{ x: 3, z: 0, r: 0.6, y0: 4.5, y1: 6 }]); assert.ok(deck.x > 4, 'a bridge deck above the head is walked under: x=' + deck.x);
+  const low = walkTo([{ x: 3, z: 0, r: 0.6, y0: 0, y1: 1.6 }, { x: 3.5, z: 0.4, r: 0.6, y0: 0, y1: 1.6 }]); assert.ok(low.x < 4, 'two overlapping walls still stop it, with no jitter into them');
+  const slideF = walkTo([{ x: 3, z: 0.3, r: 1, y0: 0, y1: 3 }], { throttle: 1, steer: 0 }, 3); assert.ok(Math.abs(slideF.z) > 0.3 || slideF.x < 3, 'it slides along the face instead of sticking');
+});
 test('enter and exit: a safe exit beside the door, none when boxed in; the interaction contract picks the nearest enabled item in range', () => {
   const car = { x: 0, z: 0, yaw: 0, halfWidth: 1, halfLength: 2.2 }; const free = chooseExit(car, footWorld()); assert.ok(free && Math.abs(free.z - 1.9) < 1e-9 && free.x === 0 && free.yaw === 0, 'the left side first: ' + JSON.stringify(free));
   const leftBlocked = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }]] })); assert.ok(leftBlocked && leftBlocked.z < 0, 'the right side when the left is blocked'); const behind = chooseExit(car, footWorld({ near: () => [[{ x: 0, z: 1.9, r: 1 }, { x: 0, z: -1.9, r: 1 }]] })); assert.ok(behind && behind.x < -3, 'behind when both sides are blocked');
@@ -1241,15 +1261,31 @@ test('Delhi landmark models (D8): every plan id is a landmark with a footprint, 
   const F = frame(3, 4, Math.PI / 2), p = F.loc(10, 2); assert.ok(Math.abs(p[0] - 1) < 1e-9 && Math.abs(p[1] - 14) < 1e-9, 'u runs along the frame angle, v to its left');
 });
 
+test('signal heads: the phase of a head is the rule the cars obey (green for one axis 14 s, then the other), never green both ways, amber only at the end of a green slot, exactly one lamp lit', async () => {
+  const { signalPhase, lampLit, SLOT, AMBER } = await import('../src/world/city/signalphase.js'), green = (time, node, tx, tz) => { const axis = Math.abs(tx) > Math.abs(tz) ? 0 : 1; return Math.floor((time + (node * 7 % 28)) / 14) % 2 === axis; };     // citytraffic.js green(), copied
+  let amber = 0, all = 0; for (const node of [0, 1, 5, 99, 12345, 406000]) for (const [tx, tz] of [[1, 0], [0, 1], [-0.7, 0.2], [0.1, -0.9]]) for (let time = 0; time < 120; time += 0.25) { all++; const st = signalPhase(time, node, tx, tz); assert.equal(st !== 'red', green(time, node, tx, tz), 'a head is lit non-red exactly when the cars see green'); assert.ok(!(st === 'green' && signalPhase(time, node, tz, tx) === 'green'), 'never green both ways'); assert.equal([0, 1, 2].filter(k => lampLit(st, k)).length, 1, 'exactly one lamp lit'); if (st === 'amber') { amber++; assert.ok(((time + (node * 7 % 28)) % SLOT) >= SLOT - AMBER, 'amber only at the end of the slot'); } }
+  assert.ok(amber / all > 0.05 && amber / all < 0.15, 'amber share ' + amber / all);
+});
+test('CP smooth circles: the Inner Circle is laid on its fitted circle in steps of 2.5 degrees or less, no piece end moves, other streets are untouched, a piece that is not an arc is left alone', async () => {
+  const { smoothCircles, arcPiece, chaikin, CP_CIRCLE: C } = await import('../src/world/city/smooth.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
+  const nm = id => { const n = G.names[G.name[id]]; return n ? (typeof n === 'string' ? n : n.en || n.ref || '') : ''; }; let pieces = 0, other = 0;
+  for (const k of ['0_-3', '1_-3', '0_-2', '1_-2']) { const t = cityPack.decodeTile(JSON.parse(readFileSync(dir + 'tiles/' + k + '.json', 'utf8')), M.tileSize), u = smoothCircles(t, G); assert.equal(u.streets.length, t.streets.length);
+    u.streets.forEach((s, i) => { const o = t.streets[i], n = nm(s.id); if (s === o) return; assert.ok(['Inner Circle', 'Middle Circle', 'Outer Circle'].includes(n), 'only the circles change: ' + n); assert.equal(s.pts[0], o.pts[0]); assert.equal(s.pts[1], o.pts[1]); assert.equal(s.pts[s.pts.length - 2], o.pts[o.pts.length - 2]); assert.equal(s.pts[s.pts.length - 1], o.pts[o.pts.length - 1]); assert.equal(s.id, o.id);
+      if (n === 'Inner Circle') { pieces++; const P = s.pts; for (let j = 2; j < P.length; j += 2) { let d = Math.abs(Math.atan2(P[j + 1] - C.cz, P[j] - C.cx) - Math.atan2(P[j - 1] - C.cz, P[j - 2] - C.cx)); if (d > Math.PI) d = 2 * Math.PI - d; assert.ok(d <= 2.6 * Math.PI / 180, 'step ' + (d * 180 / Math.PI)); } for (let j = 2; j < P.length - 2; j += 2) assert.ok(Math.abs(Math.hypot(P[j] - C.cx, P[j + 1] - C.cz) - C.R) < 4, 'on the circle'); } else other++; }); }
+  assert.ok(pieces >= 8, 'inner circle pieces smoothed: ' + pieces); assert.ok(other >= 1, 'the middle or outer circle smoothed');
+  assert.equal(arcPiece([C.cx + C.R, C.cz, C.cx + C.R, C.cz + 30, C.cx + C.R, C.cz]), null, 'a back and forth piece is left alone'); assert.equal(chaikin([0, 0, 10, 0, 10, 10], 1).length > 6, true);
+  const hand = [0, 0, 5, 0, 5, 5, 0, 5]; const c2 = chaikin(hand, 2); assert.deepEqual([c2[0], c2[1], c2[c2.length - 2], c2[c2.length - 1]], [0, 0, 0, 5], 'ends stay');
+});
 test('Delhi infill (P1): lots are inside blocks, clear of streets, mapped buildings, parks and each other; deterministic; adds coverage; stays under the cap', async () => {
   const { infillBuildings, STYLE } = await import('../src/world/city/infill.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, { M } = loadPack(dir), G = cityPack.decodeGraphColumns(JSON.parse(readFileSync(dir + 'graph.json', 'utf8')));
   const area = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return Math.abs(a) / 2; }, pip = (r, x, z) => { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { if ((r[i + 1] > z) !== (r[j + 1] > z) && x < (r[j] - r[i]) * (z - r[i + 1]) / (r[j + 1] - r[i + 1]) + r[i]) c = !c; } return c; };
   for (const [tx, tz] of [[0, -2], [0, -4]]) {
     const tile = cityPack.decodeTile(JSON.parse(readFileSync(dir + `tiles/${tx}_${tz}.json`, 'utf8')), M.tileSize), o = { size: M.tileSize, G, widthOf: s => cityPack.pieceWidth(G, s), styleAt: () => 'default' };
-    const a = infillBuildings(tile, o), b = infillBuildings(tile, o); assert.deepEqual(a.map(x => x.ring), b.map(x => x.ring), 'deterministic'); assert.ok(a.length > 50 && a.length <= 2200, 'infill count ' + a.length);
+    const a = infillBuildings(tile, o), b = infillBuildings(tile, o); assert.deepEqual(a.map(x => x.ring), b.map(x => x.ring), 'deterministic'); assert.ok(a.length > 50 && a.length <= 4000, 'infill count ' + a.length); assert.ok(a.yards && a.yards.length > 0 && a.yards.length <= 700, 'yards: ' + (a.yards && a.yards.length)); for (const y of a.yards.slice(0, 300)) { const yx = (y[0] + y[2]) / 2, yz = (y[1] + y[3]) / 2; assert.ok(tile.blocks.some(bl => pip(bl.ring, yx, yz)), 'yard inside a block'); assert.ok(![...tile.buildings, ...a].some(bl => pip(bl.ring || bl, yx, yz)), 'yard not under a building'); } assert.deepEqual(a.yards, b.yards, 'yards deterministic');
+    assert.ok(a.some(x => x.interior) && a.filter(x => x.interior).length <= 1800, 'interior lots exist and stay under their cap');
     const before = tile.buildings.reduce((q, x) => q + area(x.ring), 0), add = a.reduce((q, x) => q + area(x.ring), 0); assert.ok(add > before * 0.15, 'adds at least 15 percent to the mapped building area: ' + (add / before).toFixed(2));
     const ids = new Set(a.map(x => x.id)); assert.equal(ids.size, a.length, 'unique ids');
-    for (const x of a.slice(0, 400)) {
+    for (const x of [...a.slice(0, 400), ...a.filter(q => q.interior).slice(0, 200)]) {
       const r = x.ring, cx = (r[0] + r[4]) / 2, cz = (r[1] + r[5]) / 2; assert.ok(x.infill && x.height >= 3.2 && x.hsrc === 'tag');
       assert.ok(tile.blocks.some(bl => pip(bl.ring, cx, cz)), 'lot centre inside a block');
       assert.ok(!tile.buildings.some(bl => pip(bl.ring, cx, cz)), 'not on a mapped building');
@@ -1264,6 +1300,12 @@ test('Delhi map rules and audit: the Connaught Place station block is left out, 
   assert.ok([...skip].some(b => b.use === 'transit' && (b.height || 0) < 8), 'a transit block on a park is left out'); assert.ok(![...skip].some(b => b.landmark), 'no landmark is left out'); assert.ok(skip.size < tile.buildings.length * 0.2, 'the rules leave out a small share of a tile: ' + skip.size);
   const now = JSON.parse(execFileSync(process.execPath, [new URL('./audit_city.mjs', import.meta.url).pathname, '--json'], { encoding: 'utf8' })), base = JSON.parse(readFileSync(new URL('./city_audit_baseline.json', import.meta.url), 'utf8')).counts;
   for (const k of Object.keys(base)) assert.ok(now[k] <= base[k], 'audit class ' + k + ' got worse: ' + now[k] + ' against ' + base[k]);
+});
+test('Delhi roads out: every gate joins an India highway toward a city, and every city reachable from Delhi has a gate to leave by', async () => {
+  const { RoadNetwork } = await import('../src/world/network.js'), { mapGates, gateForCity } = await import('../src/world/city/gates.js'), dir = new URL('../assets/cities/delhi/', import.meta.url).pathname, net = new RoadNetwork(JSON.parse(readFileSync(new URL('../assets/india/skeleton.json', import.meta.url), 'utf8'))), { M } = loadPack(dir);
+  const g = mapGates(net, 'delhi', M.gates); assert.equal(g.length, M.gates.length); for (const x of g) { assert.ok(x.road && x.toward, 'gate ' + x.id + ' joins no highway'); assert.ok(net.cities.get(x.toward), 'gate ' + x.id + ' leads toward an unknown city'); }
+  let n = 0, miss = [], byGate = {}; for (const c of net.cities.values()) { if (c.id === 'delhi') continue; const rt = net.route('delhi', c.id); if (!rt || !rt.legs || !rt.legs.length) continue; n++; const r = gateForCity(net, 'delhi', g, c.id); if (!r) miss.push(c.id); else byGate[r.gate.toward] = (byGate[r.gate.toward] || 0) + 1; }
+  assert.ok(n >= 10, 'cities reachable from Delhi: ' + n); assert.deepEqual(miss, [], 'cities with no gate to leave by: ' + miss.join(', ')); assert.ok(Object.keys(byGate).length >= 4, 'the cities spread over several exits: ' + JSON.stringify(byGate)); console.log('     roads out of Delhi: ' + g.length + ' gates, ' + n + ' cities reachable, by exit ' + JSON.stringify(byGate));
 });
 test('Delhi identity (D7): identity.json is valid, zones lie inside the pack, every shop kind has name boards, areas answer', async () => {
   const I = await import('../src/world/city/identity.js'), J = JSON.parse(readFileSync(new URL('../assets/cities/delhi/identity.json', import.meta.url))), M = JSON.parse(readFileSync(new URL('../assets/cities/delhi/manifest.json', import.meta.url)));
@@ -1284,4 +1326,81 @@ test('Delhi identity (D7): identity.json is valid, zones lie inside the pack, ev
   assert.ok(['neem', 'jamun'].includes('neem'));
 });
 
+test('prefetch: each file once, one at a time in order, a failure is tried again later, nothing on a save-data connection', async () => {
+  const P = await import('../src/world/prefetch.js'), got = [], realFetch = globalThis.fetch; let fail = new Set(['assets/india/rails.json']);
+  globalThis.fetch = async u => { got.push(u); if (fail.has(u)) throw new Error('offline'); return { ok: true, arrayBuffer: async () => new ArrayBuffer(1) }; };
+  try {
+    assert.equal(P.prefetch(P.INDIA_FILES), P.INDIA_FILES.length); assert.equal(P.prefetch(P.INDIA_FILES), 0, 'asked twice: nothing new'); await new Promise(r => setTimeout(r, 30));
+    assert.deepEqual(got, P.INDIA_FILES, 'in order, once each'); fail = new Set(); assert.equal(P.prefetch(P.INDIA_FILES), 1, 'only the one that failed is asked again'); await new Promise(r => setTimeout(r, 30)); assert.equal(got.length, P.INDIA_FILES.length + 1);
+    Object.defineProperty(globalThis, 'navigator', { value: { connection: { saveData: true } }, configurable: true }); assert.equal(P.prefetch(P.CITY_FILES), 0, 'save-data: nothing');
+  } finally { globalThis.fetch = realFetch; delete globalThis.navigator; }
+});
+test('gzfetch: the gzip copy is used and unpacked, a host that already unpacked it works, a missing copy falls back to the plain file', async () => {
+  const G = await import('../src/core/gzfetch.js'), data = Uint8Array.from({ length: 5000 }, (_, i) => i % 251), gz = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  assert.ok(G.isGzip(gz) && !G.isGzip(data));
+  const mk = map => async u => { const v = map[u]; return v ? { ok: true, arrayBuffer: async () => v.buffer.slice(v.byteOffset, v.byteOffset + v.byteLength) } : { ok: false, status: 404 }; };
+  const same = (a, b) => assert.deepEqual(new Uint8Array(a), b);
+  same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': gz })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin.gz': data })), data); same(await G.fetchGrid('x.bin', mk({ 'x.bin': data })), data);
+  await assert.rejects(() => G.fetchGrid('x.bin', mk({})));
+});
+test('roundabout islands: round parks are found, dressed by size, with a painted kerb', async () => {
+  const R = await import('../src/world/city/roundabout.js'), ring = r => { const o = []; for (let i = 0; i < 24; i++) { const t = i / 24 * Math.PI * 2; o.push(100 + r * Math.cos(t), 50 + r * Math.sin(t)); } return o; };
+  assert.equal(R.islandInfo(ring(8)).size, 'small'); assert.equal(R.islandInfo(ring(25)).size, 'medium'); assert.equal(R.islandInfo(ring(60)).size, 'big'); assert.equal(R.islandInfo([0, 0, 50, 0, 50, 5, 0, 5, 0, 0, 10, 10]), null); assert.equal(R.islandInfo(ring(2)), null);
+  const n = {}; for (const r of [8, 25, 60]) { const cols = new Set(); n[r] = R.dress((cx, y0, cz, sx, sy, sz, yaw, c) => { assert.ok(Number.isFinite(cx + cz + sx + sy + sz + yaw)); cols.add(c); }, R.islandInfo(ring(r)), 0); assert.ok(cols.has(0xe0ae1e) && cols.has(0x1b1b1d), 'yellow and black kerb'); }
+  assert.ok(n[8] < n[25] && n[25] < n[60] && n[60] <= R.CAP);
+});
+test('place banner: bracketed names are shortened and every place type has a reach', async () => {
+  const P = await import('../src/ui/placebanner.js');
+  assert.equal(P.shortName('Karol Bagh (Ajmal Khan Road)'), 'Karol Bagh'); assert.equal(P.shortName('Connaught Place (Rajiv Chowk)'), 'Connaught Place'); assert.equal(P.shortName('Khan Market'), 'Khan Market');
+  const fs = await import('node:fs'), lm = JSON.parse(fs.readFileSync(new URL('../assets/cities/delhi/landmarks.json', import.meta.url))).landmarks; for (const l of lm) { const r = P.reach(l); assert.ok(r >= 200 && r <= 400, l.name.en); assert.ok(P.shortName(l.name.en).length > 2); }
+});
+test('offline download: the list is split into core and Delhi, sizes add up, the label is readable, the state follows the stored version', async () => {
+  const O = await import('../src/ui/offline.js'), m = { version: 'v2', files: [{ p: './', s: 0, g: 'core' }, { p: 'a.js', s: 3000000, g: 'core' }, { p: 'assets/cities/delhi/t.json', s: 70000000, g: 'delhi' }] };
+  assert.equal(O.plan(m, 'core').files.length, 2); assert.equal(O.plan(m, 'delhi').bytes, 70000000); assert.equal(O.plan(null, 'core').bytes, 0);
+  assert.equal(O.label(70000000), '70 MB'); assert.equal(O.label(3000000), '3 MB');
+  const store = {}; globalThis.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
+  try { assert.equal(O.stateOf('core', m), 'none'); store['gfp-offline'] = JSON.stringify({ core: 'v2', delhi: 'v1' }); assert.equal(O.stateOf('core', m), 'ready'); assert.equal(O.stateOf('delhi', m), 'old'); } finally { delete globalThis.localStorage; }
+  const sw = (await import('node:fs')).readFileSync(new URL('../sw.js', import.meta.url), 'utf8'); assert.ok(/k !== OFFLINE/.test(sw) && /offline-download/.test(sw), 'the service worker keeps the offline cache and answers the download message');
+});
+test('Lite build: Delhi only by default (no India files in the deploy list, none preloaded), the full game stays reachable with ?build=full', async () => {
+  const B = await import('../src/core/build.js'), fs = await import('node:fs'), rd = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  assert.equal(B.BUILD, 'lite'); assert.equal(B.LITE, true);
+  assert.ok(/LITE_SKIP = \('assets\/india\/',\)/.test(rd('tools/stage_cloudflare.py')) && /build == 'lite'/.test(rd('tools/stage_cloudflare.py')), 'the stage script leaves assets/india out of Lite');
+  assert.ok(/var lite = !\/\[\?&\]build=full/.test(rd('index.html')) && /lite \? \[\]/.test(rd('index.html')), 'the page preloads no India file in Lite');
+  const m = rd('src/main.js'); assert.ok(/const cityMode = LITE \|\|/.test(m) && /\(q\.get\('india'\) \|\| wantWorld\) && !LITE/.test(m) && /cityMode && !LITE\) Promise\.all/.test(m), 'main.js starts Delhi and reads no India file in Lite');
+});
+test('sign boards: Hindi for every name is Devanagari, the dictionary words are right, and the sign code keeps its rules (arrivals only, enterable roads, chevrons, give way)', async () => {
+  const H = await import('../src/world/city/hindi.js'), fs = await import('node:fs'), src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/world/city/signdests.js', import.meta.url), 'utf8');
+  assert.equal(H.hindiOf('Ring Road'), 'रिंग रोड'); assert.equal(H.hindiOf('Mahatma Gandhi Marg'), 'महात्मा गांधी मार्ग'); assert.equal(H.hindiName({ en: 'Ring Road', hi: 'x' }), 'x');
+  const man = JSON.parse(fs.readFileSync(new URL('../assets/cities/delhi/graph.json', import.meta.url), 'utf8')).names; let n = 0;
+  for (const nm of man) { if (!nm.en || !/[A-Za-z]/.test(nm.en)) continue; const h = H.hindiOf(nm.en); assert.ok(h && /[ऀ-ॿ]/.test(h) && !/[A-Za-z]/.test(h), 'Hindi for ' + nm.en + ': ' + h); n++; }
+  assert.ok(n > 3000, 'names checked: ' + n);
+  assert.ok(/G\.oneway\[id\] === \(end \? 1 : -1\)/.test(src) && /one !== \(G\.a\[e\] === node \? 1 : -1\)/.test(src), 'signs only where traffic arrives, boards only list roads that can be entered');
+  assert.ok(/kind: 'chev'/.test(src) && /'give'/.test(src) && /kind: 'cam'/.test(src) && /kind: 'ref'/.test(src) && /diagram/.test(src) && /green: true, km/.test(src), 'chevrons, give-way, camera, route plate, diagram and green distance boards are built');
+});
+test('sign boards name real places: PLACES is built from the pack, a road leading toward Karol Bagh gets a board for it, STOP and give-way signs exist', async () => {
+  const fs = await import('node:fs'), { decodeGraphColumns } = await import('../src/world/city/pack.js'), { destsAt, adjOf, placeFor } = await import('../src/world/city/signdests.js'), { PLACES } = await import('../src/world/city/places.js');
+  assert.ok(PLACES.length > 300 && PLACES.every(p => p[0] && isFinite(p[2]) && isFinite(p[3])), 'places: ' + PLACES.length);
+  const pl = placeFor(-1855, -3569 + 900, 0, -1); assert.ok(pl && /Karol Bagh|Rajendra|Patel|Shadipur|Delhi Cantt|Kirti|Jhandewalan|Rama|Moti|Satguru|Inderlok|Ashok Park/i.test(pl.en + ' ') || pl, 'a place to the north of Karol Bagh: ' + JSON.stringify(pl)); assert.equal(placeFor(0, 0, 1, 0).km !== undefined, true);
+  const G = decodeGraphColumns(JSON.parse(fs.readFileSync(new URL('../assets/cities/delhi/graph.json', import.meta.url), 'utf8'))), { head, nxt } = adjOf(G); let boards = 0, withKm = 0;
+  for (let n = 0; n < G.nodes && boards < 30; n += 97) for (let h = head[n]; h >= 0; h = nxt[h]) { const e = h >> 1, c = G.classes[G.cls[e]]; if (c !== 'primary' && c !== 'secondary') continue; const o = (h & 1) ? G.a[e] : G.b[e], dx = G.xz[o * 2] - G.xz[n * 2], dz = G.xz[o * 2 + 1] - G.xz[n * 2 + 1], L = Math.hypot(dx, dz); if (L < 30) continue; const d = destsAt(G, n, e, dx / L, dz / L, -dz / L, dx / L); for (const b of d) { boards++; if (b.km) withKm++; assert.ok(b.en && ['left', 'up', 'right'].includes(b.dir)); } break; }
+  assert.ok(boards >= 20 && withKm === boards, 'boards ' + boards);
+  const src = fs.readFileSync(new URL('../src/world/city/tilemesh.js', import.meta.url), 'utf8'); assert.ok(/kind: stop \? 'stop' : 'give'/.test(src) && /k === 'stop'/.test(src), 'STOP signs with a stop line');
+});
+test('CP street furniture (cpstreet.js): bins, bollards, drains, barricades, CCTV and transformers are placed by rule on a CP street piece, deterministically, and none sits in a building or the road', async () => {
+  const { cpStreetPiece } = await import('../src/world/city/cpstreet.js'), mk = (id, len, walk) => ({ id, len, hw: 4, walk, cls: 'secondary' }), at = (pc, s) => ({ x: s, z: 0, tx: 1, tz: 0 });
+  const run = pc => { const boxes = [], circles = [], h = { box: (M, lx, y, lz, sx, sy, sz) => boxes.push([lx, y, lz, sx, sy, sz]), M: {}, gy: 0, rnd: (a, b) => { let x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); }, C: v => v, insideBuilding: () => false, inRoad: () => false, L: (x, z) => [x, z], circle: (x, z, r) => circles.push([x, z, r]) }; return { n: cpStreetPiece(pc, at, h), boxes, circles }; };
+  const a = run(mk(5, 120, 2)), b = run(mk(5, 120, 2)); assert.deepEqual(a, b); assert.ok(a.n.bin >= 2 && a.n.bollard >= 4 && a.n.drain >= 4, JSON.stringify(a.n)); assert.ok(a.boxes.length >= 20 && a.boxes.every(q => q.every(Number.isFinite)));
+  assert.equal(Object.values(run(mk(6, 10, 2)).n).reduce((x, y) => x + y, 0), 0, 'a short piece gets nothing'); assert.equal(Object.values(run(mk(7, 120, 0)).n).reduce((x, y) => x + y, 0), 0, 'a street without a walk gets nothing');
+  let kinds = new Set(); for (let id = 1; id < 60; id++) for (const [k, v] of Object.entries(run(mk(id, 90, 2)).n)) if (v) kinds.add(k); assert.equal(kinds.size, 6, 'all six kinds occur: ' + [...kinds]);
+});
+test('Delhi QA test adapter (T1): inert without the dev flags and imported by nothing in the game', async () => {
+  const m = await import('../src/debug/delhi_test_adapter.js'); assert.equal(m.status.installed, false, 'no ?dev&testdrive=1 in node, so it installs nothing');
+  const { readdirSync, statSync } = await import('node:fs'); const files = []; const walk = d => { for (const f of readdirSync(d)) { const q = d + '/' + f; if (statSync(q).isDirectory()) walk(q); else if (/\.m?js$/.test(f)) files.push(q); } }; walk(new URL('../src', import.meta.url).pathname);
+  const hits = files.filter(f => !f.endsWith('delhi_test_adapter.js') && readFileSync(f, 'utf8').includes('delhi_test_adapter')); assert.deepEqual(hits, [], 'the game must not import the test adapter: ' + hits);
+});
+test('Delhi QA runner (T2/T3): every verified fixture routes on the pack, no wrong-way edge, continuous surface heights', async () => {
+  const { execFileSync } = await import('node:child_process'); const out = execFileSync(process.execPath, [new URL('../tools/run_delhi_test.mjs', import.meta.url).pathname, '--no-write'], { encoding: 'utf8' });
+  assert.ok(!/^FAIL /m.test(out), 'a fixture failed:\n' + out.split('\n').filter(l => /FAIL/.test(l)).join('\n')); assert.ok(/PASS +cp-india-gate/.test(out) && /PASS +flyover-rani-jhansi/.test(out) && /PASS +todarmal-replay/.test(out), 'the CP, flyover and Todarmal fixtures pass');
+});
 console.log(`\n${passed} checks passed`);

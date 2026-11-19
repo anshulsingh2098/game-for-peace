@@ -17,7 +17,7 @@ Nothing here is downloaded. Every download needs the owner's yes (file, source, 
 ## Open-source tools worth using (code, not data)
 | Project | What for | Licence | Note |
 |---|---|---|---|
-| **OSM2World** (Java) | Turns OSM data into 3D meshes (roads, buildings, bridges) usable in three.js | LGPL-3.0 (verified), free for commercial use; still in development | Good reference or offline converter for city districts; its output of OSM data is still subject to ODbL |
+| **OSM2World** (Java) | Turns OSM data into 3D meshes (roads, buildings, bridges) usable in three.js | MIT at the commit the audit pinned (17 Nov 2026; this file used to say LGPL-3.0). Confirm the licence file at the exact commit before using it | Good reference or offline converter for city districts; its output of OSM data is still subject to ODbL |
 | **tilemaker / osmium / ogr2ogr** | Cut an OSM extract down to what we need, offline | permissive (not verified here) | Build-time tools only, in `tools/` |
 | **Valhalla / OSRM** | Realistic routing between cities (for taxi missions and traffic) | permissive (unverified) | Only if the road network grows large |
 | **Rapier, three.js** | Already used | MIT / Apache | - |

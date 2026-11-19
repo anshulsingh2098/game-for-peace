@@ -45,7 +45,7 @@ export function streetConflict(ring, c, ko) {
 export const droppedForStreet = r => r.share >= 0.5 || r.centre;
 
 /* ---- street widths: stored only when they differ from the class formula (saves about 1 MB gzip in Delhi) ---- */
-export const LANE_W = { motorway: 3.5, trunk: 3.5, primary: 3.4, secondary: 3.2, tertiary: 3.0, residential: 2.8, service: 2.8, cycleway: 1.5, busway: 3.4, footway: 1.2 };
+export const LANE_W = { motorway: 3.5, trunk: 3.7, primary: 3.7, secondary: 3.6, tertiary: 3.5, residential: 3.1, service: 2.8, cycleway: 1.5, busway: 3.4, footway: 1.2 };
 export const DEFAULT_SIDEWALK = { motorway: 0, trunk: 0, primary: 2, secondary: 2, tertiary: 2, residential: 1, service: 0, footway: 0, cycleway: 0, busway: 0 };
 export const defaultWidth = (cls, lanes) => Math.max(1, Math.round(lanes * LANE_W[cls] * 10) / 10);
 /* width and sidewalk of a street piece `s` (tile) on edge `e` (graph edge array) */

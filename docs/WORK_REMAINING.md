@@ -10,7 +10,7 @@ Priority: **P1** wrong or risky as it stands, **P2** missing feature that matter
 |---|---|---|
 | 0.1 | Nothing has been tried on a real phone: frame rate, memory, touch controls, Hindi fonts, loading time. Everything was looked at in a desktop browser pane or by script. | P1 [person] |
 | 0.2 | Anshul has not reviewed any of N7 to N15, the landscape work, the India map, the junction network or the drive modes. Many Stream B files were changed additively (`traffic/sim.js`, `traffic/traffic.js`, `vehicle/physics.js`, `vehicle/rapier-vehicle.js`, `main.js`). | P1 [person] [B] |
-| 0.3 | The live site is not updated. Only Anshul deploys. `cloudflare/public` is out of date by design. | [person] |
+| 0.3 | The live site is on the owner's Cloudflare account since 17 Nov 2026 (Anshul's account keeps the old build). `cloudflare/public` is out of date by design; deploys use a scratch copy (`CLAUDE.md`). | [person] |
 | 0.4 | N0 and N4 real-device acceptance, listening to the engine, and the N6 launch are still open. | P1 [person] |
 | 0.5 | Tests are headless or look at a few screenshots. Nothing was driven for a long session (leaks, hitches over 10 minutes). | P2 [person] |
 

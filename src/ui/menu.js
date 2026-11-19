@@ -2,6 +2,9 @@
    title and garage screens. The Menu owns only the screens; everything it changes goes through the `api` object main.js passes in:
      api.vehicles (the defs), api.state() -> { vehicle, paint{}, time, weather, quality, shadows, lights, muted, rumble, traffic, radioVol }
      api.play() api.pickVehicle(i) api.paint(i, colour) api.set(name, value) api.newWorld() api.toRoad() api.radio() api.onOpen(screen) api.onClose() */
+import { canInstall, install, onInstallChange } from './install.js';
+import { LITE } from '../core/build.js';
+import { GROUPS, label, plan, loadManifest, stateOf, supported, download, remove } from './offline.js';
 import { CITIES, CITY, roadGraph, shortestRoute, gameKm, driveMinutes } from '../world/india_network.js';
 const mk = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; if (parent) parent.appendChild(e); return e; };
 const btn = (parent, label, fn, cls) => { const b = mk('button', cls || '', parent, label); b.type = 'button'; b.onclick = e => { e.stopPropagation(); fn(); b.blur(); }; return b; };
@@ -51,9 +54,27 @@ export class Menu {
     mk('div', 'm-kicker', p, 'A drive through an endless, generated world');
     mk('h1', '', p, 'Game for Peace');
     const col = mk('div', 'm-col', p);
-    btn(col, 'Play: India map', () => { if (this.api.inWorld && !this.api.inWorld()) this.api.indiaMap(); else this.hide(); }, 'primary'); btn(col, 'Explore cities', () => this.open2('locations', 'title')); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title')); btn(col, 'Travel', () => this.open2('travel', 'title'));
+    btn(col, LITE ? 'Play: Delhi' : 'Play: India map', () => { if (!LITE && this.api.inWorld && !this.api.inWorld()) this.api.indiaMap(); else this.hide(); }, 'primary'); if (!LITE) btn(col, 'Explore cities', () => this.open2('locations', 'title')); btn(col, 'Garage', () => this.open2('garage', 'title')); btn(col, 'Settings', () => this.open2('settings', 'title')); if (!LITE) btn(col, 'Travel', () => this.open2('travel', 'title'));
+    if (canInstall()) { const row = mk('div', 'm-col', p), b = btn(row, 'Add to Home Screen', async () => { note.textContent = await install(); note.style.display = 'block'; try { note.scrollIntoView({ block: 'nearest' }); } catch (e) { /* old browser */ } if (!canInstall()) b.style.display = 'none'; }), note = mk('div', '', row, ''); note.style.cssText = 'display:none;font-size:12px;line-height:1.35;color:#cfe0ff;grid-column:1/-1'; b.style.marginTop = '8px'; b.style.gridColumn = '1/-1'; }          // the app icon that opens full screen: see ui/install.js
+    this.offlineRows(p);          // the Download buttons: keep the game on this device (ui/offline.js)
     mk('div', 'm-hint', p, 'Pick a car, truck or bike, then roam. Hold Q at any time to tune a live radio station from around the world, including India.');
     const lic = mk('a', '', p, 'Licenses and credits'); lic.href = 'licenses.html'; lic.target = '_blank'; lic.rel = 'noopener'; lic.style.cssText = 'display:block;margin-top:14px;font-size:12px;color:#9fb0c8;text-align:center';          // every credit and licence in one page, linked from the title screen
+  }
+
+  /* "Download": one row per group (the game, Delhi). Shown only where the game is served with a download list and a service worker runs. */
+  async offlineRows(parent) {
+    const m = await loadManifest(); if (!m || !supported() || this.screen !== 'title') return;
+    const box = mk('div', 'm-col', parent); box.style.cssText = 'grid-column:1/-1;margin-top:8px'; mk('div', 'm-hint', box, 'Download to play with no connection and no waiting:').style.margin = '0 0 4px';
+    for (const g of ['core', 'delhi']) {
+      const size = plan(m, g).bytes, row = mk('div', '', box), note = mk('div', '', box); note.style.cssText = 'font-size:12px;line-height:1.35;color:#cfe0ff;margin:2px 0 6px';
+      const paint = () => { const st = stateOf(g, m); b.textContent = st === 'ready' ? GROUPS[g] + ': on this device (remove)' : (st === 'old' ? 'Update: ' : 'Download: ') + GROUPS[g] + ' (' + label(size) + ')'; };
+      const b = btn(row, '', async () => {
+        if (stateOf(g, m) === 'ready') { await remove(g); paint(); note.textContent = 'Removed from this device.'; return; }
+        b.disabled = true; note.textContent = 'Starting...';
+        const r = await download(g, d => { note.textContent = 'Downloading ' + Math.round(100 * d.done / d.total) + '% (' + d.done + ' of ' + d.total + ' files)'; });
+        b.disabled = false; paint(); note.textContent = r.ok ? 'Done. This now opens without a connection.' : (r.why || r.failed + ' files did not download: check the connection and press again.');
+      }); paint();
+    }
   }
 
   garage() {
@@ -128,8 +149,8 @@ export class Menu {
   pause() {
     const api = this.api, p = mk('div', 'm-panel m-title', this.root); mk('h2', '', p, 'Paused');
     const col = mk('div', 'm-col', p);
-    btn(col, 'Resume', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'pause')); btn(col, 'Explore cities', () => this.open2('locations', 'pause')); btn(col, 'Settings', () => this.open2('settings', 'pause')); btn(col, 'Credits', () => this.open2('credits', 'pause'));
-    btn(col, 'Travel', () => this.open2('travel', 'pause'));
-    btn(col, 'Back to the road', () => { api.toRoad(); this.hide(); }); btn(col, 'New world', () => { api.newWorld(); this.hide(); }); btn(col, 'Title screen', () => this.show('title'));
+    btn(col, 'Resume', () => this.hide(), 'primary'); btn(col, 'Garage', () => this.open2('garage', 'pause')); if (!LITE) btn(col, 'Explore cities', () => this.open2('locations', 'pause')); btn(col, 'Settings', () => this.open2('settings', 'pause')); btn(col, 'Credits', () => this.open2('credits', 'pause'));
+    if (!LITE) btn(col, 'Travel', () => this.open2('travel', 'pause'));
+    btn(col, 'Back to the road', () => { api.toRoad(); this.hide(); }); if (!LITE) btn(col, 'New world', () => { api.newWorld(); this.hide(); }); btn(col, 'Title screen', () => this.show('title'));
   }
 }

@@ -1,14 +1,14 @@
 """Builds the Cloudflare deploy folder from the project, replacing hand copying.
-Usage: python tools/stage_cloudflare.py [--out <folder>] [--dry-run]
+Usage: python tools/stage_cloudflare.py [--out <folder>] [--dry-run] [--build lite|full]   (lite is the default: Delhi only, no assets/india)
 Default output is cloudflare/public. Copies the pages, scripts, three.js, models, textures and the radio
 playlist and songs; leaves out Blender sources, dev files and backups. Files in the output that are no
 longer part of the site are removed, so the folder always mirrors the project."""
-import os, sys, shutil, filecmp
+import os, sys, shutil, filecmp, json, hashlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FILES = ['index.html', 'next.html', 'classic.html', 'tuner.html', 'licenses.html', 'india_map.html', 'game.js', 'audio.js']                      # single files, if present
+FILES = ['manifest.webmanifest', 'sw.js', 'index.html', 'next.html', 'classic.html', 'tuner.html', 'licenses.html', 'india_map.html', 'game.js', 'audio.js']                      # single files, if present
 TREES = {                                                                      # folder -> allowed extensions
-    'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', ''}, 'assets': {'.glb', '.png', '.jpg', '.webp', '.hdr', '.mp3', '.wav', '.json'},
+    'src': {'.js'}, 'vendor': {'.js', '.mjs', '.txt', '', '.wasm'}, 'assets': {'.glb', '.png', '.jpg', '.webp', '.hdr', '.mp3', '.wav', '.json', '.bin', '.gz', '.txt'},   # .bin: assets/india/terrain.bin; .txt: data attribution files; .wasm: the vendored decoders (audit R01)
     'music': {'.json', '.mp3', '.m4a', '.ogg'},
 }
 
@@ -16,20 +16,37 @@ def lp(p):                                                                     #
     p = os.path.abspath(p); pre = '\\\\?\\'
     return pre + p if os.name == 'nt' and not p.startswith(pre) else p
 
-def wanted():
+LITE_SKIP = ('assets/india/',)                                                 # files the Lite (Delhi only, src/core/build.js) game never reads; kept in the repo, left out of the deploy
+
+def wanted(build='lite'):
     out = [f for f in FILES if os.path.isfile(os.path.join(ROOT, f))]
     for tree, exts in TREES.items():
         for d, _, names in os.walk(os.path.join(ROOT, tree)):
             for n in names:
                 if os.path.splitext(n)[1].lower() in exts:
                     rel = os.path.relpath(os.path.join(d, n), ROOT).replace('\\', '/')
+                    if build == 'lite' and rel.startswith(LITE_SKIP): continue
                     out.append(rel)
     return sorted(out)
+
+def offline_list(files, out):
+    """offline.json for the Download button (src/ui/offline.js): the files that make the game playable with no network, in two groups:
+    'core' = the page, the code, the libraries and every asset outside the city packs; 'delhi' = the Delhi pack. 'version' changes when any of them changes."""
+    keep, h = [], hashlib.sha1()
+    for rel in files:
+        if rel.endswith('.html') and rel != 'index.html': continue
+        if rel in ('sw.js', 'game.js', 'audio.js') or rel.startswith('music/'): continue
+        g = 'delhi' if rel.startswith('assets/cities/delhi/') else 'core'
+        f = os.path.join(out, rel); d = open(lp(f), 'rb').read() if os.path.isfile(lp(f)) else b''
+        h.update(rel.encode()); h.update(hashlib.sha1(d).digest()); keep.append({'p': rel, 's': len(d), 'g': g})
+    keep.insert(0, {'p': './', 's': 0, 'g': 'core'})
+    return {'version': h.hexdigest()[:12], 'files': keep}
 
 def main():
     args = sys.argv[1:]; dry = '--dry-run' in args
     out = os.path.abspath(args[args.index('--out') + 1]) if '--out' in args else os.path.join(ROOT, 'cloudflare', 'public')
-    files = wanted(); keep = set(files); copied = same = removed = 0
+    build = args[args.index('--build') + 1] if '--build' in args else 'lite'
+    files = wanted(build); keep = set(files); copied = same = removed = 0
     for rel in files:
         src, dst = os.path.join(ROOT, rel), os.path.join(out, rel)
         if os.path.isfile(lp(dst)) and filecmp.cmp(lp(src), lp(dst), shallow=False): same += 1; continue
@@ -38,9 +55,11 @@ def main():
     for d, _, names in os.walk(out):
         for n in names:
             rel = os.path.relpath(os.path.join(d, n), out).replace('\\', '/')
-            if rel not in keep:
+            if rel not in keep and rel != 'offline.json':
                 removed += 1; print('  remove', rel)
                 if not dry: os.remove(lp(os.path.join(d, n)))
+    if not dry:
+        with open(lp(os.path.join(out, 'offline.json')), 'w') as fh: json.dump(offline_list(files, out), fh, separators=(',', ':'))
     size = sum(os.path.getsize(lp(os.path.join(ROOT, f))) for f in files) / 1e6
     print(f'{"would stage" if dry else "staged"} {len(files)} files ({size:.1f} MB) to {out}: {copied} copied, {same} unchanged, {removed} removed')
 

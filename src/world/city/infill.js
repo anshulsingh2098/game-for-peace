@@ -15,9 +15,10 @@ export const STYLE = {
   dda: { rows: 1, fill: 0.45, floors: [4, 5], w: [14, 30], d: [10, 14], use: 'residential' },
   cp: { rows: 2, fill: 0.5, floors: [3, 4], w: [12, 22], d: [14, 18], use: 'commercial' },
   lutyens: { rows: 1, fill: 0.1, floors: [1, 2], w: [14, 24], d: [16, 24], use: 'residential' },
+  kartavya: { rows: 1, fill: 0.02, floors: [1, 1], w: [14, 20], d: [14, 20], use: 'residential' },
   business: { rows: 1, fill: 0.45, floors: [5, 10], w: [18, 36], d: [18, 30], use: 'office' },
 };
-const MAX_PER_TILE = 2200, EDGE_MARGIN = 25, STREET_CLEAR = 0.9, FLOOR = 3.2;
+const MAX_PER_TILE = 4000, INTERIOR_MAX = 1800, YARD_MAX = 700, YARD_STREET = 2.5, LANE = 3.2, INTERIOR_FILL = 0.8, EDGE_MARGIN = 25, STREET_CLEAR = 0.9, FLOOR = 3.2;
 
 const area2 = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return a / 2; };
 function pip(r, x, z) { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { const xi = r[i], zi = r[i + 1], xj = r[j], zj = r[j + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; }
@@ -83,5 +84,46 @@ export function* infillSteps(tile, o) {
       }
     }
   }
+  /* P1 part 2: the interiors. The frontage rows above leave the middle of a big block open (the map data has no buildings there either). Here the block is cut into back-to-back rows of lots in the direction of its longest edge, with a 3 m lane between rows, and the same acceptance test as the frontage lots (inside the block, clear of every street, park, mapped building, earlier lot and hole). */
+  const interior = []; let nIn = 0;
+  for (let bi = 0; bi < blocks.length && nIn < INTERIOR_MAX && out.length < MAX_PER_TILE; bi++) {
+    if (o.yieldNow && o.yieldNow()) yield;
+    const B = blocks[bi], r = B.ring, n = r.length / 2; if (n < 3) continue;
+    let bl = 0, ux = 1, uz = 0; for (let e = 0; e < n; e++) { const dx = r[((e + 1) % n) * 2] - r[e * 2], dz = r[((e + 1) % n) * 2 + 1] - r[e * 2 + 1], L = Math.hypot(dx, dz); if (L > bl) { bl = L; ux = dx / L; uz = dz / L; } }
+    const vx = -uz, vz = ux; let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9; for (let i = 0; i < r.length; i += 2) { const u = r[i] * ux + r[i + 1] * uz, v = r[i] * vx + r[i + 1] * vz; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
+    if (u1 - u0 < 36 || v1 - v0 < 36) continue;
+    const cu = (u0 + u1) / 2, cv = (v0 + v1) / 2, style = STYLE[o.styleAt(cu * ux + cv * vx, cu * uz + cv * vz)] || STYLE.default, dep = (style.d[0] + style.d[1]) / 2, pitch = dep + LANE, fill = style.fill * INTERIOR_FILL;
+    let k = bi * 1009 + 7, rowN = 0;
+    for (let v = v0 + 2 + hash(bi * 61 + tile.tx * 5 + tile.tz * 3) * pitch; v + dep < v1 && nIn < INTERIOR_MAX; v += pitch + (rowN++ % 2 ? 0 : 0)) {
+      for (let u = u0 + 2 + hash(bi * 67 + rowN * 13) * 6; u < u1 - 2 && nIn < INTERIOR_MAX; ) {
+        const rn = hash(k++ * 17 + tile.tx * 3 + tile.tz * 5 + bi), w = style.w[0] + (style.w[1] - style.w[0]) * rn, step = w + (rn < 0.1 ? 3 + rn * 15 : 0.4 * rn);
+        if (hash(k * 29 + bi * 53 + tile.tx * 11 + tile.tz * 23) > fill) { u += step; continue; }
+        const W = (a, b) => [a * ux + b * vx, a * uz + b * vz], p0 = W(u, v), p1 = W(u + w, v), p2 = W(u + w, v + dep), p3 = W(u, v + dep), pts = [p0, p1, p2, p3], ccx = (p0[0] + p2[0]) / 2, ccz = (p0[1] + p2[1]) / 2;
+        u += step;
+        const probe = [...pts, [ccx, ccz], [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2], [(p2[0] + p3[0]) / 2, (p2[1] + p3[1]) / 2], [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2], [(p3[0] + p0[0]) / 2, (p3[1] + p0[1]) / 2]];
+        st.iTry = (st.iTry || 0) + 1; if (probe.some(q => q[0] < ox + EDGE_MARGIN || q[0] > ox + size - EDGE_MARGIN || q[1] < oz + EDGE_MARGIN || q[1] > oz + size - EDGE_MARGIN)) { st.iMargin = (st.iMargin || 0) + 1; continue; }
+        if (probe.some(q => !pip(r, q[0], q[1]))) { st.iOut = (st.iOut || 0) + 1; continue; } if (probe.some(q => !streetClear(q[0], q[1], STREET_CLEAR) || inPoly(q[0], q[1]))) { st.iStreet = (st.iStreet || 0) + 1; continue; } if (B.holes.some(h => probe.some(q => pip(h, q[0], q[1])))) { st.iHole = (st.iHole || 0) + 1; continue; }
+        let hit = false; for (let a = 0; a <= 4 && !hit; a++) for (let b = 0; b <= 3 && !hit; b++) { const qx = p0[0] + (p1[0] - p0[0]) * a / 4 + (p3[0] - p0[0]) * b / 3, qz = p0[1] + (p1[1] - p0[1]) * a / 4 + (p3[1] - p0[1]) * b / 3; if (inBuilding(qx, qz)) hit = true; }
+        if (hit) { st.iBld = (st.iBld || 0) + 1; continue; }
+        const x0 = Math.min(...pts.map(q => q[0])) - 0.5, x1 = Math.max(...pts.map(q => q[0])) + 0.5, z0 = Math.min(...pts.map(q => q[1])) - 0.5, z1 = Math.max(...pts.map(q => q[1])) + 0.5;
+        for (let i = Math.floor(x0 / CELL); i <= Math.floor(x1 / CELL) && !hit; i++) for (let j = Math.floor(z0 / CELL); j <= Math.floor(z1 / CELL) && !hit; j++) { const l = bgrid.get(i + ',' + j); if (l) for (const b of l) { for (let q = 0; q < b.r.length; q += 2) { const qx = b.r[q], qz = b.r[q + 1]; if (qx < x0 || qx > x1 || qz < z0 || qz > z1) continue; const rx = qx - p0[0], rz = qz - p0[1], uu = rx * ux + rz * uz, vv = rx * vx + rz * vz; if (uu > -0.5 && uu < w + 0.5 && vv > -0.5 && vv < dep + 0.5) { hit = true; break; } } if (hit) break; } }
+        if (hit) continue;
+        const ring = [p0[0], p0[1], p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]], fl = Math.round(style.floors[0] + (style.floors[1] - style.floors[0]) * hash(k * 41 + bi * 211 + 9)), lv = Math.max(1, fl); addB(ring); nIn++; st.interior = (st.interior || 0) + 1;
+        out.push({ id: baseId + (seq++ % 4000), ring, levels: lv, height: lv * FLOOR, use: style.use, hsrc: 'tag', infill: true, interior: true });
+      }
+    }
+  }
+  /* P1 part 3: forecourts. Ground inside a built-up block that is still open after the lots (the yards, the lanes and the plots between buildings) is paved in the dense areas, so it reads as a courtyard or a forecourt and not as bare earth: an 8 m grid, a cell is paved when all its corners and centre lie in the block, clear of streets by 2.5 m, of parks and of buildings (1.2 m), and it has a free neighbour on its row; the cells of a row are merged into rectangles [x0, z0, x1, z1]. Lawn areas, villages, DDA and Lutyens keep their earth and grass. */
+  const yards = []; out.yards = yards; const YC = 8, YARD_AREAS = new Set(['oldDelhi', 'market', 'default', 'business']);
+  for (let bi = 0; bi < blocks.length && yards.length < YARD_MAX; bi++) {
+    if (o.yieldNow && o.yieldNow()) yield;
+    const B = blocks[bi], r = B.ring; if (r.length < 6) continue; let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9; for (let i = 0; i < r.length; i += 2) { bx0 = Math.min(bx0, r[i]); bx1 = Math.max(bx1, r[i]); bz0 = Math.min(bz0, r[i + 1]); bz1 = Math.max(bz1, r[i + 1]); }
+    if ((bx1 - bx0) < 3 * YC || (bz1 - bz0) < 3 * YC || !YARD_AREAS.has(o.styleAt((bx0 + bx1) / 2, (bz0 + bz1) / 2))) continue;
+    const gx0 = Math.max(Math.floor(bx0 / YC), Math.ceil((ox + EDGE_MARGIN) / YC)), gx1 = Math.min(Math.floor(bx1 / YC), Math.floor((ox + size - EDGE_MARGIN) / YC) - 1), gz0 = Math.max(Math.floor(bz0 / YC), Math.ceil((oz + EDGE_MARGIN) / YC)), gz1 = Math.min(Math.floor(bz1 / YC), Math.floor((oz + size - EDGE_MARGIN) / YC) - 1);
+    const free = (gx, gz) => { const x = gx * YC, z = gz * YC, P = [[x, z], [x + YC, z], [x + YC, z + YC], [x, z + YC], [x + YC / 2, z + YC / 2]]; for (const q of P) { if (!pip(r, q[0], q[1]) || !streetClear(q[0], q[1], YARD_STREET) || inPoly(q[0], q[1]) || inBuilding(q[0], q[1])) return false; } if (B.holes.some(h => P.some(q => pip(h, q[0], q[1])))) return false;
+      for (const [dx, dz] of [[-1.2, 0], [1.2, 0], [0, -1.2], [0, 1.2]]) { if (inBuilding(x - dx, z + YC / 2 + dz) || inBuilding(x + YC + dx, z + YC / 2 + dz) || inBuilding(x + YC / 2 + dx, z - dz) || inBuilding(x + YC / 2 + dx, z + YC + dz)) return false; } return true; };
+    for (let gz = gz0; gz <= gz1 && yards.length < YARD_MAX; gz++) { let run = -1; for (let gx = gx0; gx <= gx1 + 1; gx++) { const f = gx <= gx1 && free(gx, gz); if (f && run < 0) run = gx; if (!f && run >= 0) { if (gx - run >= 2) yards.push([run * YC, gz * YC, gx * YC, (gz + 1) * YC]); run = -1; } } }
+  }
+  out.streetClear = streetClear;                                                                // for the arcades of tilemesh.js (a colonnade is built only where it stays off the carriageway)
   void placed; return out;
 }

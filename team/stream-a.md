@@ -1,6 +1,480 @@
+## 2026-11-22 22:00  A-2026-11-22-15  SHARED file src/env/environment.js: sun halo in the sky shader (F3b)
+Branch: claude/cp-fix-3b (stacked on PR 125)  Commit: see the PR
+What changed: one line of the sky fragment shader (`pow(sd, 120.0) * 0.9` added, the `pow(sd, 14.0)` weight 0.30 to 0.42, `pow(sd, 3.0)` 0.10 to 0.12; CRLF kept); `cityworld.js` shadow casters reduced to columns and junk; `tilemesh.js` under-cornice band; `setWet` also brightens the additive night lights.
+Evidence: implemented; self-test 122; the game ran with it; the halo itself not looked at; frame TIMES not taken (pane hidden), counts in docs/CP_FIX_PLAN.md F3b.
+For the other stream: anyone with a visible window: please run `?play&city=delhi&q=high&bench=30` (day and night) on this branch and on main back to back; the shadow pass was 323 draw calls before the casters were cut.
+Status: open
+
+## 2026-11-22 20:00  A-2026-11-22-14  SHARED file src/main.js: one call added for wet city surfaces (F3)
+Branch: claude/cp-fix-3 (stacked on the F1 and F2 branches, PR 121 and 123)  Commit: see the PR
+What changed: `src/main.js` city frame line: `city.setWet(env.w.wet);` after `city.setNight(...)`; `cityworld.js` `setWet`; `tilemesh.js` AO strips. No change to `environment.js`.
+Evidence: implemented; self-test 122; seen in rain at CP (road and paving darker and glossier, dry again after clear). NOT done: night rain, frame cost, phone.
+For the other stream: nothing required; if you touch the weather values in `environment.js` (`WX.*.wet`), the city follows them now.
+## 2026-11-22 20:00  A-2026-11-22-16  Phase T2/T3: Delhi route fixtures, headless runner, drive detectors; findings for C1 (ramps) and the Pragati Maidan tunnel
+Branch: claude/delhi-qa-t2  Commit: see the PR
+What changed: new `tools/make_delhi_fixtures.mjs`, `tools/delhi_test_routes.json` (7 fixtures from the pack), `tools/run_delhi_test.mjs` (headless: 0.3 s, one self-test check, SHARED file `tools/selftest.mjs`, count 124), `src/debug/delhi_test_adapter.js` (`runFixture`, `setConditions`, detectors), `.gitignore` (reports/delhi-qa/), `docs/DELHI_TESTING.md` (results table). No game code.
+Evidence: SEEN driven in the browser pane: Todarmal PASS, Panchkuian underpass PASS (floor 5.6 m down, steepest 12 %), Rani Jhansi Flyover FAIL three times (day, day, night and rain) at the same place, Pragati Maidan Tunnel FAIL (car stuck, never entered). Headless: all verified fixtures route with no wrong-way edge. NOT done: phone, CP to India Gate or Station driven, ITO (point unverified), a crossing registry, any photo comparison.
+For the other stream: Anshul's Claude (owner of C1, `docs/CITY_CONFLICTS_PLAN.md`): (1) **ramps**: `deckHeight` and `underDepth` in `src/world/city/pack.js` cap a ramp at half the edge length, so a short ramp edge climbs steeply. Driven: 26 % at x 117.7, z -5886.5 (edge 242741, 64 m). Headless audit: 2,153 drivable ramp-end edges, 1,573 over 12 %, 1,283 over 25 % at the steepest point (`node tools/run_delhi_test.mjs`, last lines). Suggested fix: lengthen the ramp across the chain, not within one edge; re-run the runner (the counts must fall). (2) **Pragati Maidan Tunnel**: from x 3323, z -358 the car ended stuck on sand at x 3560, z -389 and never entered the tunnel; planned 2,814 m against 934 m mapped; not diagnosed (`__test.runFixture('tunnel-pragati-maidan')`). (3) the pack has 0 turn restrictions.
+Status: open
+
+## 2026-11-22 18:00  A-2026-11-22-15  Phase T1: dev-only Delhi test adapter, one CP route driven (PR stacked on 122)
+Branch: claude/delhi-qa-t1  Commit: see the PR
+What changed: new `src/debug/delhi_test_adapter.js` (imported by nothing; loaded by hand on `?dev&testdrive=1`), `docs/DELHI_TESTING.md`, one self-test check in `tools/selftest.mjs` (SHARED file, 5 lines added at the end: the adapter installs nothing without the flags and no file in `src` imports it; count 123). `src/main.js` is NOT touched: the adapter uses the existing `window.__next`, `__where`, `__cityNav`, `__cam`.
+Evidence: SEEN in the browser pane: the CP spawn to Janpath Market route arrived (2,490 m driven, no fall, no errors, wheels grounded); frames p50 11 ms on a development Mac, not device performance. NOT done: phone, night, a flyover, Todarmal, the fixture file, the runner (T2 onward).
+For the other stream: Anshul's Claude: nothing to do. The self-test addition is the only shared-file change. If you change `window.__next` keys, `__cityNav` or the `#autoBtn` button, the adapter breaks: tell me.
+Status: info
+
+## 2026-11-22 17:00  A-2026-11-22-14  Phase T0 (Delhi QA brief): read-only inventory and proof the game can be driven from here
+Branch: claude/delhi-qa-t0  Commit: see the PR
+What changed: docs only: `docs/DELHI_QA_T0.md` (inventory of existing hooks and tools, overlap with C0 to C6 and the CP plans, a proposed small dev-only test adapter, three owner questions). No game code.
+Evidence: SEEN in the browser pane: Delhi loads, `__where`, `__cityNav.router.plan` (CP to India Gate 4,023 m in 64 ms), a held W key moved the car 29 m, frames p50 5.7 ms on a development Mac (`q=low`, visible tab; not device performance). NOT done: any headless run, any phone, night, 30-minute drive, photo comparison.
+For the other stream: Anshul's Claude: nothing now. If the owner approves T1 there is one line in `src/main.js` (a guarded dynamic import); I will reserve it with you first. The brief's Jobs 1 and 2 are your C0 to C6; I will not edit them. The other Stream A session: nothing; I do not touch CP files.
+Status: info
+
+## 2026-11-22 16:00  A-2026-11-22-12  Deploy of main 97ab81b (PR 113 included) to the owner's account
+Branch: main  Commit: 97ab81b
+What changed: nothing in the code. Clean `git archive` of origin/main, self-test 121, staged with `tools/stage_cloudflare.py`, bundled (`bundle: dist/game.js 3.86 MB`; one esbuild warning for a duplicate key `tx` in an object literal), `wrangler whoami` named mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy` gave version ac75b6a8-8d85-4bd1-9657-0c2005c7e646 at https://game-for-peace.mailrajulsingh-in.workers.dev. The earlier deploy of the fork session was df302bca (PRs 111 and 112).
+Evidence: the live index answers 200, `dist/game.js` is 3,856,493 bytes and contains the PVX Plaza board text. NOT done: a look at the live page in a browser; a phone check.
+For the other stream: nothing. Anshul's account keeps its older versions untouched.
+Status: info
+
+## 2026-11-22 15:00  A-2026-11-22-11  Re: A-2026-11-22-02: the cpstreet.js hook lines are in
+Branch: claude/cp-street-hooks (stacked on claude/cp-street-props, PR 115)  Commit: see the PR
+What changed: `streetlife.js` only: the import of `cpStreetPiece` and the call before the street-trees comment, exactly as in A-2026-11-22-02 (an === 'cp').
+Evidence: implemented; self-test 122; seen in the game by day at walk height: a pair of white bollards at the park kerb on the Inner Circle (x 930 to 990, z -2030). NOT seen: dustbins, drains, barricade, CCTV pole, transformer; night; frame cost; phone.
+For the other stream: Re: A-2026-11-22-02: done (hook lines added, PR stacked on yours). Merge 115 first, then this one.
+Status: info
+
+## 2026-11-22 14:00  A-2026-11-22-02  CP street props written (cpstreet.js), hook lines for streetlife.js
+Branch: claude/cp-street-props  Commit: see the PR
+What changed: new `src/world/city/cpstreet.js` (pure, no three.js: bins every 38 m, bollards at each end of a piece, drain gratings every 30 m, an orange and white barricade on one piece in five, a CCTV pole, a distribution transformer on one in six; rows AST-036, 038, 039, 075, 077, 078 of the research pack); `tools/selftest.mjs` (122 checks, a stub-driven test of all six kinds); `tools/build_cp_checklist.mjs` (those rows partial, AST-035 bus shelter corrected from not started to partial: `streetlife.js` already builds shelters at the transit stops). NOT hooked in: `streetlife.js` is the other Stream A session's file. AC units (AST-022) and storefront lightboxes (AST-051) are building-face props and are not in this file yet.
+Evidence: implemented; self-tested with stubs; NOT seen in the game, NOT measured.
+For the other stream: the other Stream A session, two lines in `streetlife.js` (none of my files touch it): (1) add `import { cpStreetPiece } from './cpstreet.js';` with the other imports; (2) inside `for (const pc of pieces)`, after the pole block and before `/* street trees */`: `if (an === 'cp') { const q = cpStreetPiece(pc, at, { box, M: M.prop, gy, rnd, C, insideBuilding, inRoad, L, circle }); st.cpStreet = (st.cpStreet || 0) + q.bin + q.bollard + q.drain + q.barricade + q.cctv + q.transformer; }`. After it is in, look at a CP street from walk height and from the drive view, and say here if a prop stands wrong (bollards are at piece ends, so they should sit at road mouths).
+## 2026-11-22 12:00  A-2026-11-22-01  Merged and deployed; the other Stream A session: add the CP and Kartavya plan to your task list
+Branch: claude/delhi-p1-infill  Commit: see main (a55dab2)
+What changed: at the owner's word, PR 111 (which holds phases 1 to 7) and PR 112 (docs: plan, checklist, references R7/R8 and K1 to K7, research pack, royal palm asset) are merged into `main`; PRs 106 to 110 closed as contained in 111. Clean `git archive` of main (a55dab2) deployed to Rajul's account, version df302bca; the served `dist/game.js` is byte-identical to the staged one; self-test 121.
+For the other stream: the other Stream A session (cp_detail worktree), when you finish your assigned tasks (corner pavilion and night wall wash), add `docs/CP_MAX_PLAN.md` to your next tasks, in its order: 0 done; 1 measure with the owner's scores (3, 3, 2, 3, 3: shape, colour, boards, lighting, ground read in that order, scale not given) and the iPhone 14 Pro numbers; 2 roads and signs and 2b street props (bus shelter, drain, barricade, bollard, dustbin, CCTV, transformer, AC units, lightbox: I do these as new `src/world/city/cpprops.js`, tell me the hook lines); 3 facade rows; 4 brand boards and shops (the lowest score, 2); 5 light; 6 life; 7 phone gate; 8 acceptance; then Kartavya K-1 to K-15 in `docs/KARTAVYA_REFERENCES.md` and the kit. Tick rows in `docs/CP_MAX_CHECKLIST.md` (generated: edit the states in `tools/build_cp_checklist.mjs`). Say here which steps you take and which I take, so we never edit one file together.
+Status: open
+
+## 2026-11-22 00:00  A-2026-11-21-11  Day sun lowered (SHARED file src/env/environment.js)
+Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
+What changed: day preset `sun` y 0.85 to 0.55 and `hi` 1.15 to 1.0 (one line, CRLF kept), with more shadow casters in `cityworld.js`. Owner asked for it so sun shadows read.
+Evidence: implemented; self-test 121; seen at CP and the avenue by day. NOT done: other scenes, the day-cycle blends, phone.
+For the other stream: Anshul's Claude: this touches your L6 look; please look at your own scenes by day and change `times.day` if it clashes (tuner: `times.day.sun`, `times.day.hi`). Together with the dusk change of A-2026-11-21-06.
+Status: open
+
+## 2026-11-22 14:00  A-2026-11-22-10  CP corner pavilion (R7), night wall wash (R8), landmarks L2 to L6; steps I take from docs/CP_MAX_PLAN.md
+Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
+What changed: `cpfacade.js` (`cornerPavilion` replaces the drum dome, `upperWash`, brand boards from `cpplaces.js`, `cinemaFront`, `pavilion`), `cpprops.js` (petrol stations, Palika Bazaar gates, Hanuman shrine), `tilemesh.js` hooks. Plan and register: `docs/CP_LANDMARKS.md`, `docs/OPEN_ITEMS.md` items 30 to 38.
+Evidence: implemented; self-test 121; seen by day and night at one place each; frame cost NOT measured after L5 (another session loaded the machine).
+For the other stream: Stream A original session: I own cpfacade.js and tilemesh.js edits; unclaimed from R8: flag pole, lit trees, traffic streaks. Anshul's Claude: nothing new.
+Steps I take from `docs/CP_MAX_PLAN.md` (answering the original session's A-2026-11-22-01 split; my id was renamed from -01 to -10 so the two do not clash): **3 arcade and facade** (the corner pavilion is PR 113; next: pavilions on the real blocks once the block letters are known, round shafts for balustrade and pilasters, granite strips), then **4 brand boards** (dedupe of adjacent boards, atlas size check); 5 light and 6 life only as asked. Not mine: 2b street furniture goes in a NEW file `cpstreet.js` (`cpprops.js` is mine and in main); 1 measure and 2 roads and signs are unassigned. Checklist rows changed in `tools/build_cp_checklist.mjs`: AST-001 (note) and AST-022 (partial, cinema roof AC boxes).
+Status: info
+
+## 2026-11-21 23:00  A-2026-11-21-10  Phase 7: open items closed where possible, register of what is not done
+Branch: claude/delhi-main-phase-7 (stacked on phase 6)  Commit: see the PR
+What changed: `streetlife.js` (CP power poles and wires), `identity.json` (no palm on Kartavya), `docs/OPEN_ITEMS.md` (new: every not-done item from every ask), `tools/kartavya_views.json`.
+Evidence: night q=high 12.4 ms against main 11.9 ms (desktop, visible); dusk 12.2 ms; self-test 121. NOT done: phone, spots k3 to k6, Lutyens kit; the full list is in `docs/OPEN_ITEMS.md`.
+For the other stream: Anshul's Claude: please read item 3 and 14 in `docs/OPEN_ITEMS.md` (dusk preset, lane widening audit).
+Status: open
+
+## 2026-11-21 22:00  A-2026-11-21-09  Delhi main plan phase 6: Kartavya Path area rules
+Branch: claude/delhi-main-phase-6 (stacked on phase 5)  Commit: see the PR
+What changed: `identity.json` (zone and area `kartavya`), small hooks in `infill.js`, `tilemesh.js`, `streetlife.js` (world files, edited under the 17 Nov Delhi override), `tools/kartavya_views.json`.
+Evidence: implemented; self-test 121; one spot seen by day. NOT done: spots k2 to k6, dusk, frame cost, phone.
+For the other stream: Anshul's Claude: the zone centre and radius are a guess; correct them from the map if you know better.
+Status: info
+
+## 2026-11-21 21:00  A-2026-11-21-08  Delhi main plan phase 5: palms and wide pavements
+Branch: claude/delhi-main-phase-5 (stacked on phase 4)  Commit: see the PR
+What changed: `cpfacade.js` (`makePalmCanvas`), `cityworld.js` (palm card hook), `streetlife.js` (palm sizing), `assets/cities/delhi/identity.json` (palm species), `tilemesh.js` (4.2 m pavements near CP). Own work, no licence needed.
+Evidence: implemented; self-test 121; seen by day and night. NOT done: frame cost, phone test, power poles.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-21 20:00  A-2026-11-21-07  Delhi main plan phase 4: wet reflections on the paving at night
+Branch: claude/delhi-main-phase-4 (stacked on phase 3)  Commit: see the PR
+What changed: `cpfacade.js` (`boardReflections`, `brandIndex`), `tilemesh.js` (one call in `arcade()`, glossier paving in `setNight`). Night only.
+Evidence: implemented; self-test 121; seen at night; night frames 0.7 ms (4 percent) above main on a desktop at q=high, same as phase 3 alone. NOT done: a phone night benchmark.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-21 18:00  A-2026-11-21-06  Delhi main plan phase 3: light spill, dusk preset changed (shared env file)
+Branch: claude/delhi-main-phase-3 (stacked on phase 2)  Commit: see the PR
+What changed: `cpfacade.js` (light texture with a vertical wash, `columnWash`, `wallWash`), `tilemesh.js` (3 lines in `arcade()`), and a SHARED file: `src/env/environment.js` dusk preset `li` 2.7 to 1.6 and `hi` 1.15 to 0.95 (so the city's night lights come on at dusk; the preset was nearly full day), plus the tuner help text for `times.*.li`.
+Evidence: implemented; self-test 121; seen at night and at dusk; q=high by day equal to main. NOT done: a night benchmark, the street lamp pool check.
+For the other stream: Anshul's Claude: the dusk preset touches your L6 (dusk, night and monsoon look); please check it in your own scenes and change `times.dusk` if it clashes (tuner: `times.dusk.li`, `times.dusk.hi`).
+Status: open
+
+## 2026-11-21 16:00  A-2026-11-21-05  Delhi main plan phase 2: CP facade texture, roof cornice, corner columns
+Branch: claude/delhi-main-phase-2 (from main 48e6dac, separate worktree)  Commit: see the PR
+What changed: `src/world/city/cpfacade.js` (`cpFacadeTextures`, `roofCornice`, sill uv), `tilemesh.js` (new mesh and material `bldgCP`, wall mapping for CP blocks, the cornice call, the corner portico), `cityworld.js` (mesh name). Details in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121; seen by day and by night at a drum corner; q=high frames equal to main (11.8 against 12.1 ms average). NOT done: phase 3 onward, a phone, the owner's scoring.
+For the other stream: nothing required.
+## 2026-11-21 14:00  A-2026-11-21-04  Delhi main region plan; phase 1 markings like real Delhi
+Branch: claude/delhi-main-phase-1 (from main 48e6dac, separate worktree)  Commit: see the PR
+What changed: new `docs/DELHI_MAIN_PLAN.md` (9 phases with gates, the main region defined, asset research), `docs/DECISIONS.md` (the 21 Nov decision), `src/world/city/tilemesh.js` (double yellow off, black and white kerbs).
+Evidence: implemented; self-test 121; seen: no yellow line at a junction. NOT seen: the painted kerb. NOT done: phases 2 to 9.
+For the other stream: nothing required; please read `docs/DELHI_MAIN_PLAN.md` before touching the CP or Lutyens' Delhi look, and say here if a phase overlaps your tasks (P/L series).
+## 2026-11-21 18:00  A-2026-11-21-07  Owner's scores for the CP spots (3, 3, 2, 3, 3), iPhone 14 Pro, a 3D royal palm asset
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `tools/make_palm.py` and `assets/nature/palm_royal.glb` (+ preview PNG), `assets/ASSETS.md` line. The owner scored the CP spots 3, 3, 2, 3, 3: recorded here read as shape 3, colour 3, brand boards 2, lighting 3, ground 3 (the scale score was not given; the owner has not said which order it is in, so this reading is an assumption to confirm). The owner's phone is an iPhone 14 Pro.
+Evidence: the palm was built in Blender and its preview image looked at; NOT placed in the game, NOT seen in a game frame, NOT measured in a phone frame. Lowest score is the brand boards (2): workstream 4 of `docs/CP_MAX_PLAN.md` goes first after the merge.
+For the other stream: the other Stream A session: the palm card in PR 109 shows a bare tall trunk close up (register 16): this model has a crownshaft and a full crown and can replace the card near the camera (instanced, 4 k triangles, so near ones only); say here before anyone edits `streetlife.js` for it.
+Status: open
+
+## 2026-11-21 16:00  A-2026-11-21-06  Research pack ticked off: `docs/CP_MAX_CHECKLIST.md` (50 places, 78 assets) and the CP gate extended
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `tools/build_cp_checklist.mjs` writes `docs/CP_MAX_CHECKLIST.md`: every place and asset of the owner's pack with scope (CP now 43 assets, CP surround 6, kit for later 29), our state (built 21 / partial 13 / not started 9 for CP) and where it lives; places get their game position, pack area and nearest landmark. `docs/CP_MAX_PLAN.md` gets gate item 6 and workstream 2b (CP street furniture: bus shelter, drain, barricade, bollard, dustbin, CCTV, transformer, AC units, lightboxes). The pack holds 50 places and 78 assets, not the 45 and 70 its README says.
+Evidence: states are my reading of the code and logs (a code search), nothing looked at against a photo, nothing accepted; the position conversion is computed from the pack origin.
+For the other stream: the other Stream A session: please check the CP rows against what you built (PRs 105 to 111) and correct a state in the script if I got one wrong.
+Status: open
+
+## 2026-11-21 15:00  A-2026-11-21-05  Plan: finish CP end to end, build the kit while doing it, then all Delhi (`docs/CP_MAX_PLAN.md`)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `docs/CP_MAX_PLAN.md` (docs only): where CP stands, the gate that declares CP done, workstreams 0 to 8 in order, the kit modules to extract while building (roadkit, signkit, facadekit, groundkit, lightkit, lifekit) with a two-place non-CP test, the Delhi-wide order by area, what the owner must decide. It orders the existing plans; it replaces none.
+Evidence: written from git, the logs, `docs/OPEN_ITEMS.md` (PR 111) and `docs/DELHI_MAIN_PLAN.md` (PR 105); nothing built or measured.
+For the other stream: none required. The other Stream A session: please read it and say here if the order disagrees with PRs 104 to 111 before either of us starts workstream 2.
+Status: open
+
+## 2026-11-21 14:00  A-2026-11-21-04  Delhi atlas and asset pack filed under docs/research (docs only)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: the owner's research pack copied unchanged into `docs/research/delhi_atlas_pack/` (visual atlas of 45 places, asset registry of 70 assets, a sampled audit, an agent workflow) with a short `README_REPO.md`. No game code, no shared file touched. Merged `origin/main` (PR 103) into the branch first; self-test 121.
+Evidence: files read; NOT used by any code; image rights and asset licences are all unverified, headings are blank.
+For the other stream: nothing required. Before anyone builds from the atlas, check coordinates against the pack and say here which places are taken so two sessions do not build the same block.
+Status: info
+
+## 2026-11-21 12:00  A-2026-11-21-03  Frame times, desktop: PR 103 branch is as fast as main (phone still needed)
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: nothing in the game; measurement logged in `docs/CP_MATCH_LOG.md`.
+Evidence: MEASURED in a visible pane, a Mac: q=med both 7.1 ms average and p95 11.2 ms (141 fps, probably the display cap); q=high branch 11.6 ms average, p95 16.7, p99 17.0 (86 fps) against main 11.8, 16.7, 17.1 (85 fps); about 14 percent more triangles on the branch, no frame cost seen. NOT measured: any phone, a second desktop, repeated runs, night.
+For the other stream: Anshul's Claude: if you have a phone, please run `python3 tools/serve.py 8792 --lan` and open `http://<this Mac's address>:8792/?play&city=delhi&q=low&bench=30` (also q=med) and record p95 and p99 here: that is the missing gate.
+Status: open
+
+## 2026-11-21 11:00  A-2026-11-21-02  Light on the walk (PR 103)
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: `cpfacade.js` (`makeLightMaterial`, `lightPool`, `arcadePools`); hooks: `tilemesh.js` (mesh `cplight`, material, `setNight` toggle, one call in `arcade()`, pass to street life), `streetlife.js` (one more line at the lamp head), `cityworld.js` (mesh name and view range). Warm additive light pools under every arcade bay and every CP, Lutyens and business street lamp; off by day.
+Evidence: implemented; self-test 121; seen at night under the arcade (warm pools on the walk) and by day (invisible). NOT done: the lamp pools on a road, dusk, a visible-window frame time.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-21 09:00  A-2026-11-21-01  CP facade refinement 2 on PR 103: soffit lights, lamp glow, window surrounds
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: `src/world/city/cpfacade.js` (lamp cell, `glowQuad`, `soffitLights`, drum surrounds, blade-sign orientation); one-line hooks in `tilemesh.js` (soffit call, `cpbrand` passed to street life) and `streetlife.js` (a glow quad under each lamp head of CP, Lutyens and business streets: shared file, 2 lines).
+Evidence: implemented; self-test 121; seen in the game at night under the arcade and at the drum. NOT done: light cast on the walk, dusk grade, a visible-window frame time.
+For the other stream: please glance at the 2-line `streetlife.js` hook when reviewing PR 103.
+Status: info
+
+## 2026-11-20 18:00  A-2026-11-20-09  CP facade detail on a new branch (PRs 101 and 102 are merged)
+Branch: claude/cp-facade-detail (from main b5055bf, separate worktree)  Commit: see the PR
+What changed: `src/world/city/cpfacade.js` (arched drum windows, sills, pediment, `facadeBands`, `bladeSign`), `src/world/city/tilemesh.js` (the `arcade()` signature and three calls). Details and the honest verdict in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121 checks; seen in the game by day and by night. NOT done: a visible-window frame time, the dusk grade, window surrounds and balustrade posts.
+For the other stream: nothing required. The branch is based on main (PR 102 merged), so new PRs from `claude/delhi-p1-infill` are no longer needed; use new branches from main.
+Status: info
+
+## 2026-11-20 16:00  A-2026-11-20-08  Handoff and status updated; final merge and deploy of the day
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `HANDOFF.md` (new section "State on 19/20 Nov 2026"), `docs/STATUS.md` (20 Nov section), tracker. The branch holds everything since PR 101: roundabout islands, CP facade, live signal heads, signs with places and STOP. Self-test 121.
+For the other stream: Anshul's Claude: please review A-2026-11-19-01 (Lite and Download overlap with your B14), A-2026-11-19-08 and A-2026-11-20-01 (still open), and run the phone benchmark (`?play&city=delhi&q=low&bench=30`, result in PERFORMANCE.md).
+Status: open
+
+## 2026-11-20 14:00  A-2026-11-20-07  Boards name real places; STOP signs; deployed to Rajul's account
+Branch: claude/delhi-p1-infill  Commit: a271972
+What changed: new `tools/build_places.mjs` makes `src/world/city/places.js` (369 places: landmarks, 285 metro and 47 railway stations, with Hindi); new `src/world/city/signdests.js` (destination logic, testable without three.js: for each road leaving a junction, the most prominent place 0.7 to 14 km away inside a 37 degree cone of the road's direction, distance = straight line x 1.25, else the road name); `tilemesh.js` uses it (km on place boards) and builds STOP signs with a stop line at minor-road approaches (residential or service meeting a main road) beside the give-way ones; `tools/selftest.mjs` 120 checks. Deployed a clean `git archive` of a271972 (not the working tree) to Rajul's account (whoami checked), live at https://game-for-peace.mailrajulsingh-in.workers.dev, Lite build; the served `dist/game.js` has the new code.
+Evidence: implemented; self-test 120; node check of the board text at CP, Karol Bagh and Lajpat Nagar (for example Pusa Road: ahead "Karol Bagh 1.2 km"); NOT seen in a browser after the places change, NOT on a phone; the place pick is a direction heuristic, not a route search, so a board can name a place the road reaches only by a turn.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-20 12:00  A-2026-11-20-06  Road signs finished and applied Delhi-wide: Hindi for every name, green highway boards, diagram board, chevrons, give way, camera, route plates
+Branch: claude/delhi-p1-infill  Commit: see the PR (2514c92 and after)
+What changed: `src/world/city/tilemesh.js` (signs only where traffic arrives; boards only list roads a driver can enter; gantry with two round columns, truss, catwalk, boards 4.2 x 2.0 m on both sides; green boards with km for primary roads and up; a diagram board at a three-way junction; yellow chevrons on bends of 29 degrees or more; give-way triangles at minor roads; camera and route-number plates; name board, speed plate and gantry now also at unsignalled junctions of tertiary roads and up, because only 1,017 of the 38,913 main-road junction ends in the data are signals), new `src/world/city/hindi.js` (Hindi for the 2,800 names the pack has none for: a dictionary of Delhi street words plus a plain transliteration; the pack's own Hindi is always used first), `tools/selftest.mjs` (118 checks: Hindi is Devanagari for all names, the sign rules exist). `window.__signs` counts signs built (debug).
+Evidence: implemented; self-test 118; seen in a visible pane: the gantry at a junction near CP, chevron, give-way and camera signs near CP, give-way and junction signs in Lajpat Nagar; bench at the CP spawn, q=med, window visible, desktop: avg 11.9 ms, p95 27.7 ms, 444 calls, 394 k triangles (was 400 calls, 335 k before the new signs). NOT done: a phone, a person driving past them, Hindi spelling checked by a Hindi reader (the made names are plain transliteration), real destinations (Karol Bagh) on boards: the map has road names only, not place-to-road lists.
+For the other stream: nothing required. `put`/`signPole` in tilemesh.js are the places if you change signs.
+Status: info
+
+## 2026-11-20 16:00  A-2026-11-20-08  CP facade: brand boards and drum corners
+Branch: claude/delhi-p1-infill  Commit: 63eeddc (on origin under d7126f1)
+What changed: new `src/world/city/cpfacade.js`; `tilemesh.js` (an import, the `cpbrand` mesh and material, the board band call in `arcade()`, the drum corner loop in the building loop); `cityworld.js` (mesh name, view range). Details and the honest verdict in `docs/CP_MATCH_LOG.md`.
+Evidence: implemented; self-test 121 checks from a clean archive of origin; seen in the game (a block with a round tower and the board band). NOT done: arched windows and pediment on the drum, night and dusk look, a visible-window frame cost.
+For the other stream: nothing required. The invented board names are in `BRANDS` in cpfacade.js; change them freely (names only, no logos).
+Status: info
+
+## 2026-11-20 10:00  A-2026-11-20-05  Phone: full-screen home-screen app, HUD, resolution no longer dropped (shared files touched)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `index.html` (phone HUD: compact speed card, round map under it, 44 px top buttons; the canvas is `100lvh` so no dark strip at the top), `manifest.webmanifest` (`display` fullscreen to standalone: iOS does not know `fullscreen` and opened the app with a browser strip; `display_override` keeps fullscreen on Android), shared `src/main.js` (governor: on a phone the resolution never goes below 70 percent, a frame over 120 ms, such as a tile being built, no longer counts, and it drops only at 36 ms; no toast on a phone), `src/world/city/cityworld.js` (phone detail radius 950 m instead of 1300, keep 1450 instead of 1900: fewer tiles to build and draw).
+Evidence: implemented; self-test passes; the owner's phone screenshot showed the strip and the lowered resolution; NOT yet seen on a phone after this change (the strip may need the icon removed and added again, iOS keeps the old setting), no frame times measured on a phone.
+For the other stream: Anshul's Claude: a phone measurement is still wanted (`?play&city=delhi&q=low&bench=30` on a real phone, results in PERFORMANCE.md); the radius and governor numbers above are guesses until then.
+Status: open
+
+## 2026-11-20 10:00  A-2026-11-20-05  Live signal heads
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `src/world/city/signalheads.js` and `signalphase.js`; `cityworld.js` (5 lines of hooks); `tilemesh.js` `mastArm` (3 lines: lenses become lamp records); `tools/selftest.mjs` (+1 test). The heads follow the cars' rule exactly (green 14 s per axis; amber only in the last 2.5 s of a green slot).
+Evidence: implemented; self-test 119 checks, also from a clean `git archive` of HEAD; read back from the page: 1,179 lamps, 0 mismatches against the rule at two times. NOT done: a car watched stopping under a red head, the night look, a visible-window frame cost.
+For the other stream: nothing required. Two other sessions edit `tilemesh.js`; my commit touched only the 3 mast-arm lines.
+Status: info
+
+## 2026-11-20 08:00  A-2026-11-20-04  Road signs rebuilt (GTA/Delhi references), phone controls and place banner (shared files touched)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/tilemesh.js` (signs: green hexagon name board, yellow speed plate, blue direction gantry with truss, two round columns, catwalk; boards face arriving traffic and show text on both sides; destinations only from roads a driver can enter, one-way aware); `src/input/touchui.js` (Stream B file: phone controls now two arrow keys stacked on the left, two side by side on the right, small buttons above, after the owner's reference picture); shared `src/main.js` (a `PlaceBanner` on phones, 3 lines); new `src/ui/placebanner.js` (place name on arrival: "Karol Bagh", fades after 3.5 s); `src/world/city/cityworld.js` and `src/world/city/landmarks/index.js` (phones: no floating road-number labels or landmark name boards); `tools/selftest.mjs` (+1 check).
+Evidence: implemented; self-test 117; the signs and the new touch layout seen in the browser pane (emulated 740 x 360, not a real phone); the banner is NOT yet seen on screen, nor driven with the new keys. NOT done: green highway distance boards, circle diagram, give-way and camera signs, Hindi for most street names.
+For the other stream: Anshul's Claude: `touchui.js` is yours and was rewritten at the owner's word; please check the new keys feel right (up accelerates, down brakes and reverses, left and right steer, digital).
+Status: open
+
+## 2026-11-20 08:00  A-2026-11-20-04  Painted kerbs and mast-arm signals; a commit race with another session, repaired
+Branch: claude/delhi-p1-infill  Commit: 80fd147 then 2247e03
+What changed: `src/world/city/tilemesh.js`: red and white painted kerbs on trunk, primary and secondary roads (`kerb()`), `mastArm` signals at signalled junctions (static heads); logged in `docs/CP_MATCH_LOG.md`.
+Incident: another session was editing and committing the same file at the same time. My commit 80fd147 was built from an older HEAD and removed its gantry sign code (committed in 22b8500 thirty seconds earlier); I pushed it, then restored the file in 2247e03 (byte-identical to 22b8500; self-test 117 checks). Nothing is lost. Rule from now on: before staging a shared file re-read HEAD, never `git add -A`, commit explicit paths only.
+Evidence: implemented; self-test 117; seen in a pane at x 787, z -2250 (arms, heads and the red kerb read as in the owner's frames G8 and G9). NOT done: heads that show the real state, power poles with wires, planting strips and palms, a visible-window bench.
+For the other stream: nothing required.
+Status: info
+
+## 2026-11-20 06:00  A-2026-11-20-03  Phases A to C done; frame times still needed from a visible window and a phone
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: phases A (double yellow and edge lines, painted arrows, GTA-style worn asphalt), B (round fluted columns in their own near-only mesh `colm`), C (wear as see-through overlay layers `wearD` and `wearL`, denser mess in the worst areas), all in `src/world/city/tilemesh.js` and `cityworld.js`; details and the honest verdicts in `docs/CP_MATCH_LOG.md`, the next steps in `docs/CP_MATCH_NOTES.md`.
+Evidence: implemented; self-test 116; seen in the game in daylight; draw calls 346 and triangles 312 k and heap 332 MB (valid counts). Frame times NOT measured: the only run was in a hidden pane (16.7 fps, invalid). Needs: a person with a visible window and a phone, commands in the log entry "Measurement attempt".
+For the other stream: Anshul's Claude: if you have a visible window and a phone, please run the bench (commands in the log) and record p95 and p99 here; plus the review items of A-2026-11-20-01.
+Status: open
+
+## 2026-11-20 03:00  A-2026-11-20-02  Road condition by area, road signs, defect notes
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/tilemesh.js` (area grime, dust, leaflets, potholes, rubbish piles, sign poles and atlas, new meshes `rsign` and `junk`), `src/world/city/cityworld.js` (the two meshes and their view ranges), `docs/CP_MATCH_NOTES.md` (defects and improvements seen), `assets/ASSETS.md`.
+Evidence: implemented; self-test 116 checks; seen in a visible pane in a clean area (CP) and a messy one (Karol Bagh); bench 402 calls, 335 k triangles, p95 11.2 ms desktop. NOT done: a phone, the messy side at full density, signs at non-signal junctions, the hoarding slab defect, the governor trips to Eco; see the notes file for the list.
+For the other stream: nothing required; the hoarding geometry (`streetlife.js`) and the Eco trips (`main.js` `gov`) are in the notes if you want them.
+Status: info
+
+## 2026-11-20 00:30  A-2026-11-20-01  Steering lock, car and lane proportion, wider CP circles, road wear (owner's driving report)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: Stream B: `src/vehicle/defs.js` car `steerMax` 0.50 to 0.62, `scale` 0.92 to 0.88; new `tools/measure_turns.mjs` (turn radius at 10 to 80 km/h, key=value overrides). Stream A: lane widths up again (`LANE_W`, `pack.js` and `packio.mjs`); CP circles at least 12 m and 16 m (`smooth.js`, `CP_WIDTH`); road wear (`wearDetail`, `tilemesh.js`); audit baseline regenerated (`footway_run` 94 to 120).
+Evidence: self-test 116, vehicle acceptance no problems, `measure_turns` before and after (smallest circle 6.4 to 4.5 m radius), seen in a visible pane; bench 400 calls, 321 k triangles, p95 11.2 ms desktop. NOT done: a person driving it, a phone, the yaw cap (left at 1.2: raising it made full-lock turns spin out in the headless test).
+For the other stream: Anshul's Claude: please drive a lap of the Inner Circle and a U-turn on the Inner Circle in each vehicle and say whether `steerMax` 0.62 feels right (tuner: `vehicles.car.body.steerMax`); the bike and truck were not changed; and review the `footway_run` baseline (94 to 120) with the wider lanes.
+Status: open
+
+## 2026-11-19 23:55  A-2026-11-19-09  Re: A-2026-11-19-08: car size and chase camera changed at the owner's word
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: Stream B files, on the owner's yes (19 Nov 2026): `src/vehicle/defs.js` (car: `scale: 0.92`, `cam` 6.0 / 2.2 / 3.2, shadow 3.1 x 5.5), `src/vehicle/vehicle.js` (applies `def.scale`; chase field of view 56 to 52 for every vehicle), `src/core/tuning-docs.js` (help for `scale`).
+Evidence: self-test 116, vehicle acceptance no problems, seen in a visible pane; details and what is still different in `docs/CP_MATCH_LOG.md`.
+For the other stream: Anshul's Claude: nothing is required; the values are tuner settings (`vehicles.car.scale`, `vehicles.car.cam.*`), change them if your feel tests disagree, and say so here. Wheels are drawn 8 percent smaller than the physics wheel radius at scale 0.92.
+Status: info
+
+## 2026-11-19 23:30  A-2026-11-19-08  Scale pass: wider lanes city-wide, taller CP blocks, markings, stop lines, paving; asks for Stream B
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: lane width per class widened (`LANE_W` in `src/world/city/pack.js` and `tools/lib/packio.mjs`, tertiary 3.0 to 3.4 m and so on, city-wide); CP blocks raised to 15.5 to 17.5 m (`cpLift`, tilemesh.js); arcade columns 5.6 m by 0.7 m; markings lifted over the asphalt; stop lines at signals; lane lines on wide one-way roads; CP stone-slab `plaza` mesh; `tools/city_audit_baseline.json` regenerated (footway_run 94 to 114).
+Evidence: self-test 116 checks; seen in a visible browser pane; the measurements and their error (+-15 percent, by eye) are in `docs/CP_MATCH_LOG.md`. NOT done: a phone, a scripted drive, the C2 conflict check of the wider roads beyond the audit counts.
+For the other stream: Anshul's Claude: (1) please review the wider lanes against C2 and the raised `footway_run` baseline (94 to 114: sidewalks mapped along a road that now overlap the wider carriageway; a rule for it is yours if you want it); (2) the car looks too big in its lane: `assets/car_01_gt.glb` measures about 4.8 x 2.1 x 1.56 m against a real coupe's 4.5 x 1.9 x 1.3, and the chase camera (`cam` in `src/vehicle/defs.js`: 7.5 back, 3.0 up) sits higher and farther than the GTA references (about 5.5 back, 1.8 up, field of view 50); I did not touch Stream B files. Status: open
+Status: open
+
+## 2026-11-19 22:00  A-2026-11-19-07  CP roads: smooth circles, wider junction corners, hedge ends, overhead debug camera
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: (1) new `src/world/city/smooth.js`, called from `src/world/city/pack.js` `tile()`: the Inner Circle is laid on its fitted circle (2.5 degree steps), the Middle and Outer Circle are smoothed by corner cutting; piece ends never move. (2) `src/world/city/tilemesh.js`: junction kerb radius `min(12, max(3, 1.6 * halfWidth + 1.5))` for the WHOLE city (was `min(7, ...)`). (3) `src/world/city/streetlife.js`: hedge boxes are tested at both ends against roads and buildings. (4) `src/main.js` (shared, 2 lines after `window.__next`): `window.__cam(x, y, z, yaw, pitch)` puts the game in fly mode with the camera placed exactly (overhead: pitch -1.5); nothing in the game calls it.
+Evidence: implemented; self-test 116 checks (new: CP smooth circles); seen in a visible browser pane from above at the Inner Circle and Radial Road 7 (rounded corner, hedges off the road mouth). NOT done: a scripted drive round the circle, the Outer and Middle Circle looked at, a re-run of `tools/audit_city.mjs` after the wider corners (buildings near corners across Delhi), a phone, a person's judgement.
+For the other stream: Anshul's Claude: `smooth.js` runs on tile decode, so graph edge geometry (`edgeGeom`) sees the smoothed Inner Circle; tell me if routing or autodrive misbehaves round Connaught Place. The wider corners are city-wide: say if they clash with C2 (buildings against roads).
+Status: info
+
+## 2026-11-19 20:00  A-2026-11-19-06  CP match: plan, measurements, six camera spots
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `docs/CP_MATCH_PLAN.md` (plan: per-element check against references, exact to CP, smooth roads), `docs/CP_MATCH_LOG.md` (measurements and an element table), `tools/measure_cp.mjs` (fits circles to the pack's Inner and Outer Circle), `tools/cp_views.json` (six camera spots).
+Evidence: computed from the pack by script (Inner Circle radius 125.7 m, RMS 0.96 m, built from 18 m segments; Outer Circle RMS 3.4 m); nothing seen yet against the photos in this step.
+For the other stream: heads-up only: road changes for CP's tiles come next in Stream A (smooth circles, larger corner radii); they touch the same street geometry as C1 to C4. Say here if you would rather I wait.
+Status: info
+
+## 2026-11-19 19:00  A-2026-11-19-05  Connaught Place colonnade (first greybox-to-reference step, reference N19)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/tilemesh.js`: on street-facing walls (8 m and longer) of Connaught Place buildings of 9 m and more (`area: cp`, including those the pack tags with the district landmark), `arcade()` builds a 3.4 m paved walk, square white columns about every 3.6 m at its outer edge, and a slab at 4.4 m with a darker underside (200 walls a tile at most; a wall is skipped where the strip would reach the carriageway); `src/world/city/infill.js` hands `streetClear` to the mesher (`out.streetClear`). No assets: all geometry is own work in code, matched by eye to the described view in the register entry N19 (white colonnade, continuous shaded walk, shop bays behind); the photograph itself is not used.
+Evidence: implemented; self-test 115 checks (none cover the arcade); seen in a browser (visible pane) at the Inner Circle, x 970 z -2225: columns, slab and dark shop bays read as a colonnade. Cost, same route as A-2026-11-19-03 (Connaught Place start, q=med, bench 30, visible pane, desktop Mac): triangles 281 k to 318 k (+13 %), draw calls 382 to 383, p95 11.4 ms (the earlier run 16.7 ms: run-to-run noise is large, do not read it as faster). NOT done: column spacing and bay width are from a description, not a surveyed footprint (N19 itself says to get another camera and a footprint); the apron between the carriageway and the arcade is still bare earth; shop signs; the Outer Circle's different frontage; no phone run; no person has judged it. Note: the service worker serves old files in a browser tab that has run the game before; clear it (DevTools, Application) or you will not see this.
+For the other stream: nothing.
+Status: info
+
+## 2026-11-19 18:00  A-2026-11-19-04  Delhi reference pack mapped onto C/P/L/B tasks; licence register
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `docs/DELHI_REFERENCES.md` (pack steps R0 to R11 mapped to existing tasks, no new phase names; licence rules), `docs/delhi_reference_register.json` (every photo and source page, no image bytes), a "Reference photographs" section in `assets/ASSETS.md`. All pack photos are study only, permission not confirmed; no GTA code or data is used.
+Evidence: documents only; nothing implemented or measured here.
+For the other stream: Anshul's Claude: C0 to C4 are yours under the 17 Nov override; the pack asks for source-id diagnostics first (C0). The Connaught Place greybox comparison (my side, Stream A) comes next and will be logged separately.
+Status: info
+
+## 2026-11-19 17:00  A-2026-11-19-03  P1 part 3: paved forecourts, and the first visible frame measurement
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/infill.js`: open ground left inside dense blocks (oldDelhi, market, default, cp, business) is returned as `yards` (8 m grid cells merged to rectangles, 700 a tile at most, clear of streets by 2.5 m and of buildings by 1.2 m); `src/world/city/tilemesh.js` paves them in the pavement mesh (same height and texture as the pavements); `tools/selftest.mjs`: yards are inside a block, not under a building, deterministic.
+Evidence: implemented; self-test 115 checks; frame cost MEASURED in a visible Browser pane (Claude desktop app, Chrome 156, MacBook-class Mac, `?play&city=delhi&q=med&bench=30`, Connaught Place start): 3,034 frames, average 9.9 ms, p95 16.7 ms, p99 22.3 ms, worst 55.4 ms, 382 draw calls, 281 k triangles, heap 270 MB. This is a desktop figure, NOT a phone figure. Not done: a person's check of the forecourts, a phone run.
+For the other stream: nothing.
+Status: info
+
+## 2026-11-19 15:00  A-2026-11-19-02  P1 second increment: interiors of big blocks, and a void measuring tool
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: `src/world/city/infill.js` (Stream A file): a second pass cuts each block into back-to-back rows of lots along its longest edge with 3.2 m lanes, same acceptance test as the frontage lots (cap 1,800 interior lots a tile, 4,000 in all; `interior: true` on the record; stats `iTry`, `iOut`, `iStreet`, `iBld`, `iMargin`); new `tools/measure_voids.mjs` (100 m cells of the 5 sample areas); `tools/selftest.mjs` (interior lots checked by the existing validity test); status lines in `docs/DELHI_POLISH_PLAN.md` and `docs/NEXT_PHASES.md`.
+Evidence: implemented; self-test 115 checks; measured by script: void cells in the sample areas 19 to 10, block coverage up 1 to 2 points (Chandni Chowk 24.3 to 27.5 %, Khan Market 15.5 to 16.4 %); infill time per tile +10 ms (44 to 53, 24 to 34, 30 to 35 ms); seen in a browser at Karol Bagh (street looks right). NOT measured: frame cost (the browser pane was hidden, so no valid frame numbers; run `?play&city=delhi&q=med&bench=30` in a visible window), forecourts, parking and plazas are not built, the coverage targets (50 to 60 %) are not met: most of the missing ground is in no block face or under mapped buildings.
+For the other stream: nothing.
+Status: info
+
+## 2026-11-19 12:00  A-2026-11-19-01  Lite build (Delhi only in the browser) and the Download-for-offline button
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: (1) new `src/core/build.js`: `BUILD`/`LITE`, Lite by default, `?build=full` for the full game from a full source tree. (2) `src/main.js` (shared, small): Lite always starts Delhi (`cityMode`), skips the India world, the roads-out fetch and the highway gates (`leaveCity`, `updateGateExit`). (3) `src/ui/menu.js` (shared): Lite shows "Play: Delhi", hides Explore cities, Travel and New world; adds the Download rows. (4) `index.html`: the early preload skips India files in Lite. (5) `tools/stage_cloudflare.py` (shared): `--build lite|full` (default lite leaves `assets/india/` out of the deploy; nothing is deleted from the repo) and writes `offline.json`; `tools/bundle.mjs` updates it for the bundle. (6) `sw.js` + new `src/ui/offline.js`: a "Download" button per group (game core about 45 MB, Delhi 78 MB) fills a never-trimmed cache with progress; the service worker keeps it across updates. This overlaps your task B14 (build switch, Lite boots into Delhi) and part of B16: please review instead of redoing it.
+Evidence: implemented; self-test 115 checks (two new); seen in a browser on a staged, bundled build: a plain `?play` opens Delhi with no India file requested, the pause menu has no city or travel entries, the core download cached 256 files and the game opened with the server stopped. NOT tested: the Delhi download, a real phone (iPhone has no service worker by design), driving to the edge of the city data (the gates are off, so nothing turns the car back), a real deploy, a person's acceptance.
+For the other stream: review the three shared-file edits; mark B14 as covered or tell me what is missing. Deploy the Lite build with `python tools/stage_cloudflare.py --out <folder>/public` (Lite is the default) then `node tools/bundle.mjs <folder>/public` as before.
+Status: open
+
+## 2026-11-18 10:00  Delhi stuck on loading screen: builder boost while loading
+Branch: claude/delhi-loading-fix  Commit: see PR
+What changed: src/main.js whenCityReady() sets city.boost (22 ms/frame builder budget instead of 3 ms) while waiting, wait up to 45 s, shows 'Building Delhi... N of 5 tiles'; cityworld.js stepJob honours boost (?noboost turns it off). Cause: on slow frames the 3 ms budget built 0 tiles in 20 s, so the game started on bare plains / looked stuck.
+For the other stream: nothing. The deployed site needs a redeploy by whoever deploys to get this.
+Status: open
+
 # Stream A log (World: Rajul's Claude writes here, Anshul's Claude only reads)
 
 Newest entries first. Format is in `CLAUDE.md`.
+
+## 2026-11-18 23:30  A-2026-11-18-26: trees redone, Metro-through-buildings fix, asset cache, engine sound start
+Branch: fix/trees-cache-sound (PR)  Commit: see the PR (deployed)
+What changed: (1) TREES: `tools/make_tree_cards.py` draws six pictures (`assets/nature/delhi_*.png`, our own work); `streetlife.js` picks one per species (`TREE_PIC`), keeps them untinted, places trees in clumps with a smooth field (`clump`) instead of a grid, and records blob shadows; `cityworld.js` draws one instanced mesh per picture and a shadow mesh per tile. (2) STRIPES: the long strips across the map were Metro track: the data marks 38 stretches (17 km) as at grade, and 9 of them (4.4 km) run through building footprints, so they were drawn as ground strips through buildings (`transit_plan` heights: at grade 0.3 m). New `tools/fix_metro_grades.mjs` (dry run, `--apply`) made those 9 stretches and the at-grade stations on them underground in `assets/cities/delhi/transit.json` (kept `gradeFixed` notes). Not fixed: elevated viaducts (11.5 m) that still pass through 12 to 16 m buildings (the path and the footprints disagree by metres): needs the click-to-inspect tool (C0). (3) CACHE: `sw.js` v2: assets, city tiles, models, textures and sounds are cache first with a quiet refresh (newest 900 kept), so the second visit and every returning city tile load from the device; not on iPhone (no service worker there). (4) SOUND: `src/audio/engine.js`: the synthesised engine no longer plays for the first seconds while the recorded engine loads (the car is silent until the recording is ready; `?engine=synth` and a load failure keep the synthesised engine). Not verified by ear. Measured: 295 draw calls, 229 k triangles at the same park view.
+For the other stream: Anshul's Claude: T1 continues from part 1; C0 first for the remaining conflicts; do not re-add a synthesised engine start.
+Status: open
+
+## 2026-11-18 22:00  A-2026-11-18-25: ALL PRs merged (93 to 98); trees and conflicts are the open complaints; docs updated
+Branch: docs/final-update  Commit: see the PR
+What changed: at the owner's request PRs 93, 94, 95, 96, 97 and 98 were merged into `main` (95 and 98 needed `main` merged into them first: conflicts in the log, `docs/STATUS.md` and the tracker, kept both sides and rebuilt the tracker). I asked this session's neighbour (the other Claude session, owner of PR 97) first; no reply came before I merged PR 97, which was clean against `main` and small. `HANDOFF.md`, `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/NEXT_PHASES.md` (new task T1, trees) and the tracker are updated. Owner's complaints, with Rajul's Claude's diagnosis: TREES: one olive-tree picture for all trees (twisted thick grey-blue trunk, thin pale foliage), tint and haze wash the colour out, grid placement, no shadows, wrong species. CONFLICTS (screenshot): station track strips cut through buildings and roads, trains pass through buildings, cars and people pass through trains (the track kit, trains, traffic and pedestrians do not know about each other), buildings stand on roads; plan C0 to C6.
+For the other stream: Anshul's Claude: `git pull`; read `docs/NEXT_PHASES.md`: T1, C0 to C6, B1 to B16 and the phases; one phase at a time, one PR each, owner merges.
+Status: open
+
+## 2026-11-18 21:00  A-2026-11-18-24: strips near Todarmal Road: station track kits shortened (live eb901661); the road fan is still there
+Branch: docs/city-conflicts (PR 98), code on fix/delhi-green (PR 96)  Commit: see the PRs (deployed)
+What changed: `src/world/city/transit_rail.js` (PR 96): station tracks 45 m past the platforms (was 220 m), rake travel 120 m (was 260 m), gravel-coloured ballast and darker rails. OpenStreetMap (viewed in the browser) shows the New Delhi to Nizamuddin corridor of about 12 parallel tracks at Tilak Bridge. The second kind of strip, a fan of unnamed residential edges, is NOT fixed: no detector matched it (details in `docs/CITY_CONFLICTS_PLAN.md`, "Update"). Tool: `tools/audit_city_area.mjs`. Not verified: the OSM tags of the fan, other stations (New Delhi, Nizamuddin) after the shortening, trains running in from beyond the tracks.
+For the other stream: Anshul's Claude: C0 must include a click-to-inspect street overlay (OSM id and tags) before any rule is written; C3 replaces the platform-face track count with the real tracks.
+Status: open
+
+## 2026-11-18 20:00  A-2026-11-18-23: owner reports rail, road, building and height conflicts; plan C0 to C6 (docs/CITY_CONFLICTS_PLAN.md)
+Branch: docs/city-conflicts  Commit: see the PR
+What changed: the owner sent a screenshot of a city covered in parallel strips with trains on them and old low-poly trees, and reported rail and road overlaps, buildings on roads, a car that sinks and a car that falls into a tunnel. Not reproduced in the live game (`c085cc44`) at Connaught Place, New Delhi station or the India-map start. New `docs/CITY_CONFLICTS_PLAN.md` (what was checked, likely causes, phases C0 to C6) and tasks C0 to C6 in `docs/NEXT_PHASES.md`. Three rail systems exist that do not share data (the India-map network, the Delhi station kits, the Metro in `transit.json`), and the city pack has no rail class; the pack's own conflict counts are in the plan.
+For the other stream: Anshul's Claude: start with C0 (`tools/audit_city.mjs`), then C1; ask the owner for coordinates (menu Copy line) of each defect and the build address of the screenshot.
+
+## 2026-11-18 14:00  A-2026-11-18-17: OWNER DECISION: Web Lite is Delhi only, Full (India, more cities) is a downloadable PC and phone app; your plan accepted in principle
+Branch: docs/lite-and-full  Commit: see the PR
+What changed: the owner accepted `docs/LITE_AND_FULL_PLAN.md` (your draft, now on main with the owner's decision at the top) and recorded it in `docs/DECISIONS.md`: only Delhi is playable in the browser; the whole India map and more cities are in a downloadable app for PC and phone, for better compute and graphics and so better engines can be used; the Full engine is decided after benchmarks (your Phase 6). New tasks in `docs/NEXT_PHASES.md`: B14 (the `BUILD = lite | full` switch and Lite boots into Delhi), B15 (Lite budgets on real devices), B16 (a one-page Full app packaging note); B6 now asks only the four open details (cars in Lite, minimum device, PC or phone first, a "get the full game" button; defaults in the plan: 2 cars, a mid laptop and mid phone, PC first, yes). B7 (no-reload city switch) now applies to the Full build only.
+For the other stream: Anshul's Claude: read the plan, work B14 first after B1 to B3 (shared files `src/main.js`, `tools/stage_cloudflare.py`: reserve first), and ask the owner the four open details. Keep one codebase and one self-test for both builds.
+
+## 2026-11-18 19:00  A-2026-11-18-22: real-scan leaf-card trees, compound walls, cornices; speed (live c085cc44)
+Branch: fix/delhi-green (PR 96)  Commit: see the PR (deployed)
+What changed: the owner asked to fix the four "still wrong" items. (1) Trees: `streetlife.js` no longer builds crowns; it collects tree positions as `out.cards` and `cityworld.js` draws them as leaf cards (real-scan `island_tree_02`, and `fir_sapling_0` for the columnar ashoka) on three crossed planes, one instanced mesh per tile and picture, tinted per species; each plane is built twice (front and back with an upward normal) because `DoubleSide` lit the back faces from below and drew black trees. 6 triangles a tree. (2) Walls and facades: `streetlife.js` compound walls (low plastered wall with a coping, residential streets of Lutyens and DDA, 220 a tile at most); `tilemesh.js` cornices (a projecting lip along the roof edge, 6 triangles a wall) on buildings of 9 m and more in Connaught Place, Lutyens and Old Delhi, 140 buildings a tile at most. (3) Speed: the same fly-camera spot in a park went from 571 draw calls and 322 k triangles to 230 and 173 k; the Connaught Place start at `q=med` draws 304 calls and 298 k triangles (the cornices cost about 90 k there). Not done: more tree pictures (neem, peepal and jamun specific, only two pictures exist), facade relief and signage across the whole city, the photo check by a Delhi person, a real phone measurement. Mistake and fix: a `//` comment ended a one-line function in `cityworld.js` and a build with a syntax error was live for a few minutes (version b67ee7ea); fixed in 9c318e4f. `tools/bundle.mjs` now needs its result checked: the deploy line must be gated on "bundle:" printing (to do).
+For the other stream: Anshul's Claude: continue L2 and P3 from `docs/NEXT_PHASES.md`; put more tree pictures into `assets/nature` and `treeMat` names in `cityworld.js`; measure on a phone.
+Status: open
+
+## 2026-11-18 18:00  A-2026-11-18-21: Anshul's rebuilt cars are back in (models and definitions only); his sound, birds and moon stay out (live 0e65f42a)
+Branch: fix/delhi-green (PR 96)  Commit: see the PR (deployed)
+What changed: owner request: his car design was better. Restored from `0fc2664` (main with PR 90): `assets/car_01_gt.*`, `car_02_sport.*`, `car_03_rally.*` (the rebuilt models: production-car look, arches, trim) and `src/vehicle/defs.js` and `src/vehicle/vehicle.js` (their definitions, ride height, and the Ember RS and Dust Runner entries). Not restored: `src/audio/engine.js` (his engine configs, birds and crickets: the engine falls back to the Dusk GT sound for his two extra cars) and the moon in `environment.js`. Checked: self-test 113, `vehicle_acceptance --check` no problems found, daily check green; live: the new 842 KB Dusk GT model loads, no birdsong, horn present.
+For the other stream: Anshul's Claude: B1 is now only about the engine sound and atmosphere work (the car models are in); send those as separate small PRs for the owner's yes.
+Status: info
+
+## 2026-11-18 17:30  A-2026-11-18-20: Delhi look part 3 (species crowns, medians, haze, colony trees) and the green-data check (docs/DELHI_GREEN_DATA.md)
+Branch: fix/delhi-green (PR 96)  Commit: see the PR (deployed)
+What changed: `streetlife.js`: crown shapes by species (`BLOBS`), medians where one-way carriageways of a main road run 2.4 to 20 m apart, colony trees in residential blocks (260 per tile at most); `environment.js` and `main.js`: `env.haze` from the month's smog (November 0.77: warm beige-grey sky, shorter view); `docs/DELHI_LOOK.md` photo-check table (Wikimedia Commons photos viewed, nothing copied). Owner asked to check forest and tree coverage against maps and data: new `tools/check_city_green.mjs` and `tools/check_city_places.mjs` and `docs/DELHI_GREEN_DATA.md`: forest plus scrub 144 km2 against the forest survey's 195 km2 forest cover (74 percent), tree cover outside forests (147 km2) not in the map, 6 of 20 known greens inside the right class and most others 3 to 140 m from a polygon, a few missing; the builder drops protected-area, orchard and tree-row tags and the park names. Measured: fly camera in a park, 571 draw calls, 322 k triangles at `q=med`. Not done: walls, facade relief and signage (L2, P3), modelled Delhi trees (the leaf-card trees of the open-land scatter look better than my crowns), a median not yet seen on screen, a pack rebuild (needs the 225 MB OSM extract and the owner's yes), a Delhi person's photo check. Note: PR 97 (another session, Delhi stuck on loading) also touches the city loading: merge order matters.
+For the other stream: Anshul's Claude: continue L2, L3 and P3 from `docs/NEXT_PHASES.md`; measure draw calls and triangles on a phone before adding more trees.
+Status: open
+
+## 2026-11-18 16:00  A-2026-11-18-19: Delhi greenery part 2 (broad two-blob trees, forest, scrub, farmland, hedges) and Anshul's done and left (docs/STATUS.md)
+Branch: fix/delhi-green (PR 96)  Commit: see the PR (deployed 274c9c46)
+What changed: after the owner asked to do the "not done" list and match real photos: looked at Wikimedia Commons photos of Rajpath and Karol Bagh in the browser (viewing only, nothing copied). `streetlife.js`: trees scaled up to real Delhi sizes with a second crown blob and a thicker trunk; park trees by class from the pack (`forest` 428 polygons dense, `scrub` sparse and small, `sports` and `golf` nearly bare, `garden`, `grass`); clipped hedges along the avenues of Lutyens, DDA and Connaught Place. `tilemesh.js`: forest, scrub, sports, golf and garden colours; farmland (3063 polygons, the Yamuna floodplain) drawn as fields. Measured (fly camera, `q=med`): 235 draw calls, 178 k triangles. Not done: real-scan or hand-modelled plant shapes, median planting (needs P2e road geometry), walls, haze and sky colours, a photo-by-photo check of species and facade colours. `docs/STATUS.md` now lists what Anshul's Claude has done and what is left; nothing of B1 to B16 or the phase tasks has been started by it since the assignment.
+For the other stream: Anshul's Claude: pull PR 96 before touching `tilemesh.js` or `streetlife.js`; L3 continues from the list in `docs/NEXT_PHASES.md`.
+Status: open
+
+## 2026-11-18 15:00  A-2026-11-18-18: Delhi greenery: real grass lawns, park trees, earth ground, greener land (L3 started; live 5c778ecf)
+Branch: fix/delhi-green (PR)  Commit: see the PR (deployed)
+What changed: the owner said Delhi's landscape, grass, vegetation, trees and building looks do not match real Delhi, and the grass looked basic and dull, nothing like Slow Roads. Cause (mine): the earlier "aerial look" PR 75 switched off the random trees and bushes in the city and set the ground to one grey-tan; the land between streets was a grey blotchy fill (`BLOCK` colours with a noise map). Now: (1) `tilemesh.js`: new `lawn` mesh and material (the real `assets/ground/grass_*` PBR texture, bright tint) for parks and for the blocks in green areas (Lutyens, DDA, business) or mapped as grass or garden; every other block is warm earth with the sand texture (`mats.ground`), not a grey noise map; (2) `streetlife.js`: park trees on a jittered grid by the area profile (species from `identity.json`, never in a building or a road, 600 per tile at most, with collision circles) and the crowns have 8 sides, an uneven outline and smooth shading; (3) `cityworld.js` `cityConfig`: the land under and beyond the city has green and dry-olive palette tints again, with grass tufts (0.012), bushes (0.002) and a few trees (0.0004). Measured (fly camera at India Gate, `q=med`): about 216 to 233 draw calls, 139 k triangles, no extra requests. Not done and not as good as a photograph: the crowns are still generated low-poly shapes (not real-scan models), no hedges, medians or Ridge forest, no Yamuna floodplain, no photo check of species and colours. Needs a person: tell what in Delhi looks wrong with photographs side by side.
+For the other stream: Anshul's Claude: this is a start of L3 (mark `[~]`); continue from the list in `docs/NEXT_PHASES.md` L3; before you change `tilemesh.js` or `streetlife.js` pull this PR.
+Status: open
+
+## 2026-11-18 13:00  A-2026-11-18-16: no "Enter Delhi city" button: the city loads by itself when you are near it (live c79d72b1)
+Branch: feat/auto-enter-city (PR)  Commit: see the PR (deployed)
+What changed: owner request. `src/main.js` (shared, small): the `enterBtn` button and its code are gone; on the India map, within 200 map metres (about 20 km) of Delhi on its highway the city loads by itself through the gate of the highway you are on (the same `enterCity` as before; the zone was 120 m). Driving out of the city puts you 260 m out, so you are not taken straight back in. Starting in or selecting Delhi still goes straight into the city (PR 74). Checked live: at 250 m the map stays and no button shows; at 150 m the city loads through a gate (`at=nh148a-west-9`) and the page shows Delhi city.
+For the other stream: Anshul's Claude: nothing; if you change the gate or highway start code (B7, the no-reload switch) keep the 200 and 260 numbers apart (entry zone smaller than the exit start).
+Status: info
+
+## 2026-11-18 12:00  A-2026-11-18-15: Anshul's car design, engine sound, birds, crickets and moon taken OUT of main again (live f91b4cc3); NPCs and animated exit kept
+Branch: fix/restore-cars-sound (PR)  Commit: see the PR (deployed)
+What changed: the owner noticed that things already fixed with Rajul's Claude had been replaced by Anshul's versions after PR 90 (my merge of `release/combined`): the car design, the car (engine) sound, birdsong from somewhere in Delhi, and more. Restored from `51bdc03` (main just before PR 90): `assets/car_01_gt.*`, `car_02_sport.*`, `car_03_rally.*`, `src/vehicle/defs.js`, `src/vehicle/vehicle.js` (cars, ride height, the vehicle list), `src/audio/engine.js` (his engine configs and `ambience()` birds and crickets; the horn and Delhi street bed are in the restored file), `src/env/environment.js` (the moon). Kept: his cartoon NPCs and the animated exit from the car with the cartoon player figure (`src/player/exitseq.js`). Checked: self-test 113, `vehicle_acceptance --check` no problems, daily check green; live: the old `car_01_gt.glb` (519 KB) loads, no ambience, horn present, 4 vehicles, G exits and re-enters.
+For the other stream: Anshul's Claude: your rebuilt cars, ride height, engine configs, atmosphere sound and moon are still on your branches (`release/combined`, `vehicle/cars-on-main`, `vehicle/cars-and-gears`) and are NOT in main. Do not merge them back into main as they are. The owner decides case by case: put each as its own small PR (cars; engine sound; atmosphere) with a short description and a before and after (screenshots, a recording of the sound), and wait for the owner's yes for each one. Update B1 and B2 in `docs/NEXT_PHASES.md` to match (B1 is now: open the car PRs one by one for approval, not a merge).
+
+Status: open
+
+## 2026-11-18 11:00  A-2026-11-18-14: loading stuck on "Starting the physics": engine starts first, never waited for forever, stuck screen has a way out (live c2237bce)
+Branch: perf/start-order (PR)  Commit: see the PR (deployed)
+What changed: the owner reported the loading bar not moving past "Starting the physics". That label shows until the physics engine (Rapier, a 2 MB wasm module) is ready, and `src/main.js` only started it after all the map and world building, and `setVehicle` waited on it with no limit. Now: (1) `rapierStart = initRapier()` runs at the top of `main.js`, so it loads and compiles while the map and world are built; (2) the wait has a 25 s limit and an error path that sets the flag too: after that the simple physics (`?phys=old`) is used and the bar moves on; (3) `index.html` watchdog: after 25 s on any stage it says which stage, the last console warning or error text, and offers Reload and "Try simple physics". Measured here (fast machine, new bundle cold): ready in 6.3 s, the "Starting the physics" stage no longer appears; `?phys=old` ready in 2.4 s. Not verified: the owner's device (cause unknown: slow wasm compile, memory, or a network stall); a real phone.
+For the other stream: Anshul's Claude: B9 (real phone): record on the phone which stage the loading bar shows longest and the watchdog text if it appears; B8/B10: the world build before the first frame is one long synchronous block: split it into frame-sized steps.
+Status: open
+
+## 2026-11-18 10:00  A-2026-11-18-13: faster cold start: parallel preload, gzip terrain grid, loading screen no longer waits for the trees (live 70190b50)
+Branch: perf/faster-start (PR)  Commit: see the PR (deployed)
+What changed: the owner reported the browser load as too slow. Measured a cold India load in the built-in browser (a slow link, about 0.5 MB/s): `dist/game.js` 1.3 MB, then `terrain.bin` 3.3 MB (the host does not compress `.bin`) started only after the script ran, then the world files one after another, and the loading screen also waited for the tree assets; the page was still loading at 40 s. Fixes: (1) `index.html` preloads the first files at once with `<link rel=preload as=fetch>` (India map: skeleton, rails, trains, terrain; Delhi start: city pack files), (2) `assets/india/terrain.bin.gz` (1.37 MB, 41 percent of the size) loaded by new `src/core/gzfetch.js` (`fetchGrid`, falls back to the plain file; self-test added, 113 checks), `tools/build_india_grids.py` writes it, the stage script and daily check know it, (3) `src/main.js`: the loading screen no longer waits for scenery (`scenery: true` at start; the trees appear when loaded, the code already supported that). Result, same slow link: India ready in 13.5 s (was over 40 s), terrain fetched once and starting at 0.45 s. Delhi start still takes long on that link (the 14.6 MB city graph is 3.5 MB compressed, plus tiles, models and the NPC files). Not changed: the car, traffic pack and NPC models (the host does not compress `.glb` either: `car_01_gt.glb` 0.86 MB would be 0.33 MB gzipped).
+For the other stream: Anshul's Claude: further speed items for B8 and B10: lazy city graph (decode in a worker, B10), gzip the `.glb` files the same way as the terrain (a small `fetchGz` for GLTFLoader), Brotli the bundle at deploy so the first request at each Cloudflare location is small.
+Status: open
+
+## 2026-11-18 09:00  A-2026-11-18-12: deployed Anshul's release/combined merged with main (version 3649f3ad); his B1 to B13 and phase tasks not started yet
+Branch: integrate/release-combined (PR)  Commit: see the PR (deployed)
+What changed: checked Anshul's Claude's progress at the owner's request: no task mark in `docs/NEXT_PHASES.md` has changed, nothing new on `main`; his last push (20:52) came before the assignments and holds a DEPLOY REQUEST for `release/combined` (his cars Ember RS and Dust Runner, rebuilt models, ride height, moon, birds and crickets, cartoon NPCs, animated exit from the car). That branch was 28 commits behind `main` (deploying it as it was would have removed the home-screen app, bundle, prefetch, horn and PRs 83 to 89 from the live site), so `origin/main` was merged into it: two conflicts only, `src/audio/engine.js` (kept his sport and rally engines and his `ambience()`, added the horn and Delhi street bed) and `src/main.js` (kept both sound lines). Self-test 112, `vehicle_acceptance --check` no problems found, daily check green. Deployed to the owner's account from the merged branch: live checks in the built-in browser: Delhi loads from the bundle, no errors, G exits the car and G gets back in (drive, foot, drive). Not checked: how the animation looks, how the new cars drive, a real phone.
+For the other stream: Anshul's Claude: this covers most of B1 (cars on main's vehicle system) once the PR is merged; mark B1 `[~]` or `[x]` yourself after a person has driven each vehicle, and continue with B2 onwards. Your deploy request is done by this entry.
+Status: open
+
+## 2026-11-18 08:00  A-2026-11-18-11: Delhi phases P1 to P8, look steps L1 to L6 and N17 to N20 assigned to Anshul's Claude, to be worked in blocks
+Branch: docs/assign-delhi-n17  Commit: see the PR
+What changed: at the owner's request (Rajul's session limit has ended) `docs/NEXT_PHASES.md` has a new section "Assigned to Anshul: Delhi phases ..." with tasks P1 to P8, L1 to L6 and N17 to N20, each with its "done when" line from `docs/DELHI_POLISH_PLAN.md`. `docs/DECISIONS.md` and `CLAUDE.md` record the ownership override: for these tasks Anshul's Claude may edit the Stream A (world) files. The tracker's open phase items (P and L) are re-assigned to Anshul's Claude and the roads-out-of-Delhi item is marked done (PR 85 merged).
+For the other stream: Anshul's Claude: finish B1 to B3 first, then work the blocks in order: Block 1 P1, P2, P3, L1, L2; Block 2 P4, P6, L3, L4; Block 3 P5, P7, L5, L6; Block 4 P8; Block 5 N17 to N20 (design note first; only after P8 is judged and the owner says go). One phase at a time, each its own PR with: the done-when line met, a measured frame cost before and after (`?play&city=delhi&q=med&bench=30`), screenshots, selftest and daily check green, a log entry, the mark in `docs/NEXT_PHASES.md` changed, `node tools/build_tracker.mjs` run. Stop and report to the owner at the end of each block. Phases that need a person (photos, a Delhi reader, devices) stay open on that line. First task of P2: put the scripted street-driving test into `tools/`. Never merge or deploy without the owner's word.
+Status: open
+
+## 2026-11-18 07:00  A-2026-11-18-10: TASKS B1 to B13 assigned to Anshul (docs/NEXT_PHASES.md, "Assigned to Anshul")
+Branch: docs/assign-anshul  Commit: see the PR
+What changed: at the owner's request the next phases are now a numbered task list for Anshul and his Claude, with an acceptance line each, in `docs/NEXT_PHASES.md` under "Assigned to Anshul". `tools/build_tracker.mjs` reads that section, so every task shows on the tracker's Rajul and Anshul tab and the Assigned tasks tab, and the marks `[ ]`, `[~]`, `[x]` set their status.
+For the other stream: Anshul's Claude: work B1 to B13 in order (B1 finish and PR `vehicle/cars-on-main`; B2 port the steering and grip feel as tuner settings; B3 retire the old branch; B4 NPC provenance; B5 review `runtime.js` and `onfoot.js`; B6 ask the owner the Lite/Full questions; B7 no-reload city switch; B8 cut Mumbai draw calls; B9 real-phone benchmark (needs a person); B10 router off the main thread; B11 tile cache budget; B12 close your old log entries; B13 deploy to the owner's account). When a task changes, change its mark in `docs/NEXT_PHASES.md`, run `node tools/build_tracker.mjs`, log it in `team/stream-b.md`. Shared files (`src/main.js`, `tools/selftest.mjs`, `tools/stage_cloudflare.py`): reserve first. Never merge or deploy without the owner's word.
+Status: open
+
+## 2026-11-18 06:00  A-2026-11-18-09: PRs 83 and 85 merged; NEXT PHASES for Anshul's Claude (docs/NEXT_PHASES.md); your branch not merged
+Branch: docs/next-phases  Commit: see the PR
+What changed: at the owner's request PR 85 was merged into the audit-fixes branch (conflicts in `main.js` and the log resolved; the prefetch kept in `updateGateExit`) and PR 83 was merged into `main` (self-test 112, daily check green). I tried `vehicle/cars-and-gears` into `main`: 14 files and 42 hunks conflict, and main and your branch carry different driving models, so I stopped and aborted; nothing of yours was changed. New `docs/NEXT_PHASES.md` lists the order of work. Tracker: PR rows 83 and 85 set to merged, three clashing item ids made unique, a next-phases item added.
+For the other stream: Anshul's Claude: start from `docs/NEXT_PHASES.md`. Phase 1 is merging `origin/main` into `vehicle/cars-and-gears` (what to keep from each side is listed there), then the rest in order. The owner's session limit has ended, so nothing in it can wait on the owner except what is marked as a person's job.
+Status: open
+
+## 2026-11-17 19:30  City map: the roads out of Delhi, an Other cities list, the destination carried into the India map
+Branch: claude/city-exits  Commit: see the PR
+What changed: the owner asked how to get from Delhi onto a highway and to another city: the gates were mapped to highways but the city map did not show it. `src/ui/citymap.js` (Stream B-style UI, owner's request): every green gate pin now carries a label `To <next city> \u00b7 <NH or road name>` (always drawn), an `Other cities` button lists the 97 cities reachable from Delhi with the distance and the exit (a tap routes you to that gate), the title reads `To Mumbai (To Jaipur \u00b7 NH48): 45.6 km`; `src/world/city/gates.js` `gateForCity()` (the gate on the first road of the shortest route, else the gate pointing most nearly toward the next city: the Delhi-Kolkata road shares the southern exits with the Agra road, so Mathura and Kolkata had no gate of their own); `src/main.js` (shared, small): `wireGates()`, the chosen city travels through the gate as `&nav=<city id>` (`updateGateExit` and `leaveCity`), and the India map starts its GPS toward it (`startNav`, 'Navigating to Mumbai', '-> Mumbai (1105 km): keep on this road'); `tools/selftest.mjs` 108 checks (every gate joins a highway toward a known city; all 97 reachable cities have an exit: Agra 52, Jaipur 20, Kanpur 14, Ambala 10, Dehradun 1). Seen in the browser: the Other cities list, a route to the Jaipur NH48 exit, driving out of the nh48-south-16 gate, and the India map's navigation to Mumbai. Not done: the exit from the India map back to a city through another city's gate is unchanged; gates are only labelled in the city map (no signs in the 3D world); gate mapping by direction is approximate for gates with a poor score (nh9-west-20, nh9-east-21).
+For the other stream: nothing.
+Status: open
+
+
+## 2026-11-18 05:00  A-2026-11-18-08: deployed version b6be7032 (bundle, prefetch, Anshul's cartoon NPCs) to the owner's account
+Branch: claude/audit-fixes (PR 83)  Commit: 30c799e (deployed)
+What changed: deploy only, from a scratch copy (stage, `tools/bundle.mjs`, `wrangler@4 deploy`, account `mailrajulsingh.in@gmail.com`). Live checks in the built-in browser: India title ready in 2.3 s (68 requests), Delhi city loads from `dist/game.js` with 6 tiles, the three small NPC models (0.83 MB) load, no failed requests on the page. Not checked: whether cartoon walkers appear and animate (none were in view at the start), a real phone, flyover traffic.
+For the other stream: nothing new.
+Status: info
+
+## 2026-11-18 04:00  A-2026-11-18-07: Anshul's cartoon NPCs merged into the audit-fixes branch; status of his other branch
+Branch: claude/audit-fixes (PR 83)  Commit: see the PR
+What changed: at the owner's request `origin/vehicle/npc-models` (cartoon pedestrians, `src/pedestrians/pedestrians.js` and `assets/npc/`) is merged into this branch (clean merge). The game loads only the three small `_lod1` models (about 0.85 MB), not the 2 MB ones. `assets/ASSETS.md` now credits `npc/` (daily check needed it) and `licenses.html` is regenerated; the credit says the Blender script `dev/build_npc_stylised.py` is not in the repo and the base mesh is not recorded. `vehicle/cars-and-gears` (rebuilt cars, steering and grip, atmosphere sound, adaptive resolution, `docs/LITE_AND_FULL_PLAN.md`) is NOT merged: it conflicts with this branch in 10 files (`main.js`, `menu.js`, `controls.js`, `radiowheel.js`, `defs.js`, `rapier-vehicle.js`, `vehicle.js`, `selftest.mjs`, `stage_cloudflare.py`, `stream-b.md`).
+Re: Anshul's PROPOSAL (Lite and Full): still open, the owner has not answered the four decisions. His adaptive resolution duplicates the frame-time governor already in `main.js` (`gov`). `validate_city` passes on this branch (his note says it fails on main).
+For the other stream: Anshul's Claude: (1) commit `dev/build_npc_stylised.py` and say where the NPC base mesh came from (licence); (2) merge `origin/claude/audit-fixes` (or main once PR 83 merges) into `vehicle/cars-and-gears` and resolve the 10 files before anything else; keep the home-screen app (`index.html`, `sw.js`, `manifest.webmanifest`), the horn and street sound in `engine.js`, and the bundle step in the deploy.
+Status: open
+
+## 2026-11-18 03:00  A-2026-11-18-06: city and highway flow v1: the other world's files are prefetched, so the switch is quick
+Branch: claude/audit-fixes (PR 83)  Commit: see the PR
+What changed: new `src/world/prefetch.js` (each file once, one at a time, low priority, nothing on a save-data connection, a failed file is retried later; self-test added, 111 checks). `src/main.js` (shared, 3 small lines, plus the import): on the India map within about 300 km of Delhi the Delhi pack files (`graph.json` 14.6 MB and the small ones) are fetched into the browser cache; inside Delhi within 800 m of a gate the India files (skeleton, rails, trains, terrain) are. The switch is still a page load behind the black fade (the two worlds are different scales and `main.js` builds one world at boot), but it now finds its files on the device; with the bundle the scripts are one cached file. A true in-place switch with no reload needs the world set-up in `main.js` made re-runnable (the `cityMode` constant is used in about 30 places): that is v2, best done after PR 85 lands, as a separate step.
+Overlap with PR 85 (`claude/city-exits`): it also edits `src/main.js` (gates, `startNav`) and `src/ui/citymap.js`; my edit is in `updateGateExit` and the `enterBtn` line, so expect a small conflict: keep both sides.
+Not verified: the prefetch trigger on a real drive (the map is 1:100 and the built-in browser cannot drive 300 km); the live copy has the first version of the trigger (8000 map metres, about 800 km): the corrected 3000 is in the repo but not deployed, because the Cloudflare sign-in on this machine expired (`npx wrangler login` needed).
+For the other stream: nothing.
+Status: info
+
+## 2026-11-18 02:00  A-2026-11-18-05: deploy now bundles the scripts (cold start: 142 script requests down to 1)
+Branch: claude/audit-fixes (PR 83)  Commit: see the PR (live: version f9d20b6c)
+What changed: `tools/bundle.mjs` ran with the owner's go-ahead (esbuild 0.24.2 fetched by npx). Live page: 44 requests instead of about 200, one `dist/game.js` (3.7 MB, 1.3 MB gzipped); India title ready in 5.5 s and Delhi in 3.2 s in the built-in browser (warm asset cache; the earlier Delhi start there took about 40 s). `?src=1` loads the unbundled source game (checked, 149 script requests). `CLAUDE.md` "Where deploys go" now includes the bundle step. The source files are unchanged; only the staged copy is bundled. Not verified: a real phone or a cold cache on a slow network.
+For the other stream: Anshul: when you deploy, include the bundle step (`CLAUDE.md`).
+Status: info
+
+## 2026-11-18 01:00  A-2026-11-18-04: "stuck on Building the world" and slow start: error screen, no service worker on iPhone, bundle tool (not run)
+Branch: claude/audit-fixes (PR 83)  Commit: see the PR (live: version 37d2a99f)
+What changed: the owner reported the live game stuck on "Building the world" on a phone and not opening on a desktop; I could not reproduce it (it opens in about 5 s in the built-in browser). That text is the page's own placeholder, so the game script never started on their device. `index.html`: a boot watchdog shows the first error (or "Still loading after 25 s" and a Reload button that also clears the service worker and caches) on the loading screen, so the cause can be read off a phone. `src/ui/install.js`: iPhone gets no service worker and any earlier one is removed. New `tools/bundle.mjs`: deploy-time esbuild bundle (142 script files, about 1.7 MB gzipped, to one file; `?src=1` keeps the unbundled game), **written but never run**: the sandbox refused the esbuild download, so it is not wired into any deploy and is untested.
+Not verified: the cause on the owner's devices; the bundle. For the other stream: nothing.
+Status: info
+
+## 2026-11-17 23:50  A-2026-11-17-04: phone layout, sound, Add to Home Screen, tuner set up, handoff and tracker updated
+Branch: claude/audit-fixes (PR 83)  Commit: see the PR (live on the owner's Cloudflare account)
+What changed: **phone** (the owner sent a screenshot): `src/ui/railboard.js` (small strip with two trains on a short screen), `index.html` (nothing from the road shows through a menu; compact title menu on a short screen; round map under the speed readout), seen in an emulated 740 x 340 phone. **Sound:** `src/audio/engine.js` (`horn`, `cityBed`), `src/input/touchui.js` (Horn button), `src/main.js` (key K, Delhi street bed, iPhone unlock on touchend and click, `navigator.audioSession`, resume on return). **App icon:** `manifest.webmanifest`, `sw.js`, `assets/icons/`, `src/ui/install.js`, a button in `src/ui/menu.js`; `tools/stage_cloudflare.py` stages them. **Tuner:** KV `SETTINGS` created on the owner's account and its id is in `cloudflare/wrangler.jsonc`; the Publish password is set as a secret (not in the repo). **Docs:** `HANDOFF.md`, `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/WORK_REMAINING.md`, `CHECKLIST.md` (4 new manual checks), and the tracker (`tracker/public/index.html`, redeployed; the other session's four edits for PR 85 were folded in). Line endings kept (`index.html` and `engine.js` are CRLF).
+Not verified: a real phone (frame rate, sound, the icon opening full screen), the flyover traffic. Mumbai at the low tier is about 800 to 1000 draw calls: next cost cut.
+For the other stream: Anshul: nothing new. If you deploy to your own account, the KV id in `cloudflare/wrangler.jsonc` is the owner's: your account needs its own (`CLAUDE.md`).
+Status: info
 
 ## 2026-11-17 18:30  Tracker deployed to the owner's Cloudflare account; PRs 76 and 77 merged
 Branch: claude/tracker-cloudflare  Commit: see the PR
@@ -23,6 +497,7 @@ What changed: new `docs/DELHI_POLISH_PLAN.md` (measured scale table, phases P1 t
 ## 2026-11-18 13:00  Connaught Place: the Central Park is an open park again; buildings take their area's wall colours
 Branch: claude/delhi-cp-accuracy  Commit: see the PR
 What changed: `landmarks/plans_modern.js` (the `connaught-place` model drew a white colonnade ring on the OUTLINE of the landmark footprint, OSM way 164675825, which is the Central Park in the middle of the Inner Circle, so a solid white wall stood where the park is; now it draws only the park: lawn, crossing paths, the plaza over Rajiv Chowk, the great flag; the colonnaded blocks are the ordinary mapped buildings of the ring outside the Inner Circle road), `tilemesh.js` (ordinary buildings, residential, commercial, retail and other, take their wall colours from the identity area: CP white, Lutyens cream, Old Delhi sandstone; before, `identity.json` walls were not used for buildings), new `tools/audit_city.mjs` (large buildings mostly on parks: 54 in the pack; stadiums and sports complexes are expected; others to look at: connaught-place (this fix), purana-qila 5,237 m2 residential 16 m over a park, humayuns-tomb, transit polygons in parks at tiles 2_-5, -12_6 and 9_0, a 24,772 m2 civic block over Chhatrasal Stadium). Seen in the browser: from the Inner Circle road and in the park. Google Maps data was not used (its terms forbid copying or building a dataset from it); the base stays OpenStreetMap. Not done: colonnades on the CP ring buildings (P3), the other audit hits.
+
 ## 2026-11-18 17:00  Where am I (menu coordinate line), the map-wide audit, generation rules; the zebra rule fixed
 Branch: claude/where-and-rules  Commit: see the PR
 What changed: (1) `src/main.js` `where()` and `window.__where()`, `src/ui/menu.js` `whereLine()` (a Stream B file, the owner asked): every menu screen has a bottom line with real latitude and longitude, game x and z, heading, the place, the street and its class, the area and the nearest landmark, with a Copy button. In a city lat and lon are the inverse of `projectLL` from the pack origin, in the India world from the game frame. (2) `tools/audit_city.mjs` (replaces the first version): scans all 1,925 Delhi tiles in 2 seconds for five classes with lat and lon of each hit: park_building 30, street_building 119, void_block 4,684 (mostly at the edge of the data, outside Delhi; the list is sorted by distance from Connaught Place), landmark_offset 3, footway_run 94; `--write` makes `docs/CITY_AUDIT.md` and `tools/city_audit_baseline.json`; selftest fails when a class gets worse. (3) `src/world/city/rules.js` (pure): rules that fix a class everywhere: a transit block 40 percent or more on a park is not extruded, a mapped building that a ground road runs through for 15 m or more is not drawn (landmarks are kept); tilemesh asks it per tile. (4) `tilemesh.js` zebra rule fixed after the owner's screenshot (Kashmere Gate ISBT plaza): a footway is a zebra only where it crosses a carriageway at 40 degrees or more over 16 m or less; a footway lying inside a carriageway and not crossing it is not drawn (it showed as tan and white strips on the asphalt); service lanes (under 3 m half width) are not counted as roads. (5) selftest 106 checks (one new). Not done: the 4,684 voids need the P1 infill (PR 77, not merged); pink balls on the ground are bougainvillea shrubs under flyovers (round magenta crowns without a trunk); landmark_offset listings (delhi-zoo, jln-stadium, anand-vihar-isbt) not corrected; the audit covers data classes, not looks (flicker, textures).
@@ -51,6 +526,32 @@ Status: open
 Branch: claude/delhi-flicker  Commit: see the PR
 What changed: `tilemesh.js` (`LIFT`: ground 0, parks and water +1.5 cm, pavement +3 cm, road +5 cm, markings +7 cm; they were all at height 0 and told apart only by polygon offsets, which shimmer with distance), `cityworld.js` (`gy` = engine terrain + 0.3 m: the city's ground and the engine's own flat terrain were one plane), `src/main.js` (shared: `setNear()`, in a city the camera's near plane is 1 m unless the camera is on or in the car (0.3 m): depth precision at 300 m to 1 km is about three times better; the far plane stays 14 km). Measured in the browser by shifting the camera 2 to 5 cm and counting pixels in flat areas that change colour: chase view 1.04 to 0.89 percent, low view 0.97 to 0.57, high view 0.205 to 0.024; what is left is silhouette edges (painted red: only flyover parapets and piers). A still camera while game time advances: 0 percent, so no shadow-map or draw-order flicker with a still view. Not reproduced: the flicker the owner saw while driving (grass and road parts); if it persists it may be shadow edges moving with the car, distance cut-offs of the near-detail meshes (350 to 450 m), or the engine terrain, none tested while moving. To tell them apart: `&shadows=off`, `&noinfill`, `&life=off`.
 For the other stream: nothing.
+
+## 2026-11-18 23:00  A-2026-11-18-03: DEPLOY RULE CHANGE: deploys now go to Rajul's Cloudflare account; first deploy done
+Branch: claude/audit-fixes  Commit: a0f9a8f (deployed)
+What changed: owner decision. The latest build (audit fixes v1 to v4 on top of main) is live at https://game-for-peace.mailrajulsingh-in.workers.dev (Rajul's account, `mailrajulsingh.in@gmail.com`, version `17594f28`). Deployed from a scratch copy, so `cloudflare/public` is untouched. `CLAUDE.md` and `HANDOFF.md` now say: from now on new versions deploy on Rajul's account, and **Anshul's account keeps the older original versions (`/` and `/next` on game-for-peace.anshul-rawat.workers.dev): do not deploy over them.** Checked live in a browser: the India game and `?play&city=delhi` (Connaught Place) load, `terrain.bin` and the attribution file are served; the only console errors are `/api/settings` 503 and `settings.json` 404 (the tuner's KV setup is not done on this account, as before). The Delhi city takes about 40 s to start in the test browser. Not checked: phones, the flyover traffic (v4), sound.
+For the other stream: Anshul's Claude: do not deploy to or change Anshul's Cloudflare account for new versions; the deploy steps are in `CLAUDE.md` ("Where deploys go"). Nothing else.
+Status: open
+
+## 2026-11-18 22:00  A-2026-11-18-02: v4, ambient traffic on flyovers, ramps and underpasses (R14, owner said yes)
+Branch: claude/audit-fixes  Commit: see the PR
+What changed: `citytraffic.js` takes every layer up to 3 up or down (was ground only); each car has a height `h` from `deckHeight` / `underDepth`, is drawn at it, follows a piece to the next only at the same level, sees only cars (and the player, from the new `py` argument) within 3 m of its own height, and its obstacle circles carry that height so the physics already ignores the other level. `citypeds.js`, `citybus.js` ignore cars on another level; `cityworld.js` and `main.js` pass the player's height. Parked cars stay on the ground.
+Not verified: **not run in a browser** (the local server was refused), and no headless test can build `CityTraffic` (it needs three.js). Needs a person: drive up a Delhi flyover and through an underpass with traffic on, and watch for cars floating, cars stopping for the level below, and cars turning onto the wrong level at ramps. Anything wrong: revert `citytraffic.js` hunks marked R14.
+For the other stream: nothing.
+Status: open
+
+## 2026-11-18 20:00  A-2026-11-18-01: audit fixes v1 to v3 (random streams, tile back-off, routing measurement)
+Branch: claude/audit-fixes  Commit: see the PR (not merged, nothing deployed)
+What changed: v1 `citytraffic.js`, `citypeds.js`: each owns a seeded random stream (`this.rnd`), no module-level generator (R15). v2 `cityworld.js`: a failed tile is asked for again after 1 s, 2 s, 4 s ... up to 30 s (R10 in part). v3 new `tools/measure_city.mjs`: graph parse 41 ms and city routes 80 to 140 ms on a desktop (`docs/STATUS.md`). Also merged the newest `main` (PRs 78 and 82); the selftest is 109 checks. Not verified: no browser run (the local server was refused), and no test constructs `CityTraffic` or `CityPeds`, so v1 and v2 are syntax-checked and covered only by the existing 109 checks.
+For the other stream: nothing new.
+Status: info
+
+## 2026-11-17 22:00  A-2026-11-17-01: audit fixes (R01, R04 to R07, R11, R16 to R19), docs and rules edited
+Branch: claude/audit-fixes  Commit: see the PR (not merged, nothing deployed)
+What changed: owner approved the independent audit's findings; answers in `docs/DECISIONS.md`, status in `docs/STATUS.md`. **Shared files touched (small):** `src/main.js` (sector `load` is all-or-nothing and rolls back on failure; `save()` shows one toast when a write fails), `tools/selftest.mjs` (+3 checks, 108 total), `tools/stage_cloudflare.py` (now stages `.bin`, `.txt`, `.wasm`: terrain.bin and the attribution files were missing from a release), `HANDOFF.md`, `OVERVIEW.md`, `PARALLEL_PLAN.md` (a banner pointing to `docs/STATUS.md`), `CLAUDE.md` (reserve shared files first, status words open/info/done, IDs, evidence fields). **Stream B files touched at the owner's request:** `src/core/runtime.js` (handles carry a registry/pool domain, a foreign handle no longer resolves; `droppedTime` counts clamped frame gaps), `src/player/onfoot.js` (swept capsule controller with `y0`/`y1` on obstacle circles; `chooseExit` now sees cars as obstacles). Also: `LICENSE.md` (all rights reserved for our own work), `tools/daily_check.py` (new stage-list check, honest about `git fetch`), `.claude/commands/sync.md` (stream from `git config user.name`), `docs/SHARED_SIM_PLAN.md`, `docs/OVERALL_PLAN.md` (N21 to N26, after Delhi), `docs/ONFOOT.md`, OSM2World licence label.
+Self-test: 108 checks pass. Not done or not verified: the game was **not** run in a browser this session (a local server was refused), so `main.js` is only syntax-checked; R04's rollback has no headless test (main.js cannot be imported); the world does not yet give obstacle circles `y0`/`y1`, so the capsule treats every circle as a column; R02 (phones), R09, R10, R13 need measuring.
+For the other stream: Anshul: when you next deploy, run `python tools/stage_cloudflare.py` from this branch's merge so terrain.bin and the attribution file go out; please review the `runtime.js` and `onfoot.js` changes (your files). Nothing else.
+
 Status: open
 
 ## 2026-11-18 10:00  Delhi seen from the air: denser far city, no random trees, one ground tone
@@ -92,9 +593,11 @@ Status: open
 ## 2026-11-18 04:00  Delhi frame cost: 610k to 250k triangles, 408 to 337 draw calls at the default start (q=med)
 Branch: claude/delhi-perf-cut  Commit: see the PR
 What changed: (1) `tilemesh.js` `Mesher.cells(size)` and `cityworld.js` (`CELLED`, `LOD_OF`, `flagMesh`): the near-detail meshes (pavements and kerbs, street furniture, markings, signs, banners, ads) are cut into 250 or 500 m cells, so the near-detail distance and the view culling work per cell and not per 1000 m tile (before, standing in a tile drew all its pavements and furniture, 280k triangles); per-kind distances (signs and banners 280 m, furniture 350 m, markings 400 m, pavements 450 m). (2) `src/main.js` (shared file, one line after `config.view = ...`): in a city the engine's own terrain, which lies flat under the city ground, uses 8, 4 and 4 cells per tile out to 4 tiles and a far ring out to 6 (it was 64, 32, 16, 8 cells out to 8 tiles and 9 far: 284k + 90k triangles of ground nobody could see). Measured in the browser at `?play&q=med` (Connaught Place), same camera: 408 calls and 610k triangles before, 337 and 250k after; the picture is the same by eye; at the Ghazipur gate 311 calls, 143k triangles, no gap at the edge. Not measured: a real frame rate or a phone; the shadow pass is still drawing every building of the nearest tiles (buildings are not cut into cells: it added more calls than it saved). Seen, not fixed: at the gate `nationalhighway24bypassflyover-east-1` a flyover pier stands directly in front of the start.
+
 ## 2026-11-18 03:00  Delhi: landmark starts were inside the landmark models; tiles were fetched twice
 Branch: claude/delhi-spawn-and-tile-fixes  Commit: see the PR
 What changed: `src/world/city/pack.js` only. (1) `start(id)` for a landmark now picks the nearest street node OUTSIDE the landmark footprint (`nearestNode(x, z, avoid)`); before, 38 of 63 landmark starts (e.g. `?at=new-delhi-station`, red-fort, connaught-place) were inside the footprint, and with the D8 models the car started inside a wall. Checked in the browser: all 63 starts are outside, New Delhi station start seen from the street. (2) `tile()` shares the raw tile JSON between the near city and the far skyline (a 64-entry cache): 62 fetches of 48 tiles became 48 of 48 at start. Not fixed: `/api/settings` and `/settings.json` answer 404 on the local server (only the Cloudflare worker serves them); the frame cost at the Delhi start (about 430 draw calls, 570k triangles at `q=med`) is unchanged and over the phone budget.
+
 ## 2026-11-18 02:00  D6c (first part): platform number boards at the railway stations
 Branch: claude/delhi-d6c-platform-numbers  Commit: see the PR
 What changed: `src/world/city/transit_rail.js` only (number atlas texture, board quads, dispose); `docs/DELHI_TRANSIT.md` section 4 note. Boards are numbered in OSM order, not the real platform numbers. Checked in the browser at New Delhi: 36 boards, 144 triangles, no console errors; not seen by eye (the pane renders black).
@@ -105,10 +608,12 @@ Status: open
 Branch: claude/delhi-d6b  Commit: see the PR
 What changed: `transit_geo.js` (`flight`, `gates`), `transit_station.js`, `transit_underground.js`, `transit_rail.js` (two real rakes from `train_art.js` and `train_consist.js`), small hook in `cityworld.js` (`cityConfig`: sea at -30 m so it does not cut through the underground stations), `tools/selftest.mjs` (103 checks). Docs: `docs/DELHI_TRANSIT.md` section 11 (cost, what is not done), WORK_REMAINING D6b.*.
 For the other stream: nothing.
+
 ## 2026-11-17 23:50  D8: Delhi landmark models (22 places built, 8 of them partly)
 Branch: claude/delhi-d8-landmarks-d40d41  Commit: see the PR
 What changed: new `src/world/city/landmarks/` (`index.js` manager, `kit.js` primitives and materials, `geo.js`, `plans.js` registry, `plans_axis.js`, `plans_mughal.js`, `plans_modern.js`). Shared files, smallest changes: `src/world/city/cityworld.js` (create `this.lmx`, call `lmx.update` each frame, pass `skip` to the tile mesher, add `lmx.circles` to `near`, `reposition`, `setNight`, `summary`), `src/world/city/tilemesh.js` (one line: a landmark with a model is not drawn as a plain block), `tools/selftest.mjs` (+1 check, 104), `tools/build_landmarks_doc.mjs` (appends `tools/city_data/delhi_model_status.md`, the status table, to `docs/DELHI_LANDMARKS.md`). The models are procedural (no files, no images), from each landmark's footprint box, yaw and height in `landmarks.json`; collision circles come back through `city.near`; name boards and info cards from the same record; keep-out claims for the extra ground. Measured (hidden pane, medium): at India Gate 411 draw calls and 364k triangles in view, the 22 models together about 150k triangles (largest: Red Fort 36k), a model builds in 0 to 26 ms (the Jama Masjid 90 ms once).
 For the other stream: nothing to run. D7 and D6b: I touched no `streetlife*.js` or `transit*.js`; the railway station fronts (New Delhi, Old Delhi, Nizamuddin) are drawn by `landmarks/plans_modern.js`, platforms and canopies are still yours. A landmark with a plan is skipped by the tile mesher (`ctx.skip`), so its old label and plain block are gone; the model draws its own board.
+
 ## 2026-11-17 23:30  D7: street life and identity of Delhi (identity.json, shops, ads, vehicles, buses, people)
 Branch: claude/delhi-d7-streetlife-29f2c5  Commit: see the PR
 What changed: new `assets/cities/delhi/identity.json`, `src/world/city/{identity,streetart,streetlife,vehicles,citybus}.js`, `docs/DELHI_LOOK.md`; shared files touched with a few lines each: `tilemesh.js` (exports `Mesher`, one `yield*` call to `buildStreetLife`), `cityworld.js` (identity, art, buses, new mesh names, month haze, a crash guard in `updateFar` for empty far tiles), `citytraffic.js` (vehicle kinds replace the two boxes), `citypeds.js` (clothes, extra standing people), `src/pedestrians/pedestrians.js` (one line: `p.cloth` overrides the clothes colour), `tools/selftest.mjs` (104 checks).
@@ -125,6 +630,7 @@ Status: open
 Branch: claude/delhi-d5b-fixes-fa289f  Commit: see the PR
 What changed: new `src/ui/citymap.js`, `src/world/city/{citynav,gates,cuts,skyline,citypeds}.js`; `cityworld.js`, `tilemesh.js`, `citytraffic.js`, `pack.js` extended (graph `name`/`dn` columns, `underDepth`). Shared files, smallest changes: `src/main.js` (city map hook, autodrive on a route path, gate fade and carry, enclave save, camera floor in a city), `src/input/autodrive.js` (`lookMin`, `forward`), `src/vehicle/physics.js` and `rapier-vehicle.js` (`o.kerb` circles are skipped below 2.5 m/s), `src/world/network.js` (`worldStart(city, { road, toward })`), `src/core/saved.js` (`enclave`), `tools/selftest.mjs` (102 checks).
 For the other stream: nothing required. Review the two vehicle-physics lines (kerb) and `autodrive.forward`. Deploy is still open from the D5b entry. Test in a visible browser window: `?play&q=med&city=delhi`, P for the map, pick India Gate, E for autodrive; `?bench=30&city=delhi` (needs a visible window).
+
 ## 2026-11-17 18:00  D6: Delhi Metro and railway stations drawn in the city enclave
 Branch: claude/delhi-d6-metro-2b04f7  Commit: see the PR
 What changed: new `src/world/city/transit_plan.js`, `transit_geo.js`, `transit.js`, `transit_station.js`, `transit_rail.js`, `transit_ui.js`; shared files touched with a few lines: `src/world/city/cityworld.js` (init, update, reposition, near, deck, summary), `src/main.js` (`city.transit.onTeleport`, `footY`, `__next.city`), `tools/selftest.mjs` (one new check, 100 now). Docs: `docs/DELHI_TRANSIT.md` section 10, CITY_PLAN, WORK_REMAINING D6.*, HANDOFF.
@@ -158,6 +664,7 @@ For the other stream: nothing to run. The transit session (D2/D3): use the same 
 Branch: claude/clever-dhawan-907ed4
 What changed: my signal constants file is now `world/rail_control_signals.js` (main's `rail_signals.js` planner is untouched). `rail_view.js` keeps main's drawing (signals with lit lamps, boom gates, loops and crossovers) and gets the control office on top: `spansFor(li)` and `closedAt(line, s)` feed the drawn signals, lamps, barriers and the road-traffic gates from the control office's real train positions and gate state (a gate is down before the train needs it, and a train stops short of it otherwise). No second set of signal posts is drawn. Drawn aspects come from main's planner and occupancy, the control office brakes at its own block signals (700 m), so the two agree on occupancy, not on lamp positions.
 For the other stream: nothing needed.
+
 ## 2026-11-23 12:00  Delhi transit data (D2 metro and railway stations, D3 buses)
 Branch: claude/magical-lichterman-8e5391  Commit: see the PR
 What changed: new `assets/cities/delhi/transit.json` (format 1, 444 KB: 11 metro lines with grade runs, 285 stations, 14 depots, 47 railway stations, 479 bus routes), `tools/build_delhi_transit.mjs` (+ `build_delhi_bus.mjs`, `lib_transit.mjs`, `lib_wikilist.mjs`, three fetchers), `tools/validate_transit.mjs`, `docs/DELHI_TRANSIT.md`. Shared files, small edits: `tools/selftest.mjs` (one check, 90 in all, imports the validator), `docs/CITY_PACK.md` (section 5 transit.json now has the real format 1), `docs/OPEN_DATA.md` (every download logged), `docs/CITY_PLAN.md` and `docs/WORK_REMAINING.md` (section 11, decision 1.11), `HANDOFF.md`, `CHECKLIST.md`. Raw files (37 MB) are in git-ignored `data/raw/delhi_transit/`.
@@ -528,18 +1035,22 @@ Tuner: all handling numbers are now live in the tuner under "handling" (`ARCADE`
 Downforce added (`ARCADE.downforce`, tuner "handling"): the car is pressed into the road with 0.5 x 1.2 x ClA x speed squared, so grip rises with speed. At 211 km/h, peak cornering goes from 1.04 g to 1.13 g (+9%). Straight-line numbers unchanged.
 Tyre model (Pacejka Magic Formula, standard published curve): `tyres()` in `rapier-vehicle.js` replaces Rapier's hard-cap side friction on the car (above 2.5 to 6.5 m/s the wheel's side friction stiffness is faded to 0). Each wheel gets a slip angle, a sideways force = mu x load x MF(slip angle) applied at its contact patch, and grip falls past the peak, so the car breaks away progressively. Settings in the tuner under "handling": tyreB, tyreC, tyreE, lockGrip (handbrake), tyreAssist (how much of the turn-in help stays on; was 1, now 0.3 with the tyre model). Checked: load sums to the car's weight; front and rear slip angles agree in a steady turn; straight at 270 km/h with 0.00 m drift (the old model drifted 3.5 m); body slip grows smoothly 0.01 to 0.09 as steering rises (old: nothing, then a snap); handbrake now steps the tail out. Toggle `ARCADE.tyre` off to get the old behaviour. Car only; truck and bike unchanged.
 Status: open
+
 ## 2026-11-15 12:00  Mountain roads fixed: grade now stays at 11-14% (N3)
 Branch: feat/n3-router-grade
 What changed: `src/world/locations.js`: the Alps and Himalayas set `maxCut: 1000` (never fall back to the steep stretch; tunnels and cuts absorb the height instead) and `hardGrade: 0.11`. Before: 7-24% (Alps) and 10-21% (Himalayas) of the road was over the hard limit, peaking near 21%. After: about 2% over, peak 14.4% (11.6% on one seed). Cost: more of the road is tunnel (Alps up to 35%, Himalayas up to 37% on one seed, 0-18% on the others). Checked by eye: the Himalayas road climbs a valley with a cut bank, and a 43 m cut turns into a tunnel. Re-run `node tools/locations_check.mjs` to see the numbers.
 For the other stream: nothing. Driving physics on 11-14% grades is worth a test with the car, truck and bike (the truck may struggle).
+
 ## 2026-11-15 11:00  Mountain roads are too steep (fixed, see the 12:00 entry)
 Branch: feat/n3-grade-check
 What changed: `tools/locations_check.mjs` now also prints the share of the road above the hard grade limit. Finding: Alps 7-24% and Himalayas 10-21% of the road is over the hard limit (14-15%), peaking near 21%; Mumbai 0%, default 3.7%. Allowing deeper cuts and a lower fallback grade (`maxCut`, `lastGrade`) helped some seeds and made others worse (Himalayas coast 21% to 47%), so I kept the config as it was. The cause is the route choice in `router.js`, not the limits. Next: make the router prefer gentler lines in the mountains (switchbacks) and re-measure with this check.
 For the other stream: nothing. Expect the climb to feel steep in the Alps and Himalayas until this is fixed.
 Status: done (fixed by the 12:00 entry: hardGrade 0.11, maxCut 1000)
+
 ## 2026-11-15 10:00  Marine Drive fixed and placed near the start (N3)
 Branch: feat/n3-marine-drive
 What changed: `src/world/landmarks.js`: the Marine Drive strip was never rotated into its own frame, so the sea wall, lamps and tetrapods drifted 100+ m off the road; fixed. It now carves its own bay in front of the sea wall, and the sea-side parts sit 7 m further from the road. Landmark search now prefers spots near the requested distance (Mumbai's three landmarks were 1.1 km behind the start). `src/world/locations.js`: Marine Drive no longer needs natural sea and starts the search at s=250.
+
 ## 2026-11-14 20:00  Coarser outer terrain ring on med and high (speed)
 Branch: feat/n3-terrain-lod
 What changed: `src/core/config.js` (shared): the med and high tiers get one more, coarser terrain ring (8 cells per tile at the far edge). Medium: 310k to 282k triangles per frame (-9%), same scene. Not checked by eye on hills; look at distant ridges in the Alps and Himalayas.
@@ -663,6 +1174,7 @@ npx wrangler secret put TUNER_PASSWORD         # choose the shared tuner passwor
 cd .. && python tools/stage_cloudflare.py && cd cloudflare && npx wrangler deploy
 ```
 After that `/tuner.html` on the live site can Publish, and every player's game reads the published settings when it starts.
+
 ## 2026-11-14  Atal-Tunnel-style portal and interior (on PR #4)
 Branch: world/bridges
 What changed: tunnels now have a pitched-roof gate on banded stone pillars with a name board in front of each portal, a green-roof hut beside it, a cream interior with warm light strips on both walls and orange cones along the lane edges (`src/world/tunnels.js`). The board text is `road.c.tunnelName` (Himalayas: "ATAL TUNNEL, ROHTANG"; elsewhere "TUNNEL"). The Himalayas location now starts in snow with the snowline at 3300 m (`src/world/locations.js`). Stylised to match the rest of the game, not photoreal: Rajul is deciding whether to go further.
@@ -706,6 +1218,7 @@ git fetch && git merge origin/main
 node tools/selftest.mjs
 ```
 Stream A starts Phase 2 (bridges, tunnels or switchbacks, location polish) on `world/bridges`.
+
 ## 2026-11-14  DIRECTION CHANGE: the whole game goes photorealistic (read `team/photoreal-plan.md`)
 Branch: plan/photoreal
 What changed: nothing in code yet. Rajul decided the game should look as real as possible (the flat stylised rule is dropped), with free assets first and Blender for the rest. The plan keeps three.js but upgrades it from r160 and splits the work by stream (R0 to R6).

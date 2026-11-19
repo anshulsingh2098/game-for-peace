@@ -1,0 +1,8 @@
+/* The streets around a point of the Delhi pack, by class, layer, lanes, one-way and name: node tools/audit_city_area.mjs <game x> <game z> [radius m]. Made for the owner's report of parallel strips near Todarmal Road (docs/CITY_CONFLICTS_PLAN.md). */
+import { readFileSync, existsSync } from 'node:fs';
+import { decodeGraphColumns, decodeTile, pieceWidth } from '../src/world/city/pack.js';
+const R = new URL('../assets/cities/delhi/', import.meta.url).pathname, G = decodeGraphColumns(JSON.parse(readFileSync(R + 'graph.json', 'utf8'))), M = JSON.parse(readFileSync(R + 'manifest.json'));
+const C = [+process.argv[2] || 2290, +process.argv[3] || -1760], RAD = +process.argv[4] || 130; const stat={},names={},sample=[];let tot=0;
+for(let tx=Math.floor((C[0]-RAD)/1000);tx<=Math.floor((C[0]+RAD)/1000);tx++)for(let tz=Math.floor((C[1]-RAD)/1000);tz<=Math.floor((C[1]+RAD)/1000);tz++){const f=R+'tiles/'+tx+'_'+tz+'.json';if(!existsSync(f))continue;const t=decodeTile(JSON.parse(readFileSync(f,'utf8')),M.tileSize);
+ for(const s of t.streets){const p=s.pts;let near=false;for(let i=0;i<p.length;i+=2)if(Math.hypot(p[i]-C[0],p[i+1]-C[1])<RAD){near=true;break}if(!near)continue;tot++;const id=s.id,cls=G.classes[G.cls[id]],nm=G.names[G.name[id]]?.en||'(no name)';const k=cls+'/l'+G.layer[id]+'/lanes'+G.lanes[id]+'/one'+G.oneway[id];stat[k]=(stat[k]||0)+1;names[nm]=(names[nm]||0)+1;if(sample.length<6&&cls==='service')sample.push([nm,Math.round(G.len[id]),G.speed[id],Math.round(pieceWidth(G,s))])}}
+console.log('streets within',RAD,'m of the strips:',tot);console.log(JSON.stringify(stat));console.log(Object.entries(names).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x.join(' x')).join(' | '));console.log('service samples (name,len,speed,width):',JSON.stringify(sample));
