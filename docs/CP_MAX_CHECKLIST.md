@@ -13,8 +13,8 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 | ☐ | DEL-003 | Central Park CP | CP | 1025, -1979 | cp | Palika Bazaar (116 m) | Rajiv Chowk (113 m) | 🟨 built, not scored |
 | ☐ | DEL-004 | Janpath Market | SUR | 976, -1323 | default | Janpath Market (89 m) | Janpath Market (89 m) | 🟨 landmark model exists |
 | ☐ | DEL-005 | Palika Bazaar | CP | 800, -1946 | cp | Palika Bazaar (179 m) | Palika Bazaar (179 m) | 🟨 built, not scored |
-| ☐ | DEL-006 | India Gate | SUR | 2001, 111 | lutyens | India Gate (4 m) | India Gate (3 m) | 🟨 landmark model exists |
-| ☐ | DEL-007 | Kartavya Path | SUR | 781, -67 | lutyens | National Museum (366 m) | National Museum (366 m) | ⬜ nothing specific |
+| ☐ | DEL-006 | India Gate | SUR | 2001, 111 | kartavya | India Gate (4 m) | India Gate (3 m) | 🟨 landmark model exists |
+| ☐ | DEL-007 | Kartavya Path | SUR | 781, -67 | kartavya | National Museum (366 m) | National Museum (366 m) | ⬜ nothing specific |
 | ☐ | DEL-008 | Rashtrapati Bhavan | SUR | -937, -44 | lutyens | Rashtrapati Bhavan (21 m) | Rashtrapati Bhavan (21 m) | 🟨 landmark model exists |
 | ☐ | DEL-009 | Parliament House | SUR | -98, -367 | lutyens | Samvidhan Sadan (old Parliament House) (15 m) | Samvidhan Sadan (15 m) | 🟨 landmark model exists |
 | ☐ | DEL-010 | New Parliament | SUR | 49, -423 | lutyens | Sansad Bhavan (new Parliament House) (84 m) | Sansad Bhavan (85 m) | 🟨 landmark model exists |
@@ -97,11 +97,11 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 | ☐ | AST-032 | roads | underpass retaining wall | KIT | 🟨 partial | underpass walls in the cut code |
 | ☑ | AST-033 | roads | traffic signal | CP | 🟩 built | mast arms with live signal heads |
 | ☑ | AST-034 | roads | Indian road sign bilingual | CP | 🟩 built | Hindi/English boards, gantry with places, small signs (A-2026-11-20-06, -07) |
-| ☐ | AST-035 | roads | bus stop shelter | CP | ⬜ not started | buses exist (citybus.js); no shelter model |
-| ☐ | AST-036 | roads | road drain | CP | ⬜ not started |  |
+| ☐ | AST-035 | roads | bus stop shelter | CP | 🟨 partial | bus shelters at the transit stops (streetlife.js); not placed on every CP stop |
+| ☐ | AST-036 | roads | road drain | CP | 🟨 partial | cpstreet.js (not hooked in yet: A-2026-11-22-02) |
 | ☑ | AST-037 | roads | manhole cover | CP | 🟩 built | manhole covers in road wear |
-| ☐ | AST-038 | roads | traffic barricade | CP | ⬜ not started |  |
-| ☐ | AST-039 | roads | parking bollard | CP | ⬜ not started |  |
+| ☐ | AST-038 | roads | traffic barricade | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
+| ☐ | AST-039 | roads | parking bollard | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
 | ☐ | AST-040 | commerce | pharmacy sign template | CP | 🟨 partial | pharmacy as a shop kind with board |
 | ☐ | AST-041 | commerce | mobile shop sign template | CP | 🟨 partial | mobile shop kind |
 | ☐ | AST-042 | commerce | coaching banner template | KIT | ⬜ not started |  |
@@ -137,16 +137,16 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 | ☑ | AST-072 | infrastructure | metro train | KIT | 🟩 built | metro train |
 | ☑ | AST-073 | infrastructure | utility pole | CP | 🟩 built | power poles with wires |
 | ☐ | AST-074 | infrastructure | cable bundle | CP | 🟨 partial | wires between poles; no bundle model |
-| ☐ | AST-075 | infrastructure | distribution transformer | CP | ⬜ not started |  |
+| ☐ | AST-075 | infrastructure | distribution transformer | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
 | ☑ | AST-076 | infrastructure | streetlamp | CP | 🟩 built | street lamps with light pools |
-| ☐ | AST-077 | infrastructure | public dustbin | CP | ⬜ not started |  |
-| ☐ | AST-078 | infrastructure | roadside CCTV | CP | ⬜ not started |  |
+| ☐ | AST-077 | infrastructure | public dustbin | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
+| ☐ | AST-078 | infrastructure | roadside CCTV | CP | 🟨 partial | cpstreet.js (not hooked in yet) |
 
 ## Totals (assets)
 
 | Scope | Rows | built | partial | not started |
 |---|---|---|---|---|
-| CP | 43 | 21 | 13 | 9 |
+| CP | 43 | 21 | 20 | 2 |
 | SUR | 6 | 0 | 4 | 2 |
 | KIT | 29 | 5 | 7 | 17 |
 
