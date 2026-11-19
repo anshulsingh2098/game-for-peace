@@ -1,5 +1,7 @@
 # Plan: "Karol Bagh Run", a simple mission game (owner idea, 20 Nov 2026). PLAN ONLY: nothing is built.
 
+**Decision (owner, 20 Nov 2026): storyline B, Repo Man, for the first version.** The targets are recovered cars of loan defaulters, the buyer is a dealer in Karol Bagh; C (the Peace Fund) stays as the later use of the cash.
+
 ## The idea, and is it logical?
 Steal one of the most expensive cars in Delhi, a pin appears on the map for the Karol Bagh car market, drive it there, sell it, get cash.
 **Yes, it holds together, and it fits what the game already has**, with three conditions:
