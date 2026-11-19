@@ -2,6 +2,13 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-21  Phase 7 follow-up: power poles and lamp pool inspected
+Method: the game page with a second camera rendered once into an overlay (the game's own camera cannot look up from the road), spots on the Outer Circle near x 932, z -2030 and x 811, z -2073.
+Seen, day: a grey power pole with a cross-arm 2.2 m beside a lamp post; three wires across a street between two poles 64 m apart. First version (a pole at every third lamp) made no wires at all (80 spans appear after the change to every second lamp, counted by a temporary counter, removed).
+Seen, night: warm lamp pools on the pavement, the kerb and the road under three lamps, lamp heads glowing. Verdict: matches the intent; strength not compared with a photo.
+Also seen: palms read as palms from a distance; drum corner caps look like thin slanted flaps from a low angle (wrong, listed in `docs/OPEN_ITEMS.md` item 17).
+Self-test 121 checks.
+
 ## 2026-11-21  Phase 7: open items from the first six phases (night frames, lamps, dusk, power poles)
 Done (branch `claude/delhi-main-phase-7`, stacked on phase 6): (1) power poles with a cross-arm and three wires beside every third lamp post in the `cp` area (`streetlife.js`); (2) palm taken out of the Kartavya species (the avenue is jamun and neem); (3) `docs/OPEN_ITEMS.md`, the register of everything not done from every ask; (4) measurements below.
 Night frames, desktop (Intel Mac, visible pane), `?play&city=delhi&q=high&bench=30`, night set at load: this branch 12.4 ms average (80.6 fps), p95 16.7, p99 17.3, worst 44.4, 517 calls, 480,620 triangles; main checkout 11.9 ms (84 fps), p95 16.7, p99 17.1, worst 50.1, 503 calls, 386,058 triangles. So +0.5 ms (4 percent) at night, +94,562 triangles. Dusk, this branch only: 12.2 ms, p95 16.7, p99 17.2, 517 calls. JS heap read 1130 MB against 600 MB on main at the end of the run (one sample each, not understood: could be garbage collector timing or the added meshes).

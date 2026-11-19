@@ -109,7 +109,7 @@ export function* buildStreetLife(tile, ctx, out) {
     if (pc.lay !== 0 || !DRIVABLE.has(pc.cls) || pc.len < 14) { if (pc.lay > 0 && pc.len > 20) deckLife(pc); continue; }
     const mid = at(pc, pc.len / 2), an = ID.areaNameAt(mid.x, mid.z), A = ID.area(an), edge = pc.hw + (pc.walk > 0 ? 1.7 : 0.7), lamp = an === 'cp' || an === 'lutyens' || an === 'kartavya' || an === 'business';
     /* poles */
-    let prev = null, prevPow = null, prevSide = 0; const step = lamp ? 32 : 28, sd = rnd(pc.id, 5) < 0.5 ? 1 : -1;
+    let prev = null, prevPow = null, pi = 0, prevSide = 0; const step = lamp ? 32 : 28, sd = rnd(pc.id, 5) < 0.5 ? 1 : -1;
     for (let s = 6 + rnd(pc.id, 6) * 6; s < pc.len - 6 && st.poles < cap.poles; s += step) {
       const o = at(pc, s), px = o.x + -o.tz * edge * sd, pz = o.z + o.tx * edge * sd; if (insideBuilding(px, pz, 0.4) || inRoad(px, pz, 0.4)) { prev = null; continue; }
       const [lx, lz] = L(px, pz); st.poles++; circle(px, pz, 0.25);
@@ -120,8 +120,8 @@ export function* buildStreetLife(tile, ctx, out) {
         if (A.shop.wires > 0.6 && rnd(pc.id, s | 0, 3) < 0.5) { const ox2 = px + o.tz * (edge * 2 + pc.hw) * sd, oz2 = pz - o.tx * (edge * 2 + pc.hw) * sd; wire(M.prop, px - ox, gy + 6.0, pz - oz, ox2 - ox, gy + 5.2, oz2 - oz, 0.5, C(PALE.wire)); wire(M.prop, px - ox, gy + 5.7, pz - oz, ox2 - ox, gy + 4.9, oz2 - oz, 0.7, C(PALE.wire)); st.spans++; } }
       if (A.ads > 0.4 && rnd(pc.id, (s | 0) + 3) < A.ads * 0.7) { const c = art.bannerFor(rnd(pc.id, (s | 0) + 7)); for (const f of [1, -1]) board(M.ban, lx + o.tz * sd * 0.5 + o.tx * 0.05 * f, gy + 5.0, lz - o.tx * sd * 0.5 + o.tz * 0.05 * f, o.tx * f, o.tz * f, 0.8, 1.6, WHITE, [c.u0, c.v0, c.u1, c.v1]); }
       prev = { x: px, z: pz }; prevSide = sd; void prevSide;
-      /* CP (owner 21 Nov, phase 5 list): a power pole 2 m beside every third lamp post, a cross-arm and three wires to the last one, so the walk is not bare of overhead cables */
-      if (an === 'cp' && Math.round(s / step) % 3 === 0) { const qx = px + o.tx * 2.2, qz = pz + o.tz * 2.2; if (!insideBuilding(qx, qz, 0.4) && !inRoad(qx, qz, 0.4)) { const [mx, mz] = L(qx, qz); box(M.prop, mx, gy, mz, 0.22, 8.2, 0.22, 1, 0, C(PALE.pole)); box(M.prop, mx, gy + 7.2, mz, 1.6, 0.1, 0.12, -o.tz, o.tx, C(PALE.pole)); if (prevPow) { for (let k = 0; k < 3; k++) wire(M.prop, prevPow.x - ox, gy + 7.3 - k * 0.3, prevPow.z - oz, qx - ox, gy + 7.3 - k * 0.3, qz - oz, 0.7 + 0.2 * k, C(PALE.wire)); st.spans++; } prevPow = { x: qx, z: qz }; } }
+      /* CP (owner 21 Nov, phase 5 list): a power pole 2.2 m beside every second lamp post (every third gave one pole to a short street piece and so no wire span, seen 21 Nov), a cross-arm and three wires to the last one, so the walk is not bare of overhead cables */
+      if (an === 'cp' && (pi++ & 1) === 0) { const qx = px + o.tx * 2.2, qz = pz + o.tz * 2.2; if (!insideBuilding(qx, qz, 0.4) && !inRoad(qx, qz, 0.4)) { const [mx, mz] = L(qx, qz); box(M.prop, mx, gy, mz, 0.22, 8.2, 0.22, 1, 0, C(PALE.pole)); box(M.prop, mx, gy + 7.2, mz, 1.6, 0.1, 0.12, -o.tz, o.tx, C(PALE.pole)); if (prevPow) { for (let k = 0; k < 3; k++) wire(M.prop, prevPow.x - ox, gy + 7.3 - k * 0.3, prevPow.z - oz, qx - ox, gy + 7.3 - k * 0.3, qz - oz, 0.7 + 0.2 * k, C(PALE.wire)); st.spans++; } prevPow = { x: qx, z: qz }; } }
     }
     /* street trees */
     const dens = (veg.classDensity[pc.cls] || 0.5) * A.trees.density; if (dens > 0.03) {
