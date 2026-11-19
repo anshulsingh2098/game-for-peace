@@ -29,6 +29,8 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 28 | Phase 11 | CP busier traffic and the spawn tournament change the whole city's spawning (3 candidates elsewhere) | Seen only at CP | Look at another area; Anshul's Claude owns `citytraffic.js` (C-tasks) |
 | 29 | Phase 11c | Frame time depends on machine load: back to back main and branch both 14.2 ms (70.3 fps), 502 against 531 draw calls, 385,974 against 537,047 triangles; earlier runs read 11.9 and 12.7 to 13.3 ms; both runs look bounded by the display or machine, so small costs are hidden | Other sessions load the machine | Run on a quiet machine or a phone |
 | 30 | CP landmarks | The whole CP landmarks and showrooms programme L2 to L7 (`docs/CP_LANDMARKS.md`): boards from data, the cinema, the pavilion block, granite pavements, petrol pump, street life | Plan and data only so far | Owner confirms the decisions at the end of that file |
+| 31 | L2 | Place boards: 68 of the 129 places got a board in the first tiles (the rest lie outside an arcade front or in tiles not loaded); two adjacent arcade fronts can show the same generic board side by side (seen: SPICE ROUTE twice); a place board may land a few metres from the real shop | OSM points are not shopfronts | A second look with a photo; dedupe neighbours |
+| 32 | L2 | The brand atlas grew from 1024 x 576 to 1024 x 1632 pixels (+4 MB of texture memory with mips) | New place cells | Phone memory check; halve the place cells if needed |
 
 ## Closed
 | Item | Evidence |

@@ -1,5 +1,6 @@
 /* Connaught Place facade pieces (owner's photos R1 to R4, 20 Nov 2026): the brand-board band along the front of the arcade (a deep fascia of red, blue, black and white panels with lettering that glows at night), and the drum corner blocks with a cornice ring and a dome. Own geometry and an atlas drawn in code; the brand names are INVENTED (the owner's decision of 19 Nov: names may be used as plain lettering, no logos or trade dress are copied, and these are not real shops). The functions only fill a `Mesher` (tilemesh.js) so tilemesh.js needs a few hook lines and this file holds the rest. */
 import * as THREE from 'three';
+import { CP_PLACES } from './cpplaces.js';
 
 export const BRANDS = [
   ['URBAN THREAD', 0xc4202e, 0xffffff], ['KAFE NOIR', 0x15161a, 0xf2d27a], ['SPORTLINE', 0x1d5bb8, 0xffffff], ['TECHMART', 0xf2f0ea, 0x1d1d22], ['BLUE ORCHID', 0x1f4aa0, 0xffffff], ['SILK & SAGE', 0x2e2a30, 0xe8d6b0], ['ROYAL BAZAAR', 0x7a1a22, 0xf5e6b8], ['NOVA MOBILES', 0xe9791c, 0xffffff],
@@ -9,19 +10,40 @@ export const BRANDS = [
 ];
 const CELL_W = 256, CELL_H = 64, COLS = 4, ROWS = 8, ROWS_ALL = 9;      /* 8 rows of boards and a last row whose first cell is the warm lamp patch */
 export const BRAND_COUNT = BRANDS.length;
+/* L2 (docs/CP_LANDMARKS.md): the named places of CP as extra boards. Atlas cells for them sit below the lamp row, 5 columns of 192 x 48; an index of 1000 + k means place k. */
+const PCELL_W = 192, PCELL_H = 48, PCOLS = 5, PLACE_NAMES = [], PLACE_KIND = [], PLACE_OF = new Map(); for (const [n, kind] of CP_PLACES) if (!PLACE_OF.has(n)) { PLACE_OF.set(n, PLACE_NAMES.length); PLACE_NAMES.push(n); PLACE_KIND.push(kind); }
+const PBASE_Y = 9 * 64, ATLAS_H = PBASE_Y + Math.ceil(PLACE_NAMES.length / PCOLS) * PCELL_H;
+/* a board style by kind and by name (a deterministic pick): cafes brown and cream, bars black with a neon colour, restaurants deep red, green or blue with cream, food counters red and yellow, the cinema black and gold */
+const PSTYLE = { cafe: [[0x4a2c1a, 0xf5e6c8], [0x1f5a3c, 0xf5e6c8], [0x2b1d14, 0xe8c27a]], bar: [[0x15161a, 0xff5fa8], [0x15161a, 0x5fd0ff], [0x1b1030, 0xffd45f]], restaurant: [[0x7a1a22, 0xf5e6b8], [0x1d3f6a, 0xf5ecd8], [0x2e5a2a, 0xf5ecd8], [0x3a2a24, 0xe8c27a]], food: [[0xc4202e, 0xffd23a], [0xe9791c, 0xffffff], [0xf2c230, 0x8a1c1c], [0x1f5bb8, 0xffffff]], cinema: [[0x111111, 0xe6b84a]] };
+const pstyle = (name, kind) => { let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0; const l = PSTYLE[kind] || PSTYLE.restaurant; return l[h % l.length]; };
+/* which board of an arcade front shows which place: a place belongs to the board nearest to it when it lies within 18 m of the board line and between its ends; the other boards keep the invented generic brands. Returns an array of n brand indices (generic 0..31 or 1000 + place). */
+export function assignBoards(ax, az, bx, bz, n, key) {
+  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1, tx = dx / L, tz = dz / L, out = new Array(n), best = new Array(n).fill(18);
+  for (let k = 0; k < n; k++) out[k] = brandIndex(key, k);
+  for (const [name, , x, z] of CP_PLACES) { const u = (x - ax) * tx + (z - az) * tz, d = Math.abs(-(x - ax) * tz + (z - az) * tx); if (u < 0 || u > L || d > 18) continue; const k = Math.min(n - 1, Math.floor(u / L * n)); if (d < best[k]) { best[k] = d; out[k] = 1000 + PLACE_OF.get(name); } }
+  return out;
+}
+export function boardColour(i) { return i >= 1000 ? pstyle(PLACE_NAMES[i - 1000], PLACE_KIND[i - 1000])[0] : BRANDS[i][1]; }
 
 /* the brand atlas: one 1024 x 512 canvas of 32 boards; the same canvas is the emissive map, so the boards glow at night */
 export function makeBrandAtlas() {
-  const c = document.createElement('canvas'); c.width = CELL_W * COLS; c.height = CELL_H * ROWS_ALL; const g = c.getContext('2d');
+  const c = document.createElement('canvas'); c.width = CELL_W * COLS; c.height = ATLAS_H; const g = c.getContext('2d');
   BRANDS.forEach(([name, bg, fg], i) => {
     const x = (i % COLS) * CELL_W, y = Math.floor(i / COLS) * CELL_H, hex = h => '#' + h.toString(16).padStart(6, '0');
     g.fillStyle = hex(bg); g.fillRect(x, y, CELL_W, CELL_H); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 3; g.strokeRect(x + 3, y + 3, CELL_W - 6, CELL_H - 6);
     g.fillStyle = hex(fg); g.textAlign = 'center'; g.textBaseline = 'middle'; let fs = 34; g.font = 'bold ' + fs + 'px Arial,Helvetica,sans-serif'; while (g.measureText(name).width > CELL_W - 30 && fs > 12) { fs -= 2; g.font = 'bold ' + fs + 'px Arial,Helvetica,sans-serif'; } g.fillText(name, x + CELL_W / 2, y + CELL_H / 2 + 2);
   });
   { const x = 0, y = ROWS * CELL_H, gr = g.createRadialGradient(x + CELL_W / 2, y + CELL_H / 2, 4, x + CELL_W / 2, y + CELL_H / 2, CELL_W / 2); gr.addColorStop(0, '#fff3c4'); gr.addColorStop(0.6, '#ffd27a'); gr.addColorStop(1, '#ffb347'); g.fillStyle = gr; g.fillRect(x, y, CELL_W, CELL_H); }      // the warm lamp patch
+  PLACE_NAMES.forEach((name, k) => { const [bg, fg] = pstyle(name, PLACE_KIND[k]), x = (k % PCOLS) * PCELL_W, y = PBASE_Y + Math.floor(k / PCOLS) * PCELL_H, hex = h => '#' + h.toString(16).padStart(6, '0');
+    g.fillStyle = hex(bg); g.fillRect(x, y, PCELL_W, PCELL_H); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 2; g.strokeRect(x + 2, y + 2, PCELL_W - 4, PCELL_H - 4);
+    g.fillStyle = hex(fg); g.textAlign = 'center'; g.textBaseline = 'middle'; let fs = 26; g.font = 'bold ' + fs + 'px Arial,Helvetica,sans-serif'; while (g.measureText(name.toUpperCase()).width > PCELL_W - 18 && fs > 10) { fs -= 2; g.font = 'bold ' + fs + 'px Arial,Helvetica,sans-serif'; } g.fillText(name.toUpperCase(), x + PCELL_W / 2, y + PCELL_H / 2 + 1); });
   return c;
 }
-export function brandUV(i) { const k = ((i % BRAND_COUNT) + BRAND_COUNT) % BRAND_COUNT, x = (k % COLS) * CELL_W, y = Math.floor(k / COLS) * CELL_H, W = CELL_W * COLS, H = CELL_H * ROWS_ALL; return [(x + 2) / W, 1 - (y + CELL_H - 2) / H, (x + CELL_W - 2) / W, 1 - (y + 2) / H]; }
+export function brandUV(i) {
+  if (i >= 1000) { const k = i - 1000, x = (k % PCOLS) * PCELL_W, y = PBASE_Y + Math.floor(k / PCOLS) * PCELL_H, W = CELL_W * COLS; return [(x + 2) / W, 1 - (y + PCELL_H - 2) / ATLAS_H, (x + PCELL_W - 2) / W, 1 - (y + 2) / ATLAS_H]; }
+  return brandUV0(i);
+}
+function brandUV0(i) { const k = ((i % BRAND_COUNT) + BRAND_COUNT) % BRAND_COUNT, x = (k % COLS) * CELL_W, y = Math.floor(k / COLS) * CELL_H, W = CELL_W * COLS, H = ATLAS_H; return [(x + 2) / W, 1 - (y + CELL_H - 2) / H, (x + CELL_W - 2) / W, 1 - (y + 2) / H]; }
 
 /* the material: the atlas as colour and as emissive map (intensity 0 by day, raised at night by tilemesh.js setNight), a little glow always so the lettering stays crisp */
 export function makeBrandMaterial() {
@@ -30,9 +52,9 @@ export function makeBrandMaterial() {
 }
 
 /* the brand-board band along one arcade front: from point a to point b (x, z), at height y0, `h` tall, facing (nx, nz), one board a bay of about `bay` metres, each a different brand. `key` varies the choice by building. */
-export function brandBand(m, X, Z, ax, az, bx, bz, nx, nz, y0, h, bay, key) {
-  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 3) return 0; const n = Math.max(1, Math.round(L / bay)), tx = dx / L, tz = dz / L, w = L / n - 0.25; let q = 0;
-  for (let k = 0; k < n; k++) { const uMid = (k + 0.5) * L / n, cx = ax + tx * uMid + nx * 0.06, cz = az + tz * uMid + nz * 0.06, uv0 = brandUV(brandIndex(key, k)), uv = (tx * nz - tz * nx) < 0 ? [uv0[2], uv0[1], uv0[0], uv0[3]] : uv0;      /* seen from outside the wall the texture must run left to right: the viewer's right is (nz, -nx), so a wall running the other way gets the picture turned round (it read mirrored on half the walls) */ const W = new THREE.Color(0xffffff);
+export function brandBand(m, X, Z, ax, az, bx, bz, nx, nz, y0, h, bay, key, upper = false) {      /* upper: the second row of boards on the wall over the arcade (photos P1 and P2): generic brands only, every second bay, set 7 cm off the wall */
+  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 3) return 0; const n = Math.max(1, Math.round(L / bay)), tx = dx / L, tz = dz / L, w = L / n - 0.25, IDX = upper ? Array.from({ length: n }, (_, k) => brandIndex(key + 77, k)) : assignBoards(ax, az, bx, bz, n, key); let q = 0;
+  for (let k = 0; k < n; k++) { if (upper && k % 2) continue; const uMid = (k + 0.5) * L / n, cx = ax + tx * uMid + nx * (upper ? 0.32 : 0.06), cz = az + tz * uMid + nz * (upper ? 0.32 : 0.06), uv0 = brandUV(IDX[k]), uv = (tx * nz - tz * nx) < 0 ? [uv0[2], uv0[1], uv0[0], uv0[3]] : uv0;      /* seen from outside the wall the texture must run left to right: the viewer's right is (nz, -nx), so a wall running the other way gets the picture turned round (it read mirrored on half the walls) */ const W = new THREE.Color(0xffffff);
     const v0 = m.v(X(cx - tx * w / 2), y0, Z(cz - tz * w / 2), nx, 0, nz, W, uv[0], uv[1]), v1 = m.v(X(cx + tx * w / 2), y0, Z(cz + tz * w / 2), nx, 0, nz, W, uv[2], uv[1]), v2 = m.v(X(cx + tx * w / 2), y0 + h, Z(cz + tz * w / 2), nx, 0, nz, W, uv[2], uv[3]), v3 = m.v(X(cx - tx * w / 2), y0 + h, Z(cz - tz * w / 2), nx, 0, nz, W, uv[0], uv[3]); m.tri(v0, v1, v2, nx, 0, nz); m.tri(v0, v2, v3, nx, 0, nz); q++; }
   return q;
 }
@@ -88,7 +110,7 @@ export function bladeSign(m, X, Z, cx, cz, nx, nz, tx, tz, y0, key) {
 }
 
 /* the warm lamp patch: the uv of the lamp cell of the atlas (the same emissive map as the boards, so it glows at night and is a plain pale patch by day) */
-export function lampUV() { const W = CELL_W * COLS, H = CELL_H * ROWS_ALL, y = ROWS * CELL_H; return [4 / W, 1 - (y + CELL_H - 4) / H, (CELL_W - 4) / W, 1 - (y + 4) / H]; }
+export function lampUV() { const W = CELL_W * COLS, H = ATLAS_H, y = ROWS * CELL_H; return [4 / W, 1 - (y + CELL_H - 4) / H, (CELL_W - 4) / W, 1 - (y + 4) / H]; }
 
 /* a small horizontal glowing patch facing down, centred at (cx, y, cz), w along (tx, tz) and d across; X and Z map world to mesh coordinates (identity for a mesher that already works in tile-local metres) */
 export function glowQuad(m, X, Z, cx, y, cz, w, d, tx, tz) {
@@ -172,8 +194,8 @@ export function brandIndex(key, k) { return Math.floor(((key * 7 + k * 5 + Math.
 
 /* Wet reflections on the paving at night (phase 4 of docs/DELHI_MAIN_PLAN.md): in front of every board, a soft streak of the board's own colour on the plaza, brightest at the arcade and fading outward, as the glowing board would shine on wet stone. Additive, night only (the `cplight` mesh). From a to b along the arcade front, outward normal (nx, nz), at ground height y, `reach` metres out, a streak a board wide (same bays as brandBand). 2 triangles a board. */
 export function boardReflections(m, X, Z, ax, az, bx, bz, nx, nz, y, bay, key, reach = 8) {
-  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 3) return 0; const n = Math.max(1, Math.round(L / bay)), tx = dx / L, tz = dz / L, w = L / n - 0.25; let q = 0;
-  for (let k = 0; k < n; k++) { const bg = BRANDS[brandIndex(key, k)][1], col = new THREE.Color(bg).multiplyScalar(1.7), u = (k + 0.5) * L / n, cx = ax + tx * u, cz = az + tz * u;
+  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 3) return 0; const n = Math.max(1, Math.round(L / bay)), tx = dx / L, tz = dz / L, w = L / n - 0.25, IDX = assignBoards(ax, az, bx, bz, n, key); let q = 0;
+  for (let k = 0; k < n; k++) { const bg = boardColour(IDX[k]), col = new THREE.Color(bg).multiplyScalar(1.7), u = (k + 0.5) * L / n, cx = ax + tx * u, cz = az + tz * u;
     const P = [[-1, 0, 0.5], [1, 0, 0.5], [1, 1, 1], [-1, 1, 1]].map(([a, d, v], i) => { const off = d ? 0.4 : 0.4 + reach; return m.v(X(cx + tx * a * w / 2 + nx * off), y, Z(cz + tz * a * w / 2 + nz * off), 0, 1, 0, col, i === 0 || i === 3 ? 0 : 1, v); });      // d 1 = the edge at the arcade (bright), d 0 = the far edge (faded)
     m.tri(P[0], P[1], P[2], 0, 1, 0); m.tri(P[0], P[2], P[3], 0, 1, 0); q += 2; }
   return q;
