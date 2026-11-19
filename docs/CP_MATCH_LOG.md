@@ -2,6 +2,9 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-22  F3b timings, A-B-A (window open, machine busy)
+Main e2d7ed4 31.5 ms (p99 72.2), branch 18.7 ms (p99 44.5), main again 37.3 ms (1 s stall): spread between the two main runs exceeds the gap, no verdict; draw calls and triangles of the same order (main 529 to 794 and 0.64 to 1.06 M, branch 875 and 1.12 M). The earlier 456 against 940 comparison was against another checkout and is withdrawn. Method: 15 s requestAnimationFrame probe, day, CP start, `q=high`.
+
 ## 2026-11-22  F3b: occlusion, night wet look, sun halo, shadow cost
 See `docs/CP_FIX_PLAN.md` Progress. Seen: night rain at CP (coloured board streaks on wet stone). NOT seen: the under-cornice band and tree contact shadow in a frame, the sun halo. Counts at the CP start by day: shadows on 940 calls and 1,219,878 triangles, off 617 and 764,764 (shadow pass about 323 calls); after reducing the casters 686 and 1,044,452 (off 482 and 672,916). Timings not taken (pane hidden). Shared file: `src/env/environment.js` one line. Self-test 122.
 
