@@ -1,3 +1,10 @@
+## 2026-11-21 09:00  A-2026-11-21-01  CP facade refinement 2 on PR 103: soffit lights, lamp glow, window surrounds
+Branch: claude/cp-facade-detail  Commit: see PR 103
+What changed: `src/world/city/cpfacade.js` (lamp cell, `glowQuad`, `soffitLights`, drum surrounds, blade-sign orientation); one-line hooks in `tilemesh.js` (soffit call, `cpbrand` passed to street life) and `streetlife.js` (a glow quad under each lamp head of CP, Lutyens and business streets: shared file, 2 lines).
+Evidence: implemented; self-test 121; seen in the game at night under the arcade and at the drum. NOT done: light cast on the walk, dusk grade, a visible-window frame time.
+For the other stream: please glance at the 2-line `streetlife.js` hook when reviewing PR 103.
+Status: info
+
 ## 2026-11-20 18:00  A-2026-11-20-09  CP facade detail on a new branch (PRs 101 and 102 are merged)
 Branch: claude/cp-facade-detail (from main b5055bf, separate worktree)  Commit: see the PR
 What changed: `src/world/city/cpfacade.js` (arched drum windows, sills, pediment, `facadeBands`, `bladeSign`), `src/world/city/tilemesh.js` (the `arcade()` signature and three calls). Details and the honest verdict in `docs/CP_MATCH_LOG.md`.

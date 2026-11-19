@@ -7,20 +7,21 @@ export const BRANDS = [
   ['LITTLE LOOM', 0x5a2a86, 0xffffff], ['CITY PHARMA', 0x1f6a3a, 0xffffff], ['BOOK NOOK', 0xf5e6b8, 0x4a1c14], ['FRESH BITES', 0xe9791c, 0xffffff], ['ELECTRO HUB', 0x1d5bb8, 0xffffff], ['MODA', 0x15161a, 0xffffff], ['TEA HOUSE', 0x1f6a3a, 0xf5e6b8], ['GADGET GURU', 0xc4202e, 0xffffff],
   ['CAFE MODERN', 0x2e2a30, 0xffffff], ['STYLE HUB', 0x5a2a86, 0xffffff], ['KIDS KORNER', 0xf2c230, 0x1d1d22], ['HOME & HEARTH', 0x7a1a22, 0xffffff], ['SUPER SPORTS', 0x1d5bb8, 0xffffff], ['SAREE PALACE', 0xc4202e, 0xf5e6b8], ['LENS CRAFT', 0x15161a, 0xffffff], ['FOOD COURT', 0xe9791c, 0x1d1d22],
 ];
-const CELL_W = 256, CELL_H = 64, COLS = 4, ROWS = 8;
+const CELL_W = 256, CELL_H = 64, COLS = 4, ROWS = 8, ROWS_ALL = 9;      /* 8 rows of boards and a last row whose first cell is the warm lamp patch */
 export const BRAND_COUNT = BRANDS.length;
 
 /* the brand atlas: one 1024 x 512 canvas of 32 boards; the same canvas is the emissive map, so the boards glow at night */
 export function makeBrandAtlas() {
-  const c = document.createElement('canvas'); c.width = CELL_W * COLS; c.height = CELL_H * ROWS; const g = c.getContext('2d');
+  const c = document.createElement('canvas'); c.width = CELL_W * COLS; c.height = CELL_H * ROWS_ALL; const g = c.getContext('2d');
   BRANDS.forEach(([name, bg, fg], i) => {
     const x = (i % COLS) * CELL_W, y = Math.floor(i / COLS) * CELL_H, hex = h => '#' + h.toString(16).padStart(6, '0');
     g.fillStyle = hex(bg); g.fillRect(x, y, CELL_W, CELL_H); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 3; g.strokeRect(x + 3, y + 3, CELL_W - 6, CELL_H - 6);
     g.fillStyle = hex(fg); g.textAlign = 'center'; g.textBaseline = 'middle'; let fs = 34; g.font = 'bold ' + fs + 'px Arial,Helvetica,sans-serif'; while (g.measureText(name).width > CELL_W - 30 && fs > 12) { fs -= 2; g.font = 'bold ' + fs + 'px Arial,Helvetica,sans-serif'; } g.fillText(name, x + CELL_W / 2, y + CELL_H / 2 + 2);
   });
+  { const x = 0, y = ROWS * CELL_H, gr = g.createRadialGradient(x + CELL_W / 2, y + CELL_H / 2, 4, x + CELL_W / 2, y + CELL_H / 2, CELL_W / 2); gr.addColorStop(0, '#fff3c4'); gr.addColorStop(0.6, '#ffd27a'); gr.addColorStop(1, '#ffb347'); g.fillStyle = gr; g.fillRect(x, y, CELL_W, CELL_H); }      // the warm lamp patch
   return c;
 }
-export function brandUV(i) { const k = ((i % BRAND_COUNT) + BRAND_COUNT) % BRAND_COUNT, x = (k % COLS) * CELL_W, y = Math.floor(k / COLS) * CELL_H, W = CELL_W * COLS, H = CELL_H * ROWS; return [(x + 2) / W, 1 - (y + CELL_H - 2) / H, (x + CELL_W - 2) / W, 1 - (y + 2) / H]; }
+export function brandUV(i) { const k = ((i % BRAND_COUNT) + BRAND_COUNT) % BRAND_COUNT, x = (k % COLS) * CELL_W, y = Math.floor(k / COLS) * CELL_H, W = CELL_W * COLS, H = CELL_H * ROWS_ALL; return [(x + 2) / W, 1 - (y + CELL_H - 2) / H, (x + CELL_W - 2) / W, 1 - (y + 2) / H]; }
 
 /* the material: the atlas as colour and as emissive map (intensity 0 by day, raised at night by tilemesh.js setNight), a little glow always so the lettering stays crisp */
 export function makeBrandMaterial() {
@@ -48,6 +49,9 @@ export function drumCorner(B, X, Z, vx, vz, ox, oz, y0, y1, wc, dark) {
   /* arched windows on the street side (photo R1): three a floor, each a dark rectangle with a half-round head, a white sill with a small balustrade block under it; a triangular pediment over the middle of the cornice */
   const px = -oz, pz = ox, sill = wc.clone().multiplyScalar(1.12);
   for (const [off, w2] of [[-1.7, 0.8], [0, 1.0], [1.7, 0.8]]) for (let f = 0; f < 2; f++) { const yb = y1 - 6.4 + f * 3.5; if (yb < y0 + 4.6) continue; const wx = cx + ox * (R + 0.05) + px * off * 0.85, wz = cz + oz * (R + 0.05) + pz * off * 0.85, hw2 = w2 / 2, hStraight = 1.5;
+    { const sx0 = cx + ox * (R + 0.03) + px * off * 0.85, sz0 = cz + oz * (R + 0.03) + pz * off * 0.85, fw = hw2 + 0.2, y0f = yb - 0.1, yS = yb + hStraight + 0.05;      // the surround: a lighter frame a little larger than the window and just behind it
+      const fa = V(sx0 - px * fw, y0f, sz0 - pz * fw, ox, 0, oz, ring), fb = V(sx0 + px * fw, y0f, sz0 + pz * fw, ox, 0, oz, ring), fc = V(sx0 + px * fw, yS, sz0 + pz * fw, ox, 0, oz, ring), fd = V(sx0 - px * fw, yS, sz0 - pz * fw, ox, 0, oz, ring); B.tri(fa, fb, fc, ox, 0, oz); B.tri(fa, fc, fd, ox, 0, oz);
+      const fh = V(sx0, yS, sz0, ox, 0, oz, ring); let fp = fd; for (let k3 = 1; k3 <= 4; k3++) { const an = Math.PI * k3 / 4, ex = sx0 - px * fw * Math.cos(an), ez = sz0 - pz * fw * Math.cos(an), ey = yS + fw * Math.sin(an), cu = V(ex, ey, ez, ox, 0, oz, ring); B.tri(fh, fp, cu, ox, 0, oz); fp = cu; } }
     const a = V(wx - px * hw2, yb, wz - pz * hw2, ox, 0, oz, dark), b = V(wx + px * hw2, yb, wz + pz * hw2, ox, 0, oz, dark), c2 = V(wx + px * hw2, yb + hStraight, wz + pz * hw2, ox, 0, oz, dark), d = V(wx - px * hw2, yb + hStraight, wz - pz * hw2, ox, 0, oz, dark); B.tri(a, b, c2, ox, 0, oz); B.tri(a, c2, d, ox, 0, oz);
     const hub = V(wx, yb + hStraight, wz, ox, 0, oz, dark); let prev = d; for (let k2 = 1; k2 <= 6; k2++) { const an = Math.PI * k2 / 6, ex = wx - px * hw2 * Math.cos(an), ez = wz - pz * hw2 * Math.cos(an), ey = yb + hStraight + hw2 * Math.sin(an), cur = V(ex, ey, ez, ox, 0, oz, dark); B.tri(hub, prev, cur, ox, 0, oz); prev = cur; }
     const sx = wx + ox * 0.1, sz = wz + oz * 0.1, sw = w2 + 0.5, s0 = V(sx - px * sw / 2, yb - 0.4, sz - pz * sw / 2, ox, 0, oz, sill), s1 = V(sx + px * sw / 2, yb - 0.4, sz + pz * sw / 2, ox, 0, oz, sill), s2 = V(sx + px * sw / 2, yb, sz + pz * sw / 2, ox, 0, oz, sill), s3 = V(sx - px * sw / 2, yb, sz - pz * sw / 2, ox, 0, oz, sill); B.tri(s0, s1, s2, ox, 0, oz); B.tri(s0, s2, s3, ox, 0, oz);
@@ -70,8 +74,22 @@ export function facadeBands(B, X, Z, ax, az, bx, bz, nx, nz, yBase, yTop, wc) {
 /* a vertical blade sign on an arcade column (photo R2): a narrow board standing out from the column at right angles to the wall, two-sided, with the brand lettering running up the board. (cx, cz) the column, (nx, nz) the outward normal of the wall, (tx, tz) along it, y0 its bottom, `key` picks the brand. */
 export function bladeSign(m, X, Z, cx, cz, nx, nz, tx, tz, y0, key) {
   const uv = brandUV(((key * 11 + 3) % 1000 + 1000) % BRAND_COUNT), W = new THREE.Color(0xffffff), d0 = 0.45, d1 = 1.35, h = 2.1;
-  for (const [side, flip] of [[0.02, false], [-0.02, true]]) { const sx = tx * side, sz = tz * side, P = (d, y) => [cx + nx * d + sx, y, cz + nz * d + sz], p0 = P(d0, y0), p1 = P(d1, y0), p2 = P(d1, y0 + h), p3 = P(d0, y0 + h), nn = flip ? -1 : 1;
+  const sgn = tx * nz - tz * nx;      /* which way round the lettering must run depends on the wall's direction (a viewer at the -t side has +n on their left when sgn < 0): the side facing -t reads right with the plain mapping when sgn < 0, the side facing +t with the turned one, and the other way round when sgn >= 0 */
+  for (const [side, flip] of [[0.02, sgn < 0], [-0.02, sgn >= 0]]) { const sx = tx * side, sz = tz * side, P = (d, y) => [cx + nx * d + sx, y, cz + nz * d + sz], p0 = P(d0, y0), p1 = P(d1, y0), p2 = P(d1, y0 + h), p3 = P(d0, y0 + h), nn = flip ? -1 : 1;
     const uvs = flip ? [[uv[0], uv[3]], [uv[0], uv[1]], [uv[2], uv[1]], [uv[2], uv[3]]] : [[uv[0], uv[1]], [uv[0], uv[3]], [uv[2], uv[3]], [uv[2], uv[1]]];
     const v = [p0, p1, p2, p3].map((p, i) => m.v(X(p[0]), p[1], Z(p[2]), tx * nn, 0, tz * nn, W, uvs[i][0], uvs[i][1])); m.tri(v[0], v[1], v[2], tx * nn, 0, tz * nn); m.tri(v[0], v[2], v[3], tx * nn, 0, tz * nn); }
   return 4;
+}
+
+/* the warm lamp patch: the uv of the lamp cell of the atlas (the same emissive map as the boards, so it glows at night and is a plain pale patch by day) */
+export function lampUV() { const W = CELL_W * COLS, H = CELL_H * ROWS_ALL, y = ROWS * CELL_H; return [4 / W, 1 - (y + CELL_H - 4) / H, (CELL_W - 4) / W, 1 - (y + 4) / H]; }
+
+/* a small horizontal glowing patch facing down, centred at (cx, y, cz), w along (tx, tz) and d across; X and Z map world to mesh coordinates (identity for a mesher that already works in tile-local metres) */
+export function glowQuad(m, X, Z, cx, y, cz, w, d, tx, tz) {
+  const uv = lampUV(), W = new THREE.Color(0xffffff), nx = -tz, nz = tx, P = [[-1, -1, 0, 1], [1, -1, 2, 1], [1, 1, 2, 3], [-1, 1, 0, 3]].map(([a, b, iu, iv]) => m.v(X(cx + tx * a * w / 2 + nx * b * d / 2), y, Z(cz + tz * a * w / 2 + nz * b * d / 2), 0, -1, 0, W, uv[iu], uv[iv]));
+  m.tri(P[0], P[1], P[2], 0, -1, 0); m.tri(P[0], P[2], P[3], 0, -1, 0); return 2;
+}
+/* soffit lights under an arcade slab: one warm panel per bay, along the wall from (ax, az) (direction (tx, tz), outward normal (nx, nz)), at the slab underside height y */
+export function soffitLights(m, X, Z, ax, az, tx, tz, nx, nz, l, D, y, bays) {
+  let q = 0; for (let k = 0; k < bays; k++) { const u = (k + 0.5) * l / bays; q += glowQuad(m, X, Z, ax + tx * u + nx * D * 0.62, y - 0.03, az + tz * u + nz * D * 0.62, 0.9, 0.6, tx, tz); } return q;
 }
