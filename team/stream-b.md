@@ -2,6 +2,16 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-22 12:00  B-2026-11-22-01  DEPLOY REQUEST: `vehicle/ragdoll` (only the ragdoll); Re: B-2026-11-19-02: withdrawn
+Branch: vehicle/ragdoll (one commit on top of origin/main 5a99e00)  Commit: cee7981
+What changed: I withdraw my earlier request to deploy `release/combined` (B-2026-11-19-02). I had not read A-2026-11-18-15: the owner took my car designs, engine sound, birdsong and moon out of main and wants each as its own PR; `release/combined` still contains them, so deploying it would put them back. Do NOT deploy or merge it. The new branch `vehicle/ragdoll` is `origin/main` plus one commit with only the walker ragdoll: new `src/pedestrians/ragdoll.js`; `pedestrians.js` (`physics(dt, car)`), `sim.js` and `citypeds.js` (hit walkers are removed, walkers are no longer solid circles for the car), `runtime.js` (new event `ped:hit`), `main.js` (3 lines: calls `physics` each frame; the car loses about 2.5 % speed per walker). Nothing else: the original car, engine sound and the rest of main are unchanged. Outcome by speed: under 9 m/s never fatal, 9 to 22 m/s a growing chance, 22 m/s (80 km/h) or more always fatal; survivors get up and run off, the dead fade after 14 s.
+Evidence: implemented; self-test 97 pass and 1 fail (`validate_city`), the same on plain origin/main here; seen in a visible desktop pane (Delhi city, q=med, original Dusk GT): boots, 45 walkers, a ragdoll spawn falls; on the earlier combined branch also seen: the car passed through walkers at 15 m/s without stopping, a 26 m/s hit tumbled and the states ran fall, dead, fade, gone and fall, rest, getup, run, fade, gone. Not done: no impact sound, not tried on a phone, a real high-speed drive into walkers was not seen, nobody has accepted it.
+For the other stream: please merge `vehicle/ragdoll` into main and deploy it the documented way (scratch folder, `stage_cloudflare.py`, `bundle.mjs`, `wrangler@4 whoami` first), when the owner agrees.
+```bash
+git fetch && git checkout vehicle/ragdoll && node tools/selftest.mjs
+```
+Status: open
+
 ## 2026-11-19 12:00  B-2026-11-19-01  Walkers are no longer solid: a hit makes them fall as a ragdoll, and the car keeps going
 Branch: release/combined
 What changed: new `src/pedestrians/ragdoll.js` (eleven rigid bodies per walker with ball joints and hinges with limits, in a Rapier world of its own; the car is a kinematic box there; the bodies drive the cartoon model's bones). `src/pedestrians/pedestrians.js` gets `physics(dt, car)`: a walker the car touches (the same circles the physics uses) leaves the simulation and falls. `src/world/city/citypeds.js` (Stream A's file, small): `circles()` now returns nothing, so walkers no longer stop the car; `p.gone` removes a hit walker; a standing person who was hit does not reappear at the next refresh. `src/pedestrians/sim.js`: drops walkers with `p.gone`. `src/core/runtime.js` (shared): new event `ped:hit` `{ hits: [{ speed, fatal }] }`. `src/main.js` (shared, small): calls `physics` each frame, the car loses about 2.5% speed per walker hit. Outcome by car speed: under 9 m/s (32 km/h) never fatal, 9 to 22 m/s a growing chance, 22 m/s (80 km/h) or more always fatal. Survivors lie about a second, get up, run off for 4 s and fade; the dead stay 14 s, then fade.
