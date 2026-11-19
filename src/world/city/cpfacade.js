@@ -293,7 +293,8 @@ export function pavilion(B, X, Z, ax, az, bx, bz, nx, nz, l, y0, y1, wc, key) {
   /* the projecting block and its sides */
   front(uc - hw, uc + hw, D, ys, y1, pale); side(uc - hw, 0, D, ys, y1, pale, -1); side(uc + hw, 0, D, ys, y1, pale, 1);
   /* paired pilasters at both ends, on the front, 0.5 m wide, a little proud */
-  for (const sg of [-1, 1]) for (const o of [0.75, 1.6]) { const u = uc + sg * (hw - o); front(u - 0.25, u + 0.25, D + 0.22, ys, y1 + 0.2, white); side(u - 0.25, D, D + 0.22, ys, y1 + 0.2, white, -1); side(u + 0.25, D, D + 0.22, ys, y1 + 0.2, white, 1); }
+  { const col = (u, d, ya, yb, r) => { const N = 8, c = P(u, d, 0); for (let k = 0; k < N; k++) { const t0 = k * Math.PI * 2 / N, t1 = (k + 1) * Math.PI * 2 / N, tm = (t0 + t1) / 2, wx = Math.cos(tm), wz = Math.sin(tm), p = (t, y) => [c[0] + Math.cos(t) * r, y, c[2] + Math.sin(t) * r]; solid(p(t0, ya), p(t1, ya), p(t1, yb), p(t0, yb), white, wx, 0, wz); } };      /* F1: round shafts, not flat pilasters (docs/CP_FIX_PLAN.md) */
+    for (const sg of [-1, 1]) for (const o of [0.75, 1.6]) col(uc + sg * (hw - o), D + 0.3, ys, y1 + 0.2, 0.3); }
   /* the round-headed gate in the ground floor (on the arcade's back wall) with a white surround */
   arch(uc, 0.05, y0, 4.2, 4.9, white); arch(uc, 0.09, y0, 3.6, 4.5, gate);
   /* the large arched window with the fan light on the first floor, white surround, dark glass, five spokes, a balustrade band under it */

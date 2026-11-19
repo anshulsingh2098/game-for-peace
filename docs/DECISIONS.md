@@ -30,3 +30,4 @@ Newest first. A decision here is the owner's word; an agent follows it and does 
 | Audit proposals AP-01 to AP-04 | Accepted (status ledger, release check, lifecycle reliability, device and city acceptance protocol). AP-05 to AP-08 are accepted as design and research only, after Delhi. | `docs/STATUS.md`, this file |
 | Small calls | `daily_check.py` says what it really does (it runs `git fetch`); `/sync` identifies the stream from `git config user.name`, not the branch name. OSM2World's licence label corrected to MIT (to confirm at the pinned commit). | `tools/daily_check.py`, `.claude/commands/sync.md`, `docs/OPEN_DATA.md` |
 | Order of work | By the audit's priority: R01 first, then R04 to R06, R11, R16, then R07. All done in branch `claude/audit-fixes`. | `team/stream-a.md` |
+| 22 Nov 2026, owner's scores | All six CP spots score 3 out of 5 on every criterion (gate: 4 or more); fix in phases F1 to F6 | `docs/CP_FIX_PLAN.md` |

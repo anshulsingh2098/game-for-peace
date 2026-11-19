@@ -2,6 +2,9 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-22  F1 facade realism, first pass (docs/CP_FIX_PLAN.md; owner's scores all 3 of 5)
+Owner's scores: all six CP spots 3 out of 5 on every criterion (recorded in `docs/DECISIONS.md`). Built: per-edge tone and a soot fade under the cornice, air conditioner units and a drain pipe on CP walls, round pilaster shafts on the pavilion. Seen (game, day, second camera at the radial mouth near x 1056, z -2392 and at the Outer Circle arcade): the wall tone differs between neighbouring edges and the top of the wall is a little darker; one AC unit visible; round shafts on the pavilion. Verdict: **subtle, not yet convincing** (still cleaner than real CP). NOT done: window-sill streaks, wall pipes and wires, night, frame cost, re-score. Self-test 122.
+
 ## 2026-11-22  Cinemas and towers: Odeyon, Rivolo, Jeevan Bharati
 See `docs/CP_LANDMARKS.md` section 7. The cinema front is now a list (`CINEMAS`) with per-cinema letters and canopy cells in the atlas; the tower hook is a list (`TOWERS`) with a kit and a detail style. Seen (game, day, second camera): ODEYON front (x 1173, z -2265) with gold letters on dark, three posters and a canopy reading ODEYON CINEMA TICKETS; RIVOLO front (x 711, z -1889) with letters and posters; Jeevan Bharati as a 58 m dark glass tower. Verdict: close in kind, generic in detail. Not done: Regal, Hindustan Times House, night looks, frame cost. Self-test 122.
 

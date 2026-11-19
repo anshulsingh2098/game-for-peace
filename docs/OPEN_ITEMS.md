@@ -6,7 +6,7 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | # | From | Item | Why open | Next |
 |---|---|---|---|---|
 | 1 | Phases 3 to 6 | **Phone benchmark** (day, dusk, night) | No phone available to the session; a desktop number is not a phone number | Owner or Anshul runs `?play&city=delhi&q=med&bench=30` on a named phone, night and dusk, visible screen |
-| 2 | Phase 2/3 | Owner scores the six CP spots (1 to 5) | Needs the owner's eyes | Owner, with `tools/cp_views.json` |
+| 2 | Phase 2/3 | Owner scores the six CP spots | Scored 22 Nov: **3 out of 5 on every criterion** (gate 4); fixes planned in `docs/CP_FIX_PLAN.md` (F1 to F6); re-score after each phase if the owner wants | Owner re-scores |
 | 3 | Phase 3 | Dusk preset change touches Anshul's lighting task (L6) | Open note A-2026-11-21-06 to his Claude, no reply yet | His Claude checks `times.dusk` in his scenes |
 | 4 | Phase 6 | Kartavya spot k6 (a Lutyens roundabout) | No roundabout position found yet; k1 to k5 were looked at (21 Nov) | Find a roundabout in the lutyens area, look at it |
 | 5 | Phase 6 | Lutyens kit seen only on Janpath at one spot | Hedges, lamps and avenue seen; compound walls and bungalows not seen; the buildings there are 4 storey slabs from the map, not low bungalows | Look at a residential street |
