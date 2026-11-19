@@ -80,5 +80,25 @@ export const VEHICLES = [
     cam: { back: 7.6, up: 3.0, look: 2.8 }, eye: [-0.38, 1.6, 0.2], shadow: [3.2, 5.6],
     lights: { tail: [[-0.78, 1.0, -2.4], [0.78, 1.0, -2.4]], head: [[-0.72, 0.98, 2.38], [0.72, 0.98, 2.38]], tailSize: 0.8, headSize: 1.1, beam: [0.8, 2.2] },
     buff: { name: 'Haul', desc: 'A steady surge of torque and extra grip for a few seconds.', label: 'Torque', secs: 6, cooldown: 12, mod: { accel: 1.6, grip: 1.15 } },
-    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#e8e9ec', '#16181d', '#6e7782', '#2846a4', '#a11d1d', '#2a6d4a', '#c9a227'] } }
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#e8e9ec', '#16181d', '#6e7782', '#2846a4', '#a11d1d', '#2a6d4a', '#c9a227'] } },
+  { id: 'r35', file: 'assets/cars/r35.glb', name: 'Nissan GT-R LB Works', tag: 'Super', color: '#1d3f8a',
+    desc: 'A 2017 GT-R in a Liberty Walk wide-body kit. All-wheel drive, a twin-turbo V6 and a dual-clutch box: it launches like a rocket and holds the road like it is bolted on.',
+    stats: { Speed: 97, Accel: 96, Handling: 84, Grip: 92, Top: 320 },
+    body: { mass: 1840, front: 1.27, rear: 1.49, track: 1.74, drive: 'awd', wheelR: 0.355, steerMax: 0.5, brake: 9.8, revAccel: 2.6, revTop: 9, aero: 0.3,
+      /* the 2017 GT-R (docs/CAR_SPECS.md): 3.8 L twin-turbo V6, 419 kW at 6800 rpm, 632 Nm from 3300 to 5800 rpm, 1,765 kg kerb plus a driver, 54 / 46 front / rear, all-wheel drive, six-speed dual clutch (the ratios 4.056, 2.301, 1.595, 1.248, 1.001, 0.796 and final drive 3.7 are from memory), 0 to 100 km/h in 2.7 s, about 315 km/h, Cd 0.26 x 2.15 m2. Axles from the model: wheelbase 2.76 m. A dual-clutch box shifts in under 0.1 s, which is what makes it feel premium */
+      pt: { kw: 419, peak: 6800, redline: 7100, idle: 800, launch: 4500, gears: [4.056, 2.301, 1.595, 1.248, 1.001, 0.796], final: 3.7, eff: 0.93, cdA: 0.6, upshift: 0.97, shiftTime: 0.08, tcs: 0.95, brakeMul: 1.0, down: 0.5, downEasy: 0.4 }, lean: 0.03, cg: 0.46, radius: 1.0, circles: [1.5, 0, -1.5] },
+    cam: { back: 6.2, up: 2.1, look: 3.2 }, eye: [-0.36, 1.0, 0.1], shadow: [3.2, 5.6],
+    lights: { tail: [[-0.7, 0.85, -2.45], [0.7, 0.85, -2.45]], head: [[-0.66, 0.7, 2.3], [0.66, 0.7, 2.3]], tailSize: 0.8, headSize: 1.1, beam: [0.7, 2.3] },
+    buff: { name: 'Launch Control', desc: 'A full-power launch: massive acceleration for a few seconds.', label: 'Launch', secs: 5, cooldown: 10, mod: { top: 1.15, accel: 1.8 } },
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#1d3f8a', '#e8e9ec', '#16181d', '#b11f1f', '#9a9da3', '#2a9d5b', '#f0b323'] } },
+  { id: 'gtr50', file: 'assets/cars/gtr50.glb', name: 'Nissan GT-R50', tag: 'Hyper', color: '#c9a227',
+    desc: 'The Italdesign GT-R50: a Nismo-tuned V6 with more than 700 horsepower, all-wheel drive and a razor-edged body. Fifty were built.',
+    stats: { Speed: 99, Accel: 98, Handling: 86, Grip: 92, Top: 320 },
+    body: { mass: 1775, front: 1.27, rear: 1.5, track: 1.62, drive: 'awd', wheelR: 0.355, steerMax: 0.5, brake: 10.5, revAccel: 2.6, revTop: 9, aero: 0.3,
+      /* the GT-R50 by Italdesign (docs/CAR_SPECS.md): the 3.8 L V6 enhanced by Nismo, an estimated 720 PS (530 kW) and 780 Nm, about 1,700 kg (an estimate) plus a driver, all-wheel drive, six-speed dual clutch, 0 to 100 and top speed not published (the figures here are tuned to a plausible 2.7 s and 320 km/h). Axles from the model: wheelbase 2.77 m */
+      pt: { kw: 530, peak: 6800, redline: 7100, idle: 800, launch: 4800, gears: [4.056, 2.301, 1.595, 1.248, 1.001, 0.796], final: 3.7, eff: 0.88, cdA: 0.55, upshift: 0.97, shiftTime: 0.07, tcs: 0.95, brakeMul: 1.0, down: 0.5, downEasy: 0.4 }, lean: 0.03, cg: 0.46, radius: 1.0, circles: [1.5, 0, -1.5] },
+    cam: { back: 6.0, up: 2.1, look: 3.2 }, eye: [-0.37, 1.0, 0.1], shadow: [3.0, 5.4],
+    lights: { tail: [[-0.68, 0.85, -2.3], [0.68, 0.85, -2.3]], head: [[-0.64, 0.68, 2.25], [0.64, 0.68, 2.25]], tailSize: 0.8, headSize: 1.1, beam: [0.7, 2.3] },
+    buff: { name: 'Launch Control', desc: 'A full-power launch: massive acceleration for a few seconds.', label: 'Launch', secs: 5, cooldown: 10, mod: { top: 1.15, accel: 1.8 } },
+    paint: { label: 'Body', names: ['Paint_Body'], colors: ['#16181d', '#e8e9ec', '#c9a227', '#1d3f8a', '#b11f1f', '#9a9da3', '#2a9d5b'] } }
 ];

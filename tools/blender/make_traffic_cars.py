@@ -8,6 +8,7 @@ TARGET = 3000
 # per car: which material names are tyres, rims, glass, lights; the traffic weight (how common on a Delhi road) and the kind name
 CARS = {
   'sx4':     dict(kind='sx4-hatch',    weight=9, w=1.78, tyre=['wheel.1'], glass=['glass'], light=['chassis.5', 'left front light']),
+  'r35':     dict(kind='gtr-sports',   weight=1, w=1.95, tyre=['heel3A_Details_Material1'], glass=['Black', 'Light_glass', 'red_galass', 'gtr:Nissan_LBGTRType2_2017WindowA_Material1'], light=['gtr:Nissan_LBGTRType2_2017LightC_Material1']),
   'everest': dict(kind='endeavour-suv', weight=5, w=1.95, tyre=['roda.1'], glass=['glass', 'glass.001'], light=['boot_ok.4']),
 }
 def lin(c): return tuple(((x + 0.055) / 1.055) ** 2.4 if x > 0.04045 else x / 12.92 for x in c)

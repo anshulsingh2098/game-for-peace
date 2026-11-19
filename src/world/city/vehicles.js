@@ -26,6 +26,7 @@ DIM.bus = { len: 11, wid: 2.5, speed: 0.9 };
 export const MODEL_SETS = {
   'sx4-hatch': { base: 'hatch', share: 0.22, speed: 1 },
   'endeavour-suv': { base: 'suv', share: 0.45, speed: 0.95 },
+  'gtr-sports': { base: 'hatch', share: 0.012, speed: 1.15 },       // one car in eighty: a supercar is rare on a Delhi road
 };
 export const baseKind = k => (MODEL_SETS[k] ? MODEL_SETS[k].base : k);
 

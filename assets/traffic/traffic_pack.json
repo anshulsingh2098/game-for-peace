@@ -104,9 +104,9 @@
   "tris": 1727
  },
  "sx4-hatch": {
-  "len": 4.46,
+  "len": 4.42,
   "w": 1.78,
-  "h": 1.87,
+  "h": 1.7,
   "weight": 9,
   "paintable": true,
   "tris": 3000
@@ -114,9 +114,17 @@
  "endeavour-suv": {
   "len": 5.02,
   "w": 1.95,
-  "h": 2.03,
+  "h": 1.99,
   "weight": 5,
   "paintable": true,
-  "tris": 3000
+  "tris": 2999
+ },
+ "gtr-sports": {
+  "len": 4.95,
+  "w": 1.95,
+  "h": 1.26,
+  "weight": 1,
+  "paintable": true,
+  "tris": 2999
  }
 }

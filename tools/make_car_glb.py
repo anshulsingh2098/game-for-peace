@@ -8,6 +8,10 @@ RECIPES = {
   # sx4: Z up, front +Y, already metres (4.2 m); the wheels are parented to one pivot but sit at their real places; the body paint is the red picture "Untitled design" in material chassis.0
   # everest: same rig style as the sx4 (front +Y, metres, 4.8 m body); the paint is the flat-colour material "primary"; the engine and suspension are hidden under the body and are deleted
   'everest': dict(delete=['motor', 'suspens'], wheels=['roda', 'roda.001', 'roda.002', 'roda.003'], paint=['primary'], rotate_z=180, scale=1.0, decimate=0.7, wheel_decimate=0.3, decimate_by={'interior': 0.2, 'bancos': 0.2, 'volante': 0.3, 'boot_ok': 0.45, 'bump_rear_ok': 0.45, 'bump_front_ok': 0.5, 'estribo': 0.5}, glass=['glass', 'glass.001'], front_axis='+Y'),
+  # gtr50: a GLB, front already -Y in Blender (so +Z in the file), metres, 4.7 m; parts split by material (OEMPaint is the body colour, Coloured an accent colour); the seats, dashboard parts, pedals and engine-less interior are deleted (the game draws its own cockpit), the ground-shadow sphere too
+  'gtr50': dict(delete=['Icosphere'], delete_re=r'Interior$|Seat|Pedal|Shifter|SteeringWheel|GlassInside|Carbon1MDetails|InteriorTilling|SeatBelt', wheels=['Wheel1A_LF', 'Wheel1A_RF', 'Wheel1A_LR', 'Wheel1A_RR'], paint=['OEMPaint'], accent=['Coloured'], rotate_z=0, scale=1.0, decimate=0.5, wheel_decimate=0.4, glass=['GlassMtl', 'GlassRed'], front_axis='-Y'),
+  # r35: an FBX in centimetres that imports 100 times too small (4.7 cm long), front -Y; one material per part: PaintA is the body colour (shared by the Paint and Carbon1 meshes), Coloured the accent; the interior, engine, belts, the 43-triangle wheel stickers and the Textured part (it carries the supplied tiger livery) are deleted; everything is flattened (no pivots) and scaled up in the mesh data so no node carries a scale
+  'r35': dict(delete=[], delete_re=r'Interior|Engine_Geo|SeatBelt|WindowInside|^w:Wheel01|Textured_Geo', wheels=['gtr:gtr:polySurface1', 'gtr:gtr:polySurface151', 'gtr:gtr:polySurface301', 'gtr:gtr:polySurface451'], paint=['gtr:Nissan_LBGTRType2_2017PaintA_Material1'], accent=['gtr:Nissan_LBGTRType2_2017Coloured_Material1'], flatten=True, rotate_z=0, scale=100.0, decimate=0.5, wheel_decimate=0.4, glass=['Black', 'Light_glass', 'red_galass', 'gtr:Nissan_LBGTRType2_2017WindowA_Material1'], front_axis='-Y'),
   'sx4': dict(delete=['Plane'], wheels=['wheel', 'wheel.001', 'wheel.002', 'wheel.003'], paint=['chassis.0'], rotate_z=180, scale=1.0, decimate=0.9, glass=['glass'], front_axis='+Y'),
 }
 
@@ -27,9 +31,27 @@ def main():
     else: bpy.ops.import_scene.gltf(filepath=src)
     relink_images(texdir)
     sc = bpy.context.scene
+    import re
+    for o in list(sc.objects):                                       # free every mesh from armatures and pivots first, keeping its place
+        if o.type == 'MESH' and o.parent is not None and o.parent.type == 'ARMATURE': mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw
+    for o in list(sc.objects):
+        if o.type == 'ARMATURE': bpy.data.objects.remove(o, do_unlink=True)
     for n in R['delete']:
         o = sc.objects.get(n)
         if o: bpy.data.objects.remove(o, do_unlink=True)
+    if R.get('delete_re'):
+        for o in list(sc.objects):
+            if o.type == 'MESH' and re.search(R['delete_re'], o.name): bpy.data.objects.remove(o, do_unlink=True)
+    if R.get('flatten'):                                                     # no pivots: every mesh stands alone at the top level with its transform baked into its points
+        for o in list(sc.objects):
+            if o.type == 'MESH': mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw
+        for o in list(sc.objects):
+            if o.type != 'MESH': bpy.data.objects.remove(o, do_unlink=True)
+        k = R['scale']
+        for o in sc.objects:
+            bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
+            bpy.ops.object.transform_apply(location=False, rotation=True, scale=True); o.data.transform(mathutils.Matrix.Scale(k, 4)); o.location = o.location * k
+        R['scale'] = 1.0
     # wheel centres in world space, then free the wheels from their parents
     wheels = []
     for n in R['wheels']:
@@ -63,6 +85,15 @@ def main():
         b = [n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'][0]
         for l in list(b.inputs['Base Color'].links): nt.links.remove(l)
         b.inputs['Base Color'].default_value = (0.9, 0.9, 0.92, 1); b.inputs['Metallic'].default_value = 0.35; b.inputs['Roughness'].default_value = 0.28
+    for mn in R.get('accent', []):
+        m = bpy.data.materials.get(mn)
+        if m:
+            m.name = 'Paint_Accent'; m.use_nodes = True; nt = m.node_tree
+            for n in list(nt.nodes):
+                if n.type == 'TEX_IMAGE': nt.nodes.remove(n)
+            b = [n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'][0]
+            for l in list(b.inputs['Base Color'].links): nt.links.remove(l)
+            b.inputs['Base Color'].default_value = (0.78, 0.6, 0.15, 1); b.inputs['Metallic'].default_value = 0.6; b.inputs['Roughness'].default_value = 0.3
     # FBX import leaves most materials in alpha-blend mode (the picture's alpha is wired to the shader): that makes wheels and body panels see-through and mottled. Everything but the glass becomes opaque.
     glass = set(R.get('glass', []))
     for m in bpy.data.materials:
@@ -83,6 +114,16 @@ def main():
         if im.size[0] > 512 or im.size[1] > 512:
             k = 512 / max(im.size); im.scale(max(1, int(im.size[0] * k)), max(1, int(im.size[1] * k)))
     # decimate the big body meshes a little
+    # slim the meshes: one UV set, no colour layers, no custom split normals, welded points: the supplied models carry several of each and weigh 100+ bytes a triangle
+    import bmesh
+    for o in sc.objects:
+        if o.type != 'MESH': continue
+        me = o.data
+        while len(me.uv_layers) > 1: me.uv_layers.remove(me.uv_layers[-1])
+        for ca in list(me.color_attributes): me.color_attributes.remove(ca)
+        if me.has_custom_normals:
+            bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o; bpy.ops.mesh.customdata_custom_splitnormals_clear()
+        bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5); bm.to_mesh(me); bm.free()
     for o in sc.objects:
         if o.type != 'MESH' or len(o.data.polygons) < 4000: continue
         is_wheel = bool(o.parent and o.parent.name.startswith('Wheel_')); k = R.get('wheel_decimate', 1) if is_wheel else R.get('decimate_by', {}).get(o.name.split('.')[0], R.get('decimate', 1))
