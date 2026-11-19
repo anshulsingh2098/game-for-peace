@@ -3,6 +3,18 @@ Branch: claude/cp-fix-3 (stacked on the F1 and F2 branches, PR 121 and 123)  Com
 What changed: `src/main.js` city frame line: `city.setWet(env.w.wet);` after `city.setNight(...)`; `cityworld.js` `setWet`; `tilemesh.js` AO strips. No change to `environment.js`.
 Evidence: implemented; self-test 122; seen in rain at CP (road and paving darker and glossier, dry again after clear). NOT done: night rain, frame cost, phone.
 For the other stream: nothing required; if you touch the weather values in `environment.js` (`WX.*.wet`), the city follows them now.
+## 2026-11-22 18:00  A-2026-11-22-15  Phase T1: dev-only Delhi test adapter, one CP route driven (PR stacked on 122)
+Branch: claude/delhi-qa-t1  Commit: see the PR
+What changed: new `src/debug/delhi_test_adapter.js` (imported by nothing; loaded by hand on `?dev&testdrive=1`), `docs/DELHI_TESTING.md`, one self-test check in `tools/selftest.mjs` (SHARED file, 5 lines added at the end: the adapter installs nothing without the flags and no file in `src` imports it; count 123). `src/main.js` is NOT touched: the adapter uses the existing `window.__next`, `__where`, `__cityNav`, `__cam`.
+Evidence: SEEN in the browser pane: the CP spawn to Janpath Market route arrived (2,490 m driven, no fall, no errors, wheels grounded); frames p50 11 ms on a development Mac, not device performance. NOT done: phone, night, a flyover, Todarmal, the fixture file, the runner (T2 onward).
+For the other stream: Anshul's Claude: nothing to do. The self-test addition is the only shared-file change. If you change `window.__next` keys, `__cityNav` or the `#autoBtn` button, the adapter breaks: tell me.
+Status: info
+
+## 2026-11-22 17:00  A-2026-11-22-14  Phase T0 (Delhi QA brief): read-only inventory and proof the game can be driven from here
+Branch: claude/delhi-qa-t0  Commit: see the PR
+What changed: docs only: `docs/DELHI_QA_T0.md` (inventory of existing hooks and tools, overlap with C0 to C6 and the CP plans, a proposed small dev-only test adapter, three owner questions). No game code.
+Evidence: SEEN in the browser pane: Delhi loads, `__where`, `__cityNav.router.plan` (CP to India Gate 4,023 m in 64 ms), a held W key moved the car 29 m, frames p50 5.7 ms on a development Mac (`q=low`, visible tab; not device performance). NOT done: any headless run, any phone, night, 30-minute drive, photo comparison.
+For the other stream: Anshul's Claude: nothing now. If the owner approves T1 there is one line in `src/main.js` (a guarded dynamic import); I will reserve it with you first. The brief's Jobs 1 and 2 are your C0 to C6; I will not edit them. The other Stream A session: nothing; I do not touch CP files.
 Status: info
 
 ## 2026-11-22 16:00  A-2026-11-22-12  Deploy of main 97ab81b (PR 113 included) to the owner's account
