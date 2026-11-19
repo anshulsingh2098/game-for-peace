@@ -10,6 +10,10 @@ import { DENT, HEALTH } from '../../vehicle/damage.js';
 const hashf = i => { let h = (i | 0) * 374761393 + 668265263; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const FAR = 520;
 /* the same displacement for the same place, so triangles that meet at a corner move together (the copy is not indexed) */
+const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x, smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const hv = (x, y, z) => { const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return h - Math.floor(h); };
+const vnoise = (x, y, z) => { const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z); let fx = x - ix, fy = y - iy, fz = z - iz; fx *= fx * (3 - 2 * fx); fy *= fy * (3 - 2 * fy); fz *= fz * (3 - 2 * fz);
+  const L = (a, b, t) => a + (b - a) * t; return L(L(L(hv(ix, iy, iz), hv(ix + 1, iy, iz), fx), L(hv(ix, iy + 1, iz), hv(ix + 1, iy + 1, iz), fx), fy), L(L(hv(ix, iy, iz + 1), hv(ix + 1, iy, iz + 1), fx), L(hv(ix, iy + 1, iz + 1), hv(ix + 1, iy + 1, iz + 1), fx), fy), fz); };
 const hp = (x, y, z, k) => hashf((Math.round(x * 40) * 73856093) ^ (Math.round(y * 40) * 19349663) ^ (Math.round(z * 40) * 83492791) ^ (k * 40503));
 /* a box has only corner vertices to bend: split every triangle in four, `levels` times, keeping position and colour */
 function subdivide(src, levels) {
@@ -56,11 +60,12 @@ export class TrafficDamage {
     d.g.attributes.position.needsUpdate = true; d.g.computeVertexNormals(); d.g.computeBoundingSphere(); d.hits++; this.stats.hit++;
     car.hold = Math.max(car.hold || 0, 4 + 0.4 * h.vn);                                                                // a shaken driver stops for a while
     if (!this.cosmetic && d.state !== 'wrecked') {
-      const front = L.z > d.len * 0.2, rear = L.z < -d.len * 0.2, k = front ? HEALTH.front : rear ? HEALTH.rear : HEALTH.side, loss = HEALTH.lossK * Math.pow(h.vn - DENT.soft, HEALTH.lossPow);
-      d.health = Math.max(0, d.health - loss); d.engine = Math.max(0, d.engine - loss * k); if (d.health <= 0.04) d.engine = Math.min(d.engine, HEALTH.fire - 0.01);
-      if (d.health < 0.35) car.hold = Infinity;                                                                          // too hurt to drive on
+      const front = L.z > d.len * 0.2, rear = L.z < -d.len * 0.2, loss = Math.min(HEALTH.maxHit, HEALTH.lossK * Math.pow(h.vn - DENT.soft, HEALTH.lossPow));
+      d.health = Math.max(0, d.health - loss); if (h.vn >= HEALTH.engMin) d.engine = Math.max(0, d.engine - loss * (front ? HEALTH.engFront : rear ? HEALTH.engRear : HEALTH.engSide));
+      if (d.health < 0.3) car.hold = Infinity;                                                                          // too hurt to drive on
       if (d.state === 'ok' && d.engine < HEALTH.smoke) d.state = 'smoking';
-      if ((d.state === 'smoking' || d.state === 'ok') && d.engine < HEALTH.fire) { d.state = 'burning'; d.fuse = HEALTH.fuse[0] + Math.random() * (HEALTH.fuse[1] - HEALTH.fuse[0]); d.since = 0; car.hold = Infinity; }
+      if (d.engine <= HEALTH.dead || d.health <= 0.03) { d.state = d.state === 'burning' ? 'burning' : 'dead'; car.hold = Infinity; }
+      if ((d.state === 'smoking' || d.state === 'dead') && d.engine < HEALTH.fireEngine && d.health < HEALTH.fireFrame && h.vn >= HEALTH.fireMinHit && Math.random() < Math.min(0.85, Math.max(0.1, (HEALTH.fireFrame - d.health) + (HEALTH.fireEngine - d.engine) + 0.1))) { d.state = 'burning'; d.fuse = HEALTH.fuse[0] + Math.random() * (HEALTH.fuse[1] - HEALTH.fuse[0]); d.since = 0; car.hold = Infinity; }
     }
   }
   enginePos(car, out) { const d = car.dmg; out.set(0, 0.85, d.len / 2 - 0.8); return d.mesh.localToWorld(out); }
@@ -71,11 +76,12 @@ export class TrafficDamage {
       if (Math.hypot(car.x - px, car.z - pz) > FAR) { this.drop(i); continue; }
       this.place(car); d.mesh.updateMatrixWorld(true); d.since += dt;
       if (d.state === 'ok') continue; this.enginePos(car, p); const fx = this.fx;
-      if (d.state === 'smoking') fx.smoke(p, 8 + 18 * (1 - d.engine / HEALTH.smoke), dt, 0.3, 0.55);
-      else if (d.state === 'burning') { const u = Math.min(1, d.since / 4); fx.flame(p, 22 + 40 * u, dt, 0.4 + 0.6 * u); fx.smoke(p, 24, dt, 0.8, 0.12); lightAt = lightAt || p.clone(); d.fuse -= dt; if (d.fuse <= 0) this.burst(car, p); }
+      if (d.state === 'smoking') fx.smoke(p, 8 + 18 * (1 - d.engine / HEALTH.smoke), dt, 0.3, d.engine < HEALTH.smokeBlack ? 0.2 : 0.6);
+      else if (d.state === 'dead') fx.smoke(p, 6, dt, 0.35, 0.3);
+      else if (d.state === 'burning') { const u = Math.min(1, d.since / 5); d.R = 0.4 + 0.11 * d.since; this.spots(car, d, 3, p).forEach(q => fx.flame(q, (18 + 36 * u) / 3, dt, 0.35 + 0.6 * u)); fx.smoke(p, 22, dt, 0.8, 0.12); this.burnColors(d); lightAt = lightAt || p.clone(); d.fuse -= dt; if (d.fuse <= 0) this.burst(car, p); }
       else if (d.state === 'wrecked') {
-        const t = d.since - d.burstAt; this.soot(d, Math.min(1, t / 3.5));
-        if (t < HEALTH.burnSeconds) { const k = 1 - t / HEALTH.burnSeconds; fx.flame(p, 6 + 34 * k * k, dt, 0.25 + 0.7 * k); fx.smoke(p, 14 + 12 * k, dt, 0.8, 0.1); lightAt = lightAt || p.clone(); }
+        const t = d.since - d.burstAt; d.R = Math.min(5, 1.1 + 0.4 * t); this.burnColors(d);
+        if (t < HEALTH.burnSeconds) { const k = 1 - t / HEALTH.burnSeconds; this.spots(car, d, 3, p).forEach(q => fx.flame(q, (6 + 34 * k * k) / 3, dt, 0.25 + 0.7 * k)); fx.smoke(p, 14 + 12 * k, dt, 0.8, 0.1); lightAt = lightAt || p.clone(); }
         else if (t < HEALTH.smokeSeconds) fx.smoke(p, 5 * (1 - (t - HEALTH.burnSeconds) / (HEALTH.smokeSeconds - HEALTH.burnSeconds)), dt, 0.4, 0.2);
       }
     }
@@ -86,6 +92,18 @@ export class TrafficDamage {
     const c = d.mesh.worldToLocal(p.clone()), R = 1.4, R2 = R * R, pos = d.g.attributes.position.array;                      // the bonnet buckles up
     for (let i = 0, j = 0; i < d.n; i++, j += 3) { const ex = pos[j] - c.x, ez = pos[j + 2] - c.z, d2 = ex * ex + ez * ez; if (d2 > R2 || pos[j + 1] < c.y - 0.25) continue; const t = 1 - Math.sqrt(d2) / R; pos[j + 1] += 0.2 * t * t * (0.7 + 0.6 * hp(pos[j], 0, pos[j + 2], 1)); }
     d.g.attributes.position.needsUpdate = true; d.g.computeVertexNormals(); d.g.computeBoundingSphere();
+  }
+  /* flames at random places inside the burnt region of the body, not at one point */
+  spots(car, d, n, eng) { const out = [], R = Math.max(0.3, d.R || 0.4); for (let i = 0; i < n; i++) { const v = new THREE.Vector3((Math.random() - 0.5) * Math.min(d.wid, R * 1.4), 0.4 + Math.random() * 0.7, d.len / 2 - 0.8 + (Math.random() - 0.5) * Math.min(d.len, R * 2)); out.push(d.mesh.localToWorld(v)); } void eng; return out; }
+  /* the burn: a noise-edged region growing from the engine, each vertex goes brown then sooty black by how deep inside it is (patchy, not even) */
+  burnColors(d) {
+    const a = d.g.attributes.color.array, o = d.cols0, pos = d.g.attributes.position.array, ez = d.len / 2 - 0.8, R = d.R || 0; if (R <= 0) return; d.burnT = (d.burnT || 0) + 1; if (d.burnT % 3) return;
+    for (let i = 0, j = 0; i < d.n; i++, j += 3) {
+      const x = pos[j], y = pos[j + 1], z = pos[j + 2], dist = Math.hypot(x, (y - 0.85) * 1.15, (z - ez) * 0.85), nz = 0.55 * vnoise(x * 2.6, y * 2.6, z * 2.6) + 0.3 * vnoise(x * 5.5, y * 5.5, z * 5.5) + 0.15 * vnoise(x * 11, y * 11, z * 11), b = clamp01((R - dist) / 1.3 + (nz - 0.5) * 1.15);
+      const br = smooth(0.02, 0.3, b), so = smooth(0.28, 0.65, b), sf = 0.5 + vnoise(x * 9, y * 9, z * 9);
+      for (let k = 0; k < 3; k++) { const base = o[j + k], brown = k === 0 ? 0.3 : k === 1 ? 0.15 : 0.07, soot = (k === 0 ? 0.025 : k === 1 ? 0.02 : 0.017) * sf; a[j + k] = (base * (1 - br) + brown * br) * (1 - so) + soot * so; }
+    }
+    d.g.attributes.color.needsUpdate = true;
   }
   soot(d, k) {
     if (d.char === k) return; d.char = k; const a = d.g.attributes.color.array, o = d.cols0, g = 0.035;

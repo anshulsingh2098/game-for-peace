@@ -84,6 +84,11 @@ Four zones (front, rear, left, right) plus wheels. Each hit adds `dent = k * max
 
 Rules: phases land as separate small branches off `main`; the owner decides case by case (see `A-2026-11-18-15`). Shared files (`main.js`, `cityworld.js`, `selftest.mjs`) are touched in a few lines and logged. Each phase says in its log entry what was implemented, what the self-test covers, what was seen in a browser and what was not.
 
+## 7. Realistic progression, revised 24 Nov 2026 (branch `vehicle/damage-8`)
+
+Owner feedback: a car that burns after 3 or 4 knocks is no fun and is not real; a real car breaks in stages and fire is rare. The model in `src/vehicle/damage.js` (header comment) is now: body dents on every hit; the frame wears down (about 0.10 per 41 km/h wall hit, so about ten ordinary hard crashes to finish a car); glass cracks (a spider-web in the shader) and then shatters into shards; doors and bumpers dent, then come off in a hard hit on their side (14 m/s or more); tyres next to a hit bend, go flat, then burst with a pop; the engine wears from hard front hits (the Ember RS: rear) and smokes white below 50 percent, black below 25, and is dead below 5 (the car stops, no fire); fire needs the engine nearly gone AND the frame broken AND a hard hit, and then only with a probability. The fire spreads unevenly from the engine bay (a noise-edged field in the car's shader: paint blisters brown, goes sooty black, edges glow), burns 10 to 16 s, then the fuel goes: blast, doors and bonnet thrown off, tyres burst in stages, charred wreck.
+What the research on GTA V found (searches, mostly mod pages, no numbers): the stock game makes the engine stop and smoke when engine health runs low; ordinary damage does not set the car on fire, fire and explosions come from the fuel tank (shot, or a flipped car); tyres burst when a car is burnt out; small parts (doors, bumpers) can go missing from collisions while the core of the body stays visually the same. It gave no thresholds, so every number here is a design choice.
+
 ## 6. Risks
 
 - Props in the city are merged per tile (4 draw calls), so one object cannot be removed from the mesh. That is why breakable things get their own small instanced meshes (a few more draw calls per tile): new props first, existing poles in phase 2.

@@ -306,14 +306,17 @@ function carDamageInput() {
   if (D.power < 1 || pull) input = { ...input, throttle: (input.throttle || 0) * D.power, steer: Math.max(-1, Math.min(1, (input.steer || 0) + pull)) };       // a damaged engine gives less power, a crumpled corner pulls the car to that side
 }
 let dmgState = 'ok';
+const carStateNow = () => mode === 'drive' && phys ? { x: phys.x, z: phys.z, y: phys.y, yaw: phys.yaw, u: phys.u, v: phys.v, circles: phys.p.circles, radius: phys.p.radius } : null;
 function carDamageFrame(dt) {
-  const D = view.damage; if (!D) return; const ev = D.update(dt);
-  if (D.state !== dmgState) { dmgState = D.state; if (dmgState === 'smoking') toast('The engine is smoking'); else if (dmgState === 'burning') toast('The engine is on fire: get out (G)!'); else if (dmgState === 'ok') dmgState = 'ok'; }
+  const D = view.damage; if (!D) return; D.origin = grid.origin;
+  if (!D.onChunks) { D.onChunks = (center, chunks) => { if (city && city.props) city.props.debris.spawnChunks({ x: center.x, y: center.y, z: center.z }, chunks, carStateNow()); }; D.onEvent = name => { try { if (name === 'metal') { sound.burst(0, 260, 0.3, 0.5, 'bandpass', 1.2); sound.burst(0.03, 900, 0.2, 0.3, 'bandpass', 2); } else if (name === 'glass') { sound.burst(0, 4200, 0.35, 0.35, 'highpass', 0.7); sound.burst(0.05, 2600, 0.25, 0.25, 'highpass', 0.7); } else if (name === 'pop') { sound.burst(0, 140, 0.15, 0.6, 'lowpass', 0.8); sound.burst(0, 2400, 0.06, 0.4, 'highpass', 0.8); } } catch (e) { /* no audio yet */ } }; }
+  const ev = D.update(dt);
+  if (D.state !== dmgState) { dmgState = D.state; if (dmgState === 'smoking') toast('The engine is smoking'); else if (dmgState === 'dead') toast('The engine is dead: "To road" repairs the car'); else if (dmgState === 'burning') toast('The engine is on fire: get out (G)!'); }
   if (ev.burst) onCarBurst();
 }
 /* the engine blows: a small burst throws the car up, the engine dies for good, and anyone still inside is thrown out beside it */
 function onCarBurst() {
-  if (phys && phys.body) { const lv = phys.body.linvel(), av = phys.body.angvel(); phys.body.setLinvel({ x: lv.x * 0.4, y: lv.y + 3.2, z: lv.z * 0.4 }, true); phys.body.setAngvel({ x: av.x + (Math.random() - 0.5) * 1.2, y: av.y + (Math.random() - 0.5) * 2, z: av.z + (Math.random() - 0.5) * 1.2 }, true); }
+  if (phys && phys.body) { const lv = phys.body.linvel(), av = phys.body.angvel(); phys.body.setLinvel({ x: lv.x * 0.4, y: lv.y + 3.2, z: lv.z * 0.4 }, true); phys.body.setAngvel({ x: av.x + (Math.random() - 0.5) * 2.2, y: av.y + (Math.random() - 0.5) * 2, z: av.z + (Math.random() - 0.5) * 2.2 }, true); }
   setAuto(false); sound.setEngineOn(false); try { sound.burst(0, 90, 0.9, 1.0, 'lowpass', 0.8); sound.burst(0.04, 700, 0.5, 0.55, 'bandpass', 0.7); sound.burst(0.1, 160, 1.4, 0.4, 'lowpass', 0.8); } catch (e) { /* no audio yet */ }
   toast('The engine blew: the car is wrecked. Pick another vehicle in the Garage.'); if (mode === 'drive') ejectPlayer();
 }
@@ -322,7 +325,7 @@ function ejectPlayer() {
   const spot = chooseExit({ x: phys.x, z: phys.z, yaw: phys.yaw, halfWidth: 1.6, halfLength: (phys.p.front + phys.p.rear) / 2 + 1 }, footWorld, driverLeft ? [1, -1] : [-1, 1]); if (!spot) return;
   completeExit(spot, playerGltf ? new PlayerFigure(playerGltf) : null);
 }
-function backToRoad() { if (!phys) return; if (view.damage && view.damage.wrecked) { toast('This car is wrecked: pick another vehicle in the Garage'); return; } if (view.damage) view.damage.repair(); if (cityMode) { const e = city.nearestStreet(phys.x, phys.z); if (e) { const fwd = Math.cos(phys.yaw - e.yaw) >= 0; phys.reset(e.x, e.z, fwd ? e.yaw : e.yaw + Math.PI, city.gy); view.camYaw = null; setMode('drive'); toast('Back on the street'); } return; } roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
+function backToRoad() { if (!phys) return; if (view.damage && view.damage.burntOut) { toast('This car is burnt out: pick another vehicle in the Garage'); return; } if (view.damage) view.damage.repair(); if (cityMode) { const e = city.nearestStreet(phys.x, phys.z); if (e) { const fwd = Math.cos(phys.yaw - e.yaw) >= 0; phys.reset(e.x, e.z, fwd ? e.yaw : e.yaw + Math.PI, city.gy); view.camYaw = null; setMode('drive'); toast('Back on the street'); } return; } roadS = road.closestS(phys.x, phys.z, roadS); placeOnRoad(roadS); setMode('drive'); toast('Back on the road'); }
 /* on foot (N14, src/player/onfoot.js): G beside a stopped vehicle gets you out; G beside the parked vehicle gets you back in. The vehicle waits on its handbrake. */
 let playerGltf = null, exitSeq = null; loadPlayerModel().then(g => { playerGltf = g; }).catch(() => {});          // the cartoon character; until it loads (or if it fails) getting out is the old instant step
 let entities = null; const interactions = new Interactions(); let vehicleHandle = 0, foot = null, figure = null, parkedYaw = 0, footPitch = 0.28, lookDrag = null;
@@ -344,7 +347,7 @@ function completeExit(spot, fig) {
   cam.yaw = -Math.PI / 2 - foot.yaw; vehicleHandle = (entities = entities || new Registry({ vehicle: 4, player: 1 }, bus)).create('vehicle', { index: vehicle }); setMode('foot'); bus.emit('vehicle:exited', { handle: vehicleHandle });
   interactions.add({ id: 'vehicle', x: phys.x, z: phys.z, r: 3.4, prompt: 'Get in (G)', onUse: enterVehicle }); toast('On foot: W A S D walk, Shift run, Space jump, G to get back in');
 }
-function enterVehicle() { if (mode !== 'foot' || !phys) return; if (view.damage && view.damage.wrecked) { toast('This car is wrecked'); return; } interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
+function enterVehicle() { if (mode !== 'foot' || !phys) return; if (view.damage && view.damage.burntOut) { toast('This car is burnt out'); return; } interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
 function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && interactions.use(phys.x, phys.z, 'activity:')) { /* an activity started */ } else exitVehicle(); }
 /* mouse look on foot: click the game to capture the mouse (Esc releases it), then moving the mouse turns the character and tilts the camera; on a touch screen, drag on the scene */
 const lookBy = (dx, dy) => { if (mode !== 'foot' || !foot || frozen()) return; foot.yaw += dx * 0.0035; footPitch = Math.max(-0.35, Math.min(1.1, footPitch + dy * 0.0030)); };

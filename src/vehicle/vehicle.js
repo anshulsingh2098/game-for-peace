@@ -100,7 +100,7 @@ export class VehicleView {
     /* front wheels follow the real road-wheel angle, with Ackermann geometry: the inner wheel turns more than the outer */
     const L = ph.p.L, T = ph.p.track, tn = Math.tan(ph.delta), R = Math.abs(tn) > 1e-4 ? L / tn : 1e6;
     for (const w of this.wheels) {
-      if (rb) { const st = ph.wheelStates.find(s => s.front === w.front && s.side === w.side); if (st) { w.o.rotation.x = st.spin; w.o.rotation.y = st.steer; w.o.position.y = w.y0 + st.susp; } continue; }      // each wheel's own spin, steering and spring travel
+      if (rb) { const st = ph.wheelStates.find(s => s.front === w.front && s.side === w.side); if (st) { w.o.rotation.x = st.spin; w.o.rotation.y = st.steer; w.o.position.y = w.y0 + st.susp - (w.sag || 0); } continue; }      // each wheel's own spin, steering and spring travel
       w.o.rotation.x = ph.spin; let a = 0;
       if (w.front) a = w.side === 0 ? ph.delta : Math.atan(L / (R + w.side * T / 2));          // side: +1 left wheel, -1 right wheel, 0 a single front wheel (bike)
       w.o.rotation.y = -a;

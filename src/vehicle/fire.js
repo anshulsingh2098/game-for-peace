@@ -37,7 +37,7 @@ const R = () => Math.random() - 0.5;
 export class FireFx {
   constructor(scene) {
     this.scene = scene; this.smokeL = new Layer(scene, 420, false); this.fireL = new Layer(scene, 360, true); this.acc = { smoke: 0, flame: 0 };
-    this.light = new THREE.PointLight(0xff8a30, 0, 11, 1.6); this.light.visible = false; scene.add(this.light); this.flash = 0; this.glow = 0; this.t = 0;
+    this.light = new THREE.PointLight(0xff8a30, 0, 14, 2); this.light.visible = false; scene.add(this.light); this.flash = 0; this.glow = 0; this.t = 0;
   }
   /* emit while called each frame: pos = { x, y, z } in scene metres, rate = particles per second, power 0 to 1 */
   smoke(pos, rate, dt, power = 0.5, dark = 0.3) {
@@ -54,10 +54,15 @@ export class FireFx {
     for (let i = 0; i < 24; i++) { const a = Math.random() * 6.283, sp = 6 + Math.random() * 9; this.fireL.emit(pos.x, pos.y, pos.z, Math.cos(a) * sp, 3 + Math.random() * 8, Math.sin(a) * sp, 0.5 + Math.random() * 0.5, 0.12, 0.05, 1, [1, 0.95, 0.7], [1, 0.4, 0.08], -9); }       // sparks arc and fall
     this.flash = 1; this.light.position.set(pos.x, pos.y + 0.5, pos.z);
   }
+  /* a tyre bursting: a puff of dark smoke and a few sparks */
+  pop(pos) {
+    for (let i = 0; i < 14; i++) { const a = Math.random() * 6.283, sp = 0.6 + Math.random() * 2; this.smokeL.emit(pos.x, pos.y + 0.1, pos.z, Math.cos(a) * sp, 0.8 + Math.random(), Math.sin(a) * sp, 1.2 + Math.random() * 1.2, 0.25, 1.1, 0.55, [0.05, 0.05, 0.05], [0.2, 0.2, 0.2], 0.3); }
+    for (let i = 0; i < 8; i++) { const a = Math.random() * 6.283, sp = 2 + Math.random() * 4; this.fireL.emit(pos.x, pos.y, pos.z, Math.cos(a) * sp, 1 + Math.random() * 3, Math.sin(a) * sp, 0.3 + Math.random() * 0.3, 0.1, 0.04, 1, [1, 0.9, 0.6], [1, 0.4, 0.1], -9); }
+  }
   update(dt, firePos) {
     this.t += dt; this.smokeL.update(dt); this.fireL.update(dt); this.flash = Math.max(0, this.flash - dt * 2.4);
     const burning = this.glow > 0; this.light.visible = burning || this.flash > 0;
-    if (this.light.visible) { if (firePos) this.light.position.set(firePos.x, firePos.y + 0.5, firePos.z); this.light.intensity = (burning ? (1.6 + 0.8 * Math.sin(this.t * 31) * Math.sin(this.t * 17)) * this.glow : 0) + this.flash * 14; }
+    if (this.light.visible) { if (firePos) this.light.position.set(firePos.x, firePos.y + 2.2, firePos.z); this.light.intensity = (burning ? (5 + 0.7 * Math.sin(this.t * 5.3) + 0.5 * Math.sin(this.t * 9.1 + 1)) * this.glow : 0) + this.flash * 40; }          // two or more metres above the car and a slow flicker: close to the paint and fast it strobed red and grey
     this.glow = 0;
   }
   dispose() { this.smokeL.dispose(); this.fireL.dispose(); this.scene.remove(this.light); this.light.dispose && this.light.dispose(); }
