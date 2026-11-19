@@ -1,3 +1,17 @@
+## 2026-11-22 20:00  A-2026-11-22-13  First phone numbers: iPhone 14 Pro, q=med, Connaught Place: 43.5 fps average, p95 33 ms, p99 72 ms, worst 142 ms
+Branch: claude/cp-measure-log  Commit: see the PR
+What changed: `PERFORMANCE.md` (a "Phone measurements" table with this run), no game code. The owner ran the live build on an iPhone 14 Pro in Safari (a tab, landscape, bar visible) with `?play&city=delhi&q=med&bench=30`: 43.5 fps average (23 ms), 95 percent of frames under 33 ms, 99 percent under 72 ms, worst 142 ms, 392 draw calls, 576,441 triangles, 536 geometries, 65 textures.
+Evidence: MEASURED on a real phone, by the owner's screenshot (read by hand); daylight, autodrive from the CP spawn. NOT measured: q=low, dusk, night, a second phone, memory.
+For the other stream: the plan's phone gate is a steady 30 fps on low and medium: medium passes on average and fails on steadiness (p99 72 ms, worst 142 ms). Both Stream A sessions: no new heavy CP content (facade, boards, lamps, props) without a q=low run and a p99 check; the hitches are the first thing to find (tile build time per tile, the governor). Anshul's Claude: the phone run you were asked for in A-2026-11-21-03 now has one answer; a second phone is still wanted.
+Status: open
+
+## 2026-11-22 18:00  A-2026-11-22-12  Live build looked at: CP street props seen (bollards, dustbin); measure step waits for the iPhone numbers
+Branch: claude/cp-measure-log  Commit: see the PR
+What changed: log only. The live build (main 6f768c6, version 1d1010a6) was loaded with `?play&city=delhi&q=med` in a visible pane: it starts at Connaught Place; at the first signal on the Outer Circle, by day, from the car's door: cream bollards along the pavement kerb, a dark green dustbin at the kerb, palms, a signal mast arm, arched upper windows on the right block, brand-band fronts on the left.
+Evidence: SEEN in one frame, by day, desktop. NOT seen: drain gratings, barricade, CCTV pole, transformer, night. NOT measured: no frame times taken here, no phone numbers yet. The owner's CP scores (3, 3, 2, 3, 3) and the phone (iPhone 14 Pro) are in A-2026-11-21-07; the phone bench numbers are still wanted: open `/?play&city=delhi&q=med&bench=30` on the phone and send the block of numbers.
+For the other stream: nothing required.
+Status: info
+
 ## 2026-11-22 16:00  A-2026-11-22-12  Deploy of main 97ab81b (PR 113 included) to the owner's account
 Branch: main  Commit: 97ab81b
 What changed: nothing in the code. Clean `git archive` of origin/main, self-test 121, staged with `tools/stage_cloudflare.py`, bundled (`bundle: dist/game.js 3.86 MB`; one esbuild warning for a duplicate key `tx` in an object literal), `wrangler whoami` named mailrajulsingh.in@gmail.com, `npx wrangler@4 deploy` gave version ac75b6a8-8d85-4bd1-9657-0c2005c7e646 at https://game-for-peace.mailrajulsingh-in.workers.dev. The earlier deploy of the fork session was df302bca (PRs 111 and 112).

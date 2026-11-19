@@ -28,3 +28,11 @@ The pane's display refresh caps frames at about 180 per second (5.6 ms), so a 5.
 
 - No change to texture or mesh compression yet (KTX2 and meshopt are only worth it if a phone shows a download or memory problem; measure first).
 - Loading screen added (`#loading` in `next.html`): shows what is still loading and fades out at the first drawn frame.
+
+## Phone measurements
+
+| Date | Phone | Browser | Build | Tier | Seconds | Average | p95 | p99 | Worst | Draw calls | Triangles | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 22 Nov 2026 | iPhone 14 Pro, iOS 18.7 | Safari 26.1, in a tab (not the home-screen app), landscape | live, main 6f768c6, `?play&city=delhi&q=med&bench=30` | med | 30 | 43.5 fps (23 ms) | 33 ms | 72 ms | 142 ms | 392 | 576,441 (536 geometries, 65 textures) | read from the owner's screenshot of the on-screen block; start at Connaught Place on autodrive, daylight; 0 MB downloaded |
+
+Reading (A-2026-11-22-13): the average is above 30 fps, but the plan's gate is a *steady* 30 fps: p95 33 ms sits on the edge (one frame in twenty is slower than 30 fps) and p99 72 ms and the worst frame 142 ms are visible hitches, most likely tile building and the resolution governor. The triangle count (576 k) is 46 percent above the desktop number at the same spot (394 k, 22 Nov) because the phone and the build differ; the next run should be q=low, then dusk and night. Not yet measured: q=low, dusk, night, a second phone.
