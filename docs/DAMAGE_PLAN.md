@@ -1,6 +1,6 @@
 # Crash damage and impact physics: plan
 
-Status: PLAN; phase 1 (cones and dustbins) and phase 3 (visible dents on the player's vehicle) and the player-vehicle part of phase 4 (lost power, pull, engine fire, burst, charred wreck) are built, on branches `vehicle/damage-1`, `vehicle/damage-3` and `vehicle/damage-4` (Stream B, Anshul's Claude, 22 Nov 2026). Not done: phase 2, damage to traffic and parked cars (the rest of phase 4), phase 5. Nothing here is accepted by the owner yet.
+Status: PLAN; phase 1 (cones and dustbins) and phase 3 (visible dents on the player's vehicle) and the player-vehicle part of phase 4 (lost power, pull, engine fire, burst, charred wreck) are built, on branches `vehicle/damage-1`, `vehicle/damage-3` and `vehicle/damage-4` (Stream B, Anshul's Claude, 22 Nov 2026). Phase 4 also covers traffic and parked cars (branch `vehicle/damage-5`). Not done: phase 2 (poles, signs, shelters), momentum exchange between cars, phase 5. Nothing here is accepted by the owner yet.
 
 Goal: when a vehicle hits something, what happens should depend on the thing and the speed: a trash can flies, a cone flips, a light pole snaps or holds, a wall wins, a parked car is shoved and dented, and the player's car (and any other vehicle) shows damage that builds up.
 
