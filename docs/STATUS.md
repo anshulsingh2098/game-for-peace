@@ -26,6 +26,9 @@ Ledger as of commit `774a667` on `main`, plus branch `claude/audit-fixes` (17 No
 | N17 to N20 | not started | | | | | |
 | N21 to N26 | after Delhi (`docs/OVERALL_PLAN.md`) | | | | | |
 
+## 20 Nov 2026 (Stream A): seven new cars, carjacking, damage on the new cars
+All seven supplied cars are in the garage and as NPC traffic models (`docs/NEW_CARS_PLAN.md`, `docs/CAR_SPECS.md`). **Code:** yes (PR 133 merged and live for four cars; PR `claude/cars-2` for the rest, carjacking and the traffic models). **Auto:** self-test 125 (a garage-map check for carjacking and the vehicle acceptance script with no problems). **Seen:** desktop pane only: every car drives and recolours, damage on four cars (shards, smoke, bumper off), carjacking of a parked and a moving car. **Device:** not tried on a phone (damage cost, the heavier models, carjacking prompt on touch). **Accepted:** no. **Live:** four cars and the damage code are live; the rest is in the open PR. **Known limits:** no licence for any of the seven; the Figo and Aspire are rough scans; Endeavour and Maruti are over the triangle budget; some figures are from memory.
+
 ## Owner overrides on record
 - N7 to N15 were started before N0 to N6 were accepted, at the owner's request (15 and 16 Nov 2026). The "N7 must wait" gate in `PARALLEL_PLAN.md` is superseded.
 - One Claude has done both streams' work, all logged, until Anshul takes over his stream.

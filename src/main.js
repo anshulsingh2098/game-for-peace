@@ -30,6 +30,7 @@ import { Pedestrians } from './pedestrians/pedestrians.js';
 import { WALL, ARCH } from './world/tunnels.js';
 import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
+import { GARAGE_OF } from './world/city/vehicles.js';       // carjacking: which garage car a taken NPC car becomes
 import { VehiclePhysics, vehicleParams, SURFACES } from './vehicle/physics.js';
 import { RapierVehicle, initRapier, ARCADE } from './vehicle/rapier-vehicle.js';
 import { VehicleView, loadModel } from './vehicle/vehicle.js';
@@ -348,6 +349,27 @@ function completeExit(spot, fig) {
   interactions.add({ id: 'vehicle', x: phys.x, z: phys.z, r: 3.4, prompt: 'Get in (G)', onUse: enterVehicle }); toast('On foot: W A S D walk, Shift run, Space jump, G to get back in');
 }
 function enterVehicle() { if (mode !== 'foot' || !phys) return; if (view.damage && view.damage.burntOut) { toast('This car is burnt out'); return; } interactions.remove('vehicle'); if (figure) figure.visible = false; const h = vehicleHandle; setMode('drive'); entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast('Back in the vehicle'); }
+/* Carjacking (docs/NEW_CARS_PLAN.md, phase C2). On foot beside a car on the road (a moving one: its driver is pulled out and thrown on the road, a parked one: just taken), G takes it: the car leaves the traffic, the driver falls as a ragdoll (pedestrians/ragdoll.js), and the player is at the wheel of the matching garage car in the same place, painted the same colour. Wrecks and buses cannot be taken; auto rickshaws and cycle rickshaws are not drivable. */
+let carjacking = false;
+function updateCarjack() {
+  const T = city && city.traffic; if (mode !== 'foot' || !foot || !T || !T.nearestCar || frozen() || carjacking) { interactions.remove('carjack'); return; }
+  const ref = T.nearestCar(foot.x, foot.z, 3.2); if (!ref || !GARAGE_OF[ref.c.kind]) { interactions.remove('carjack'); return; }
+  interactions.add({ id: 'carjack', x: ref.c.x, z: ref.c.z, r: 5, prompt: ref.parked ? 'Take the car (G)' : 'Pull the driver out (G)', onUse: () => carjack(ref) });
+}
+function throwDriver(car, y) {                                                       // India keeps left: the driver sits on the right, so the door is on the right of the way the car faces
+  const pv = city ? city.peds.view : peds; if (!pv || !pv.rag || !pv.models) return; const gltf = pv.models.find(Boolean); if (!gltf) return;
+  const fx = Math.cos(car.yaw), fz = Math.sin(car.yaw), rx = -fz, rz = fx;
+  try { pv.rag.spawn({ x: car.x + rx * 1.1 + fx * 0.3, z: car.z + rz * 1.1 + fz * 0.3, y, yaw: car.yaw }, gltf, { x: car.x, z: car.z, y, yaw: Math.atan2(rz, rx), u: 5.5, v: 0, circles: [0], radius: 0.9 }); } catch (e) { /* no room: the driver just vanishes */ }
+}
+async function carjack(ref) {
+  const T = city && city.traffic; if (mode !== 'foot' || carjacking || !T) return; const gid = GARAGE_OF[ref.c.kind], idx = VEHICLES.findIndex(v => v.id === gid); if (idx < 0) return;
+  carjacking = true; interactions.remove('carjack'); interactions.remove('vehicle');
+  const y = foot ? foot.y : undefined, car = T.takeCar(ref); if (!ref.parked) throwDriver(car, y);
+  if (figure) figure.visible = false; await setVehicle(idx);
+  const def = VEHICLES[idx]; if (def.paint && def.paint.names && def.paint.names.length && car.paint !== undefined) { const hex = '#' + (car.paint >>> 0).toString(16).padStart(6, '0'); S.paint[def.id] = hex; save(); await applyPaint(def, await loadModel(def), hex); buildSwatches(def, await loadModel(def)); }
+  phys.reset(car.x, car.z, Math.atan2(-Math.cos(car.yaw), -Math.sin(car.yaw)), y);
+  const h = vehicleHandle; setMode('drive'); if (entities && h) entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast(ref.parked ? 'You took the ' + def.name : 'You pulled the driver out and took the ' + def.name); carjacking = false;
+}
 function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && interactions.use(phys.x, phys.z, 'activity:')) { /* an activity started */ } else exitVehicle(); }
 /* mouse look on foot: click the game to capture the mouse (Esc releases it), then moving the mouse turns the character and tilts the camera; on a touch screen, drag on the scene */
 const lookBy = (dx, dy) => { if (mode !== 'foot' || !foot || frozen()) return; foot.yaw += dx * 0.0035; footPitch = Math.max(-0.35, Math.min(1.1, footPitch + dy * 0.0030)); };
@@ -758,7 +780,7 @@ function update(dt, now) {
       if (hits.length) { if (phys && phys.body) { const lv = phys.body.linvel(), k = Math.max(0.9, 1 - 0.025 * hits.length); phys.body.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); } bus.emit('ped:hit', { hits }); } } }
   if (figure && figure.visible && foot) { figure.position.set(foot.x - grid.origin.x, foot.y, foot.z - grid.origin.z); figure.rotation.y = -foot.yaw + Math.PI / 2; if (figure.userData.pf) figure.userData.pf.update(dt, foot.speed > 0.3 || foot.moving, foot.phase); else { const sw = Math.sin(foot.phase) * (foot.moving ? 0.5 : 0); figure.userData.legs[0].rotation.x = sw; figure.userData.legs[1].rotation.x = -sw; } }
   if (exitSeq) exitSeq.update(dt); carDamageFrame(dt);
-  updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } if (city) updateCityMap(now, dt); updateToll(); updatePrompt();
+  updateActivities(dt, px, pz); updateRoute(); if (gps) { gps.setVisible(mode === 'drive' || mode === 'foot'); gps.update(now); } if (city) updateCityMap(now, dt); updateToll(); updateCarjack(); updatePrompt();
   if (phys) { view.update(phys, grid.origin); const drive = mode === 'drive';
     view.lights(S.lights === 'on' || (S.lights === 'auto' && env.lightsOn), drive && phys.u > 1 && ((input.brake || 0) > 0.1 || (input.rev || 0) > 0.1 || (input.hand || 0) > 0.1), drive && phys.u < -0.3, dt); }
   boostEase += ((buffT > 0 ? 1 : 0) - boostEase) * Math.min(1, dt * 4);
@@ -812,7 +834,7 @@ addEventListener('message', async e => {
 });
 if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
-window.__next = { get city() { return city; }, bus, runtime, get peds() { return peds; }, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get city() { return city; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
+window.__next = { get city() { return city; }, get foot() { return foot; }, carjack, get figure() { return figure; }, bus, runtime, get peds() { return peds; }, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get city() { return city; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get roadSet() { return roadSet; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, get branches() { return branches; }, get rail() { return rail; }, get railSamples() { return railSamples; }, autodrive, get activeRec() { return activeRec; }, setNav, get primaryRec() { return primaryRec; }, sectors, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
 /* debug: window.__cam(x, y, z, yaw, pitch) puts the game in fly mode with the camera exactly there (x, z game metres, y height above the map origin plane, yaw as FlyCam uses it, pitch -1.57 = straight down); used for overhead checks of junctions (docs/CP_MATCH_PLAN.md). Nothing in the game calls it. */

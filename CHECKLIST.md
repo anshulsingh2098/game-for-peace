@@ -64,6 +64,9 @@ Open the browser console (F12): nothing red except known favicon 404s.
 
 ## 5. Phone (do this at least weekly, and before any deploy)
 
+- [ ] **New cars on a phone** (20 Nov 2026): open the Garage, pick each of the seven new cars (SX4, Endeavour, GT-R50, GT-R R35, Maruti 800, Figo, Aspire): they load (2 to 3 MB each), drive, recolour, and do not make the page reload.
+- [ ] **Damage on a phone**: hit a wall at speed with one of the new cars and with the Dusk GT, then look at the frame rate (`&bench=30` before and after, or the debug panel): the cost of dents, smoke and fire must stay small; note the result in `PERFORMANCE.md`.
+- [ ] **Carjacking**: get out (G), walk up to a moving or parked car in the street, the button reads Pull the driver out or Take the car, tap it: the driver falls on the road, you are in the car in the same colour.
 - [ ] Open the live or local address on a real phone (same wifi: start the server with `python tools/serve.py --lan`; it prints the address to type into the phone. Plain `python tools/serve.py` is only reachable from the computer itself).
 - [ ] Loads in a reasonable time; touch controls work; menus fit the screen; text readable.
 - [ ] **Touch layout** (or on a computer: add `&touch` and use a phone-sized window): left, a vertical throttle lever (stays where you leave it) with BRAKE and BOOST; right, the steering handle on its arc (springs back to the middle) with AUTO, CAM and RESET; speed at the top left. Works held sideways and upright.
