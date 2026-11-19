@@ -2,6 +2,14 @@
 
 One entry per element, newest first: what the references show, what was built, the comparison against the reference, a verdict (matches, close, wrong) and what is still different. Method: `docs/CP_MATCH_PLAN.md` ("The check loop"). Reference photos are the owner's four CP photos of 19 Nov 2026 (R1 corner block in sun, R2 arcade with brand boards, R3 wide street with hedge, R4 arcade at dusk) and N19 in `docs/delhi_reference_register.json`. Study only, kept outside the repository.
 
+## 2026-11-21  Items 17 to 22 of the register: wires, frame cost, zone against the map, GTA gap list
+Wires: the CP power spans are 2.4 times thicker with 8 pieces (`wire(..., th, n)`); seen from a pavement, three clear bands across the street at 30 to 60 m, and the drum caps from the same spot read as domes.
+Frame cost (desktop Intel Mac, visible pane, q=high, 30 s, `?play&city=delhi&q=high&bench=30`, time set at load): branch NIGHT 12.9 ms (77.2 fps), p95 16.8, p99 17.2, worst 50, 517 calls, 492,192 triangles; main NIGHT 11.9 ms (84), p95 16.7, p99 17.1, 503 calls, 386,058 triangles (measured earlier today); main DUSK 11.9 ms (83.7), 503 calls, 386,706 triangles. So the branch costs about +1.0 ms (8 percent) at night against main, and +106,000 triangles; earlier today it was +0.5 ms before the domes, wires and lawns were added. Dusk for the branch was 12.2 ms before those additions and was not re-run. No phone number exists.
+Zone against the map: the pack's `nearestStreet` along the straight line from Rashtrapati Bhavan to India Gate gives the road within 10 m of the line from x -300 to 1800 (named Kartavya Path, 2 or 4 lanes); west of -300 the streets are unnamed and 40 m off, so the two westernmost circles were removed. Width: the pack says 2 or 4 lanes (6.8 or 13.6 m); the real width was not measured.
+Dome against the owner's photo R1: not possible, the photo is not in the repository or this session; listed as item 21.
+GTA 5: a ranked 12 line list from frames, `docs/GTA_GAP.md`.
+Self-test 121 checks.
+
 ## 2026-11-21  Kartavya zone shrunk to follow the avenue
 Before: one 950 m circle round (1170, 60) took in a glass office slab at (700, 300). Now 12 circles of 170 m (400 m at India Gate) every 250 m on the straight line Rashtrapati Bhavan (x -932, z -65) to India Gate (x 2000, z 108), in `identity.json` (the smallest zone wins, so Lutyens shows outside them). Checked with the game's own `__where()` at 8 points (list in OPEN_ITEMS closed table) and one frame of the avenue. The line is straight, the real road may bend; the width was not measured. Self-test 121 checks.
 

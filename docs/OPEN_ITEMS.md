@@ -10,7 +10,7 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 3 | Phase 3 | Dusk preset change touches Anshul's lighting task (L6) | Open note A-2026-11-21-06 to his Claude, no reply yet | His Claude checks `times.dusk` in his scenes |
 | 4 | Phase 6 | Kartavya spot k6 (a Lutyens roundabout) | No roundabout position found yet; k1 to k5 were looked at (21 Nov) | Find a roundabout in the lutyens area, look at it |
 | 5 | Phase 6 | Lutyens kit seen only on Janpath at one spot | Hedges, lamps and avenue seen; compound walls and bungalows not seen; the buildings there are 4 storey slabs from the map, not low bungalows | Look at a residential street |
-| 6 | Phase 6 | Kartavya zone line | Now a chain of 12 circles (170 m, India Gate end 400 m) on the straight line from Rashtrapati Bhavan (x -932, z -65) to India Gate (x 2000, z 108); the real avenue may bend and its width was not measured | Fit to the map road |
+| 6 | Phase 6 | Kartavya zone against the map | Compared 21 Nov with the pack road (`nearestStreet`): the road lies within 10 m of the straight line from x -300 to 1800; west of x -300 the pack has unnamed streets 40 m off, so the two westernmost circles were removed. Carriageway 2 or 4 lanes by the pack (6.8 or 13.6 m); real width not measured | Owner photo or survey if wanted |
 | 7 | Phase 6 | Red and yellow kerb and double yellow on Kartavya Path not compared with a photo | No photo | Owner photo of Kartavya Path |
 | 8 | Phase 5 | Palm compared side by side with an owner photo of a CP palm | No photo | Owner photo |
 | 11 | Phase 7 | `onTeleport` ignores yaw (observed) | Cause not read | Read `transit.onTeleport` |
@@ -19,12 +19,14 @@ One line per thing that was asked or promised and is NOT finished or NOT verifie
 | 14 | Earlier | Anshul's Claude reviews: lane widening audit baseline, steering/car values | Open notes | His Claude |
 | 15 | All | Merge of PRs 104 to 110 | Needs the owner's yes; they stack (105/106 then 107 to 110) | Owner |
 | 16 | Phase 7 | Palm cards show a tall bare trunk when the camera is close under them | Seen at the avenue by day | Lift the crown or shorten the trunk of the card |
-| 18 | Phase 7 | The wires are 6 cm ribbons: visible at 10 to 30 m, hair-thin beyond | By design | Owner decides if thicker |
 | 19 | Phase 8 | Kartavya Path has one carriageway with a double yellow line and red and yellow kerb paint; the real avenue is two wide carriageways with a lawn and water channels between | Map data has one way; no canal geometry | Owner decides if the canals and sandstone paths are wanted |
+| 21 | Phase 7 | Drum dome proportions against the owner's photo R1 | The photo is outside the repository and not available to this session; the dome (3.3 m drum radius, collar 0.45 m, dome 2.15 m high, finial 1.1 m) is only checked against the written notes | Owner sends R1 again or measures a real dome |
+| 22 | Phase 8 | GTA 5 gap list (`docs/GTA_GAP.md`, 12 lines) | Ranked from frames; none started except wires | Owner picks the order |
 
 ## Closed
 | Item | Evidence |
 |---|---|
+| Wires hair-thin beyond 30 m (was 18) | CP spans now 2.4 times thicker and 8 pieces for a smoother sag (`wire(... th, n)` in `streetlife.js`); the others keep 6 cm. Seen after: three clear bands across a CP street at 30 to 60 m; the drum caps from the same spot read as domes |
 | Kartavya zone too wide to the west (was 20) | One 950 m circle replaced by 12 small circles along the avenue. `__where()` after: (700, 300) and (1200, 300) are lutyens; (1200, 60), (1700, 70), (100, -10), (2000, 100) and the western end (-600, -30) are kartavya. Seen: avenue at (1200, 60) unchanged |
 | Bare sand patches in Lutyens and Kartavya (found at k5, new) | A 330 m block beside Janpath was sand: green areas drew one block in five as dusty earth by a hash, and a long block took its area from its centre. Now Kartavya and Lutyens blocks are all lawn and a block takes the area most of its outline lies in (`tilemesh.js`). Seen after: lawn in the same view. Frame cost not measured |
 | Drum corner caps like slanted flaps (was 17) | Cause: the cornice ring had no underside, so from the street it was an open collar. Added the underside, a two-tier dome and a finial (`drumCorner`, `cpfacade.js`). Seen 21 Nov from low (collar now closed, dark underside) and from a roof-high camera (domes read as domes). Not compared with an owner photo |

@@ -52,9 +52,9 @@ function tree(m, x, y0, z, sp, k, bloom, big = 1, cards = null) {
   if (!bu && sp.shape !== 'cone') { const t = k * 6.2832, B = BLOBS[sp.id] ? BLOBS[sp.id].more : [[Math.cos(t) * 0.5, 0.1, Math.sin(t) * 0.5, 0.62, 0.72]]; B.forEach((b, q) => crown(x + b[0] * r * Math.cos(t) - b[2] * r * Math.sin(t), z + b[0] * r * Math.sin(t) + b[2] * r * Math.cos(t), y1 + ch * b[1], ch * b[4], r * b[3], k + 0.37 * (q + 1), 6, 0.86 + 0.26 * ((k * 5 + q * 0.3) % 1))); }
 }
 /* a wire from (x0, y0, z0) to (x1, y1, z1) sagging by `sag`, as a vertical and a flat ribbon of 4 pieces */
-function wire(m, x0, y0, z0, x1, y1, z1, sag, c) {
-  const n = 4; let px = x0, py = y0, pz = z0; for (let i = 1; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t, y = y0 + (y1 - y0) * t - sag * 4 * t * (1 - t), dx = x - px, dz = z - pz, l = Math.hypot(dx, dz) || 1, sx = -dz / l * 0.03, sz = dx / l * 0.03;
-    quad(m, [px, py, pz], [x, y, z], [x, y + 0.05, z], [px, py + 0.05, pz], sx * 33, 0, sz * 33, c); quad(m, [px - sx, py, pz - sz], [x - sx, y, z - sz], [x + sx, y, z + sz], [px + sx, py, pz + sz], 0, 1, 0, c); px = x; py = y; pz = z; }
+function wire(m, x0, y0, z0, x1, y1, z1, sag, c, th = 1, n = 4) {      /* th: thickness factor (1 = a 6 cm ribbon; the CP spans use 2.4 so they read beyond 30 m), n: pieces */
+  let px = x0, py = y0, pz = z0; for (let i = 1; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t, y = y0 + (y1 - y0) * t - sag * 4 * t * (1 - t), dx = x - px, dz = z - pz, l = Math.hypot(dx, dz) || 1, sx = -dz / l * 0.03 * th, sz = dx / l * 0.03 * th;
+    quad(m, [px, py, pz], [x, y, z], [x, y + 0.05 * th, z], [px, py + 0.05 * th, pz], sx * 33, 0, sz * 33, c); quad(m, [px - sx, py, pz - sz], [x - sx, y, z - sz], [x + sx, y, z + sz], [px + sx, py, pz + sz], 0, 1, 0, c); px = x; py = y; pz = z; }
 }
 function inPoly(r, x, z) { let ins = false; const n = r.length / 2; for (let i = 0, j = n - 1; i < n; j = i++) { const xi = r[i * 2], zi = r[i * 2 + 1], xj = r[j * 2], zj = r[j * 2 + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) ins = !ins; } return ins; }
 
@@ -121,7 +121,7 @@ export function* buildStreetLife(tile, ctx, out) {
       if (A.ads > 0.4 && rnd(pc.id, (s | 0) + 3) < A.ads * 0.7) { const c = art.bannerFor(rnd(pc.id, (s | 0) + 7)); for (const f of [1, -1]) board(M.ban, lx + o.tz * sd * 0.5 + o.tx * 0.05 * f, gy + 5.0, lz - o.tx * sd * 0.5 + o.tz * 0.05 * f, o.tx * f, o.tz * f, 0.8, 1.6, WHITE, [c.u0, c.v0, c.u1, c.v1]); }
       prev = { x: px, z: pz }; prevSide = sd; void prevSide;
       /* CP (owner 21 Nov, phase 5 list): a power pole 2.2 m beside every second lamp post (every third gave one pole to a short street piece and so no wire span, seen 21 Nov), a cross-arm and three wires to the last one, so the walk is not bare of overhead cables */
-      if (an === 'cp' && (pi++ & 1) === 0) { const qx = px + o.tx * 2.2, qz = pz + o.tz * 2.2; if (!insideBuilding(qx, qz, 0.4) && !inRoad(qx, qz, 0.4)) { const [mx, mz] = L(qx, qz); box(M.prop, mx, gy, mz, 0.22, 8.2, 0.22, 1, 0, C(PALE.pole)); box(M.prop, mx, gy + 7.2, mz, 1.6, 0.1, 0.12, -o.tz, o.tx, C(PALE.pole)); if (prevPow) { for (let k = 0; k < 3; k++) wire(M.prop, prevPow.x - ox, gy + 7.3 - k * 0.3, prevPow.z - oz, qx - ox, gy + 7.3 - k * 0.3, qz - oz, 0.7 + 0.2 * k, C(PALE.wire)); st.spans++; } prevPow = { x: qx, z: qz }; } }
+      if (an === 'cp' && (pi++ & 1) === 0) { const qx = px + o.tx * 2.2, qz = pz + o.tz * 2.2; if (!insideBuilding(qx, qz, 0.4) && !inRoad(qx, qz, 0.4)) { const [mx, mz] = L(qx, qz); box(M.prop, mx, gy, mz, 0.22, 8.2, 0.22, 1, 0, C(PALE.pole)); box(M.prop, mx, gy + 7.2, mz, 1.6, 0.1, 0.12, -o.tz, o.tx, C(PALE.pole)); if (prevPow) { for (let k = 0; k < 3; k++) wire(M.prop, prevPow.x - ox, gy + 7.3 - k * 0.3, prevPow.z - oz, qx - ox, gy + 7.3 - k * 0.3, qz - oz, 0.7 + 0.2 * k, C(PALE.wire), 2.4, 8); st.spans++; } prevPow = { x: qx, z: qz }; } }
     }
     /* street trees */
     const dens = (veg.classDensity[pc.cls] || 0.5) * A.trees.density; if (dens > 0.03) {
