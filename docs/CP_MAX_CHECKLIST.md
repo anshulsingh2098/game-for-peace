@@ -63,7 +63,7 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 
 | Tick | ID | Category | Asset | Scope | State | Where / note |
 |---|---|---|---|---|---|---|
-| ☑ | AST-001 | architecture | CP curved arcade bay | CP | 🟩 built | arcade bay in tilemesh.js / cpfacade.js (arch, columns, cornice, drum corners) |
+| ☑ | AST-001 | architecture | CP curved arcade bay | CP | 🟩 built | arcade bay in tilemesh.js / cpfacade.js (arch, columns, cornice, square corner pavilions after R7 (PR 113), pavilion block with gate and fan-light window, granite walk with guide strip) |
 | ☑ | AST-002 | architecture | CP column | CP | 🟩 built | round fluted column, base and capital (cpfacade.js) |
 | ☐ | AST-003 | architecture | CP shopfront | CP | 🟨 partial | shopfronts from shop rules + brand band; shutters and glass detail thin |
 | ☑ | AST-004 | architecture | CP upper window | CP | 🟩 built | arched drum windows with sills (cpfacade.js) |
@@ -84,7 +84,7 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 | ☐ | AST-019 | architecture | industrial roller door | KIT | ⬜ not started |  |
 | ☐ | AST-020 | architecture | glass office tower | KIT | 🟨 partial | office kit (glass bands) in tilemesh.js |
 | ☐ | AST-021 | architecture | rooftop water tank | CP | 🟨 partial | rooftop water tanks in tilemesh.js (checked on few buildings) |
-| ☐ | AST-022 | architecture | AC outdoor unit | CP | ⬜ not started |  |
+| ☐ | AST-022 | architecture | AC outdoor unit | CP | 🟨 partial | AC boxes on the roof of the PVX Plaza cinema front only (cpfacade.js cinemaFront); none on the other fronts |
 | ☑ | AST-023 | architecture | roof parapet | CP | 🟩 built | parapet and roof cornice |
 | ☐ | AST-024 | architecture | solar panel | KIT | ⬜ not started |  |
 | ☑ | AST-025 | roads | arterial asphalt | CP | 🟩 built | PBR asphalt with wear, tracks, patches, cracks |
@@ -146,7 +146,7 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 
 | Scope | Rows | built | partial | not started |
 |---|---|---|---|---|
-| CP | 43 | 21 | 20 | 2 |
+| CP | 43 | 21 | 21 | 1 |
 | SUR | 6 | 0 | 4 | 2 |
 | KIT | 29 | 5 | 7 | 17 |
 

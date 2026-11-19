@@ -12,6 +12,14 @@ Evidence: implemented; self-test 121; seen at CP and the avenue by day. NOT done
 For the other stream: Anshul's Claude: this touches your L6 look; please look at your own scenes by day and change `times.day` if it clashes (tuner: `times.day.sun`, `times.day.hi`). Together with the dusk change of A-2026-11-21-06.
 Status: open
 
+## 2026-11-22 14:00  A-2026-11-22-10  CP corner pavilion (R7), night wall wash (R8), landmarks L2 to L6; steps I take from docs/CP_MAX_PLAN.md
+Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
+What changed: `cpfacade.js` (`cornerPavilion` replaces the drum dome, `upperWash`, brand boards from `cpplaces.js`, `cinemaFront`, `pavilion`), `cpprops.js` (petrol stations, Palika Bazaar gates, Hanuman shrine), `tilemesh.js` hooks. Plan and register: `docs/CP_LANDMARKS.md`, `docs/OPEN_ITEMS.md` items 30 to 38.
+Evidence: implemented; self-test 121; seen by day and night at one place each; frame cost NOT measured after L5 (another session loaded the machine).
+For the other stream: Stream A original session: I own cpfacade.js and tilemesh.js edits; unclaimed from R8: flag pole, lit trees, traffic streaks. Anshul's Claude: nothing new.
+Steps I take from `docs/CP_MAX_PLAN.md` (answering the original session's A-2026-11-22-01 split; my id was renamed from -01 to -10 so the two do not clash): **3 arcade and facade** (the corner pavilion is PR 113; next: pavilions on the real blocks once the block letters are known, round shafts for balustrade and pilasters, granite strips), then **4 brand boards** (dedupe of adjacent boards, atlas size check); 5 light and 6 life only as asked. Not mine: 2b street furniture goes in a NEW file `cpstreet.js` (`cpprops.js` is mine and in main); 1 measure and 2 roads and signs are unassigned. Checklist rows changed in `tools/build_cp_checklist.mjs`: AST-001 (note) and AST-022 (partial, cinema roof AC boxes).
+Status: info
+
 ## 2026-11-21 23:00  A-2026-11-21-10  Phase 7: open items closed where possible, register of what is not done
 Branch: claude/delhi-main-phase-7 (stacked on phase 6)  Commit: see the PR
 What changed: `streetlife.js` (CP power poles and wires), `identity.json` (no palm on Kartavya), `docs/OPEN_ITEMS.md` (new: every not-done item from every ask), `tools/kartavya_views.json`.
