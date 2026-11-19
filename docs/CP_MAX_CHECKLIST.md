@@ -13,8 +13,8 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 | ☐ | DEL-003 | Central Park CP | CP | 1025, -1979 | cp | Palika Bazaar (116 m) | Rajiv Chowk (113 m) | 🟨 built, not scored |
 | ☐ | DEL-004 | Janpath Market | SUR | 976, -1323 | default | Janpath Market (89 m) | Janpath Market (89 m) | 🟨 landmark model exists |
 | ☐ | DEL-005 | Palika Bazaar | CP | 800, -1946 | cp | Palika Bazaar (179 m) | Palika Bazaar (179 m) | 🟨 built, not scored |
-| ☐ | DEL-006 | India Gate | SUR | 2001, 111 | lutyens | India Gate (4 m) | India Gate (3 m) | 🟨 landmark model exists |
-| ☐ | DEL-007 | Kartavya Path | SUR | 781, -67 | lutyens | National Museum (366 m) | National Museum (366 m) | ⬜ nothing specific |
+| ☐ | DEL-006 | India Gate | SUR | 2001, 111 | kartavya | India Gate (4 m) | India Gate (3 m) | 🟨 landmark model exists |
+| ☐ | DEL-007 | Kartavya Path | SUR | 781, -67 | kartavya | National Museum (366 m) | National Museum (366 m) | ⬜ nothing specific |
 | ☐ | DEL-008 | Rashtrapati Bhavan | SUR | -937, -44 | lutyens | Rashtrapati Bhavan (21 m) | Rashtrapati Bhavan (21 m) | 🟨 landmark model exists |
 | ☐ | DEL-009 | Parliament House | SUR | -98, -367 | lutyens | Samvidhan Sadan (old Parliament House) (15 m) | Samvidhan Sadan (15 m) | 🟨 landmark model exists |
 | ☐ | DEL-010 | New Parliament | SUR | 49, -423 | lutyens | Sansad Bhavan (new Parliament House) (84 m) | Sansad Bhavan (85 m) | 🟨 landmark model exists |
@@ -63,7 +63,7 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 
 | Tick | ID | Category | Asset | Scope | State | Where / note |
 |---|---|---|---|---|---|---|
-| ☑ | AST-001 | architecture | CP curved arcade bay | CP | 🟩 built | arcade bay in tilemesh.js / cpfacade.js (arch, columns, cornice, drum corners) |
+| ☑ | AST-001 | architecture | CP curved arcade bay | CP | 🟩 built | arcade bay in tilemesh.js / cpfacade.js (arch, columns, cornice, square corner pavilions after R7 (PR 113), pavilion block with gate and fan-light window, granite walk with guide strip) |
 | ☑ | AST-002 | architecture | CP column | CP | 🟩 built | round fluted column, base and capital (cpfacade.js) |
 | ☐ | AST-003 | architecture | CP shopfront | CP | 🟨 partial | shopfronts from shop rules + brand band; shutters and glass detail thin |
 | ☑ | AST-004 | architecture | CP upper window | CP | 🟩 built | arched drum windows with sills (cpfacade.js) |
@@ -84,7 +84,7 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 | ☐ | AST-019 | architecture | industrial roller door | KIT | ⬜ not started |  |
 | ☐ | AST-020 | architecture | glass office tower | KIT | 🟨 partial | office kit (glass bands) in tilemesh.js |
 | ☐ | AST-021 | architecture | rooftop water tank | CP | 🟨 partial | rooftop water tanks in tilemesh.js (checked on few buildings) |
-| ☐ | AST-022 | architecture | AC outdoor unit | CP | ⬜ not started |  |
+| ☐ | AST-022 | architecture | AC outdoor unit | CP | 🟨 partial | AC boxes on the roof of the PVX Plaza cinema front only (cpfacade.js cinemaFront); none on the other fronts |
 | ☑ | AST-023 | architecture | roof parapet | CP | 🟩 built | parapet and roof cornice |
 | ☐ | AST-024 | architecture | solar panel | KIT | ⬜ not started |  |
 | ☑ | AST-025 | roads | arterial asphalt | CP | 🟩 built | PBR asphalt with wear, tracks, patches, cracks |
@@ -146,7 +146,7 @@ The atlas has no headings, photos or licences yet (every row `UNSURVEYED`), so n
 
 | Scope | Rows | built | partial | not started |
 |---|---|---|---|---|
-| CP | 43 | 21 | 13 | 9 |
+| CP | 43 | 21 | 14 | 8 |
 | SUR | 6 | 0 | 4 | 2 |
 | KIT | 29 | 5 | 7 | 17 |
 

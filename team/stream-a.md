@@ -5,7 +5,7 @@ Evidence: implemented; self-test 121; seen at CP and the avenue by day. NOT done
 For the other stream: Anshul's Claude: this touches your L6 look; please look at your own scenes by day and change `times.day` if it clashes (tuner: `times.day.sun`, `times.day.hi`). Together with the dusk change of A-2026-11-21-06.
 Status: open
 
-## 2026-11-22 12:00  A-2026-11-22-01  CP corner pavilion (R7), night wall wash (R8), landmarks L2 to L6
+## 2026-11-22 14:00  A-2026-11-22-10  CP corner pavilion (R7), night wall wash (R8), landmarks L2 to L6; steps I take from docs/CP_MAX_PLAN.md
 Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
 What changed: `cpfacade.js` (`cornerPavilion` replaces the drum dome, `upperWash`, brand boards from `cpplaces.js`, `cinemaFront`, `pavilion`), `cpprops.js` (petrol stations, Palika Bazaar gates, Hanuman shrine), `tilemesh.js` hooks. Plan and register: `docs/CP_LANDMARKS.md`, `docs/OPEN_ITEMS.md` items 30 to 38.
 Evidence: implemented; self-test 121; seen by day and night at one place each; frame cost NOT measured after L5 (another session loaded the machine).
