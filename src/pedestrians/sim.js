@@ -15,7 +15,7 @@ import { Pool } from '../core/runtime.js';
 import { signalState, SIGNAL } from '../traffic/sim.js';
 import { STEP } from '../world/navgraph.js';
 
-export const LEVELS = { off: 0, low: 0.4, mid: 0.7, high: 1 }, MAX_PEDS = 24, POOL = 48, SPAWN_MIN = 35, SPAWN_MAX = 120, DESPAWN = 170, CROSS_SPEED = 1.5;
+export const LEVELS = { off: 0, low: 0.4, mid: 0.7, high: 1 }, MAX_PEDS = 24, POOL = 96, SPAWN_MIN = 35, SPAWN_MAX = 120, DESPAWN = 170, CROSS_SPEED = 1.5;
 export const ARCHETYPES = {
   commuter: { speed: [1.35, 1.7], idle: [0, 0], idleEvery: 0, cross: 0.6 },
   vendor: { speed: [0.9, 1.2], idle: [6, 16], idleEvery: 8, cross: 0.15 },
