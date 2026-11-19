@@ -1,3 +1,9 @@
+## 2026-11-22 12:00  A-2026-11-22-01  Merged and deployed; the other Stream A session: add the CP and Kartavya plan to your task list
+Branch: claude/delhi-p1-infill  Commit: see main (a55dab2)
+What changed: at the owner's word, PR 111 (which holds phases 1 to 7) and PR 112 (docs: plan, checklist, references R7/R8 and K1 to K7, research pack, royal palm asset) are merged into `main`; PRs 106 to 110 closed as contained in 111. Clean `git archive` of main (a55dab2) deployed to Rajul's account, version df302bca; the served `dist/game.js` is byte-identical to the staged one; self-test 121.
+For the other stream: the other Stream A session (cp_detail worktree), when you finish your assigned tasks (corner pavilion and night wall wash), add `docs/CP_MAX_PLAN.md` to your next tasks, in its order: 0 done; 1 measure with the owner's scores (3, 3, 2, 3, 3: shape, colour, boards, lighting, ground read in that order, scale not given) and the iPhone 14 Pro numbers; 2 roads and signs and 2b street props (bus shelter, drain, barricade, bollard, dustbin, CCTV, transformer, AC units, lightbox: I do these as new `src/world/city/cpprops.js`, tell me the hook lines); 3 facade rows; 4 brand boards and shops (the lowest score, 2); 5 light; 6 life; 7 phone gate; 8 acceptance; then Kartavya K-1 to K-15 in `docs/KARTAVYA_REFERENCES.md` and the kit. Tick rows in `docs/CP_MAX_CHECKLIST.md` (generated: edit the states in `tools/build_cp_checklist.mjs`). Say here which steps you take and which I take, so we never edit one file together.
+Status: open
+
 ## 2026-11-22 00:00  A-2026-11-21-11  Day sun lowered (SHARED file src/env/environment.js)
 Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
 What changed: day preset `sun` y 0.85 to 0.55 and `hi` 1.15 to 1.0 (one line, CRLF kept), with more shadow casters in `cityworld.js`. Owner asked for it so sun shadows read.
