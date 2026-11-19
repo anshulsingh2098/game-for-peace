@@ -748,7 +748,7 @@ function update(dt, now) {
   if (peds && traffic) peds.update(dt, { x: px, z: pz, u: mode === 'foot' ? 0 : phys ? phys.u : 0 }, traffic.sim.time);
   const carNow = () => mode === 'drive' && phys ? { x: phys.x, z: phys.z, y: phys.y, yaw: phys.yaw, u: phys.u, v: phys.v, circles: phys.p.circles, radius: phys.p.radius } : null;
   if (city && city.traffic.dmg) city.traffic.dmg.update(dt, px, pz, city.gy);          // other cars: dents, smoke, fire, wrecks (trafficdamage.js)
-  if (phys && phys.broke && city && city.props) { const car = carNow(); for (const o of phys.broke) if (o.pole) city.props.snapPole(o.pole, car); phys.broke = null; }          // poles the car snapped (breakables.js)
+  if (phys && phys.broke && city && city.props) { const car = carNow(); for (const o of phys.broke) if (o.pole) city.props.snapPole(o.pole, car); else if (o.brk) city.props.breakObject(o.brk, car); phys.broke = null; }          // poles the car snapped (breakables.js)
   if (city && city.props) { const hs = city.props.update(dt, px, pz, city.gy, carNow()); if (hs.length && phys && phys.body) { let k = 1; for (const h of hs) k *= h.keep; const lv = phys.body.linvel(); phys.body.setLinvel({ x: lv.x * k, y: lv.y, z: lv.z * k }, true); } }       // cones and dustbins: knocked over, the car keeps going (breakables.js)
   { const pv = city ? city.peds.view : peds;                                                                                                // the car can hit walkers: they fall as ragdolls and the car keeps going (pedestrians/ragdoll.js)
     if (pv) { const car = carNow(), hits = pv.physics(dt, car);

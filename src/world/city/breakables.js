@@ -14,6 +14,12 @@ export const DAMAGE = {
      an electric pole (concrete or steel, carrying wires) holds up to 26 m/s (94 km/h). The wires of the tile stay where they were. */
   lamp: { snap: 6, mass: 110, keep: 0.93, r: 0.22, h: 7.1, solid: 0.2 },
   power: { snap: 26, mass: 260, keep: 0.8, r: 0.25, h: 7.2, solid: 0.25 },
+  /* pieces torn out of the tile's merged meshes (phase 2): the thin steel and glass of a bus shelter gives way from 5 m/s (18 km/h) and flies apart in 8 pieces; a street stall or a kiosk (sheet metal and wood)
+     from 4 and 6 m/s; a road sign on its thin post from 4 m/s (a street name board on two posts from 7, a speed-limit plate from 5). Below that they hold and dent the car. */
+  shelter: { snap: 5, keep: 0.9, chunks: 8, solid: 0.7 },
+  stall: { snap: 4, keep: 0.94, chunks: 7, solid: 0.8 },
+  kiosk: { snap: 6, keep: 0.9, chunks: 9, solid: 0.9 },
+  sign: { snap: 4, keep: 0.97, chunks: 3, solid: 0.16 },
 };
 const WALK = new Set(['primary', 'secondary', 'tertiary', 'residential']);
 const CAP = 480, RANGE = 220, MAXDEBRIS = 14, CAR = 1 << 15, GROUND = 1 << 14, H = 1 / 120;
@@ -61,7 +67,21 @@ class Debris {
     const mesh = new THREE.Mesh(this.geos[kind], this.mat); mesh.castShadow = true; mesh.frustumCulled = false; this.scene.add(mesh);
     const d = { slot, kind, body, mesh, age: 0, rest: 0, fade: -1 }; this.list.push(d); return d;
   }
-  remove(i) { const d = this.list[i]; this.world.removeRigidBody(d.body); this.scene.remove(d.mesh); this.list.splice(i, 1); }
+  /* a piece of street furniture broke into `chunks` ([{ cx, cy, cz, hx, hy, hz, geo, mat }] in game metres, the geometry centred on its own centre): one rigid body each, thrown outward and away from the car */
+  spawnChunks(center, chunks, car) {
+    this.ensure(center.x, center.z, center.y); const used = new Set(this.list.map(d => d.slot)); let slot = 0; while (used.has(slot) && slot < 14) slot++;
+    if (slot > 13) { const s0 = this.list[0].slot; while (this.list.length && this.list[0].slot === s0) this.remove(0); slot = s0; }
+    const cv = car ? [car.u * Math.cos(car.yaw) - car.v * Math.sin(car.yaw), car.u * Math.sin(car.yaw) + car.v * Math.cos(car.yaw)] : [0, 0], sp = Math.hypot(cv[0], cv[1]), r = () => Math.random() - 0.5, out = [];
+    for (const c of chunks) {
+      let ox = c.cx - center.x, oz = c.cz - center.z; const ol = Math.hypot(ox, oz) || 1; ox /= ol; oz /= ol; const push = 1.2 + 0.18 * sp, vol = Math.max(0.0005, 8 * c.hx * c.hy * c.hz);
+      const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(c.cx - this.ox, c.cy, c.cz - this.oz).setLinvel(cv[0] * 0.55 + ox * push + r() * 1.2, 1.5 + Math.random() * (1.5 + 0.1 * sp), cv[1] * 0.55 + oz * push + r() * 1.2)
+        .setAngvel({ x: r() * 8, y: r() * 8, z: r() * 8 }).setLinearDamping(0.1).setAngularDamping(0.6).setCcdEnabled(true));
+      this.world.createCollider(RAPIER.ColliderDesc.cuboid(Math.max(0.04, c.hx), Math.max(0.04, c.hy), Math.max(0.04, c.hz)).setMass(Math.max(1.5, vol * 160)).setFriction(0.7).setRestitution(0.25).setCollisionGroups(((1 << slot) << 16) | GROUND | CAR), body);
+      const mesh = new THREE.Mesh(c.geo, c.mat); mesh.castShadow = true; mesh.frustumCulled = false; this.scene.add(mesh); const d = { slot, kind: 'chunk', body, mesh, age: 0, rest: 0, fade: -1, centred: true, life: 150, ownGeo: true }; this.list.push(d); out.push(d);
+    }
+    return out;
+  }
+  remove(i) { const d = this.list[i]; this.world.removeRigidBody(d.body); this.scene.remove(d.mesh); if (d.ownGeo) d.mesh.geometry.dispose(); this.list.splice(i, 1); }
   update(dt, car) {
     if (!this.world) return;
     if (car) { const hl = Math.max(1.8, (car.circles ? Math.max(...car.circles) - Math.min(...car.circles) : 3) / 2 + (car.radius || 0.95)), hw = Math.max(0.8, (car.radius || 0.95) * 0.95); this.carCol.setHalfExtents({ x: hw, y: 0.5, z: hl });
@@ -70,7 +90,7 @@ class Debris {
     this.acc += Math.min(dt, 0.05); let n = 0; while (this.acc >= H && n++ < 6) { this.world.step(); this.acc -= H; }
     for (let i = this.list.length - 1; i >= 0; i--) {
       const d = this.list[i]; d.age += dt; const t = d.body.translation(), q = d.body.rotation(), v = d.body.linvel();
-      d.mesh.quaternion.set(q.x, q.y, q.z, q.w);
+      d.mesh.quaternion.set(q.x, q.y, q.z, q.w); if (d.centred) { d.mesh.position.set(t.x + this.ox - this.origin.x, t.y, t.z + this.oz - this.origin.z); d.rest = Math.hypot(v.x, v.y, v.z) < 0.15 ? d.rest + dt : 0; if (d.rest > 1 && d.age > 1) d.body.sleep(); if (d.age > d.life && d.fade < 0) d.fade = 0; if (d.fade >= 0) { d.fade += dt; d.mesh.scale.setScalar(Math.max(0.001, 1 - d.fade / 1.2)); if (d.fade > 1.2) this.remove(i); } continue; }
       // the mesh's origin is at its base; the body's centre is half the height up, along the body's own axis
       const up = new THREE.Vector3(0, -DAMAGE[d.kind].h / 2, 0).applyQuaternion(d.mesh.quaternion); d.mesh.position.set(t.x + this.ox - this.origin.x + up.x, t.y + up.y, t.z + this.oz - this.origin.z + up.z);
       d.rest = Math.hypot(v.x, v.y, v.z) < 0.15 ? d.rest + dt : 0; if (d.rest > 1 && d.age > 1) d.body.sleep();
@@ -82,8 +102,8 @@ class Debris {
 }
 
 export class StreetProps {
-  constructor(scene, origin, traffic) {
-    this.scene = scene; this.origin = origin; this.traffic = traffic; this.t = 0; this.scanT = 0; this.byPiece = new Map(); this.knocked = new Set(); this.nextId = 1; this.dirty = true; this.gy = 0;
+  constructor(scene, origin, traffic, city) {
+    this.scene = scene; this.origin = origin; this.traffic = traffic; this.city = city; this.brk = new Map(); this.t = 0; this.scanT = 0; this.byPiece = new Map(); this.knocked = new Set(); this.nextId = 1; this.dirty = true; this.gy = 0;
     this.geos = { bin: binGeo(), cone: coneGeo(), lamp: lampGeo(), power: powerGeo() }; this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65, metalness: 0.05, envMapIntensity: 0.4 });
     this.mesh = { bin: new THREE.InstancedMesh(this.geos.bin, this.mat, CAP), cone: new THREE.InstancedMesh(this.geos.cone, this.mat, CAP) };
     for (const m of Object.values(this.mesh)) { m.count = 0; m.frustumCulled = false; m.castShadow = true; scene.add(m); }
@@ -142,9 +162,32 @@ export class StreetProps {
     const arr = list.map(p => ({ k: p.k, x: p.x, z: p.z, y: this.gy, yaw: Math.atan2(-p.az, p.ax), alive: true, tile: k })); let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const p of arr) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
     arr.bb = [x0 - 3, z0 - 3, x1 + 3, z1 + 3]; this.poles.set(k, arr); this.pdirty = true;
   }
-  removePoles(k) { if (this.poles.delete(k)) this.pdirty = true; }
+  removePoles(k) { if (this.poles.delete(k)) this.pdirty = true; this.brk.delete(k); }
+  /* shelters, kiosks, stalls and road signs of a tile (from streetlife.js and tilemesh.js: { k, circles: [[x, z, r], ...], bb: [x0, z0, x1, z1, y0, y1], snap? }): they stay in the tile's meshes, solid for the car, until one is broken */
+  addBreakables(k, list) { this.brk.set(k, list.map(e => ({ ...e, tile: k, alive: true, snap: e.snap || DAMAGE[e.k].snap }))); }
+  /* the car broke this one: take its triangles out of the tile's meshes (collapse them), make rigid pieces of them and throw them */
+  breakObject(e, car) {
+    if (!e.alive) return; e.alive = false; this.stats.broken = (this.stats.broken || 0) + 1; const t = this.city && this.city.tiles.get(e.tile); if (!t) return; const S = this.city.pack.size, ox = t.tx * S, oz = t.tz * S, [x0, z0, x1, z1, y0, y1] = e.bb, pad = 0.04;
+    const mats = new Set(['prop', 'ban', 'sign', 'ad', 'rsign'].map(n => this.city.mats[n]).filter(Boolean)), groups = new Map(), D = DAMAGE[e.k]; let cell = 1.1;
+    const tris = []; for (const m of t.meshes) {
+      if (!m.isMesh || m.isInstancedMesh || !mats.has(m.material) || !m.geometry.index) continue; const g = m.geometry, P = g.attributes.position.array, N = g.attributes.normal && g.attributes.normal.array, C = g.attributes.color && g.attributes.color.array, U = g.attributes.uv && g.attributes.uv.array, I = g.index.array; let hit = false;
+      for (let q = 0; q < I.length; q += 3) { const a = I[q], b = I[q + 1], c = I[q + 2]; if (a === b) continue; const cx = (P[a * 3] + P[b * 3] + P[c * 3]) / 3 + ox, cy = (P[a * 3 + 1] + P[b * 3 + 1] + P[c * 3 + 1]) / 3, cz = (P[a * 3 + 2] + P[b * 3 + 2] + P[c * 3 + 2]) / 3 + oz;
+        if (cx < x0 - pad || cx > x1 + pad || cz < z0 - pad || cz > z1 + pad || cy < y0 - pad || cy > y1 + pad) continue; tris.push({ m, P, N, C, U, v: [a, b, c], cx, cy, cz }); I[q + 1] = a; I[q + 2] = a; hit = true; }
+      if (hit) g.index.needsUpdate = true;
+    }
+    if (!tris.length) return; const key = (tr, cs) => tr.m.uuid + '|' + Math.floor(tr.cx / cs) + ',' + Math.floor(tr.cy / (cs * 1.4)) + ',' + Math.floor(tr.cz / cs);
+    for (let tries = 0; tries < 6; tries++) { groups.clear(); for (const tr of tris) { const kk = key(tr, cell); let l = groups.get(kk); if (!l) groups.set(kk, l = []); l.push(tr); } if (groups.size <= (D.chunks || 8)) break; cell *= 1.4; }
+    const chunks = []; for (const l of groups.values()) {
+      let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9, c0 = 1e9, c1 = -1e9; for (const tr of l) for (const v of tr.v) { const x = tr.P[v * 3] + ox, y = tr.P[v * 3 + 1], z = tr.P[v * 3 + 2] + oz; a0 = Math.min(a0, x); a1 = Math.max(a1, x); b0 = Math.min(b0, y); b1 = Math.max(b1, y); c0 = Math.min(c0, z); c1 = Math.max(c1, z); }
+      const mx = (a0 + a1) / 2, my = (b0 + b1) / 2, mz = (c0 + c1) / 2, pos = [], nor = [], col = [], uv = []; for (const tr of l) for (const v of tr.v) { pos.push(tr.P[v * 3] + ox - mx, tr.P[v * 3 + 1] - my, tr.P[v * 3 + 2] + oz - mz); if (tr.N) nor.push(tr.N[v * 3], tr.N[v * 3 + 1], tr.N[v * 3 + 2]); if (tr.C) col.push(tr.C[v * 3], tr.C[v * 3 + 1], tr.C[v * 3 + 2]); if (tr.U) uv.push(tr.U[v * 2], tr.U[v * 2 + 1]); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); if (nor.length) g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); if (col.length) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); if (uv.length) g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      chunks.push({ cx: mx, cy: my, cz: mz, hx: (a1 - a0) / 2, hy: (b1 - b0) / 2, hz: (c1 - c0) / 2, geo: g, mat: l[0].m.material });
+    }
+    this.debris.spawnChunks({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, y: this.gy }, chunks, car || { x: (x0 + x1) / 2 - 1, z: (z0 + z1) / 2, yaw: 0, u: 3, v: 0 });
+  }
   circles(x, z, r) {
-    const out = []; for (const arr of this.poles.values()) { const b = arr.bb; if (x < b[0] - r || x > b[2] + r || z < b[1] - r || z > b[3] + r) continue;
+    const out = []; for (const list of this.brk.values()) for (const e of list) { if (!e.alive) continue; for (const c of e.circles) if (Math.abs(c[0] - x) <= r + 2 && Math.abs(c[1] - z) <= r + 2) out.push({ x: c[0], z: c[1], r: c[2], y: this.gy, snap: e.snap, keep: DAMAGE[e.k].keep, brk: e }); }
+    for (const arr of this.poles.values()) { const b = arr.bb; if (x < b[0] - r || x > b[2] + r || z < b[1] - r || z > b[3] + r) continue;
       for (const p of arr) { if (!p.alive || Math.abs(p.x - x) > r + 2 || Math.abs(p.z - z) > r + 2) continue; const D = DAMAGE[p.k]; out.push({ x: p.x, z: p.z, r: D.solid, y: p.y, snap: D.snap, keep: D.keep, pole: p }); } } return out;
   }
   /* the car broke this pole off: it stops being solid and falls over, away from the car */
