@@ -14,6 +14,7 @@ import { loadIdentity } from './identity.js';
 import { StreetArt } from './streetart.js';
 import { CityBuses } from './citybus.js';
 import { SignalHeads } from './signalheads.js';
+import { makePalmCanvas } from './cpfacade.js';
 import { WX } from '../../env/environment.js';
 
 /* the world config of a city: the region's palette and plants, on flat land (no hills, no sea) with the engine's own placeholder road parked far away (the engine always has one road; here it only gives the vehicle code something to ask) */
@@ -103,7 +104,7 @@ export class CityWorld {
   /* the leaf-card material of a tree picture (assets/nature): the picture's own colours, tinted per tree, cut out by its alpha; shared by every tile */
   /* a soft dark disc under a tree (a blob shadow): one instanced mesh a tile */
   shadowMat() { if (!this._sm) { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, 'rgba(0,0,0,0.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); this._sm = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); } return this._sm; }
-  treeMat(name) { this._tm = this._tm || {}; if (!this._tm[name]) { const t = new THREE.TextureLoader().load('assets/nature/' + name + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; this._tm[name] = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.45, side: THREE.FrontSide, roughness: 1, metalness: 0, envMapIntensity: 0.25 }); } return this._tm[name]; }
+  treeMat(name) { this._tm = this._tm || {}; if (!this._tm[name]) { const t = name === 'delhi_palm' ? new THREE.CanvasTexture(makePalmCanvas()) : new THREE.TextureLoader().load('assets/nature/' + name + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; this._tm[name] = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.45, side: THREE.FrontSide, roughness: 1, metalness: 0, envMapIntensity: 0.25 }); } return this._tm[name]; }
   ck(i, j) { return (i + 8192) * 16384 + (j + 8192); }
   label(grp, l, tile) {
     if (typeof document !== 'undefined' && document.body && document.body.classList.contains('touch')) return null;       // phones: no floating road numbers (owner, 20 Nov 2026)

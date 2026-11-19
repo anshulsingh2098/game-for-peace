@@ -172,3 +172,23 @@ export function boardReflections(m, X, Z, ax, az, bx, bz, nx, nz, y, bay, key, r
     m.tri(P[0], P[1], P[2], 0, 1, 0); m.tri(P[0], P[2], P[3], 0, 1, 0); q += 2; }
   return q;
 }
+
+/* A Delhi palm picture for the tree-card system (phase 5 of docs/DELHI_MAIN_PLAN.md): 512 x 1024, transparent, drawn in code (no outside image, no licence): a slim tapered trunk with ring marks, a crown of 17 arching fronds with leaflets, a few dead fronds hanging under the crown. Proportions as the other Delhi pictures expect (tilemesh and streetlife place a card by the crown width and the tree height): the crown spans 86 percent of the width, the tree 86 percent of the height, the foot 2 percent above the bottom. Seeded, so it is the same every time. */
+export function makePalmCanvas() {
+  const W = 512, H = 1024, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  let seed = 90210; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const cx = 258, cy = 300, foot = 1004;                                                                           // crown centre and trunk foot
+  const trunk = t => ({ x: 256 + (cx - 256) * t * t + 6 * Math.sin(t * 3.1), y: foot + (cy - foot) * t, w: 24 - 11 * t });
+  g.lineCap = 'round'; for (let i = 0; i < 60; i++) { const a = trunk(i / 60), b = trunk((i + 1) / 60); const lg = g.createLinearGradient(a.x - a.w / 2, 0, a.x + a.w / 2, 0); lg.addColorStop(0, '#5a4128'); lg.addColorStop(0.5, '#8a6a47'); lg.addColorStop(1, '#4d3822'); g.strokeStyle = lg; g.lineWidth = a.w + 1; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y + 1); g.stroke(); }
+  g.strokeStyle = 'rgba(40,28,16,0.55)'; g.lineWidth = 2; for (let y = foot - 8; y > cy + 10; y -= 15) { const t = (foot - y) / (foot - cy), a = trunk(t); g.beginPath(); g.moveTo(a.x - a.w / 2, y); g.quadraticCurveTo(a.x, y + 4, a.x + a.w / 2, y); g.stroke(); }          // the ring marks
+  const GREENS = ['#2f6a2c', '#3f7d34', '#4f9040', '#2a5c2a', '#5aa047'];
+  const frond = (ang, L, droop, dead) => {
+    const dx = Math.cos(ang), dy = Math.sin(ang), pt = t => ({ x: cx + dx * L * t, y: cy + dy * L * t + droop * L * t * t });
+    g.strokeStyle = dead ? '#7a5a34' : '#3a6a2c'; g.lineWidth = dead ? 3 : 4; g.beginPath(); g.moveTo(cx, cy); for (let i = 1; i <= 20; i++) { const p = pt(i / 20); g.lineTo(p.x, p.y); } g.stroke();
+    for (let t = 0.1; t < 1; t += dead ? 0.07 : 0.032) { const a = pt(t), b = pt(Math.min(1, t + 0.02)), tx = b.x - a.x, ty = b.y - a.y, tl = Math.hypot(tx, ty) || 1, ux = tx / tl, uy = ty / tl, len = (dead ? 14 : 30) * (1 - 0.6 * t) * (0.8 + 0.4 * rnd());
+      for (const side of [-1, 1]) { const ca = Math.cos(0.95 * side), sa = Math.sin(0.95 * side), lx = ux * ca - uy * sa, ly = ux * sa + uy * ca + 0.45; const n = Math.hypot(lx, ly); g.strokeStyle = dead ? '#8a6a3c' : GREENS[Math.floor(rnd() * GREENS.length)]; g.lineWidth = dead ? 2 : 3.2; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(a.x + lx / n * len, a.y + ly / n * len); g.stroke(); } } };
+  for (let i = 0; i < 3; i++) frond(Math.PI / 2 + (i - 1) * 0.5 + (rnd() - 0.5) * 0.2, 90 + 30 * rnd(), 0.2, true);                         // dead fronds hanging
+  for (let i = 0; i < 17; i++) { const a = -Math.PI + 0.12 + (Math.PI - 0.24) * (i / 16) + (rnd() - 0.5) * 0.12, up = Math.abs(Math.sin(a)); frond(a, 190 + 40 * (1 - up) + 24 * rnd(), 0.35 + 0.5 * (1 - up), false); }          // the live crown: tips spread to 86 percent of the width
+  g.fillStyle = '#6a4c2a'; g.beginPath(); g.ellipse(cx, cy + 4, 15, 20, 0, 0, 7); g.fill(); g.fillStyle = '#4d6a2a'; for (let i = 0; i < 7; i++) { g.beginPath(); g.ellipse(cx + (rnd() - 0.5) * 20, cy - 8 - rnd() * 12, 6, 14, (rnd() - 0.5) * 0.8, 0, 7); g.fill(); }          // the crown shaft and the spear leaves
+  return c;
+}

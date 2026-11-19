@@ -1,3 +1,10 @@
+## 2026-11-21 21:00  A-2026-11-21-08  Delhi main plan phase 5: palms and wide pavements
+Branch: claude/delhi-main-phase-5 (stacked on phase 4)  Commit: see the PR
+What changed: `cpfacade.js` (`makePalmCanvas`), `cityworld.js` (palm card hook), `streetlife.js` (palm sizing), `assets/cities/delhi/identity.json` (palm species), `tilemesh.js` (4.2 m pavements near CP). Own work, no licence needed.
+Evidence: implemented; self-test 121; seen by day and night. NOT done: frame cost, phone test, power poles.
+For the other stream: nothing required.
+Status: info
+
 ## 2026-11-21 20:00  A-2026-11-21-07  Delhi main plan phase 4: wet reflections on the paving at night
 Branch: claude/delhi-main-phase-4 (stacked on phase 3)  Commit: see the PR
 What changed: `cpfacade.js` (`boardReflections`, `brandIndex`), `tilemesh.js` (one call in `arcade()`, glossier paving in `setNight`). Night only.

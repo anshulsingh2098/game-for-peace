@@ -393,7 +393,7 @@ export function* buildTileSteps(tile, ctx) {
     }
     strip(M.road, -hw, hw, rc, 0); if (lay === 0 && !sunk && ROADJ.has(cls) && s.pts.length >= 4) addJ(s.pts, hw, rc, cls);
     if (sunk) { underpass(pts, F, H, hw, id, lay); if (['motorway', 'trunk', 'primary', 'secondary', 'tertiary'].includes(cls) && w >= 5.5) { /* lane marks below */ } } else
-    if (walk > 0) { const wl = 1.8; strip(M.walk, hw, hw + wl, WALK, 0); if (walk > 1 || two) strip(M.walk, -hw - wl, -hw, WALK, 0); if (!deck) { kerb(pts, F, hw, 1, id); if (walk > 1 || two) kerb(pts, F, hw, -1, id); } }
+    if (walk > 0) { const mx = pts[(F.n >> 1) * 2] - CP_CIRCLE.cx, mz = pts[(F.n >> 1) * 2 + 1] - CP_CIRCLE.cz, dcp = Math.hypot(mx, mz), wl = dcp > 90 && dcp < CP_CIRCLE.PLAZA_R && !deck && (cls === 'primary' || cls === 'secondary' || cls === 'tertiary') ? 4.2 : 1.8; /* CP (owner 21 Nov, phase 5): the pavements round the circles and on the radials are wide, 4.2 m, not 1.8 */ strip(M.walk, hw, hw + wl, WALK, 0); if (walk > 1 || two) strip(M.walk, -hw - wl, -hw, WALK, 0); if (!deck) { kerb(pts, F, hw, 1, id); if (walk > 1 || two) kerb(pts, F, hw, -1, id); } }
     /* sidewalks are painted flat (the car physics has no kerb yet); a flyover gets edges, an underside and piers */
     if (deck) {
       const wall = (off, side) => { for (let i = 0; i + 1 < F.n; i++) {
