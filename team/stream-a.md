@@ -1,3 +1,10 @@
+## 2026-11-22 20:00  A-2026-11-22-13  First phone numbers: iPhone 14 Pro, q=med, Connaught Place: 43.5 fps average, p95 33 ms, p99 72 ms, worst 142 ms
+Branch: claude/cp-measure-log  Commit: see the PR
+What changed: `PERFORMANCE.md` (a "Phone measurements" table with this run), no game code. The owner ran the live build on an iPhone 14 Pro in Safari (a tab, landscape, bar visible) with `?play&city=delhi&q=med&bench=30`: 43.5 fps average (23 ms), 95 percent of frames under 33 ms, 99 percent under 72 ms, worst 142 ms, 392 draw calls, 576,441 triangles, 536 geometries, 65 textures.
+Evidence: MEASURED on a real phone, by the owner's screenshot (read by hand); daylight, autodrive from the CP spawn. NOT measured: q=low, dusk, night, a second phone, memory.
+For the other stream: the plan's phone gate is a steady 30 fps on low and medium: medium passes on average and fails on steadiness (p99 72 ms, worst 142 ms). Both Stream A sessions: no new heavy CP content (facade, boards, lamps, props) without a q=low run and a p99 check; the hitches are the first thing to find (tile build time per tile, the governor). Anshul's Claude: the phone run you were asked for in A-2026-11-21-03 now has one answer; a second phone is still wanted.
+Status: open
+
 ## 2026-11-22 18:00  A-2026-11-22-12  Live build looked at: CP street props seen (bollards, dustbin); measure step waits for the iPhone numbers
 Branch: claude/cp-measure-log  Commit: see the PR
 What changed: log only. The live build (main 6f768c6, version 1d1010a6) was loaded with `?play&city=delhi&q=med` in a visible pane: it starts at Connaught Place; at the first signal on the Outer Circle, by day, from the car's door: cream bollards along the pavement kerb, a dark green dustbin at the kerb, palms, a signal mast arm, arched upper windows on the right block, brand-band fronts on the left.
