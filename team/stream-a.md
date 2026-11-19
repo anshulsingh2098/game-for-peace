@@ -1,3 +1,10 @@
+## 2026-11-22 22:00  A-2026-11-22-15  SHARED file src/env/environment.js: sun halo in the sky shader (F3b)
+Branch: claude/cp-fix-3b (stacked on PR 125)  Commit: see the PR
+What changed: one line of the sky fragment shader (`pow(sd, 120.0) * 0.9` added, the `pow(sd, 14.0)` weight 0.30 to 0.42, `pow(sd, 3.0)` 0.10 to 0.12; CRLF kept); `cityworld.js` shadow casters reduced to columns and junk; `tilemesh.js` under-cornice band; `setWet` also brightens the additive night lights.
+Evidence: implemented; self-test 122; the game ran with it; the halo itself not looked at; frame TIMES not taken (pane hidden), counts in docs/CP_FIX_PLAN.md F3b.
+For the other stream: anyone with a visible window: please run `?play&city=delhi&q=high&bench=30` (day and night) on this branch and on main back to back; the shadow pass was 323 draw calls before the casters were cut.
+Status: open
+
 ## 2026-11-22 20:00  A-2026-11-22-14  SHARED file src/main.js: one call added for wet city surfaces (F3)
 Branch: claude/cp-fix-3 (stacked on the F1 and F2 branches, PR 121 and 123)  Commit: see the PR
 What changed: `src/main.js` city frame line: `city.setWet(env.w.wet);` after `city.setNight(...)`; `cityworld.js` `setWet`; `tilemesh.js` AO strips. No change to `environment.js`.
