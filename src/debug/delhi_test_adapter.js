@@ -69,16 +69,35 @@ function install() {
       nav.setDest(ph.x, ph.z, { x: t.x, z: t.z, name: t.name }, ph.yaw); if (!nav.route) return { ok: false, reason: 'no drivable route to ' + t.name };
       const plan = { metres: Math.round(nav.route.metres), steps: nav.steps.map(s => ({ dist: Math.round(s.dist), text: s.text })) };
       if (!n.autodrive.enabled) document.querySelector('#autoBtn').click(); if (!n.autodrive.enabled) return { ok: false, reason: 'autodrive did not start' };
-      const samples = [], t0 = performance.now(); let still = 0, last = null, arrived = false, minGround = 1, maxDy = 0, dist = 0, rerouted = 0, stepSeen = new Set();
+      const samples = [], t0 = performance.now(); let still = 0, last = null, arrived = false, minGround = 1, maxDy = 0, dist = 0, rerouted = 0, stepSeen = new Set(), minY = Infinity, maxY = -Infinity, below = 0, maxSlope = 0, slopeAt = null;
       while (performance.now() - t0 < maxSeconds * 1000) {
         await wait(sampleMs); const s = api.telemetry(); samples.push(s);
-        if (last) { const d = Math.hypot(s.x - last.x, s.z - last.z); dist += d; maxDy = Math.max(maxDy, Math.abs(s.y - last.y)); still = d < 0.3 ? still + sampleMs / 1000 : 0; }
-        minGround = Math.min(minGround, s.grounded === null ? 1 : s.grounded); if (nav.si !== undefined) stepSeen.add(nav.si); if (s.routeState && s.routeState.offRoute > 0) rerouted++;
+        if (last) { const d = Math.hypot(s.x - last.x, s.z - last.z); dist += d; maxDy = Math.max(maxDy, Math.abs(s.y - last.y)); if (d > 2) { const sl = Math.abs(s.y - last.y) / d; if (sl > maxSlope) { maxSlope = sl; slopeAt = { x: s.x, z: s.z, dy: round(s.y - last.y, 2), dM: round(d, 1), street: s.street }; } } still = d < 0.3 ? still + sampleMs / 1000 : 0; }
+        minGround = Math.min(minGround, s.grounded === null ? 1 : s.grounded); minY = Math.min(minY, s.y); maxY = Math.max(maxY, s.y); if (s.groundY !== null && s.y < s.groundY - 1.5) below++; if (nav.si !== undefined) stepSeen.add(nav.si); if (s.routeState && s.routeState.offRoute > 0) rerouted++;
         last = s; if (onSample) onSample(s); if (nav.arrived) { arrived = true; break; } if (still > 25) break;
       }
       if (n.autodrive.enabled) document.querySelector('#autoBtn').click(); if (n.autodrive.enabled) document.querySelector('#autoBtn').click();    // cycle full -> cruise -> off
       release(); const end = api.telemetry();
-      return { ok: arrived, arrived, stuck: still > 25, seconds: round((performance.now() - t0) / 1000), driveMetres: Math.round(dist), plan, endsNear: { x: end.x, z: end.z, street: end.street }, distToTargetM: Math.round(Math.hypot(end.x - t.x, end.z - t.z)), minGrounded: minGround, maxStepDy: round(maxDy, 2), stepsReached: stepSeen.size, frames: frameStats(f0), errors: errors.slice(e0), samples: samples.length, firstSamples: samples.slice(0, 3) };
+      return { ok: arrived, arrived, stuck: still > 25, seconds: round((performance.now() - t0) / 1000), driveMetres: Math.round(dist), plan, endsNear: { x: end.x, z: end.z, street: end.street }, distToTargetM: Math.round(Math.hypot(end.x - t.x, end.z - t.z)), minGrounded: minGround, maxStepDy: round(maxDy, 2), maxSlope: round(maxSlope, 3), slopeAt, yRange: [round(minY, 1), round(maxY, 1)], samplesBelowGround: below, stepsReached: stepSeen.size, frames: frameStats(f0), errors: errors.slice(e0), samples: samples.length, firstSamples: samples.slice(0, 3) };
+    },
+    /* the game's own time of day and weather, frozen: 'dawn'|'day'|'dusk'|'night' and 'clear'|'overcast'|'fog'|'rain'|'storm' */
+    setConditions({ time, weather }) { const e = N().env; if (time) e.setTime(time); if (weather) e.setWeather(weather); return { time, weather }; },
+    /* one fixture of tools/delhi_test_routes.json, driven: spawn on its start (facing the way the route leaves), drive its route, and judge the report with the detectors below.
+       Detectors: arrival; no car below the ground by 1.5 m; no road slope above 25 % between two samples (a height step over a stretch the car actually covered: a frame stall that makes the car cover little ground does not count; the ramps are meant to be about 8 to 12 %); wheel contact never under 0.5; no console error; not stalled; the layer run reaches a height (flyover: above the start by 3 m or more; underpass or tunnel: 3 m or more below). */
+    async runFixture(id, { time, weather, maxSeconds } = {}) {
+      const FX = await fetch('/tools/delhi_test_routes.json', { cache: 'no-store' }).then(r => r.json()), f = FX.fixtures.find(x => x.id === id); if (!f) return { ok: false, reason: 'no fixture ' + id };
+      if (time || weather) api.setConditions({ time, weather }); api.reset(); const t = toXZ(f.to), a = toXZ(f.from); let st = C().nearestStreet(a.x, a.z);
+      if (!st || st.d > (f.spawnSnapM || 40)) { P().reset(a.x, a.z, 0); const t0 = performance.now(); while (performance.now() - t0 < 60000) { await wait(1000); st = C().nearestStreet(a.x, a.z); if (st && st.d <= (f.spawnSnapM || 40)) break; } }   /* the city streams in only around the car: put the car at the start (a spawn, not a drive) and wait for its tiles */
+      if (!st || st.d > (f.spawnSnapM || 40)) return { ok: false, reason: 'start is ' + (st ? Math.round(st.d) : '?') + ' m from a street after 60 s of loading' }; await wait(4000);
+      const ph0 = P(); ph0.reset(st.x, st.z, st.yaw); const pl = window.__cityNav.router.plan(st.x, st.z, st.yaw, t.x, t.z); let yaw = st.yaw;
+      if (pl && pl.poly && pl.poly.length >= 4) { let k = 2; while (k < pl.poly.length - 2 && Math.hypot(pl.poly[k] - st.x, pl.poly[k + 1] - st.z) < 5) k += 2; yaw = Math.atan2(-(pl.poly[k] - st.x), -(pl.poly[k + 1] - st.z)); }
+      ph0.reset(st.x, st.z, yaw); await wait(600); const y0 = P().y, rep = await api.followRoute(f.to, { maxSeconds: Math.max(maxSeconds || f.maxSeconds || 240, pl ? pl.metres / 4 : 0) }), v = [];      // at least 4 m/s on average: city traffic and signals slow the autodrive a lot
+      const add = (name, ok, detail) => v.push({ name, status: ok ? 'PASS' : 'FAIL', detail });
+      add('arrived', rep.arrived, 'ends ' + rep.distToTargetM + ' m from the target'); add('no car below the ground', rep.samplesBelowGround === 0, rep.samplesBelowGround + ' samples'); add('no road slope above 25 %', rep.maxSlope <= 0.25, 'steepest ' + Math.round(rep.maxSlope * 100) + ' % (' + rep.maxStepDy + ' m largest step) ' + JSON.stringify(rep.slopeAt)); add('wheels stay on the road', rep.minGrounded >= 0.5, 'minimum contact ' + rep.minGrounded);
+      add('no console or page errors', rep.errors.length === 0, rep.errors.slice(0, 2).join(' | ')); add('not stalled', !rep.stuck, rep.stuck ? 'no movement for 25 s' : 'moving');
+      if (f.expect && f.expect.layer > 0) add('flyover deck reached (3 m or more above the start)', rep.yRange[1] - y0 >= 3, 'start y ' + round(y0, 1) + ', highest ' + rep.yRange[1]);
+      if (f.expect && f.expect.layer < 0) add('underpass or tunnel floor reached (3 m or more below the start)', y0 - rep.yRange[0] >= 3, 'start y ' + round(y0, 1) + ', lowest ' + rep.yRange[0]);
+      return { id, conditions: { time: time || 'unchanged', weather: weather || 'unchanged' }, verdict: v.every(x => x.status === 'PASS') ? 'PASS' : (!rep.arrived && !rep.stuck && rep.samplesBelowGround === 0 && rep.maxSlope <= 0.25 && rep.errors.length === 0 ? 'INCONCLUSIVE (time ran out before arrival; nothing else failed)' : 'FAIL'), checks: v, report: { ...rep, firstSamples: undefined, plan: { metres: rep.plan && rep.plan.metres } }, when: new Date().toISOString(), frameNote: 'visible tab on the machine that ran it: not device performance' };
     },
     /* one reading; a field the game does not expose is null */
     telemetry() {

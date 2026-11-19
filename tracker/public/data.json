@@ -1,5 +1,5 @@
 {
- "commit": "48e6dac",
+ "commit": "e2d7ed4",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -386,6 +386,62 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a1477ce8",
+     "t": "A-2026-11-22-16 Phase T2/T3: Delhi route fixtures, headless runner, drive detectors; findings for C1 (ramps) and the Pragati Maidan tunnel",
+     "d": "Anshul's Claude (owner of C1, docs/CITY_CONFLICTS_PLAN.md): (1) ramps: deckHeight and underDepth in src/world/city/pack.js cap a ramp at half the edge length, so a short ramp edge climbs steeply. Driven: 26 % at x 117.7, z -5886.5 (edge 242741, 64 m). Headless audit: 2,153 drivable ramp-end edges, 1,573 over 12 %, 1,283 over 25 % at the steepest point (node tools/run_delhi_test.mjs, last lines). Suggested fix: lengt…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-22, from Rajul's Claude"
+    },
+    {
+     "id": "a9c36b77",
+     "t": "A-2026-11-22-01 Merged and deployed; the other Stream A session: add the CP and Kartavya plan to your task list",
+     "d": "the other Stream A session (cp_detail worktree), when you finish your assigned tasks (corner pavilion and night wall wash), add docs/CP_MAX_PLAN.md to your next tasks, in its order: 0 done; 1 measure with the owner's scores (3, 3, 2, 3, 3: shape, colour, boards, lighting, ground read in that order, scale not given) and the iPhone 14 Pro numbers; 2 roads and signs and 2b street props (bus shelter, drain, barricade, b…",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-22, from Rajul's Claude"
+    },
+    {
+     "id": "a74ba194",
+     "t": "A-2026-11-21-11 Day sun lowered (SHARED file src/env/environment.js)",
+     "d": "Anshul's Claude: this touches your L6 look; please look at your own scenes by day and change times.day if it clashes (tuner: times.day.sun, times.day.hi). Together with the dusk change of A-2026-11-21-06.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-22, from Rajul's Claude"
+    },
+    {
+     "id": "a3cf8c59",
+     "t": "A-2026-11-21-10 Phase 7: open items closed where possible, register of what is not done",
+     "d": "Anshul's Claude: please read item 3 and 14 in docs/OPEN_ITEMS.md (dusk preset, lane widening audit).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-21, from Rajul's Claude"
+    },
+    {
+     "id": "a264366c",
+     "t": "A-2026-11-21-06 Delhi main plan phase 3: light spill, dusk preset changed (shared env file)",
+     "d": "Anshul's Claude: the dusk preset touches your L6 (dusk, night and monsoon look); please check it in your own scenes and change times.dusk if it clashes (tuner: times.dusk.li, times.dusk.hi).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-21, from Rajul's Claude"
+    },
+    {
+     "id": "ad2ee9d9",
+     "t": "A-2026-11-21-07 Owner's scores for the CP spots (3, 3, 2, 3, 3), iPhone 14 Pro, a 3D royal palm asset",
+     "d": "the other Stream A session: the palm card in PR 109 shows a bare tall trunk close up (register 16): this model has a crownshaft and a full crown and can replace the card near the camera (instanced, 4 k triangles, so near ones only); say here before anyone edits streetlife.js for it.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-21, from Rajul's Claude"
+    },
+    {
+     "id": "a0929e36",
+     "t": "A-2026-11-21-06 Research pack ticked off: docs/CP_MAX_CHECKLIST.md (50 places, 78 assets) and the CP gate extended",
+     "d": "the other Stream A session: please check the CP rows against what you built (PRs 105 to 111) and correct a state in the script if I got one wrong.",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-21, from Rajul's Claude"
+    },
+    {
      "id": "a3dea0b0",
      "t": "A-2026-11-21-03 Frame times, desktop: PR 103 branch is as fast as main (phone still needed)",
      "d": "Anshul's Claude: if you have a phone, please run python3 tools/serve.py 8792 --lan and open http://<this Mac's address>:8792/?play&city=delhi&q=low&bench=30 (also q=med) and record p95 and p99 here: that is the missing gate.",
@@ -528,62 +584,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a3c2aeff",
-     "t": "A-2026-11-18-12: deployed Anshul's release/combined merged with main (version 3649f3ad); his B1 to B13 and phase tasks not started yet",
-     "d": "Anshul's Claude: this covers most of B1 (cars on main's vehicle system) once the PR is merged; mark B1 [~] or [x] yourself after a person has driven each vehicle, and continue with B2 onwards. Your deploy request is done by this entry.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a52ba072",
-     "t": "A-2026-11-18-11: Delhi phases P1 to P8, look steps L1 to L6 and N17 to N20 assigned to Anshul's Claude, to be worked in blocks",
-     "d": "Anshul's Claude: finish B1 to B3 first, then work the blocks in order: Block 1 P1, P2, P3, L1, L2; Block 2 P4, P6, L3, L4; Block 3 P5, P7, L5, L6; Block 4 P8; Block 5 N17 to N20 (design note first; only after P8 is judged and the owner says go). One phase at a time, each its own PR with: the done-when line met, a measured frame cost before and after (?play&city=delhi&q=med&bench=30), screenshots, selftest and daily…",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a68f8d96",
-     "t": "A-2026-11-18-10: TASKS B1 to B13 assigned to Anshul (docs/NEXT_PHASES.md, \"Assigned to Anshul\")",
-     "d": "Anshul's Claude: work B1 to B13 in order (B1 finish and PR vehicle/cars-on-main; B2 port the steering and grip feel as tuner settings; B3 retire the old branch; B4 NPC provenance; B5 review runtime.js and onfoot.js; B6 ask the owner the Lite/Full questions; B7 no-reload city switch; B8 cut Mumbai draw calls; B9 real-phone benchmark (needs a person); B10 router off the main thread; B11 tile cache budget; B12 close yo…",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "aed82e85",
-     "t": "A-2026-11-18-09: PRs 83 and 85 merged; NEXT PHASES for Anshul's Claude (docs/NEXT_PHASES.md); your branch not merged",
-     "d": "Anshul's Claude: start from docs/NEXT_PHASES.md. Phase 1 is merging origin/main into vehicle/cars-and-gears (what to keep from each side is listed there), then the rest in order. The owner's session limit has ended, so nothing in it can wait on the owner except what is marked as a person's job.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a892cd5f",
-     "t": "A-2026-11-18-07: Anshul's cartoon NPCs merged into the audit-fixes branch; status of his other branch",
-     "d": "Anshul's Claude: (1) commit dev/build_npc_stylised.py and say where the NPC base mesh came from (licence); (2) merge origin/claude/audit-fixes (or main once PR 83 merges) into vehicle/cars-and-gears and resolve the 10 files before anything else; keep the home-screen app (index.html, sw.js, manifest.webmanifest), the horn and street sound in engine.js, and the bundle step in the deploy.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a662e9d7",
-     "t": "Tracker page: source in the repo, a Cloudflare Worker copy prepared (NOT deployed)",
-     "d": "Anshul or the owner deploys it once; steps in tracker/README.md (npx wrangler whoami, kv namespace create TRACKER and paste the id into wrangler.jsonc, secret put TRACKER_PASSWORD, wrangler deploy). It does not touch the game's Worker.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a99d3c35",
-     "t": "Where am I (menu coordinate line), the map-wide audit, generation rules; the zebra rule fixed",
-     "d": "menu.js has a new bottom line on every screen.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
     }
    ]
   ],
@@ -637,6 +637,75 @@
      "s": "todo",
      "w": "Rajul",
      "r": "stream-b.md 2026-11-17, from Anshul's Claude"
+    }
+   ]
+  ],
+  [
+   "Open pull requests",
+   [
+    {
+     "id": "aa8721c0",
+     "t": "PR 127: CP fix F3b: occlusion, night wet look, sun halo, fewer shadow casters",
+     "d": "Open pull request on branch claude/cp-fix-3b. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 127"
+    },
+    {
+     "id": "afa9127b",
+     "t": "PR 125: CP fix F4: parked cars and scooters, more pedestrians, varied island hedges",
+     "d": "Open pull request on branch claude/cp-fix-4. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 125"
+    },
+    {
+     "id": "ae768c9b",
+     "t": "PR 124: CP fix F3: wet city surfaces in rain, AO at the arcade wall foot",
+     "d": "Open pull request on branch claude/cp-fix-3. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 124"
+    },
+    {
+     "id": "a9bb7de1",
+     "t": "PR 123: CP fix F2: boards, first pass (corner inset, no repeated neighbours, wider place catch)",
+     "d": "Open pull request on branch claude/cp-fix-2. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 123"
+    },
+    {
+     "id": "ad3ff0c4",
+     "t": "PR 121: CP fix plan (owner scores all 3) and F1 facade realism, first pass",
+     "d": "Open pull request on branch claude/cp-fix-1. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 121"
+    },
+    {
+     "id": "a3e59e87",
+     "t": "PR 120: CP cinemas and towers: Odeyon, Rivolo, Jeevan Bharati",
+     "d": "Open pull request on branch claude/cp-cinemas-towers. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 120"
+    },
+    {
+     "id": "a16f140e",
+     "t": "PR 119: Log: live build looked at, CP street props seen",
+     "d": "Open pull request on branch claude/cp-measure-log. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 119"
+    },
+    {
+     "id": "aedd68fd",
+     "t": "PR 118: Log: deploy of main 6f768c6",
+     "d": "Open pull request on branch claude/log-deploy-2. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 118"
     }
    ]
   ],
@@ -1524,6 +1593,126 @@
  ],
  "prs": [
   [
+   "127",
+   "CP fix F3b: occlusion, night wet look, sun halo, fewer shadow casters",
+   "open"
+  ],
+  [
+   "126",
+   "Delhi QA phase T1: dev-only test adapter, one CP route driven (stacked on PR 122)",
+   "merged"
+  ],
+  [
+   "125",
+   "CP fix F4: parked cars and scooters, more pedestrians, varied island hedges",
+   "open"
+  ],
+  [
+   "124",
+   "CP fix F3: wet city surfaces in rain, AO at the arcade wall foot",
+   "open"
+  ],
+  [
+   "123",
+   "CP fix F2: boards, first pass (corner inset, no repeated neighbours, wider place catch)",
+   "open"
+  ],
+  [
+   "122",
+   "Delhi QA phase T0: inventory and proof of capability (docs only)",
+   "merged"
+  ],
+  [
+   "121",
+   "CP fix plan (owner scores all 3) and F1 facade realism, first pass",
+   "open"
+  ],
+  [
+   "120",
+   "CP cinemas and towers: Odeyon, Rivolo, Jeevan Bharati",
+   "open"
+  ],
+  [
+   "119",
+   "Log: live build looked at, CP street props seen",
+   "open"
+  ],
+  [
+   "118",
+   "Log: deploy of main 6f768c6",
+   "open"
+  ],
+  [
+   "117",
+   "CP landmarks 2: Central Park rebuilt from the aerial photos, Statesman House, New Book Land kiosk",
+   "merged"
+  ],
+  [
+   "116",
+   "Hook the CP street furniture (cpstreet.js) into streetlife.js",
+   "merged"
+  ],
+  [
+   "115",
+   "CP street props (cpstreet.js, not hooked in yet): bins, bollards, drains, barricades, CCTV, transformers",
+   "merged"
+  ],
+  [
+   "114",
+   "Log: merged and deployed 22 Nov, task hand-off of the CP plan",
+   "merged"
+  ],
+  [
+   "113",
+   "CP corner: square pavilion replaces the drum dome (R7), first-floor night wash (R8)",
+   "merged"
+  ],
+  [
+   "112",
+   "CP and Kartavya plan, references R7/R8 and K1-K7, checklist of the research pack, royal palm asset",
+   "merged"
+  ],
+  [
+   "111",
+   "Phase 7: open items from phases 1-6 (night frames, power poles, register of not-done)",
+   "merged"
+  ],
+  [
+   "110",
+   "Delhi main plan phase 6: Kartavya Path area rules",
+   "closed"
+  ],
+  [
+   "109",
+   "Delhi main plan phase 5: palms and wide CP pavements",
+   "closed"
+  ],
+  [
+   "108",
+   "Delhi main plan phase 4: wet reflections on the paving at night (stacked on PR 107)",
+   "closed"
+  ],
+  [
+   "107",
+   "Delhi main plan phase 3: light on columns and walls at night, dusk grade (stacked on PR 106)",
+   "closed"
+  ],
+  [
+   "106",
+   "Delhi main plan phase 2: CP facade texture, roof cornice, balustrade sills, paired corner columns",
+   "closed"
+  ],
+  [
+   "105",
+   "Delhi main region plan; phase 1: markings and kerbs like real Delhi",
+   "merged"
+  ],
+  [
+   "104",
+   "Tracker rebuilt after PR 103; CP status note",
+   "merged"
+  ],
+  [
    "103",
    "CP facade detail: arched drum windows, pediment, string courses, pilasters, blade signs",
    "merged"
@@ -1602,143 +1791,23 @@
    "88",
    "Assign tasks B1 to B13 to Anshul (next phases)",
    "merged"
-  ],
-  [
-   "87",
-   "Tracker: Rajul and Anshul view, Assigned tasks, auto-built from the repo",
-   "merged"
-  ],
-  [
-   "86",
-   "Next phases for Anshul's Claude; status, handoff and tracker after PRs 83 and 85",
-   "merged"
-  ],
-  [
-   "85",
-   "City map: the roads out of Delhi, Other cities list, destination carried into the India map",
-   "merged"
-  ],
-  [
-   "84",
-   "Tracker page: source in the repo and a Cloudflare Worker copy (not deployed)",
-   "merged"
-  ],
-  [
-   "83",
-   "Audit fixes, phone layout, sound, Add to Home Screen, tuner, deploy rule, docs",
-   "merged"
-  ],
-  [
-   "82",
-   "Menu coordinate line, map-wide audit and generation rules, zebra rule fixed",
-   "merged"
-  ],
-  [
-   "81",
-   "Delhi look, step 2: junction shaping (stacked on PR 80)",
-   "merged"
-  ],
-  [
-   "80",
-   "Delhi look, step 1: real asphalt and paving textures (stacked on PR 79)",
-   "merged"
-  ],
-  [
-   "79",
-   "Delhi flicker: real height steps for ground layers, city off the terrain, 1 m near plane",
-   "merged"
-  ],
-  [
-   "78",
-   "Connaught Place: open Central Park instead of a white wall; area wall colours; map audit tool",
-   "merged"
-  ],
-  [
-   "77",
-   "Delhi P1: infill buildings where the map data is silent; loading screen waits for the city",
-   "merged"
-  ],
-  [
-   "76",
-   "Delhi scale check, phased polish plan, N0 to N20 status (docs)",
-   "merged"
-  ],
-  [
-   "75",
-   "Delhi from the air: denser far city, no random trees, one ground tone",
-   "merged"
-  ],
-  [
-   "74",
-   "Delhi is always the real city; Enter Delhi city button on the India map",
-   "merged"
-  ],
-  [
-   "73",
-   "Title screen: Play India map and Explore cities; Delhi on the India map is the full city",
-   "merged"
-  ],
-  [
-   "72",
-   "Delhi: walls flush with buildings, solid flyover piers, ground start at flyover gates (stacked on PR 71)",
-   "merged"
-  ],
-  [
-   "71",
-   "Delhi: kerbs no longer block the car like invisible walls (stacked on PR 70)",
-   "merged"
-  ],
-  [
-   "70",
-   "Delhi: cut the shadow pass (stacked on PR 69)",
-   "merged"
-  ],
-  [
-   "69",
-   "Delhi: cut the frame cost (610k to 250k triangles, 408 to 337 draw calls)",
-   "merged"
-  ],
-  [
-   "68",
-   "Delhi: landmark starts outside the footprint; each city tile fetched once",
-   "merged"
-  ],
-  [
-   "67",
-   "D6c: platform number boards at the Delhi railway stations",
-   "merged"
-  ],
-  [
-   "66",
-   "Overall plan and handoff update",
-   "merged"
-  ],
-  [
-   "65",
-   "D7: Delhi street life and identity (identity.json, shops, ads, vehicles, buses on routes, people, trees)",
-   "merged"
-  ],
-  [
-   "64",
-   "D8: Delhi landmark models (22 places, procedural, with collision, name boards and info cards)",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 97 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 160 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 148 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 211 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 146 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 209 behind main)"
   ]
  ],
- "tests": "121",
+ "tests": "124",
  "facts": [
   [
    "Tracker data",
@@ -1746,8 +1815,8 @@
   ],
   [
    "Self-test",
-   "121 checks passing"
+   "124 checks passing"
   ]
  ],
- "generated": "2026-11-19T05:21:56.835Z"
+ "generated": "2026-11-19T12:22:47.656Z"
 }
