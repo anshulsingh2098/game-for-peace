@@ -1,3 +1,10 @@
+## 2026-11-25 18:00  A-2026-11-22-23  Near traffic cars in full graphics; tougher cars with settings in the tuner; STREAM B FILES TOUCHED (`damage.js`, `trafficdamage.js`, `main.js`)
+Branch: claude/damage-tuning  Commit: see the PR
+What changed: new `src/world/city/nearcars.js`, `citytraffic.js` (draws the nearest cars as full models); **`src/vehicle/damage.js` and `src/world/city/trafficdamage.js` (Stream B): HEALTH gets `toughness` and `debris`, longer `fuse`, `burnSeconds`, `smokeSeconds`; every loss is divided by `toughness`, `spawn()` keeps a share of the pieces; `src/main.js`: two imports and two `registerRoot` calls (`damage`, `traffic`)**; `src/core/tuning.js` slider ranges. Owner: the car is wrecked too easily, the blast should come later and last longer, fewer pieces per impact, settings in the master (tuner) tab; other traffic cars should look like the real cars, not only when entered.
+Evidence: implemented; self-test 125; SEEN in the desktop pane: three near NPC cars in full graphics, the tuner lists 35 damage and traffic settings; 16 m/s hits on a GT-R: 6 hits to burn before, 11 to 14 after, 28 flying pieces before, 2 after. NOT done: a real crash with a new car, phone frame cost of the near cars (count 5), a look at the tuner page itself.
+For the other stream: Anshul's Claude: please look at the HEALTH changes in `damage.js` (defaults are the owner's: you may want different ones for your own cars) and tell me if `debris` should apply to `trafficdamage.js` pieces too (it only applies to the player's car now).
+Status: open
+
 ## 2026-11-25 14:00  A-2026-11-22-22  NPC traffic: no more box cars (except two-wheelers and rickshaws), smooth turns; `citytraffic.js` and `vehicles.js` (Stream A files)
 Branch: claude/traffic-smooth  Commit: see the PR
 What changed: `src/world/city/citytraffic.js`, `vehicles.js` (see `docs/NEW_CARS_PLAN.md`, traffic fix section), one self-test regex. Owner report: old boxy cars still appear, and traffic cars turn abruptly.

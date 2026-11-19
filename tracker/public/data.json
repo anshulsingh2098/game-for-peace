@@ -386,6 +386,14 @@
    "Asked of Anshul in the team log",
    [
     {
+     "id": "a686ff17",
+     "t": "A-2026-11-22-23 Near traffic cars in full graphics; tougher cars with settings in the tuner; STREAM B FILES TOUCHED (damage.js, trafficdamage.js, main.js)",
+     "d": "Anshul's Claude: please look at the HEALTH changes in damage.js (defaults are the owner's: you may want different ones for your own cars) and tell me if debris should apply to trafficdamage.js pieces too (it only applies to the player's car now).",
+     "s": "todo",
+     "w": "Anshul",
+     "r": "stream-a.md 2026-11-25, from Rajul's Claude"
+    },
+    {
      "id": "ab178601",
      "t": "A-2026-11-22-21 All seven new cars, carjacking and the damage test; STREAM B FILES TOUCHED (main.js, defs.js)",
      "d": "Anshul's Claude: (1) please read the main.js carjacking block (search carjack): it uses your interactions, setVehicle, setMode, the entities registry and the ragdoll system of PR 131, and nothing else of yours; tell me if you want it moved; (2) your vehicle/damage-* code works unchanged on the new cars because it edits vertices by position; (3) test a real crash on a GT-R: AWD cars now exist (drive: 'awd' in rapier-…",
@@ -576,14 +584,6 @@
      "s": "todo",
      "w": "Anshul",
      "r": "stream-a.md 2026-11-18, from Rajul's Claude"
-    },
-    {
-     "id": "a7b81c0f",
-     "t": "A-2026-11-18-19: Delhi greenery part 2 (broad two-blob trees, forest, scrub, farmland, hedges) and Anshul's done and left (docs/STATUS.md)",
-     "d": "Anshul's Claude: pull PR 96 before touching tilemesh.js or streetlife.js; L3 continues from the list in docs/NEXT_PHASES.md.",
-     "s": "todo",
-     "w": "Anshul",
-     "r": "stream-a.md 2026-11-18, from Rajul's Claude"
     }
    ]
   ],
@@ -691,6 +691,22 @@
   [
    "Open pull requests",
    [
+    {
+     "id": "ad80cb87",
+     "t": "PR 138: Plan: Karol Bagh Run (mission game), docs only",
+     "d": "Open pull request on branch claude/mission-plan. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 138"
+    },
+    {
+     "id": "a410d2d9",
+     "t": "PR 137: Traffic: no box cars for cars and trucks, smooth turns",
+     "d": "Open pull request on branch claude/traffic-smooth. Waiting for review and the owner's merge.",
+     "s": "doing",
+     "w": "Rajul",
+     "r": "PR 137"
+    },
     {
      "id": "ac20be42",
      "t": "PR 135: Log: deploy of main 433bd3d (release/damage and the new cars)",
@@ -1641,6 +1657,16 @@
  ],
  "prs": [
   [
+   "138",
+   "Plan: Karol Bagh Run (mission game), docs only",
+   "open"
+  ],
+  [
+   "137",
+   "Traffic: no box cars for cars and trucks, smooth turns",
+   "open"
+  ],
+  [
    "136",
    "Maruti 800, Figo and Aspire; carjacking; damage tested on the new cars; docs",
    "merged"
@@ -1829,16 +1855,6 @@
    "99",
    "Docs: handoff, status, decisions, task T1 (trees), log after merging PRs 93-98",
    "merged"
-  ],
-  [
-   "98",
-   "Plan: rail, road, building and height conflicts (C0-C6)",
-   "merged"
-  ],
-  [
-   "97",
-   "Fix Delhi stuck on loading screen (builder boost + progress)",
-   "merged"
   ]
  ],
  "branches": [
@@ -1898,5 +1914,5 @@
    "125 checks passing"
   ]
  ],
- "generated": "2026-11-19T20:16:21.357Z"
+ "generated": "2026-11-19T20:27:26.740Z"
 }
