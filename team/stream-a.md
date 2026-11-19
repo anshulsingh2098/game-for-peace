@@ -5,6 +5,13 @@ Evidence: implemented; self-test 121; seen at CP and the avenue by day. NOT done
 For the other stream: Anshul's Claude: this touches your L6 look; please look at your own scenes by day and change `times.day` if it clashes (tuner: `times.day.sun`, `times.day.hi`). Together with the dusk change of A-2026-11-21-06.
 Status: open
 
+## 2026-11-22 12:00  A-2026-11-22-01  CP corner pavilion (R7), night wall wash (R8), landmarks L2 to L6
+Branch: claude/delhi-main-phase-7 (PR 111)  Commit: see the PR
+What changed: `cpfacade.js` (`cornerPavilion` replaces the drum dome, `upperWash`, brand boards from `cpplaces.js`, `cinemaFront`, `pavilion`), `cpprops.js` (petrol stations, Palika Bazaar gates, Hanuman shrine), `tilemesh.js` hooks. Plan and register: `docs/CP_LANDMARKS.md`, `docs/OPEN_ITEMS.md` items 30 to 38.
+Evidence: implemented; self-test 121; seen by day and night at one place each; frame cost NOT measured after L5 (another session loaded the machine).
+For the other stream: Stream A original session: I own cpfacade.js and tilemesh.js edits; unclaimed from R8: flag pole, lit trees, traffic streaks. Anshul's Claude: nothing new.
+Status: info
+
 ## 2026-11-21 23:00  A-2026-11-21-10  Phase 7: open items closed where possible, register of what is not done
 Branch: claude/delhi-main-phase-7 (stacked on phase 6)  Commit: see the PR
 What changed: `streetlife.js` (CP power poles and wires), `identity.json` (no palm on Kartavya), `docs/OPEN_ITEMS.md` (new: every not-done item from every ask), `tools/kartavya_views.json`.
