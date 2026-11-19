@@ -50,6 +50,32 @@ Branch: claude/delhi-main-phase-1 (from main 48e6dac, separate worktree)  Commit
 What changed: new `docs/DELHI_MAIN_PLAN.md` (9 phases with gates, the main region defined, asset research), `docs/DECISIONS.md` (the 21 Nov decision), `src/world/city/tilemesh.js` (double yellow off, black and white kerbs).
 Evidence: implemented; self-test 121; seen: no yellow line at a junction. NOT seen: the painted kerb. NOT done: phases 2 to 9.
 For the other stream: nothing required; please read `docs/DELHI_MAIN_PLAN.md` before touching the CP or Lutyens' Delhi look, and say here if a phase overlaps your tasks (P/L series).
+## 2026-11-21 18:00  A-2026-11-21-07  Owner's scores for the CP spots (3, 3, 2, 3, 3), iPhone 14 Pro, a 3D royal palm asset
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `tools/make_palm.py` and `assets/nature/palm_royal.glb` (+ preview PNG), `assets/ASSETS.md` line. The owner scored the CP spots 3, 3, 2, 3, 3: recorded here read as shape 3, colour 3, brand boards 2, lighting 3, ground 3 (the scale score was not given; the owner has not said which order it is in, so this reading is an assumption to confirm). The owner's phone is an iPhone 14 Pro.
+Evidence: the palm was built in Blender and its preview image looked at; NOT placed in the game, NOT seen in a game frame, NOT measured in a phone frame. Lowest score is the brand boards (2): workstream 4 of `docs/CP_MAX_PLAN.md` goes first after the merge.
+For the other stream: the other Stream A session: the palm card in PR 109 shows a bare tall trunk close up (register 16): this model has a crownshaft and a full crown and can replace the card near the camera (instanced, 4 k triangles, so near ones only); say here before anyone edits `streetlife.js` for it.
+Status: open
+
+## 2026-11-21 16:00  A-2026-11-21-06  Research pack ticked off: `docs/CP_MAX_CHECKLIST.md` (50 places, 78 assets) and the CP gate extended
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `tools/build_cp_checklist.mjs` writes `docs/CP_MAX_CHECKLIST.md`: every place and asset of the owner's pack with scope (CP now 43 assets, CP surround 6, kit for later 29), our state (built 21 / partial 13 / not started 9 for CP) and where it lives; places get their game position, pack area and nearest landmark. `docs/CP_MAX_PLAN.md` gets gate item 6 and workstream 2b (CP street furniture: bus shelter, drain, barricade, bollard, dustbin, CCTV, transformer, AC units, lightboxes). The pack holds 50 places and 78 assets, not the 45 and 70 its README says.
+Evidence: states are my reading of the code and logs (a code search), nothing looked at against a photo, nothing accepted; the position conversion is computed from the pack origin.
+For the other stream: the other Stream A session: please check the CP rows against what you built (PRs 105 to 111) and correct a state in the script if I got one wrong.
+Status: open
+
+## 2026-11-21 15:00  A-2026-11-21-05  Plan: finish CP end to end, build the kit while doing it, then all Delhi (`docs/CP_MAX_PLAN.md`)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: new `docs/CP_MAX_PLAN.md` (docs only): where CP stands, the gate that declares CP done, workstreams 0 to 8 in order, the kit modules to extract while building (roadkit, signkit, facadekit, groundkit, lightkit, lifekit) with a two-place non-CP test, the Delhi-wide order by area, what the owner must decide. It orders the existing plans; it replaces none.
+Evidence: written from git, the logs, `docs/OPEN_ITEMS.md` (PR 111) and `docs/DELHI_MAIN_PLAN.md` (PR 105); nothing built or measured.
+For the other stream: none required. The other Stream A session: please read it and say here if the order disagrees with PRs 104 to 111 before either of us starts workstream 2.
+Status: open
+
+## 2026-11-21 14:00  A-2026-11-21-04  Delhi atlas and asset pack filed under docs/research (docs only)
+Branch: claude/delhi-p1-infill  Commit: see the PR
+What changed: the owner's research pack copied unchanged into `docs/research/delhi_atlas_pack/` (visual atlas of 45 places, asset registry of 70 assets, a sampled audit, an agent workflow) with a short `README_REPO.md`. No game code, no shared file touched. Merged `origin/main` (PR 103) into the branch first; self-test 121.
+Evidence: files read; NOT used by any code; image rights and asset licences are all unverified, headings are blank.
+For the other stream: nothing required. Before anyone builds from the atlas, check coordinates against the pack and say here which places are taken so two sessions do not build the same block.
 Status: info
 
 ## 2026-11-21 12:00  A-2026-11-21-03  Frame times, desktop: PR 103 branch is as fast as main (phone still needed)
