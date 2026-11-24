@@ -40,7 +40,7 @@ MATS = {}
 def mat(name, hexcol, rough=0.6, metal=0.0):
     m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
     b.inputs['Base Color'].default_value = srgb(hexcol); b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal; MATS[name] = m
-for n, c, r, mt in [('Skin', T['skin'], 0.55, 0), ('Hair', T['hairc'], 0.75, 0), ('Top', T['topc'], 0.8, 0), ('Bottom', T['botc'], 0.85, 0), ('Shoe', T['shoec'], 0.55, 0), ('Sole', 0xe9e9e6, 0.7, 0),
+for n, c, r, mt in [('Skin', T['skin'], 0.55, 0), ('Hair', T['hairc'], 0.75, 0), ('Top', T['topc'], 0.8, 0), ('Bottom', T['botc'], 0.85, 0), ('Shoe', T['shoec'], 0.55, 0), ('Sole', 0xb9b9b4, 0.7, 0),
                     ('Accent', T['accent'], 0.6, 0), ('Eye', 0xf2f0ea, 0.25, 0), ('Iris', 0x4a2e1c, 0.3, 0), ('Pupil', 0x0c0a09, 0.2, 0), ('Lip', 0x7a3a30, 0.5, 0), ('Glass', 0x14171c, 0.1, 0.0), ('Metal', 0xb9a15a, 0.3, 1.0)]:
     mat(n, c, r, mt)
 
@@ -237,14 +237,30 @@ def add_clothes():
     finish('Hip', loft([(0.84, 0, 0, .146, .09), (0.92, 0, 0, .162, .102), (0.96, 0, 0, .152, .098)], 16, True, True), 'Bottom', 'hips')
     if bot in ('jeans', 'trousers'): finish('Belt', loft([(0.945, 0, 0, .18, .114), (0.975, 0, 0, .18, .114)], 16, False, False), 'Accent', 'hips', '', 0)
 
+def loftY(secs, dx, seg=14):
+    """a loft along the foot's length: secs = [(y, centre z, half width, half height)], heel (+y) to toe (-y)"""
+    bm = bmesh.new(); rings = []
+    for y, cz, rx, rz in secs:
+        rings.append([bm.verts.new((dx + rx * math.cos(2 * math.pi * i / seg), y, cz + rz * math.sin(2 * math.pi * i / seg))) for i in range(seg)])
+    for r in range(len(rings) - 1):
+        for i in range(seg): bm.faces.new((rings[r][i], rings[r][(i + 1) % seg], rings[r + 1][(i + 1) % seg], rings[r + 1][i]))
+    bm.faces.new(list(reversed(rings[0]))); bm.faces.new(rings[-1]); bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:]); return bm
+
 def add_shoes():
     for s, sd in ((1, 'L'), (-1, 'R')):
+        dx = s * .085
         if T['shoe'] == 'sneaker':
-            finish('Shoe', ellip((s * .085, -.035, .062), (.05, .122, .052), 16, 12), 'Shoe', 'foot', sd); finish('Toe', ellip((s * .085, -.105, .05), (.047, .062, .04), 12, 8), 'Shoe', 'foot', sd)
-            finish('Sole', box((s * .085, -.04, .014), (.1, .27, .03)), 'Sole', 'foot', sd, 1, False)
+            # upper: a heel counter, a collar round the ankle, a low instep with laces, a rounded toe box; a thick sole in a slightly different shade
+            finish('Shoe', loftY([(.098, .052, .029, .042), (.078, .068, .036, .054), (.045, .074, .040, .047), (.0, .062, .043, .040), (-.05, .050, .044, .033), (-.10, .040, .043, .028), (-.15, .032, .038, .022), (-.185, .026, .024, .016), (-.196, .024, .012, .011)], dx), 'Shoe', 'foot', sd)
+            finish('Sole', loftY([(.104, .018, .032, .018), (.06, .017, .043, .017), (-.02, .017, .051, .017), (-.10, .018, .054, .018), (-.16, .022, .046, .021), (-.2, .029, .026, .017)], dx), 'Sole', 'foot', sd)
         else:
-            finish('FootSkin', ellip((s * .085, -.04, .052), (.044, .112, .04), 14, 10), 'Skin', 'foot', sd); finish('Sole', box((s * .085, -.04, .012), (.098, .27, .024)), 'Shoe', 'foot', sd, 1, False)
-            finish('Strap', box((s * .085, -.06, .06), (.095, .035, .024)), 'Shoe', 'foot', sd, 0, False); finish('Strap2', box((s * .085, .045, .06), (.092, .03, .03)), 'Shoe', 'foot', sd, 0, False)
+            # a bare foot (heel, arch, instep, toes) on a thin leather sole with a toe-post strap and a heel strap
+            finish('FootSkin', loftY([(.092, .045, .028, .038), (.07, .06, .036, .05), (.03, .062, .042, .052), (-.03, .05, .047, .042), (-.09, .04, .051, .032), (-.14, .033, .049, .025), (-.175, .028, .038, .02)], dx), 'Skin', 'foot', sd)
+            for k, (tx, tl, tz) in enumerate(((-.034, .02, .017), (-.016, .02, .017), (0.002, .018, .016), (.018, .016, .014), (.033, .013, .012))):
+                finish('Toe', ellip((dx + s * tx * -1, -.19 - (tl - .02) * 0.5, tz + .008), (.0105, .016 + tl * .3, .0095), 8, 6), 'Skin', 'foot', sd, 0)
+            finish('Sole', loftY([(.1, .0065, .034, .0065), (.0, .0065, .05, .0065), (-.1, .0075, .056, .0075), (-.19, .0085, .044, .0085)], dx), 'Shoe', 'foot', sd)
+            finish('Strap', loftY([(-.052, .047, .056, .052), (-.082, .042, .054, .048)], dx), 'Shoe', 'foot', sd, 0)
+            finish('Strap2', loftY([(.07, .063, .042, .054), (.098, .056, .036, .05)], dx), 'Shoe', 'foot', sd, 0)
 
 def add_gear():
     if T.get('bag') == 'shoulder':
@@ -394,6 +410,7 @@ def shot(name, loc, target=(0, 0, 0.9), clip='Walk', frame=1):
 shot('front', (0.9, -5.2, 1.0), clip='Idle', frame=1)
 shot('walk', (3.2, -4.0, 1.05), clip='Walk', frame=7)
 shot('head', (0.45, -1.15, 1.6), target=(0, 0, 1.57), clip='Idle', frame=1)
+shot('feet', (0.75, -0.8, 0.32), target=(0, -0.02, 0.07), clip='Idle', frame=1)
 if TYPE == 'commuter':
     glb = os.path.join(OUT, 'npc_commuter.glb')
     bpy.ops.export_scene.gltf(filepath=glb, export_format='GLB', export_animations=True, export_nla_strips=True, export_skins=True, export_apply=False, export_yup=True)
