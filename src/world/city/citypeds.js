@@ -16,7 +16,7 @@ export class CityPeds {
     this.view = new Pedestrians(scene, { graph: { edges: new Map() } }, 'city', origin, { density: 1, level: 'high' }); this.view.sim = this.sim; this.hitSpots = []; this.view.onRemove = p => this.hitSpots.push({ x: p.x, z: p.z, t: this.t });
   }
   setMode(m) { this.cap = Math.min(44, MODES[m] === undefined ? 10 : MODES[m]); }
-  pos(p, s, out) { const pc = p.pc, c = pc.cum, pts = pc.s.pts; let i = 0; while (i + 2 < c.length && c[i + 1] < s) i++; const f = Math.max(0, Math.min(1, (s - c[i]) / Math.max(0.01, c[i + 1] - c[i]))), dx = pts[i * 2 + 2] - pts[i * 2], dz = pts[i * 2 + 3] - pts[i * 2 + 1], L = Math.hypot(dx, dz) || 1; out.x = pts[i * 2] + dx * f; out.z = pts[i * 2 + 1] + dz * f; out.tx = dx / L; out.tz = dz / L; return out; }
+  pos(p, s, out) { const pc = p.pc, c = pc.cum, pts = pc.pts || pc.s.pts; let i = 0;  while (i + 2 < c.length && c[i + 1] < s) i++; const f = Math.max(0, Math.min(1, (s - c[i]) / Math.max(0.01, c[i + 1] - c[i]))), dx = pts[i * 2 + 2] - pts[i * 2], dz = pts[i * 2 + 3] - pts[i * 2 + 1], L = Math.hypot(dx, dz) || 1; out.x = pts[i * 2] + dx * f; out.z = pts[i * 2 + 1] + dz * f; out.tx = dx / L; out.tz = dz / L; return out; }      // pc.pts: the rounded points the lengths `cum` were measured on (pc.s.pts has fewer points: positions were NaN)
   spawn(px, pz) {
     const tr = this.traffic; if (!tr.pieces.size) return null; const list = [...tr.pieces.keys()];
     for (let t = 0; t < 30; t++) { const pc = list[Math.floor(this.rnd() * list.length)]; if (!WALKABLE.has(pc.cls) || pc.len < 20) continue; const s = this.rnd() * pc.len, o = this.pos({ pc }, s, {}), d = Math.hypot(o.x - px, o.z - pz); if (d < SPAWN_MIN || d > SPAWN_MAX) continue; if (this.list.some(q => Math.hypot(q.x - o.x, q.z - o.z) < 1.4) || this.extra.some(q => Math.hypot(q.x - o.x, q.z - o.z) < 1.4)) continue;
@@ -28,12 +28,16 @@ export class CityPeds {
     this.gy = gy; this.t += dt; const tr = this.traffic, L = this.list, ID = this.city && this.city.identity, capNow = ID && ID.areaNameAt && this.cap > 0 && ID.areaNameAt(px, pz) === 'cp' ? Math.min(60, Math.round(this.cap * 1.5)) : this.cap;      /* F4: Connaught Place is crowded: half as many people again (up to 60) */
     while (L.length > capNow) L.pop();
     if (L.length < capNow && tr.pieces.size && dt > 0) { const p = this.spawn(px, pz); if (p) L.push(p); }
+    /* a fast car bearing down on a walker: they notice (alarm, 2.5 s), the ones on the pavement step away from the kerb and break into a run, the ones crossing hurry across */
+    let pvx = 0, pvz = 0, psp = 0; if (this.pp && dt > 0) { pvx = (px - this.pp.x) / dt; pvz = (pz - this.pp.z) / dt; psp = Math.hypot(pvx, pvz); if (psp > 60) psp = pvx = pvz = 0; } this.pp = { x: px, z: pz };
     const o = {}, GR = new Map(), CS = 1.5, put = q => { const k = Math.floor(q.x / CS) * 100003 + Math.floor(q.z / CS); let l = GR.get(k); if (!l) GR.set(k, l = []); l.push(q); };
     for (const q of L) put(q); for (const q of this.extra) put(q);
     for (let n = 0; n < L.length; n++) { const p = L[n];
       if (p.gone || !p.pc.alive || Math.hypot(p.x - px, p.z - pz) > DESPAWN) { const r = this.spawn(px, pz); if (r) L[n] = r; else L.splice(n--, 1); continue; }
-      if (p.state === 'cross') { p.cross += dt * 1.4 / Math.max(4, p.pc.w + 1.8); p.phase += dt * 7; if (p.cross >= 1) { p.cross = 0; p.side = -p.side; p.state = 'walk'; } }
-      else if (p.state === 'wait') { p.wait -= dt; p.phase = 0; if (p.wait <= 0 && !this.carNear(p.x, p.z, 22)) { p.state = 'cross'; p.cross = 0; } }
+      if (p.alarm > 0) p.alarm -= dt;
+      if (psp > 7 && !(p.alarm > 0)) { const dx = p.x - px, dz = p.z - pz, along = (dx * pvx + dz * pvz) / psp, lat = Math.abs(dx * pvz - dz * pvx) / psp; if (along > 0 && along < psp * 2.6 && along < 32 && lat < 3.4) p.alarm = 2.5; }
+      if (p.state === 'cross') { p.cross += dt * (p.alarm > 0 ? 3.4 : 1.4) / Math.max(4, p.pc.w + 1.8); p.phase += dt * 7; if (p.cross >= 1) { p.cross = 0; p.side = -p.side; p.state = 'walk'; } }
+      else if (p.state === 'wait') { p.wait -= dt; p.phase = 0; if (p.wait <= 0 && !(p.alarm > 0) && !this.carNear(p.x, p.z, 22)) { p.state = 'cross'; p.cross = 0; } }
       else {
         let slow = 1; const ds = p.dir > 0 ? 1 : -1;                                                                                    // keep left: a walker's own side of the pavement depends on which way they walk
         if (p.lane === undefined) p.lane = 0; const base = p.lane + 0.3 * ds, fx = Math.cos(p.yaw), fz = Math.sin(p.yaw), cx = Math.floor(p.x / CS), cz = Math.floor(p.z / CS); let push = 0;
@@ -41,8 +45,8 @@ export class CityPeds {
           for (const q of l) { if (q === p) continue; const dx = q.x - p.x, dz = q.z - p.z, d = Math.hypot(dx, dz); if (d > 1.3 || d < 1e-3) continue; const ahead = dx * fx + dz * fz, side = -dx * fz + dz * fx;       // side > 0: they are on my left
             if (d < 0.85) push += (side >= 0 ? -1 : 1) * (0.85 - d);                                                                        // step away from someone too close
             if (ahead > 0.05 && Math.abs(side) < 0.6 && ahead < 1.25 && (q.state !== 'walk' || q.dir === p.dir)) slow = Math.min(slow, Math.max(q.state === 'walk' ? 0 : 0.35, (ahead - 0.5) / 0.75)); } }       // someone just ahead, going the same way or standing: slow behind them
-        p.lat = (p.lat === undefined ? base : p.lat); p.lat += push * ds * dt * 3.2 + (base - p.lat) * Math.min(1, dt * 0.7); p.lat = Math.max(base - 1.1, Math.min(base + 1.1, p.lat));
-        p.s += p.dir * p.v * slow * dt; p.phase += dt * 6;
+        p.lat = (p.lat === undefined ? base : p.lat); const alarmed = p.alarm > 0, tgt = alarmed ? base + p.side * 1.1 : base; p.lat += push * ds * dt * 3.2 + (tgt - p.lat) * Math.min(1, dt * (alarmed ? 3 : 0.7)); p.lat = Math.max(base - 1.1, Math.min(base + 1.1, p.lat));
+        p.s += p.dir * p.v * (alarmed ? 2.4 : 1) * slow * dt; p.phase += dt * 6;
         if (p.s > p.pc.len || p.s < 0) {
           const end = p.dir > 0 ? p.pc.len : 0; this.pos(p, end, o); const ex = o.x, ez = o.z;
           if (tr.crossingAt(ex, ez) && this.rnd() < 0.5) { p.s = end; p.state = 'wait'; p.wait = 1 + this.rnd() * 3; }                     // cross at a zebra (a flagged node), once the street is clear
