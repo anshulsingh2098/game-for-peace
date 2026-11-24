@@ -33,9 +33,9 @@ export class Pedestrians {
     for (let i = 0; i < ACTORS; i++) {
       const variant = i % VARIANTS.length, g = this.models[variant], obj = SkeletonUtils.clone(g.scene), mixer = new THREE.AnimationMixer(obj);
       const clip = n => g.animations.find(c => c.name === n) || g.animations.find(c => c.name.toLowerCase().includes(n.toLowerCase()));
-      const walk = mixer.clipAction(clip('Walk')), idle = mixer.clipAction(clip('Idle')); walk.play(); idle.play();
+      const act = n => { const c = clip(n); if (!c) return null; const x = mixer.clipAction(c); x.play(); x.weight = 0; return { x, dur: c.duration }; }, A = { walk: act('Walk'), run: act('Run'), idle: act('Idle'), look: act('IdleLook'), wait: act('Wait') }; A.idle.x.weight = 1;
       obj.visible = false; obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } }); this.group.add(obj);
-      this.actors.push({ obj, mixer, walk, idle, variant, p: null, dur: walk.getClip().duration });
+      this.actors.push({ obj, mixer, A, variant, p: null, w: { walk: 0, run: 0, idle: 1, look: 0, wait: 0 }, init: false });
     }
   }
   wantVariant(p) { return p.arch === 'vendor' ? 1 : p.arch === 'tourist' ? 2 : (p.colour | 0) % VARIANTS.length; }
@@ -43,13 +43,28 @@ export class Pedestrians {
     const near = []; for (const p of this.sim.list) { if (p.gone) continue; const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < NEAR) near.push([d, p]); }
     near.sort((a, b) => a[0] - b[0]); const chosen = new Set(near.slice(0, this.actors.length).map(e => e[1]));
     for (const a of this.actors) if (a.p && !chosen.has(a.p)) { if (a.p.__a === a) a.p.__a = null; a.p = null; a.obj.visible = false; }
-    for (const p of chosen) { if (p.__a && p.__a.p === p) continue; const w = this.wantVariant(p), a = this.actors.find(x => !x.p && x.variant === w) || this.actors.find(x => !x.p); if (a) { a.p = p; p.__a = a; } }
+    for (const p of chosen) { if (p.__a && p.__a.p === p) continue; const w = this.wantVariant(p), a = this.actors.find(x => !x.p && x.variant === w) || this.actors.find(x => !x.p); if (a) { a.p = p; p.__a = a; a.init = false; } }
   }
+  /* each walker's animation: the clips run on the distance the walker has really covered (one Walk cycle per 1.45 m, one Run cycle per 3 m), so the feet do not slide whatever speed the simulation uses; Walk, Run, Idle, Wait
+     (at a kerb: a foot taps) and now and then IdleLook blend over about a seventh of a second; the body turns toward its heading smoothly instead of snapping at a corner; each walker has its own idle timing. */
   poseActors(o) {
-    const t = performance.now() / 1000;
-    for (const a of this.actors) { const p = a.p; if (!p) continue; const walking = (p.state === 'walk' || p.state === 'cross') && !p.frozen;
-      a.walk.weight = walking ? 1 : 0; a.idle.weight = walking ? 0 : 1; a.walk.time = (((p.phase || 0) / (2 * Math.PI)) % 1) * a.dur; a.idle.time = t % a.idle.getClip().duration; a.mixer.update(0);
-      a.obj.position.set(p.x - o.x, p.y + 0.16, p.z - o.z); a.obj.rotation.y = Math.PI / 2 - p.yaw; a.obj.visible = true; }
+    const now = performance.now() / 1000, dt = Math.min(0.1, Math.max(0.001, now - (this._now || now))); this._now = now;
+    for (const a of this.actors) {
+      const p = a.p; if (!p) continue; const A = a.A, W = a.w;
+      if (!a.init) { a.init = true; a.lx = p.x; a.lz = p.z; a.rot = Math.PI / 2 - p.yaw; a.y = p.y + 0.16; a.dist = Math.random() * 3; a.spd = 0; a.off = Math.random() * 20; a.nextLook = now + 3 + Math.random() * 8; a.lookEnd = 0; a.lookStart = 0; }
+      const step = Math.hypot(p.x - a.lx, p.z - a.lz); a.lx = p.x; a.lz = p.z; const ok = step < 2.5;                                  // a jump (a teleport, a respawn) is not a step
+      if (ok) { a.dist += step; a.spd += (step / dt - a.spd) * Math.min(1, dt * 8); } else a.spd = 0;
+      const moving = a.spd > 0.2, run = a.spd > 2.6, waiting = !moving && p.state === 'wait';
+      if (moving) a.lookEnd = 0; else if (!waiting && now > a.nextLook && a.lookEnd === 0 && A.look) { a.lookStart = now; a.lookEnd = now + A.look.dur; a.nextLook = a.lookEnd + 6 + Math.random() * 12; }
+      const looking = !moving && !waiting && now < a.lookEnd, want = { walk: moving && !run ? 1 : 0, run: moving && run && A.run ? 1 : 0, idle: !moving && !waiting && !looking ? 1 : 0, look: looking ? 1 : 0, wait: waiting && A.wait ? 1 : 0 };
+      if (moving && run && !A.run) want.walk = 1; if (waiting && !A.wait) want.idle = 1;
+      let sum = 0; for (const n in want) { W[n] += (want[n] - W[n]) * Math.min(1, dt * 7); sum += W[n]; } sum = sum || 1;
+      for (const n in A) if (A[n]) A[n].x.weight = W[n] / sum;
+      A.walk.x.time = ((a.dist / 1.45) % 1) * A.walk.dur; if (A.run) A.run.x.time = ((a.dist / 3.0) % 1) * A.run.dur; A.idle.x.time = (now + a.off) % A.idle.dur; if (A.wait) A.wait.x.time = (now + a.off) % A.wait.dur; if (A.look) A.look.x.time = Math.max(0, now - a.lookStart) % A.look.dur;
+      a.mixer.update(0);
+      let d = (Math.PI / 2 - p.yaw) - a.rot; d = Math.atan2(Math.sin(d), Math.cos(d)); a.rot += d * Math.min(1, dt * (moving ? 9 : 5)); a.y += (p.y + 0.16 - a.y) * Math.min(1, dt * 14);
+      a.obj.position.set(p.x - o.x, a.y, p.z - o.z); a.obj.rotation.y = a.rot; a.obj.visible = true;
+    }
   }
   /* every frame: the car (or null when the player is on foot) may hit walkers, which then fall as ragdolls (src/pedestrians/ragdoll.js). Returns the hits: [{ speed, fatal }] */
   physics(dt, car) {

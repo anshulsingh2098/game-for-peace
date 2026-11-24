@@ -125,7 +125,7 @@ export class RagdollSystem {
       fg.obj.position.set(f.fromPos.x, f.fromPos.y + (f.groundY - f.fromPos.y - 0.0) * s, f.fromPos.z); fg.obj.rotation.y = f.faceYaw * s;
       if (u >= 1) { f.state = 'run'; f.t = 0; f.runPos = fg.obj.position.clone(); f.phase = 0; }
     } else if (f.state === 'run') {
-      const fg = f.fig, sp = 2.3; f.phase += sp * dt * 2.2; const fx = Math.sin(f.faceYaw), fz = Math.cos(f.faceYaw); fg.obj.position.set(f.runPos.x + fx * sp * f.t, f.groundY, f.runPos.z + fz * sp * f.t); fg.update(dt, true, f.phase);
+      const fg = f.fig, sp = 4.0; f.phase += sp * dt * 2.2; const fx = Math.sin(f.faceYaw), fz = Math.cos(f.faceYaw); fg.obj.position.set(f.runPos.x + fx * sp * f.t, f.groundY, f.runPos.z + fz * sp * f.t); fg.update(dt, true, f.phase, true);
       if (f.t > R.runAway) { f.state = 'fade'; f.t = 0; f.after = 'gone'; }
     } else if (f.state === 'fade') { const u = Math.min(1, f.t / R.fade); f.fig.obj.scale.setScalar(Math.max(0.001, 1 - u)); if (u >= 1) f.state = 'gone'; }
   }

@@ -18,17 +18,24 @@ export class PlayerFigure {
     this.obj = SkeletonUtils.clone(gltf.scene); this.obj.updateMatrixWorld(true);
     this.obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
     this.mixer = new THREE.AnimationMixer(this.obj);
-    const clip = n => gltf.animations.find(c => c.name.toLowerCase().includes(n));
+    const clip = n => gltf.animations.find(c => c.name.toLowerCase() === n) || gltf.animations.find(c => c.name.toLowerCase().includes(n));
     this.walk = this.mixer.clipAction(clip('walk')); this.idle = this.mixer.clipAction(clip('idle')); this.walk.play(); this.idle.play(); this.dur = this.walk.getClip().duration; this.idleDur = this.idle.getClip().duration;
+    const rc = clip('run'), lc = clip('idlelook'); this.run = rc ? this.mixer.clipAction(rc) : null; this.look = lc ? this.mixer.clipAction(lc) : null; if (this.run) { this.run.play(); this.runDur = rc.duration; } if (this.look) { this.look.play(); this.lookDur = lc.duration; }
+    this.w = { walk: 0, run: 0, idle: 1, look: 0 }; this.still = 0; this.lookAt = 0; this.lookEnd = 0;
     this.bones = []; this.byName = {}; const inv = this.obj.matrixWorld.clone().invert(), tmp = new THREE.Matrix4(), p = new THREE.Vector3(), s = new THREE.Vector3();
     this.obj.traverse(o => { if (o.isBone) { tmp.multiplyMatrices(inv, o.matrixWorld); const w = new THREE.Quaternion(); tmp.decompose(p, w, s); const rec = { bone: o, name: o.name, restW: w, parent: null, cum: new THREE.Quaternion(), world: new THREE.Quaternion() }; this.bones.push(rec); this.byName[o.name] = rec; } });
     for (const b of this.bones) { const pp = b.bone.parent; b.parent = pp && pp.isBone ? this.byName[pp.name] : null; if (!b.parent && pp) { tmp.multiplyMatrices(inv, pp.matrixWorld); const w = new THREE.Quaternion(); tmp.decompose(p, w, s); b.parentW = w; } }
     this.scripted = false; this.clock = 0;
   }
-  /* on-foot: the Walk clip follows the character's stride phase (so the feet do not slide), Idle otherwise */
-  update(dt, moving, phase) {
-    this.clock += dt; if (this.scripted) return;
-    this.walk.weight = moving ? 1 : 0; this.idle.weight = moving ? 0 : 1; this.walk.time = ((phase || 0) / (2 * Math.PI) % 1) * this.dur; this.idle.time = this.clock % this.idleDur; this.mixer.update(0);
+  /* on-foot: the clips follow the distance walked (`phase` is the stride phase of the on-foot controller, 2.2 per metre), so the feet do not slide: one Walk cycle (two steps) per 1.45 m, one Run cycle per 3 m. Walk, Run,
+     Idle and now and then IdleLook blend into one another over about a seventh of a second instead of cutting. */
+  update(dt, moving, phase, run = false) {
+    this.clock += dt; if (this.scripted) return; const dist = (phase || 0) / 2.2, W = this.w, k = Math.min(1, dt * 7);
+    this.still = moving ? 0 : this.still + dt; if (!moving) { if (this.still > 5 && this.clock > this.lookAt && this.look) { this.lookAt = this.clock + 8 + Math.random() * 10; this.lookEnd = this.clock + this.lookDur; this.lookStart = this.clock; } } else this.lookEnd = 0;
+    const looking = this.clock < this.lookEnd && !moving, want = { walk: moving && !(run && this.run) ? 1 : 0, run: moving && run && this.run ? 1 : 0, idle: !moving && !looking ? 1 : 0, look: looking ? 1 : 0 };
+    for (const n of ['walk', 'run', 'idle', 'look']) W[n] += (want[n] - W[n]) * k;
+    const sum = (W.walk + W.run + W.idle + W.look) || 1; this.walk.weight = W.walk / sum; this.idle.weight = W.idle / sum; if (this.run) this.run.weight = W.run / sum; if (this.look) this.look.weight = W.look / sum;
+    this.walk.time = ((dist / 1.45) % 1) * this.dur; if (this.run) this.run.time = ((dist / 3.0) % 1) * this.runDur; this.idle.time = this.clock % this.idleDur; if (this.look) this.look.time = Math.max(0, this.clock - (this.lookStart || 0)) % this.lookDur; this.mixer.update(0);
   }
   /* scripted pose: deltas = { boneName: [rx, ry, rz] } in character space, each relative to the parent bone's own motion */
   pose(deltas) {
