@@ -31,7 +31,7 @@ export class CityTraffic {
   variantOf(k) { for (const name in MODEL_SETS) { if (!this.models[name]) continue; const S = MODEL_SETS[name]; if (S.base === k && this.vr() < S.share) return name; } return k; }
   /* the seated rider of the motorbikes (assets/npc/npc_rider_lod1.glb): baked to one static mesh for the fleet, and kept for the ragdoll that throws the rider off when the bike is hit */
   loadRider() { import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/npc/npc_rider_lod1.glb')).then(g => { this.riderGltf = g; const geo = riderGeometry(g, mergeGeometries); if (geo) this.fleet.setRider(geo); this.makeRiderActors(g); }).catch(() => { /* the bikes go without a rider */ }); }
-  /* the owner's bike model for every motorbike in traffic (assets/bike_01.glb); until it arrives (and if it does not) the box bike is drawn */
+  /* the owner's bike model for every motorbike in traffic (assets/traffic/bike_traffic.glb, the Volt Bike without its dummy rider: dev/make_traffic_bike.py); until it arrives (and if it does not) the box bike is drawn */
   makeRiderActors(g) {
     const clip = g.animations.find(a => a.name === 'Ride'); if (!clip || !(clip.duration > 0)) return; this.riderActors = [];
     for (let i = 0; i < RIDERS_LIVE; i++) {
@@ -40,7 +40,7 @@ export class CityTraffic {
       const mixer = new THREE.AnimationMixer(obj), act = mixer.clipAction(clip); act.play(); act.time = (i * 0.37) % clip.duration; this.fleet.group.add(wrap); this.riderActors.push({ wrap, mixer, mats, car: null, jk: -1 });
     }
   }
-  loadBike() { import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/bike_01.glb')).then(g => { const geo = bikeGeometry(g, mergeGeometries); if (!geo) return; this.fleet.addModel('bike-01', geo, BIKE_DIM.len, BIKE_DIM.wid, 1.05, 200); this.models['bike-01'] = true; for (const c of this.cars) if (c.kind === 'two') c.kind = 'bike-01'; for (const l of this.parked.values()) for (const c of l) if (c.kind === 'two') c.kind = 'bike-01'; }).catch(() => { /* the box bike stays */ }); }
+  loadBike() { import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/traffic/bike_traffic.glb')).then(g => { const geo = bikeGeometry(g, mergeGeometries); if (!geo) return; this.fleet.addModel('bike-01', geo, BIKE_DIM.len, BIKE_DIM.wid, 1.05, 200); this.models['bike-01'] = true; for (const c of this.cars) if (c.kind === 'two') c.kind = 'bike-01'; for (const l of this.parked.values()) for (const c of l) if (c.kind === 'two') c.kind = 'bike-01'; }).catch(() => { /* the box bike stays */ }); }
   loadModels() {
     this.loadRider(); this.loadBike();
     this.vr = (() => { let s = 777; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();

@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-25 07:30  B-2026-11-25-09  The Volt Bike's built-in dummy rider (head, chest, arms, hands, thighs) removed from the traffic bike
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: `assets/bike_01.glb` carries a stick-figure dummy rider inside its `Details` mesh (round head and visor, chest wedge, arms, hands, thighs). `dev/make_traffic_bike.py` (new) separates `Details` into its 151 loose parts, deletes the 63 that form the dummy (found by place), puts back a plain handlebar, grips and mirror stalks, and writes `assets/traffic/bike_traffic.glb` (5,112 vertices); the original is untouched. `src/world/city/citytraffic.js` loads that file instead; the name filter for `Cube008_3` in `vehicles.js` is gone (the part is not in the new file). The player's own bike model still has the dummy. Previews: `dev/previews/bike_traffic_side.png`, `bike_traffic_front34.png`. Shared files touched (small): `citytraffic.js`, `vehicles.js`.
+Evidence: implemented; seen in Blender renders of the new file (bike with bars and mirrors, no rider parts); seen in the game earlier with the first version (only the head removed) and, after this change, the file loads (`bike-01` registered, 5,112 vertices, 5 bikes, no console errors). NOT seen in the game: the new file's bike with the live rider (no bike was within camera reach when I looked); whether the rider's hands meet the new bars exactly (bars are at the old dummy's hand height, the rider hands were fitted to the old model's grips); the player's bike still shows the dummy if the owner wants it gone there too; self-test not re-read.
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-25 06:30  B-2026-11-25-08  Dummy head removed from the traffic bike
 Branch: vehicle/npc-animation  Commit: see `git log`
 What changed: `src/world/city/vehicles.js` `bikeGeometry()` leaves out the mesh `Cube008_3` of `assets/bike_01.glb`, the round dummy head above the handlebars (the traffic bike has a real rider). The player's own Volt Bike model is untouched.
