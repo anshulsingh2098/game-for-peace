@@ -2,12 +2,13 @@
    continuing street at each end (pieces meet end to end within a few metres) and are respawned near the player when they leave the loaded ground. They are simple boxes (one instanced body and one cabin), not the
    traffic pack's models, and they have no signals yet. Flyovers, ramps and underpasses carry traffic too (audit R14, owner decision 17 Nov 2026): each car has a height `h` above or below the ground, cars only see cars at their own level, and a car's obstacle circles carry that height so the physics ignores a car on the other level. Obstacle circles go to the vehicle physics through `circles()`, so the player cannot drive through them. Browser only. */
 import * as THREE from 'three';
-import { Fleet, DIM, MODEL_SETS, baseKind } from './vehicles.js';
+import { Fleet, DIM, MODEL_SETS, baseKind, riderGeometry } from './vehicles.js';
 import { roundCorners } from './citynav.js';
 import { NearCars, NEAR, FULL } from './nearcars.js';
 import { deckHeight, underDepth } from './pack.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
+const JACKETS = [0xe8e8e4, 0x2f6fa8, 0xc94f3a, 0x3d3d40, 0x3f9d6a, 0xe3b21a, 0x8e4f9e, 0x1f2430];
 const LOD_NEAR = 45, PARK_MAX = 300, AUTO = [0xe3b21a, 0x2e8b57, 0x2e8b57, 0xe3b21a];
 const MODES = { off: 0, low: 10, mid: 22, high: 34 }, CELL = 8, PAINT = [0xf2f2f2, 0xf2f2f2, 0xd9d9d9, 0x1b1b1d, 0x9a9da3, 0xb11f1f, 0x2a4f8a, 0xe8c547, 0x3a3a3c, 0xcfd2d6];
 const DRIVABLE = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential']);
@@ -26,7 +27,10 @@ export class CityTraffic {
   pickKind(x, z, r, parked = false) { const ID = this.identity; if (!ID) return 'hatch'; let k = ID.vehicleKind(ID.areaNameAt(x, z), r); if (k === 'bus') k = 'hatch'; if (parked && (k === 'cyclerick' || k === 'truck')) k = 'two'; return this.variantOf(k); }
   /* some cars of a base kind are drawn as a real model once the pack is loaded (a stream of its own, so the simulation's random numbers do not change whether or not the models are there) */
   variantOf(k) { for (const name in MODEL_SETS) { if (!this.models[name]) continue; const S = MODEL_SETS[name]; if (S.base === k && this.vr() < S.share) return name; } return k; }
+  /* the seated rider of the motorbikes (assets/npc/npc_rider_lod1.glb): baked to one static mesh for the fleet, and kept for the ragdoll that throws the rider off when the bike is hit */
+  loadRider() { import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/npc/npc_rider_lod1.glb')).then(g => { this.riderGltf = g; const geo = riderGeometry(g, mergeGeometries); if (geo) this.fleet.setRider(geo); }).catch(() => { /* the bikes go without a rider */ }); }
   loadModels() {
+    this.loadRider();
     this.vr = (() => { let s = 777; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
     import('../../traffic/traffic.js').then(m => m.loadTrafficPack()).then(pack => {
       if (!pack) return; for (const key in MODEL_SETS) { const S = MODEL_SETS[key], pn = S.pack || key, p = pack.parts[pn], meta = pack.kinds.find(k => k.name === pn); if (!p || !meta) continue;
@@ -107,7 +111,7 @@ export class CityTraffic {
     N.end();
     /* two levels of the traffic models: about 3,000 triangles within LOD_NEAR metres of the player, about 700 beyond (the far ones are tiny on screen; there are up to 300 parked cars) */
     const px2 = this.px, pz2 = this.pz, LO = LOD_NEAR * LOD_NEAR, key = (c, x, z) => { const k = c.kind; if (!F.f[k + '|lo']) return k; const dx = x - px2, dz = z - pz2; return dx * dx + dz * dz > LO ? k + '|lo' : k; };
-    for (const c of this.cars) if (!c.wreck && !full.has(c)) F.add(key(c, c.x, c.z), c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint);
+    for (const c of this.cars) if (!c.wreck && !full.has(c)) { F.add(key(c, c.x, c.z), c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint); if (c.kind === 'two' && !c.noRider) { if (c.jk === undefined) c.jk = JACKETS[Math.floor(Math.random() * JACKETS.length)]; F.addRider(c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.jk); } }
     for (const c of pk) if (!c.wreck && !full.has(c)) F.add(key(c, c.x, c.z), c.x - ox, gy, c.z - oz, c.yaw, c.paint);
     F.end();
   }

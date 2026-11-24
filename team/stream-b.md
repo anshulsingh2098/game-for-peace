@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-25 03:00  B-2026-11-25-04  Motorbike riders: a real seated rider, and they are thrown off when the bike is hit
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: the rider of a traffic motorbike was two boxes. Now: `dev/build_npc_stylised.py` has a `rider` type (open-face helmet, jacket, jeans, trainers) and a one-frame `Ride` clip (seated, leaning, hands on the bars, feet on the pegs); `assets/npc/npc_rider_lod1.glb`. `src/world/city/vehicles.js`: the bike is boxes only; `riderGeometry()` plays `Ride` once, bakes the skinned mesh to one static geometry and `Fleet.setRider/addRider` draw it as one more instanced mesh that follows each moving bike (jacket colour per rider). `src/world/city/citytraffic.js`: loads it (`loadRider`, `riderGltf`) and draws a rider on each moving `two` that has `noRider` unset. `src/world/city/trafficdamage.js`: `fall(car, side)` tips the bike over on its side in about half a second and stops it for good. `src/main.js` `bikeFall()`: when the player's car hits a bike harder than 1.2 m/s the rider leaves the fleet and becomes a ragdoll (same system and the same death chance as a walker, `pedestrians/ragdoll.js`), the bike falls; `bikeFall` is also on `window.__next` for testing. Shared files touched (small): `src/main.js`, `citytraffic.js`, `vehicles.js`, `trafficdamage.js`.
+Evidence: implemented; seen in Blender renders (`dev/previews/rider_ride3.png`); seen in a visible pane (Delhi city, q=med): six bikes each with a seated helmeted rider, no console errors; `bikeFall` called by hand on one bike: the bike tipped over and the rider fell as a ragdoll. NOT seen: a real car-hits-bike collision at speed (the rider's throw), a rider killed, another traffic car hitting a bike (only the player's car does this), parked bikes (they have no rider now), the cost of 260 extra riders at 6,700 vertices each. Limits: the rider starts the ragdoll in a standing pose, the bike is still a box shape, hands are palm-up.
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-25 02:00  B-2026-11-25-03  NPC hair improved
 Branch: vehicle/npc-animation  Commit: see `git log`
 What changed: `dev/build_npc_stylised.py`: hair is now a cap plus many thin overlapping locks that follow the head (short cropped, side-swept with a part, long with two locks in front of the shoulders, a bun pulled back to a hair tie, sideburns), instead of a smooth helmet; the elder's cap sits on the head, his glasses are thin metal rims (the lenses used to hide the eyes) and his beard is a goatee on the chin. All seven `assets/npc/*.glb` rebuilt (about 8,400 faces each, up from 8,000). Preview: `dev/previews/npc7_heads.png`.

@@ -359,6 +359,15 @@ function updateCarjack() {
   const ref = T.nearestCar(foot.x, foot.z, 3.2); if (!ref || !GARAGE_OF[ref.c.kind]) { interactions.remove('carjack'); return; }
   interactions.add({ id: 'carjack', x: ref.c.x, z: ref.c.z, r: 5, prompt: ref.parked ? 'Take the car (G)' : 'Pull the driver out (G)', onUse: () => carjack(ref) });
 }
+/* a motorbike is hit (by anything harder than a nudge): the rider is thrown off as a ragdoll and the bike falls over; a hard hit can kill the rider (the same chance as for a walker) */
+function bikeFall(bike, h) {
+  const T = city && city.traffic, pv = city && city.peds && city.peds.view; if (!T || !T.dmg || !pv || !pv.rag || bike.noRider || bike.wreck && !bike.dmg || h.vn < 1.2) return;
+  const gltf = T.riderGltf || (pv.models && pv.models.find(Boolean)); if (!gltf) return;
+  const y = (T.gy || 0) + (bike.h || 0), fx = Math.cos(bike.yaw), fz = Math.sin(bike.yaw), car = carStateNow() || { x: bike.x - h.nx * 2, z: bike.z - h.nz * 2, y, yaw: Math.atan2(h.nz, h.nx), u: h.vn, v: 0, circles: [0], radius: 0.9 };
+  bike.noRider = true;
+  try { const fl = pv.rag.spawn({ x: bike.x - fx * 0.3, z: bike.z - fz * 0.3, y, yaw: bike.yaw }, gltf, car); if (fl) fl.fig.obj.traverse(o => { if (o.isMesh) for (const m of [].concat(o.material)) if (m.name === 'Top') m.color.setHex(bike.jk || 0x2f6fa8); }); } catch (e) { /* no room: the rider just vanishes */ }
+  T.dmg.fall(bike, T.dmg.local(bike, h.x, h.z).x);
+}
 function throwDriver(car, y) {                                                       // India keeps left: the driver sits on the right, so the door is on the right of the way the car faces
   const pv = city ? city.peds.view : peds; if (!pv || !pv.rag || !pv.models) return; const gltf = pv.models.find(Boolean); if (!gltf) return;
   const fx = Math.cos(car.yaw), fz = Math.sin(car.yaw), rx = -fz, rz = fx;
@@ -744,7 +753,7 @@ function update(dt, now) {
         if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null; let adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (cityMode) { adRoad = cityNav.path; adSim = null; autodrive.lookMin = 6; autodrive.forward = true; autodrive.lane = () => -1.5; autodrive.lanes = () => 1; if (!cityNav.active || cityNav.arrived) { setAuto(false); if (cityNav.arrived) arriveT = 2.5; else toast('Autodrive off: no route'); } } if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = cityMode ? 0 : rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); if (cityMode) { adStuck = Math.abs(phys.u) < 0.4 && input.throttle > 0.5 ? adStuck + dt : 0; if (adStuck > 3) { adStuck = 0; if (cityNav.blockHere(phys.x, phys.z, phys.yaw)) backToRoad(); } } }
       }
       if (cityMode && arriveT > 0) { arriveT -= dt; input = { ...input, throttle: 0, brake: 1 }; }                    // stop at the destination
-      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; carDamageInput(); phys.step(dt, input); if (phys.hit && view.damage && dmgMode !== 'off') view.damage.hit(phys.hit, grid.origin, phys.y); if (phys.hit && phys.hit.o && phys.hit.o.car && dmgMode !== 'off' && city && city.traffic.dmg) { city.traffic.dmg.cosmetic = dmgMode !== 'full'; city.traffic.dmg.hit(phys.hit.o.car, phys.hit); }          // visible dents (vehicle/damage.js)
+      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; carDamageInput(); phys.step(dt, input); if (phys.hit && view.damage && dmgMode !== 'off') view.damage.hit(phys.hit, grid.origin, phys.y); if (phys.hit && phys.hit.o && phys.hit.o.car && dmgMode !== 'off' && city && city.traffic.dmg) { city.traffic.dmg.cosmetic = dmgMode !== 'full'; city.traffic.dmg.hit(phys.hit.o.car, phys.hit); } if (phys.hit && phys.hit.o && phys.hit.o.car && phys.hit.o.car.kind === 'two' && dmgMode !== 'off') bikeFall(phys.hit.o.car, phys.hit);          // visible dents (vehicle/damage.js)
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
     }
@@ -838,7 +847,7 @@ addEventListener('message', async e => {
 });
 if (parent !== window) parent.postMessage({ type: 'ready' }, location.origin);
 
-window.__next = { get city() { return city; }, missions, get foot() { return foot; }, carjack, get figure() { return figure; }, bus, runtime, get peds() { return peds; }, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get city() { return city; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
+window.__next = { bikeFall, get city() { return city; }, missions, get foot() { return foot; }, carjack, get figure() { return figure; }, bus, runtime, get peds() { return peds; }, sectors, assetCache, get nav() { return nav; }, fx, get config() { return config; }, get terrain() { return terrain; }, get city() { return city; }, get road() { return road; }, get roadMesh() { return roadMesh; }, get scatter() { return scatter; },
   radio, wheel, get roadS() { return roadS; }, set roadS(v) { roadS = v; }, get mode() { return mode; }, get phys() { return phys; }, get roadSet() { return roadSet; }, get auto() { return auto; }, set auto(v) { auto = v; },
   menu, get landmarks() { return landmarks; }, get branches() { return branches; }, get rail() { return rail; }, get railSamples() { return railSamples; }, autodrive, get activeRec() { return activeRec; }, setNav, get primaryRec() { return primaryRec; }, sectors, get traffic() { return traffic; }, setMode, setVehicle, backToRoad, placeOnRoad, useBuff, get buffT() { return buffT; }, get buffCd() { return buffCd; }, view, env, sound, settings: S, grid, far, cam, camera, controls, renderer, scene, regenerate, encodeConfig, step };
 /* debug: window.__cam(x, y, z, yaw, pitch) puts the game in fly mode with the camera exactly there (x, z game metres, y height above the map origin plane, yaw as FlyCam uses it, pitch -1.57 = straight down); used for overhead checks of junctions (docs/CP_MATCH_PLAN.md). Nothing in the game calls it. */

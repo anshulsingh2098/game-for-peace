@@ -44,7 +44,12 @@ export class TrafficDamage {
     g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); const pos = g.attributes.position.array, mesh = new THREE.Mesh(g, this.mat); mesh.castShadow = true; mesh.frustumCulled = false; this.scene.add(mesh);
     car.wreck = true; car.dmg = { mesh, g, orig: pos.slice(), tot: new Float32Array(n), cols0: cols.slice(), health: 1, engine: 1, state: 'ok', fuse: 0, since: 0, burstAt: 0, hits: 0, n, len: DIM[car.kind].len, wid: DIM[car.kind].wid, char: 0 }; this.list.push(car); this.place(car); return car.dmg;
   }
-  place(car) { const m = car.dmg.mesh; m.position.set(car.x - this.origin.x, this.gy + (car.h || 0), car.z - this.origin.z); m.rotation.set(0, -car.yaw + Math.PI / 2, 0); }
+  place(car) {
+    const d = car.dmg, m = d.mesh, f = d.fall, e = f ? Math.min(1, f.t / 0.55) : 0, k = e * e * (3 - 2 * e);
+    m.position.set(car.x - this.origin.x, this.gy + (car.h || 0), car.z - this.origin.z); m.rotation.order = 'YXZ'; m.rotation.set(0, -car.yaw + Math.PI / 2, f ? f.side * 1.42 * k : 0);       // a bike that is hit tips over on its side
+  }
+  /* a two-wheeler is knocked over: it takes its own mesh (if it has none yet), stops for good and falls toward `side` (+1: the bike's +x side goes up, -1: down) */
+  fall(car, side) { const d = car.dmg || this.start(car); if (!d || d.fall) return; d.fall = { t: 0, side: side >= 0 ? 1 : -1 }; car.hold = Infinity; car.v = 0; }
   /* car-local coordinates of a world point (x, z) on the car, and of a world direction */
   local(car, x, z) { const th = -car.yaw + Math.PI / 2, c = Math.cos(th), s = Math.sin(th), dx = x - car.x, dz = z - car.z; return { x: dx * c - dz * s, z: dx * s + dz * c }; }
   /* the player's car hit this car: h = { x, z, nx, nz, vn } as the physics reports it (the normal points from this car into the player's) */
@@ -74,7 +79,7 @@ export class TrafficDamage {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const car = this.list[i], d = car.dmg;
       if (Math.hypot(car.x - px, car.z - pz) > FAR) { this.drop(i); continue; }
-      this.place(car); d.mesh.updateMatrixWorld(true); d.since += dt;
+      if (d.fall) d.fall.t += dt; this.place(car); d.mesh.updateMatrixWorld(true); d.since += dt;
       if (d.state === 'ok') continue; this.enginePos(car, p); const fx = this.fx;
       if (d.state === 'smoking') fx.smoke(p, 8 + 18 * (1 - d.engine / HEALTH.smoke), dt, 0.3, d.engine < HEALTH.smokeBlack ? 0.2 : 0.6);
       else if (d.state === 'dead') fx.smoke(p, 6, dt, 0.35, 0.3);
