@@ -180,27 +180,92 @@ def hair_cap(scale=1.0, back=0.014, lift=0.012, low=0.0):
     bm = ellip((0, back, 1.575 + lift), (.0895 * scale, .106 * scale, .117 * scale), 40, 28)
     cut(bm, (0, 0, 1.575 - low), (0, 1.22, 1.0)); return bm                                    # hairline: higher at the front, lower at the back
 
+def merge(bms):
+    bm = bmesh.new()
+    for b2 in bms:
+        me = bpy.data.meshes.new('t'); b2.to_mesh(me); b2.free(); bm.from_mesh(me); bpy.data.meshes.remove(me)
+    return bm
+
+def strand(P, d, L, r, seg=6, rings=4):
+    """a thin tapered lock of hair: an elongated ellipsoid starting at P and running along d"""
+    d = Vector(d).normalized(); rot = d.to_track_quat('Z', 'Y').to_matrix()
+    return ellip(Vector(P) + d * L / 2, (r, r * .85, L / 2), seg, rings, rot)
+
+def cap_pt(phi, th, k=1.04):
+    """a point on the hair cap (phi from the crown down, th around: 0 = front) and the direction running down the surface"""
+    sp, cp, st, ct = math.sin(phi), math.cos(phi), math.sin(th), math.cos(th)
+    P = Vector((.0895 * sp * st * k, .014 - .106 * sp * ct * k, 1.587 + .117 * cp * k))
+    return P, Vector((.0895 * cp * st, -.106 * cp * ct, -.117 * sp)).normalized()
+
+def hairline(y, low=0.0): return 1.575 - 1.22 * y - low
+
+def cap_strands(rings, count, L, r, low=0.0, swirl=0.0, bias=None, wob=0.0):
+    out = []
+    for i, phi in enumerate(rings):
+        n = count(phi)
+        for j in range(n):
+            th = 2 * math.pi * (j + .5 * (i % 2)) / n
+            P, d = cap_pt(phi, th)
+            if bias is not None: d = (d + bias(P, th)).normalized()
+            d = (d + Vector((math.cos(th + 1.57) * swirl, math.sin(th + 1.57) * swirl, 0))).normalized()
+            l = L * (1 - .25 * ((j * 7 + i * 3) % 5) / 4)
+            E = P + d * l
+            if P.z < hairline(P.y, low) + .004: continue
+            while l > .02 and E.z < hairline(E.y, low) - .002: l -= .008; E = P + d * l
+            out.append(strand(P - d * .01, d, l + .01, r * (1 + wob * ((j * 3 + i) % 3 - 1))))
+    return out
+
 def add_hair():
     h = T['hair']
-    if h == 'short': finish('HairCap', hair_cap(), 'Hair', 'head', '', 0); finish('Quiff', ellip((0, -.045, 1.685), (.06, .048, .021), 14, 10), 'Hair', 'head', '', 0)
+    if h == 'short': finish('HairCap', hair_cap(), 'Hair', 'head', '', 0)
     elif h == 'side':
-        finish('HairCap', hair_cap(1.01, 0.012, 0.014), 'Hair', 'head', '', 0); finish('HairPart', ellip((-.03, -.03, 1.675), (.05, .075, .03), 12, 8, Matrix.Rotation(0.3, 3, 'Y')), 'Hair', 'head', '', 0)
+        finish('HairCap', hair_cap(1.01, 0.012, 0.014), 'Hair', 'head', '', 0); finish('HairPart', ellip((-.03, -.035, 1.672), (.04, .055, .018), 12, 8, Matrix.Rotation(0.3, 3, 'Y')), 'Hair', 'head', '', 0)
     elif h == 'long':
         finish('HairCap', hair_cap(1.02, 0.016, 0.016, 0.02), 'Hair', 'head', '', 0)
         finish('HairBack', loft([(1.27, 0, .095, .075, .042), (1.36, 0, .092, .095, .058), (1.48, 0, .075, .10, .078), (1.58, 0, .05, .098, .095), (1.64, 0, .03, .082, .10), (1.68, 0, .02, .05, .075)], 14, True, False), 'Hair', 'longhair')
     elif h == 'bun':
         finish('HairCap', hair_cap(1.01, 0.014, 0.012, 0.01), 'Hair', 'head', '', 0); finish('Bun', ellip((0, .07, 1.70), (.04, .04, .04), 12, 10), 'Hair', 'head', '', 0)
     elif h == 'topi':
-        finish('Topi', loft([(1.655, 0, 0.0, .088, .104), (1.665, 0, 0.0, .092, .108), (1.72, 0, 0.0, .088, .104), (1.735, 0, 0.0, .075, .09)], 18, False, True), 'Accent', 'head')
+        finish('Topi', loft([(1.605, 0, 0.0, .087, .104), (1.615, 0, 0.0, .091, .108), (1.67, 0, 0.0, .088, .104), (1.69, 0, 0.0, .075, .09)], 18, False, True), 'Accent', 'head')
         finish('HairSide', ellip((0, .035, 1.58), (.09, .09, .06), 16, 10), 'Hair', 'head', '', 0)
     elif h == 'cap':
         finish('HairNape', ellip((0, .06, 1.56), (.085, .05, .05), 14, 10), 'Hair', 'head', '', 0)
         finish('CapCrown', loft([(1.625, 0, 0.0, .094, .112), (1.68, 0, 0.0, .098, .115), (1.725, 0, 0.0, .088, .105), (1.74, 0, 0.0, .05, .06)], 18, False, True), 'Accent', 'head')
         finish('CapBrim', ellip((0, -.115, 1.645), (.075, .07, .008), 14, 8, Matrix.Rotation(-0.1, 3, 'X')), 'Accent', 'head', '', 0)
+    st = []
+    if h == 'short':
+        st = cap_strands((.30, .55, .80, 1.05, 1.28), lambda f: int(7 + 12 * math.sin(f)), .06, .0075, 0.0, .2, None, .12)
+        for s2 in (1, -1): st += [strand((s2 * .084, .004, 1.585), (s2 * .1, .15, -1.0), .048, .0085), strand((s2 * .0835, -.014, 1.600), (s2 * .1, .1, -1.0), .036, .0075)]        # sideburns
+    elif h == 'side':
+        st = cap_strands((.30, .55, .80, 1.05, 1.28), lambda f: int(7 + 12 * math.sin(f)), .065, .0078, 0.0, .1, lambda P, th: Vector((-.7, 0, 0)) if P.x < .02 else Vector((.4, 0, 0)), .15)    # swept to the right of the part
+        for s2 in (1, -1): st += [strand((s2 * .084, .004, 1.585), (s2 * .1, .15, -1.0), .05, .0085)]
+    elif h == 'bun':
+        st = []
+        for i, phi in enumerate((.55, .8, 1.05, 1.28)):
+            n = int(6 + 8 * math.sin(phi))
+            for j in range(n):
+                th = 2 * math.pi * (j + .5 * (i % 2)) / n; P, d = cap_pt(phi, th); tgt = (Vector((0, .07, 1.70)) - P).normalized(); d = (d * .65 + tgt * .35).normalized()
+                if P.z < hairline(P.y, .01) + .004: continue
+                st.append(strand(P - d * .012, d, .05, .0072))
+        finish('HairTie', loft([(1.678, 0, .07, .044, .044), (1.69, 0, .07, .047, .047), (1.70, 0, .07, .044, .044)], 12, False, False), 'Accent', 'head', '', 0)
+    elif h == 'long':
+        st = cap_strands((.35, .6, .85, 1.1, 1.3), lambda f: int(7 + 10 * math.sin(f)), .075, .0085, .02, .12, None, .1)
+        fr = [strand((s2 * .079, -.02, 1.60), (s2 * .25, -.08, -1.0), .26, .0125) for s2 in (1, -1)]                                                       # two locks falling in front of the shoulders
+        finish('HairFront', merge(fr), 'Hair', 'longhair', '', 0)
+    elif h == 'topi':
+        for s2 in (1, -1): st += [strand((s2 * .083, .012 + .012 * k, 1.60 - .012 * k), (s2 * .1, .2, -1.0), .05 - .005 * k, .0085) for k in range(3)]
+    if st: finish('HairStrands', merge(st), 'Hair', 'head', '', 0)
     if T.get('stache'): finish('Stache', ellip((0, -.095, 1.526), (.03, .012, .007), 10, 8), 'Hair', 'head', '', 0)
-    if T.get('beard'): finish('Beard', cut(ellip((0, -.045, 1.505), (.066, .074, .06), 16, 12), (0, 0, 1.49), (0, 0.2, -1.0)), 'Hair', 'head', '', 0)
+    if T.get('beard'): finish('Beard', ellip((0, -.068, 1.474), (.042, .03, .024), 16, 10), 'Hair', 'head', '', 0)
     if T.get('glasses') or T.get('sunglasses'):
-        for s in (1, -1): finish('Lens', ellip((s * .0335, -.1055, 1.583), (.0185, .0035, .0135), 12, 8), 'Glass' if T.get('sunglasses') else 'Eye', 'head', '', 0)
+        for s in (1, -1):
+            if T.get('sunglasses'): finish('Lens', ellip((s * .0335, -.1055, 1.583), (.0185, .0035, .0135), 12, 8), 'Glass', 'head', '', 0)
+            else:                                                                                                                              # clear glasses: a thin metal rim round each eye
+                rim = bmesh.new(); N, M = 20, 6
+                vs = [[rim.verts.new(((.0185 + .0014 * math.cos(b2)) * math.cos(a2), 0.0014 * math.sin(b2), (.0135 + .0014 * math.cos(b2)) * math.sin(a2))) for b2 in [2 * math.pi * j / M for j in range(M)]] for a2 in [2 * math.pi * i / N for i in range(N)]]
+                for i in range(N):
+                    for j in range(M): rim.faces.new((vs[i][j], vs[i][(j + 1) % M], vs[(i + 1) % N][(j + 1) % M], vs[(i + 1) % N][j]))
+                bmesh.ops.transform(rim, matrix=Matrix.Translation((s * .0335, -.1055, 1.583)), verts=rim.verts[:]); finish('Rim', rim, 'Metal', 'head', '', 0)
         finish('Bridge', box((0, -.106, 1.59), (.02, .004, .004)), 'Metal', 'head', '', 0)
         for s in (1, -1): finish('Temple', box((s * .0865, -.052, 1.59), (.004, .105, .004)), 'Metal', 'head', '', 0)
 
@@ -442,6 +507,7 @@ def shot(name, loc, target=(0, 0, 0.9), clip='Walk', frame=1):
 shot('front', (0.9, -5.2, 1.0), clip='Idle', frame=1)
 shot('walk', (3.2, -4.0, 1.05), clip='Walk', frame=7)
 shot('head', (0.45, -1.15, 1.6), target=(0, 0, 1.57), clip='Idle', frame=1)
+shot('headside', (1.0, 0.7, 1.62), target=(0, 0, 1.52), clip='Idle', frame=1)
 shot('feet', (0.75, -0.8, 0.32), target=(0, -0.02, 0.07), clip='Idle', frame=1)
 if TYPE == 'commuter':
     glb = os.path.join(OUT, 'npc_commuter.glb')
