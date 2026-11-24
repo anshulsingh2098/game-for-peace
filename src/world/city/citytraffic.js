@@ -121,13 +121,14 @@ export class CityTraffic {
   /* parked cars within 220 m of the player (at most PARK_MAX) */
   /* carjacking (docs/NEW_CARS_PLAN.md, phase C2): the car nearest to (x, z) within r metres of its body that a person could drive off with: a moving one or a parked one, never a wreck or a bus. Returns { c, parked, d } or null. */
   nearestCar(x, z, r = 3.2) {
-    let best = null; const test = (c, parked) => { if (c.wreck || c.kind === 'bus') return; const D = DIM[c.kind]; if (!D) return; const dx = c.x - x, dz = c.z - z, d = Math.hypot(dx, dz) - Math.min(D.len, 5) * 0.32; if (d < r && (!best || d < best.d)) best = { c, parked, d }; };
+    let best = null; const test = (c, parked) => { if ((c.wreck && !(c.kind === 'two' && c.dmg && c.dmg.fall && (c.dmg.state === 'ok' || c.dmg.state === 'smoking'))) || c.kind === 'bus') return; const D = DIM[c.kind]; if (!D) return; const dx = c.x - x, dz = c.z - z, d = Math.hypot(dx, dz) - Math.min(D.len, 5) * 0.32; if (d < r && (!best || d < best.d)) best = { c, parked, d }; };
     for (const c of this.cars) test(c, false); for (const l of this.parked.values()) for (const c of l) if (Math.abs(c.x - x) < 12 && Math.abs(c.z - z) < 12) test(c, true);
     return best;
   }
   /* the car is taken: it leaves the traffic (a parked one leaves its street for good). Returns what the player needs to drive it: { kind, paint, x, z, yaw (travel direction in the game plane), v (m/s) } */
   takeCar(ref) {
-    const c = ref.c, out = { kind: c.kind, paint: c.paint, x: c.x, z: c.z, yaw: c.yaw, v: ref.parked ? 0 : (c.v || 0), mission: c.mission };
+    const c = ref.c; if (c.dmg && this.dmg) { const i = this.dmg.list.indexOf(c); if (i >= 0) this.dmg.drop(i); }                                  // a fallen bike goes back to being a bike
+    const out = { kind: c.kind, paint: c.paint, x: c.x, z: c.z, yaw: c.yaw, v: ref.parked ? 0 : (c.v || 0), mission: c.mission };
     if (ref.parked) { for (const l of this.parked.values()) { const i = l.indexOf(c); if (i >= 0) { l.splice(i, 1); break; } } } else { const i = this.cars.indexOf(c); if (i >= 0) this.cars.splice(i, 1); }
     return out;
   }

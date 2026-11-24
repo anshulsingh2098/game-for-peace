@@ -357,7 +357,7 @@ let carjacking = false;
 function updateCarjack() {
   const T = city && city.traffic; if (mode !== 'foot' || !foot || !T || !T.nearestCar || frozen() || carjacking) { interactions.remove('carjack'); return; }
   const ref = T.nearestCar(foot.x, foot.z, 3.2); if (!ref || !GARAGE_OF[ref.c.kind]) { interactions.remove('carjack'); return; }
-  interactions.add({ id: 'carjack', x: ref.c.x, z: ref.c.z, r: 5, prompt: ref.parked ? 'Take the car (G)' : 'Pull the driver out (G)', onUse: () => carjack(ref) });
+  interactions.add({ id: 'carjack', x: ref.c.x, z: ref.c.z, r: 5, prompt: ref.parked ? 'Take the car (G)' : ref.c.noRider ? 'Pick up the bike (G)' : 'Pull the driver out (G)', onUse: () => carjack(ref) });
 }
 /* a motorbike is hit (by anything harder than a nudge): the rider is thrown off as a ragdoll and the bike falls over; a hard hit can kill the rider (the same chance as for a walker) */
 function bikeFall(bike, h) {
@@ -365,7 +365,7 @@ function bikeFall(bike, h) {
   const gltf = T.riderGltf || (pv.models && pv.models.find(Boolean)); if (!gltf) return;
   const y = (T.gy || 0) + (bike.h || 0), fx = Math.cos(bike.yaw), fz = Math.sin(bike.yaw), car = carStateNow() || { x: bike.x - h.nx * 2, z: bike.z - h.nz * 2, y, yaw: Math.atan2(h.nz, h.nx), u: h.vn, v: 0, circles: [0], radius: 0.9 };
   bike.noRider = true;
-  try { const fl = pv.rag.spawn({ x: bike.x - fx * 0.3, z: bike.z - fz * 0.3, y, yaw: bike.yaw }, gltf, car); if (fl) fl.fig.obj.traverse(o => { if (o.isMesh) for (const m of [].concat(o.material)) if (m.name === 'Top') m.color.setHex(bike.jk || 0x2f6fa8); }); } catch (e) { /* no room: the rider just vanishes */ }
+  try { const fl = pv.rag.spawn({ x: bike.x, z: bike.z, y, yaw: bike.yaw, seat: true, vel: [fx * (bike.v || 0), fz * (bike.v || 0)] }, gltf, car); if (fl) fl.fig.obj.traverse(o => { if (o.isMesh) for (const m of [].concat(o.material)) if (m.name === 'Top') m.color.setHex(bike.jk || 0x2f6fa8); }); } catch (e) { /* no room: the rider just vanishes */ }
   T.dmg.fall(bike, T.dmg.local(bike, h.x, h.z).x);
 }
 function throwDriver(car, y) {                                                       // India keeps left: the driver sits on the right, so the door is on the right of the way the car faces
@@ -377,11 +377,11 @@ const missions = createMissions({ scene, S, save, toast, city: () => city, cityN
 async function carjack(ref) {
   const T = city && city.traffic; if (mode !== 'foot' || carjacking || !T) return; const gid = GARAGE_OF[ref.c.kind], idx = VEHICLES.findIndex(v => v.id === gid); if (idx < 0) return;
   carjacking = true; interactions.remove('carjack'); interactions.remove('vehicle');
-  const y = foot ? foot.y : undefined, car = T.takeCar(ref), wasVehicle = vehicle; if (car.mission) missions.taken(car.mission, wasVehicle); if (!ref.parked) throwDriver(car, y);
+  const y = foot ? foot.y : undefined, car = T.takeCar(ref), wasVehicle = vehicle; if (car.mission) missions.taken(car.mission, wasVehicle); if (!ref.parked && !ref.c.noRider) throwDriver(car, y);
   if (figure) figure.visible = false; await setVehicle(idx);
   const def = VEHICLES[idx]; if (def.paint && def.paint.names && def.paint.names.length && car.paint !== undefined) { const hex = '#' + (car.paint >>> 0).toString(16).padStart(6, '0'); S.paint[def.id] = hex; save(); await applyPaint(def, await loadModel(def), hex); buildSwatches(def, await loadModel(def)); }
   phys.reset(car.x, car.z, Math.atan2(-Math.cos(car.yaw), -Math.sin(car.yaw)), y);
-  const h = vehicleHandle; setMode('drive'); if (entities && h) entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast(ref.parked ? 'You took the ' + def.name : 'You pulled the driver out and took the ' + def.name); carjacking = false;
+  const h = vehicleHandle; setMode('drive'); if (entities && h) entities.destroy(h); vehicleHandle = 0; foot = null; bus.emit('vehicle:entered', { handle: h }); view.camYaw = null; toast(ref.parked ? 'You took the ' + def.name : ref.c.noRider ? 'You picked up the ' + def.name : 'You pulled the driver out and took the ' + def.name); carjacking = false;
 }
 function useNearby() { if (mode === 'foot') { if (foot) interactions.use(foot.x, foot.z); } else if (mode === 'drive' && phys && Math.abs(phys.u) < 6 && interactions.use(phys.x, phys.z, 'activity:')) { /* an activity started */ } else exitVehicle(); }
 /* mouse look on foot: click the game to capture the mouse (Esc releases it), then moving the mouse turns the character and tilts the camera; on a touch screen, drag on the scene */
