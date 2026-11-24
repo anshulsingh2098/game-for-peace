@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-24 23:40  B-2026-11-24-07  NPC faces and bodies reworked
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: `dev/build_npc_stylised.py`: the head is now sculpted (narrower jaw and a chin, brow ridge, eye sockets with upper eyelids, cheeks, mouth groove, nose with bridge, tip and wings, smaller lips), clean hairline (high at the forehead, low at the back; long hair no longer shows a visor edge); the torso has a waist, bust, sloped shoulders and a neck line; arms are slimmer with rounded shoulder caps; sleeves fit closer. All seven `assets/npc/*.glb` rebuilt (same skeleton and clips, about 8,000 faces each). Previews: `dev/previews/npc4_lineup.png`, `npc4_head.png`.
+Evidence: implemented; seen in Blender renders of all seven; self-test unchanged; game loads in a browser with no new console errors. NOT seen: the new faces in the game at street distance; shoulders still look a little rounded and mannequin-like, lips and nose are simple shapes, no animation retest.
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-24 23:00  B-2026-11-24-06  NPCs no longer walk or stand inside each other
 Branch: vehicle/npc-animation  Commit: see `git log`
 What changed: `src/world/city/citypeds.js` (Stream A's file, small change): each walker has a lane and keeps left, steps aside from anyone closer than 0.85 m, slows behind someone just ahead; standing groups (bus stops etc.) are pushed apart to at least 0.9 m (were 0.6 m); new walkers do not spawn within 1.4 m of anyone.
