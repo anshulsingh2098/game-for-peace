@@ -7,6 +7,8 @@ import { roundCorners } from './citynav.js';
 import { NearCars, NEAR, FULL } from './nearcars.js';
 import { deckHeight, underDepth } from './pack.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+const RIDERS_LIVE = 6, RIDER_NEAR = 40;      // the nearest bikes' riders are real animated people (the 'Ride' clip: breathing, glances at the mirrors, hands on the bars); the rest are the static instanced copy
 
 const JACKETS = [0xe8e8e4, 0x2f6fa8, 0xc94f3a, 0x3d3d40, 0x3f9d6a, 0xe3b21a, 0x8e4f9e, 0x1f2430];
 const LOD_NEAR = 45, PARK_MAX = 300, AUTO = [0xe3b21a, 0x2e8b57, 0x2e8b57, 0xe3b21a];
@@ -28,9 +30,17 @@ export class CityTraffic {
   /* some cars of a base kind are drawn as a real model once the pack is loaded (a stream of its own, so the simulation's random numbers do not change whether or not the models are there) */
   variantOf(k) { for (const name in MODEL_SETS) { if (!this.models[name]) continue; const S = MODEL_SETS[name]; if (S.base === k && this.vr() < S.share) return name; } return k; }
   /* the seated rider of the motorbikes (assets/npc/npc_rider_lod1.glb): baked to one static mesh for the fleet, and kept for the ragdoll that throws the rider off when the bike is hit */
-  loadRider() { import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/npc/npc_rider_lod1.glb')).then(g => { this.riderGltf = g; const geo = riderGeometry(g, mergeGeometries); if (geo) this.fleet.setRider(geo); }).catch(() => { /* the bikes go without a rider */ }); }
-  /* the owner's bike model for every motorbike in traffic (assets/bike_01.glb); until it arrives (and if it does not) the box bike is drawn */
-  loadBike() { import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/bike_01.glb')).then(g => { const geo = bikeGeometry(g, mergeGeometries); if (!geo) return; this.fleet.addModel('bike-01', geo, BIKE_DIM.len, BIKE_DIM.wid, 1.05, 200); this.models['bike-01'] = true; for (const c of this.cars) if (c.kind === 'two') c.kind = 'bike-01'; for (const l of this.parked.values()) for (const c of l) if (c.kind === 'two') c.kind = 'bike-01'; }).catch(() => { /* the box bike stays */ }); }
+  loadRider() { import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/npc/npc_rider_lod1.glb')).then(g => { this.riderGltf = g; const geo = riderGeometry(g, mergeGeometries); if (geo) this.fleet.setRider(geo); this.makeRiderActors(g); }).catch(() => { /* the bikes go without a rider */ }); }
+  /* the owner's bike model for every motorbike in traffic (assets/traffic/bike_traffic.glb, the Volt Bike without its dummy rider: dev/make_traffic_bike.py); until it arrives (and if it does not) the box bike is drawn */
+  makeRiderActors(g) {
+    const clip = g.animations.find(a => a.name === 'Ride'); if (!clip || !(clip.duration > 0)) return; this.riderActors = [];
+    for (let i = 0; i < RIDERS_LIVE; i++) {
+      const wrap = new THREE.Group(), obj = SkeletonUtils.clone(g.scene), mats = []; obj.position.set(0, 0.17, -0.06); wrap.add(obj); wrap.visible = false;
+      obj.traverse(o => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; o.material = [].concat(o.material).map(m => { const c = m.clone(); if (c.name === 'Top') mats.push(c); return c; })[0]; } });
+      const mixer = new THREE.AnimationMixer(obj), act = mixer.clipAction(clip); act.play(); act.time = (i * 0.37) % clip.duration; this.fleet.group.add(wrap); this.riderActors.push({ wrap, mixer, mats, car: null, jk: -1 });
+    }
+  }
+  loadBike() { import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/traffic/bike_traffic.glb')).then(g => { const geo = bikeGeometry(g, mergeGeometries); if (!geo) return; this.fleet.addModel('bike-01', geo, BIKE_DIM.len, BIKE_DIM.wid, 1.05, 200); this.models['bike-01'] = true; for (const c of this.cars) if (c.kind === 'two') c.kind = 'bike-01'; for (const l of this.parked.values()) for (const c of l) if (c.kind === 'two') c.kind = 'bike-01'; }).catch(() => { /* the box bike stays */ }); }
   loadModels() {
     this.loadRider(); this.loadBike();
     this.vr = (() => { let s = 777; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
@@ -106,6 +116,10 @@ export class CityTraffic {
     const gy = this.gy || 0, pk = this.parkedNear(), F = this.fleet, ox = this.origin.x, oz = this.origin.z; F.begin();
     if (this.modelsDone) { for (const c of this.cars) if (!c.mdl) { c.mdl = true; c.kind = this.variantOf(c.kind); } for (const c of pk) if (!c.mdl) { c.mdl = true; c.kind = this.variantOf(c.kind); } }       // cars made before the models arrived (and every parked car) take a model now
     /* the nearest cars with a supplied model are drawn as that full model (nearcars.js); the rest as the cheap instance */
+    const live = new Set(), RA = this.riderActors;                                                                                                       // riders drawn as animated people
+    if (RA) { const cand = [], px = this.px, pz = this.pz; for (const c of this.cars) if (!c.wreck && !c.noRider && baseKind(c.kind) === 'two') { const d2 = (c.x - px) ** 2 + (c.z - pz) ** 2; if (d2 < RIDER_NEAR * RIDER_NEAR) cand.push([d2, c]); } cand.sort((a, b) => a[0] - b[0]);
+      for (let i = 0; i < RA.length; i++) { const a = RA[i], c = i < cand.length ? cand[i][1] : null; a.car = c; a.wrap.visible = !!c; if (!c) continue; live.add(c); if (c.jk === undefined) c.jk = JACKETS[Math.floor(Math.random() * JACKETS.length)]; if (a.jk !== c.jk) { a.jk = c.jk; for (const m of a.mats) m.color.setHex(c.jk); }
+        a.wrap.position.set(c.x - ox, gy + (c.h || 0), c.z - oz); a.wrap.rotation.set(0, -c.yaw + Math.PI / 2, 0); a.mixer.update(Math.min(0.1, this.dtLast || 0.016) * (0.6 + Math.min(1, (c.v || 0) / 8) * 0.4)); } }
     const full = new Set(), N = this.near; N.begin(this.dtLast);
     if (NEAR.count > 0) { const cand = [], px = this.px, pz = this.pz, R2 = NEAR.range * NEAR.range; const take = (c, parked) => { if (c.wreck || c.dmg || !FULL[c.kind]) return; const d2 = (c.x - px) ** 2 + (c.z - pz) ** 2; if (d2 < R2) cand.push([d2, c, parked]); };
       for (const c of this.cars) take(c, false); if (NEAR.parked) for (const c of pk) take(c, true); cand.sort((a, b) => a[0] - b[0]);
@@ -113,7 +127,7 @@ export class CityTraffic {
     N.end();
     /* two levels of the traffic models: about 3,000 triangles within LOD_NEAR metres of the player, about 700 beyond (the far ones are tiny on screen; there are up to 300 parked cars) */
     const px2 = this.px, pz2 = this.pz, LO = LOD_NEAR * LOD_NEAR, key = (c, x, z) => { const k = c.kind; if (!F.f[k + '|lo']) return k; const dx = x - px2, dz = z - pz2; return dx * dx + dz * dz > LO ? k + '|lo' : k; };
-    for (const c of this.cars) if (!c.wreck && !full.has(c)) { F.add(key(c, c.x, c.z), c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint); if (baseKind(c.kind) === 'two' && !c.noRider) { if (c.jk === undefined) c.jk = JACKETS[Math.floor(Math.random() * JACKETS.length)]; F.addRider(c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.jk); } }
+    for (const c of this.cars) if (!c.wreck && !full.has(c)) { F.add(key(c, c.x, c.z), c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.paint); if (baseKind(c.kind) === 'two' && !c.noRider && !live.has(c)) { if (c.jk === undefined) c.jk = JACKETS[Math.floor(Math.random() * JACKETS.length)]; F.addRider(c.x - ox, gy + (c.h || 0), c.z - oz, c.yaw, c.jk); } }
     for (const c of pk) if (!c.wreck && !full.has(c)) F.add(key(c, c.x, c.z), c.x - ox, gy, c.z - oz, c.yaw, c.paint);
     F.end();
   }
