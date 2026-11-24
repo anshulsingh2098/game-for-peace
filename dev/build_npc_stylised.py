@@ -23,6 +23,7 @@ TYPES = {
     'woman_top':   dict(sex='f', tee=True, top='shirt', sleeve='short', bottom='jeans',   hair='bun',   bag='shoulder', shoe='sneaker', skin=0xc89070, hairc=0x201510, topc=0xe9e2d2, botc=0x35507a, shoec=0xf0f0ee, accent=0x8a4a2a),
     'elder':       dict(sex='m', top='kurta', sleeve='long',  bottom='salwar',  hair='topi',  beard=True,   glasses=True, shoe='sandal', skin=0x9a6a4e, hairc=0xcfcfcf, topc=0xf0eee6, botc=0xf0eee6, shoec=0x4a3a2a, accent=0xf4f1e8),
     'vendor':      dict(sex='m', top='shirt', sleeve='long',  bottom='trousers', hair='short', stache=True,  scarf=True,  shoe='sandal', skin=0x8a5a44, hairc=0x15110e, topc=0xe9a23b, botc=0x3d4a5c, shoec=0x5a4636, accent=0xc8321f),
+    'rider':       dict(sex='m', top='shirt', sleeve='long',  bottom='jeans',   hair='helmet', stache=True, gloves=True, shoe='sneaker', skin=0x9a6a4e, hairc=0x15110e, topc=0xffffff, botc=0x2b3a52, shoec=0x2a2a2d, accent=0xc8321f),
     'tourist':     dict(sex='m', tee=True, stripe=True, top='shirt', sleeve='short', bottom='shorts',  hair='cap',   backpack=True, sunglasses=True, shoe='sneaker', skin=0xe0b295, hairc=0x6a4a2a, topc=0x3fa7a0, botc=0xd9c9a3, shoec=0xf0f0ee, accent=0x2c5c8f),
 }
 T = TYPES[TYPE]
@@ -255,6 +256,10 @@ def add_hair():
     elif h == 'topi':
         for s2 in (1, -1): st += [strand((s2 * .083, .012 + .012 * k, 1.60 - .012 * k), (s2 * .1, .2, -1.0), .05 - .005 * k, .0085) for k in range(3)]
     if st: finish('HairStrands', merge(st), 'Hair', 'head', '', 0)
+    if h == 'helmet':                                                                                                                           # an open-face motorcycle helmet: a hard shell, a rim and a chin strap
+        bm = ellip((0, .012, 1.592), (.103, .122, .121), 36, 26); cut(bm, (0, 0, 1.556), (0, .55, 1.0)); finish('Helmet', bm, 'Accent', 'head', '', 0)
+        finish('HelmetRim', loft([(1.612, 0, -.056, .0, .0)], 4, False, False), 'Accent', 'head', '', 0) if False else None
+        for s2 in (1, -1): finish('Strap', box((s2 * .066, -.02, 1.51), (.008, .02, .09), 0), 'Shoe', 'head', '', 0, False)
     if T.get('stache'): finish('Stache', ellip((0, -.095, 1.526), (.03, .012, .007), 10, 8), 'Hair', 'head', '', 0)
     if T.get('beard'): finish('Beard', ellip((0, -.068, 1.474), (.042, .03, .024), 16, 10), 'Hair', 'head', '', 0)
     if T.get('glasses') or T.get('sunglasses'):
@@ -476,7 +481,16 @@ def wait(t):
     pb['UpperArm_L'].rotation_euler.x = -0.35; pb['LowerArm_L'].rotation_euler.x = -1.25; pb['Hand_L'].rotation_euler.x = -0.15
     pb['Head'].rotation_euler.y = 0.35 * math.sin(t * TAU) + 0.3
 
-ACTS = [('Walk', 24, walk), ('Run', 16, run), ('Idle', 96, idle), ('IdleLook', 72, look), ('Wait', 48, wait)]
+def ride(t):
+    pb['Hips'].location = (0, -0.03, -0.30)                                                                                        # sits on the seat, a little behind the middle of the bike
+    pb['Spine'].rotation_euler.x = 0.50; pb['Chest'].rotation_euler.x = 0.18; pb['Head'].rotation_euler.x = -0.58
+    for sd, k in (('L', 1), ('R', -1)):
+        pb['UpperLeg_' + sd].rotation_euler.x = -1.30; pb['UpperLeg_' + sd].rotation_euler.z = -0.06 * k
+        pb['LowerLeg_' + sd].rotation_euler.x = 1.45; pb['Foot_' + sd].rotation_euler.x = -0.15
+        pb['UpperArm_' + sd].rotation_euler.x = -1.95; pb['UpperArm_' + sd].rotation_euler.z = 0.04 * k
+        pb['LowerArm_' + sd].rotation_euler.x = -0.30; pb['Hand_' + sd].rotation_euler.x = -0.25
+
+ACTS = [('Walk', 24, walk), ('Run', 16, run), ('Idle', 96, idle), ('IdleLook', 72, look), ('Wait', 48, wait), ('Ride', 1, ride)]
 acts = {}
 for name, frames, fn in ACTS: acts[name] = make_action(name, frames, fn)
 bpy.ops.object.mode_set(mode='OBJECT')
@@ -509,6 +523,7 @@ shot('walk', (3.2, -4.0, 1.05), clip='Walk', frame=7)
 shot('head', (0.45, -1.15, 1.6), target=(0, 0, 1.57), clip='Idle', frame=1)
 shot('headside', (1.0, 0.7, 1.62), target=(0, 0, 1.52), clip='Idle', frame=1)
 shot('feet', (0.75, -0.8, 0.32), target=(0, -0.02, 0.07), clip='Idle', frame=1)
+if TYPE == 'rider': shot('ride', (4.2, -0.1, 0.95), target=(0, -0.1, 0.9), clip='Ride', frame=1); shot('ride3', (2.6, -2.8, 1.3), target=(0, -0.1, 0.9), clip='Ride', frame=1)
 if TYPE == 'commuter':
     glb = os.path.join(OUT, 'npc_commuter.glb')
     bpy.ops.export_scene.gltf(filepath=glb, export_format='GLB', export_animations=True, export_nla_strips=True, export_skins=True, export_apply=False, export_yup=True)
