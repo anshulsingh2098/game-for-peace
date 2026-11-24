@@ -40,8 +40,11 @@ export const MODEL_SETS = {
   'pk-delivery': { pack: 'delivery', base: 'tempo', share: 1, speed: 0.8 },
   'pk-truck': { pack: 'truck', base: 'truck', share: 1, speed: 0.8 },
 };
+/* the owner's motorbike (assets/bike_01.glb, the Volt Bike the player rides) as the traffic motorbike: baked to one vertex-coloured geometry (the Paint_Panel fairing is white and takes the paint), loaded by citytraffic.js; it stands in for every `two` */
+MODEL_SETS['bike-01'] = { base: 'two', share: 1, speed: 1.05 };
+export const BIKE_DIM = { len: 2.25, wid: 0.7 };
 /* which garage car a taken NPC car becomes (null: it cannot be driven by the player: auto rickshaws, e-rickshaws, cycle rickshaws) */
-export const GARAGE_OF = { hatch: 'sx4', 'sx4-hatch': 'sx4', 'maruti-800': 'maruti', 'figo-hatch': 'figo', 'aspire-hatch': 'aspire', 'aspire-taxi': 'aspire', 'pk-hatchback-sports': 'sx4', suv: 'everest', 'endeavour-suv': 'everest', 'pk-suv': 'everest', 'pk-suv-luxury': 'everest', 'gtr-sports': 'r35', taxi: 'sx4', 'pk-sedan': 'sx4', two: 'bike', tempo: 'truck', 'pk-van': 'truck', 'pk-delivery': 'truck', truck: 'truck', 'pk-truck': 'truck', auto: null, erick: null, cyclerick: null };
+export const GARAGE_OF = { hatch: 'sx4', 'sx4-hatch': 'sx4', 'maruti-800': 'maruti', 'figo-hatch': 'figo', 'aspire-hatch': 'aspire', 'aspire-taxi': 'aspire', 'pk-hatchback-sports': 'sx4', suv: 'everest', 'endeavour-suv': 'everest', 'pk-suv': 'everest', 'pk-suv-luxury': 'everest', 'gtr-sports': 'r35', taxi: 'sx4', 'pk-sedan': 'sx4', two: 'bike', tempo: 'truck', 'pk-van': 'truck', 'pk-delivery': 'truck', truck: 'truck', 'pk-truck': 'truck', 'bike-01': 'bike', auto: null, erick: null, cyclerick: null };
 export const baseKind = k => (MODEL_SETS[k] ? MODEL_SETS[k].base : k);
 
 function merge(parts) {
@@ -84,14 +87,26 @@ export class Fleet {
   /* one vehicle: kind, position relative to the scene (origin already subtracted), yaw (travel direction in the game's x, z plane), paint hex */
   add(kind, x, y, z, yaw, hex) { const f = this.f[kind]; if (!f || f.n >= f.cap) return false; this.q.setFromAxisAngle(this.up, -yaw + Math.PI / 2); this.pos.set(x, y, z); this.m4.compose(this.pos, this.q, this.sc); f.mesh.setMatrixAt(f.n, this.m4); f.mesh.setColorAt(f.n, this.col.setHex(hex)); f.n++; return true; }
   /* a model kind from the traffic pack: geo carries position, normal and a 'color' attribute (white where the body paint goes); len and wid from the pack's size list */
-  addModel(kind, geo, len, wid, speed) {
-    if (this.f[kind]) return; const cap = 80, m = new THREE.InstancedMesh(geo, this.mat, cap); m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); m.instanceColor.setUsage(THREE.DynamicDrawUsage); m.visible = false;
+  addModel(kind, geo, len, wid, speed, cap = 80) {
+    if (this.f[kind]) return; const m = new THREE.InstancedMesh(geo, this.mat, cap); m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); m.instanceColor.setUsage(THREE.DynamicDrawUsage); m.visible = false;
     this.group.add(m); this.f[kind] = { mesh: m, n: 0, cap }; DIM[kind] = { len, wid, speed };
   }
   end() { for (const k in this.f) { const f = this.f[k]; f.mesh.count = f.n; f.mesh.visible = f.n > 0; f.mesh.instanceMatrix.needsUpdate = true; f.mesh.instanceColor.needsUpdate = true; } }
   counts() { const o = {}; for (const k in this.f) o[k] = this.f[k].n; return o; }
 }
 
+/* the bike model as one static geometry: every mesh in its place, a colour per vertex from its material (Paint_Panel white: it takes the paint) */
+export function bikeGeometry(gltf, mergeGeometries) {
+  const gs = [], v = new THREE.Vector3(), nm = new THREE.Vector3(), c = new THREE.Color(); gltf.scene.updateMatrixWorld(true);
+  gltf.scene.traverse(o => {
+    if (!o.isMesh || o.isSkinnedMesh) return; const src = o.geometry, n = src.attributes.position.count, mats = [].concat(o.material), groups = src.groups.length ? src.groups : [{ start: 0, count: src.index ? src.index.count : n, materialIndex: 0 }];
+    const g = src.index ? src.toNonIndexed() : src.clone(), pos = new Float32Array(g.attributes.position.count * 3), nor = new Float32Array(g.attributes.position.count * 3), col = new Float32Array(g.attributes.position.count * 3), nmat = new THREE.Matrix3().getNormalMatrix(o.matrixWorld);
+    for (let i = 0; i < g.attributes.position.count; i++) { v.fromBufferAttribute(g.attributes.position, i).applyMatrix4(o.matrixWorld); pos.set([v.x, v.y, v.z], i * 3); nm.fromBufferAttribute(g.attributes.normal, i).applyMatrix3(nmat).normalize(); nor.set([nm.x, nm.y, nm.z], i * 3); }
+    for (const gr of groups) { const m = mats[gr.materialIndex || 0] || mats[0]; if (m.name === 'Paint_Panel') c.setRGB(1, 1, 1); else c.copy(m.color); const a = src.index ? gr.start : gr.start, e = a + gr.count; for (let i = a; i < e; i++) col.set([c.r, c.g, c.b], i * 3); }
+    const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(col, 3)); gs.push(out);
+  });
+  return gs.length ? mergeGeometries(gs) : null;
+}
 /* a static, seated rider for the instanced fleet: play the 'Ride' clip of the rider model at its first frame, read every skinned vertex in that pose and merge the parts into one geometry (position, normal, colour:
    the Top material, the jacket, becomes white so the instance colour paints it; the others keep their colours) */
 export function riderGeometry(gltf, mergeGeometries) {
@@ -103,5 +118,6 @@ export function riderGeometry(gltf, mergeGeometries) {
     for (let i = 0; i < n; i++) { o.getVertexPosition(i, v); v.applyMatrix4(o.matrixWorld); pos.set([v.x, v.y, v.z], i * 3); col.set([c.r, c.g, c.b], i * 3); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); if (src.index) g.setIndex(src.index.clone()); g.computeVertexNormals(); gs.push(g);
   });
-  mixer.stopAllAction(); return gs.length ? mergeGeometries(gs) : null;
+  mixer.stopAllAction(); const out = gs.length ? mergeGeometries(gs) : null; if (out) out.translate(0, 0.17, -0.06);                       // up onto the seat of the Volt Bike (seat top 1.0 m)
+  return out;
 }

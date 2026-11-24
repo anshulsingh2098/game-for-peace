@@ -36,7 +36,7 @@ const SPEEDK = { pelvis: 1.0, torso: 0.8, head: 0.65, uaL: 0.7, uaR: 0.7, laL: 0
 function seatedLayout() {
   const R = (a, y, z) => [y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a)], L = {};
   const at = (j, rel, a) => { const r = R(a, rel[0], rel[1]); return [j[0] + r[0], j[1] + r[1]]; };               // [y, z] of a segment centre from its joint
-  const P = [0.85, -0.30]; L.pelvis = { c: P, a: 0 };
+  const P = [1.02, -0.36]; L.pelvis = { c: P, a: 0 };
   const jt = [P[0] + 0.10, P[1]], tt = 0.68, T = at(jt, [0.19, 0], tt); L.torso = { c: T, a: tt };
   const jn = at(T, [0.23, 0], tt); L.head = { c: at(jn, [0.12, 0], 0.10), a: 0.10 };
   const js = at(T, [0.14, 0], tt), ua = -1.27, UA = at(js, [-0.13, 0], ua), je = at(UA, [-0.13, 0], ua), la = -1.57; L.uaL = L.uaR = { c: UA, a: ua }; L.laL = L.laR = { c: at(je, [-0.13, 0], la), a: la };

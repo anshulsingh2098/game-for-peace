@@ -30,7 +30,7 @@ import { Pedestrians } from './pedestrians/pedestrians.js';
 import { WALL, ARCH } from './world/tunnels.js';
 import { loadNature } from './world/nature.js';
 import { VEHICLES } from './vehicle/defs.js';
-import { GARAGE_OF } from './world/city/vehicles.js';
+import { GARAGE_OF, baseKind } from './world/city/vehicles.js';
 import { createMissions } from './missions/missionrun.js';       // the Repo Man mission (docs/MISSION_PLAN.md)
 import { HEALTH, DENT } from './vehicle/damage.js';       // settings: the tuner's damage tab
 import { NEAR } from './world/city/nearcars.js';       // carjacking: which garage car a taken NPC car becomes
@@ -753,7 +753,7 @@ function update(dt, now) {
         if ((autodrive.level === 'full' && Math.abs(input.steer) > 0.25) || input.brake > 0.25 || input.hand > 0.25 || input.rev > 0.25) setAuto(false); else { const hand = input, rec = indiaRoute && activeRec ? activeRec : null; let adRoad = rec ? rec.road : road; adSim = rec ? (rec.te ? rec.te.sim : traffic && traffic.sim) : traffic && traffic.sim; if (cityMode) { adRoad = cityNav.path; adSim = null; autodrive.lookMin = 6; autodrive.forward = true; autodrive.lane = () => -1.5; autodrive.lanes = () => 1; if (!cityNav.active || cityNav.arrived) { setAuto(false); if (cityNav.arrived) arriveT = 2.5; else toast('Autodrive off: no route'); } } if (autodrive.road !== adRoad) { autodrive.road = adRoad; autodrive.s = cityMode ? 0 : rec ? rec.hint : roadS; } input = autodrive.update(phys, adRoad, hand); if (cityMode) { adStuck = Math.abs(phys.u) < 0.4 && input.throttle > 0.5 ? adStuck + dt : 0; if (adStuck > 3) { adStuck = 0; if (cityNav.blockHere(phys.x, phys.z, phys.yaw)) backToRoad(); } } }
       }
       if (cityMode && arriveT > 0) { arriveT -= dt; input = { ...input, throttle: 0, brake: 1 }; }                    // stop at the destination
-      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; carDamageInput(); phys.step(dt, input); if (phys.hit && view.damage && dmgMode !== 'off') view.damage.hit(phys.hit, grid.origin, phys.y); if (phys.hit && phys.hit.o && phys.hit.o.car && dmgMode !== 'off' && city && city.traffic.dmg) { city.traffic.dmg.cosmetic = dmgMode !== 'full'; city.traffic.dmg.hit(phys.hit.o.car, phys.hit); } if (phys.hit && phys.hit.o && phys.hit.o.car && phys.hit.o.car.kind === 'two' && dmgMode !== 'off') bikeFall(phys.hit.o.car, phys.hit);          // visible dents (vehicle/damage.js)
+      if (auto) input = auto; if (exitSeq) input = { steer: 0, throttle: 0, brake: 1, hand: 1, rev: 0 }; carDamageInput(); phys.step(dt, input); if (phys.hit && view.damage && dmgMode !== 'off') view.damage.hit(phys.hit, grid.origin, phys.y); if (phys.hit && phys.hit.o && phys.hit.o.car && dmgMode !== 'off' && city && city.traffic.dmg) { city.traffic.dmg.cosmetic = dmgMode !== 'full'; city.traffic.dmg.hit(phys.hit.o.car, phys.hit); } if (phys.hit && phys.hit.o && phys.hit.o.car && baseKind(phys.hit.o.car.kind) === 'two' && dmgMode !== 'off') bikeFall(phys.hit.o.car, phys.hit);          // visible dents (vehicle/damage.js)
       if (buffT > 0) { buffT -= dt; if (buffT <= 0) phys.setMod(null); } buffCd = Math.max(0, buffCd - dt);
       if (phys.stuck > 1.5) backToRoad();
     }
