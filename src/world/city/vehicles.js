@@ -99,7 +99,8 @@ export class Fleet {
 export function bikeGeometry(gltf, mergeGeometries) {
   const gs = [], v = new THREE.Vector3(), nm = new THREE.Vector3(), c = new THREE.Color(); gltf.scene.updateMatrixWorld(true);
   gltf.scene.traverse(o => {
-    if (!o.isMesh || o.isSkinnedMesh) return; const src = o.geometry, n = src.attributes.position.count, mats = [].concat(o.material), groups = src.groups.length ? src.groups : [{ start: 0, count: src.index ? src.index.count : n, materialIndex: 0 }];
+    if (!o.isMesh || o.isSkinnedMesh || o.name === 'Cube008_3') return;                                                                       // Cube008_3 is the round dummy head above the bars: the traffic bike has a real rider instead
+    const src = o.geometry, n = src.attributes.position.count, mats = [].concat(o.material), groups = src.groups.length ? src.groups : [{ start: 0, count: src.index ? src.index.count : n, materialIndex: 0 }];
     const g = src.index ? src.toNonIndexed() : src.clone(), pos = new Float32Array(g.attributes.position.count * 3), nor = new Float32Array(g.attributes.position.count * 3), col = new Float32Array(g.attributes.position.count * 3), nmat = new THREE.Matrix3().getNormalMatrix(o.matrixWorld);
     for (let i = 0; i < g.attributes.position.count; i++) { v.fromBufferAttribute(g.attributes.position, i).applyMatrix4(o.matrixWorld); pos.set([v.x, v.y, v.z], i * 3); nm.fromBufferAttribute(g.attributes.normal, i).applyMatrix3(nmat).normalize(); nor.set([nm.x, nm.y, nm.z], i * 3); }
     for (const gr of groups) { const m = mats[gr.materialIndex || 0] || mats[0]; if (m.name === 'Paint_Panel') c.setRGB(1, 1, 1); else c.copy(m.color); const a = src.index ? gr.start : gr.start, e = a + gr.count; for (let i = a; i < e; i++) col.set([c.r, c.g, c.b], i * 3); }

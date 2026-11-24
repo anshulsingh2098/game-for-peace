@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-25 06:30  B-2026-11-25-08  Dummy head removed from the traffic bike
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: `src/world/city/vehicles.js` `bikeGeometry()` leaves out the mesh `Cube008_3` of `assets/bike_01.glb`, the round dummy head above the handlebars (the traffic bike has a real rider). The player's own Volt Bike model is untouched.
+Evidence: implemented; seen in a visible pane: the round object is gone, the rider's hands reach the bars; no console errors. NOT checked: that the same part is wanted on the player's bike.
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-25 06:00  B-2026-11-25-07  Bike riders are alive: an animated rider on the nearest bikes
 Branch: vehicle/npc-animation  Commit: see `git log`
 What changed: owner: the stiff mannequin rider is "fake". `dev/build_npc_stylised.py`: the `Ride` clip is now a 2 s loop (breathing, glances left and right at the mirrors, the arms taking the road, small bumps; every term is zero at the first frame so the static copy is unchanged); `assets/npc/npc_rider_lod1.glb` rebuilt. `src/world/city/citytraffic.js`: the 6 nearest moving bikes within 40 m get a real skinned rider (`makeRiderActors`, a clone of the model with its own Top material, `AnimationMixer` playing `Ride`, slowed when the bike is slow); the rest keep the static instanced rider. Shared file touched (small): `citytraffic.js` only.
