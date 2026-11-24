@@ -49,7 +49,7 @@ export class TrafficDamage {
     m.position.set(car.x - this.origin.x, this.gy + (car.h || 0), car.z - this.origin.z); m.rotation.order = 'YXZ'; m.rotation.set(0, -car.yaw + Math.PI / 2, f ? f.side * 1.42 * k : 0);       // a bike that is hit tips over on its side
   }
   /* a two-wheeler is knocked over: it takes its own mesh (if it has none yet), stops for good and falls toward `side` (+1: the bike's +x side goes up, -1: down) */
-  fall(car, side) { const d = car.dmg || this.start(car); if (!d || d.fall) return; d.fall = { t: 0, side: side >= 0 ? 1 : -1 }; car.hold = Infinity; car.v = 0; }
+  fall(car, side) { const d = car.dmg || this.start(car); if (!d || d.fall) return; d.fall = { t: 0, side: side >= 0 ? 1 : -1 }; car.hold = Infinity; }                  // it keeps its speed: the traffic simulation brakes it at 9 m/s2, so it slides along the road on its side
   /* car-local coordinates of a world point (x, z) on the car, and of a world direction */
   local(car, x, z) { const th = -car.yaw + Math.PI / 2, c = Math.cos(th), s = Math.sin(th), dx = x - car.x, dz = z - car.z; return { x: dx * c - dz * s, z: dx * s + dz * c }; }
   /* the player's car hit this car: h = { x, z, nx, nz, vn } as the physics reports it (the normal points from this car into the player's) */
