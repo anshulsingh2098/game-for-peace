@@ -46,6 +46,7 @@ export class Pedestrians {
   /* skin, clothes and hair of one person, from their number (p.colour, p.skin) and, in the city, the clothes the area suggests (p.cloth) */
   tint(a, p) {
     const k = (p.colour | 0) + 7 * ((p.skin | 0) + 1), pick = (list, n) => list[Math.abs(Math.floor(n)) % list.length], set = (name, hex) => { for (const m of a.mats[name] || []) m.color.setHex(hex); };
+    { const h = 0.94 + ((k * 37) % 13) / 13 * 0.13, w = 0.93 + ((k * 53) % 11) / 11 * 0.15; a.obj.scale.set(w * (a.variant === 4 ? 0.97 : 1), h * (a.variant === 4 ? 0.96 : 1), w); }   // each person has their own height (94 to 107 %) and build
     const tourist = a.variant === 6, own = a.variant >= 4;                                                      // elders, vendors and tourists keep the clothes they were made in
     set('Skin', tourist ? pick([0xe0b295, 0xf0c8a0, 0xd9a273], k) : pick(SKIN_TONES, p.skin | 0));
     if (a.variant !== 4) set('Hair', pick(HAIRS, k * 3));
