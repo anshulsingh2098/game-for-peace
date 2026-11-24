@@ -489,8 +489,16 @@ def ride(t):
         pb['LowerLeg_' + sd].rotation_euler.x = 1.45; pb['Foot_' + sd].rotation_euler.x = -0.15
         pb['UpperArm_' + sd].rotation_euler.x = -1.95; pb['UpperArm_' + sd].rotation_euler.z = 0.04 * k
         pb['LowerArm_' + sd].rotation_euler.x = -0.30; pb['Hand_' + sd].rotation_euler.x = -0.25
+    # alive on the bike (2 s loop, every term is zero at t = 0 so the first frame is the plain pose the fleet bakes): breathing, a glance left and right at the mirrors, the arms taking the road, the body riding the bumps
+    s1, s2 = math.sin(t * TAU), math.sin(t * TAU * 2)
+    pb['Chest'].rotation_euler.x += 0.018 * s2; pb['Spine'].rotation_euler.x += 0.025 * s1
+    pb['Head'].rotation_euler.y = 0.40 * s1 * (0.5 + 0.5 * math.sin(t * TAU * 0.5))
+    pb['Head'].rotation_euler.x += 0.04 * s2; pb['Neck'].rotation_euler.y = 0.12 * s1
+    pb['Hips'].location.y += 0.006 * s2
+    pb['UpperArm_L'].rotation_euler.x += 0.05 * s2; pb['UpperArm_R'].rotation_euler.x += 0.05 * (math.sin(t * TAU * 2 + 1.2) - math.sin(1.2))
+    pb['LowerArm_L'].rotation_euler.x += 0.04 * s1; pb['LowerArm_R'].rotation_euler.x -= 0.04 * s1
 
-ACTS = [('Walk', 24, walk), ('Run', 16, run), ('Idle', 96, idle), ('IdleLook', 72, look), ('Wait', 48, wait), ('Ride', 1, ride)]
+ACTS = [('Walk', 24, walk), ('Run', 16, run), ('Idle', 96, idle), ('IdleLook', 72, look), ('Wait', 48, wait), ('Ride', 48, ride)]
 acts = {}
 for name, frames, fn in ACTS: acts[name] = make_action(name, frames, fn)
 bpy.ops.object.mode_set(mode='OBJECT')

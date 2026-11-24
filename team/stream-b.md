@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-25 06:00  B-2026-11-25-07  Bike riders are alive: an animated rider on the nearest bikes
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: owner: the stiff mannequin rider is "fake". `dev/build_npc_stylised.py`: the `Ride` clip is now a 2 s loop (breathing, glances left and right at the mirrors, the arms taking the road, small bumps; every term is zero at the first frame so the static copy is unchanged); `assets/npc/npc_rider_lod1.glb` rebuilt. `src/world/city/citytraffic.js`: the 6 nearest moving bikes within 40 m get a real skinned rider (`makeRiderActors`, a clone of the model with its own Top material, `AnimationMixer` playing `Ride`, slowed when the bike is slow); the rest keep the static instanced rider. Shared file touched (small): `citytraffic.js` only.
+Evidence: implemented; seen in a visible pane (Delhi city, q=med): one live rider on a Volt Bike, leaning over the bars, the head turned to a different angle between two screenshots; no console errors; self-test unchanged. NOT seen: all six live at once, the frame cost (6 skinned figures of about 8,000 triangles), the switch from animated to static riders as a bike goes out of range (a visible pop is possible), the live rider when the bike falls (the ragdoll takes over; the live copy is hidden because the bike has `noRider`).
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-25 05:00  B-2026-11-25-06  Traffic motorbikes now use the owner's Volt Bike model
 Branch: vehicle/npc-animation  Commit: see `git log`
 What changed: owner: the box bike is not acceptable, use the bike design supplied at the start (`assets/bike_01.glb`, the player's Volt Bike). `src/world/city/vehicles.js`: `bikeGeometry()` bakes the model to one vertex-coloured geometry (the Paint_Panel fairing is white and takes the paint, everything else keeps its colour); `MODEL_SETS['bike-01']` = base `two`, `GARAGE_OF['bike-01']` = bike; `Fleet.addModel` takes a capacity (200 for the bike). `src/world/city/citytraffic.js` `loadBike()` registers it when loaded and turns every existing `two` into it; `baseKind(c.kind) === 'two'` replaces `c.kind === 'two'` for the rider, falling and picking up. `src/main.js`: same base-kind test. The rider (B-2026-11-25-04) sits 17 cm higher and 6 cm further back to match the seat (`riderGeometry`, `seatedLayout` in `src/pedestrians/ragdoll.js`). Shared files touched (small): `main.js`, `citytraffic.js`, `vehicles.js`, `ragdoll.js`.
