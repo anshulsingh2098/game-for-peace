@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-25 00:10  B-2026-11-25-01  NPC feet reshaped
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: `dev/build_npc_stylised.py` `add_shoes`: shoes and feet are now lofted along their length (heel counter, ankle collar, low instep, rounded toe box, a separate thicker sole in a darker shade) instead of stacked ellipsoids; sandals show a bare foot (heel, arch, instep, five toes) on a thin sole with an instep strap and a heel strap. Same bones and weights. All seven `assets/npc/*.glb` rebuilt. Previews: `dev/previews/npc5_feet_*.png`.
+Evidence: implemented; seen in Blender close-ups; self-test unchanged. NOT seen in the game or while walking (toes and soles not checked for clipping through the ground in the walk clip); sneakers are still smooth, with no laces or tread, and look a little like slippers.
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-24 23:40  B-2026-11-24-07  NPC faces and bodies reworked
 Branch: vehicle/npc-animation  Commit: see `git log`
 What changed: `dev/build_npc_stylised.py`: the head is now sculpted (narrower jaw and a chin, brow ridge, eye sockets with upper eyelids, cheeks, mouth groove, nose with bridge, tip and wings, smaller lips), clean hairline (high at the forehead, low at the back; long hair no longer shows a visor edge); the torso has a waist, bust, sloped shoulders and a neck line; arms are slimmer with rounded shoulder caps; sleeves fit closer. All seven `assets/npc/*.glb` rebuilt (same skeleton and clips, about 8,000 faces each). Previews: `dev/previews/npc4_lineup.png`, `npc4_head.png`.
