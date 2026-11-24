@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-24 23:00  B-2026-11-24-06  NPCs no longer walk or stand inside each other
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: `src/world/city/citypeds.js` (Stream A's file, small change): each walker has a lane and keeps left, steps aside from anyone closer than 0.85 m, slows behind someone just ahead; standing groups (bus stops etc.) are pushed apart to at least 0.9 m (were 0.6 m); new walkers do not spawn within 1.4 m of anyone.
+Evidence: implemented; self-test same as before (only `validate_city` fails); in a browser the natural crowd showed no pair under 0.5 m and no console errors from this code. NOT seen: a dense crowd on a narrow pavement, frame cost.
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-24 22:00  B-2026-11-24-05  NPCs redone: realistic proportions, a real face, clothes that sit on the body, seven types, a different look per person
 Branch: vehicle/npc-animation (stacked on B-2026-11-24-03)  Commit: see `git log`
 What changed: owner: make the NPCs look better and more realistic. `dev/build_npc_stylised.py` rewritten: about 7.3 heads tall (was a big-head cartoon), the body is built from lofted cross-sections (torso, thighs and calves, upper arms and forearms, neck) with a hand with thumb and fingers, a head with a jaw, ears, nose, eyes with iris and pupil, brows and two lips, hair (short, side-parted, long, bun, topi, cap), glasses, moustache, beard; clothes are separate layers over the body (shirt, kurta, kurti, trousers, jeans, salwar, shorts, belt, scarf, dupatta, shoulder bag, backpack, sneakers, sandals). Same 17-bone skeleton and the same five clips (joint heights unchanged, so the ragdoll and the on-foot code still fit). Seven types: commuter (also the player on foot), man in kurta, woman in kurti, woman in top, elder, vendor, tourist: seven `_lod1.glb` (about 8,000 faces each) and `npc_commuter.glb` at full detail (11,000 faces); the old `npc_vendor.glb` and `npc_tourist.glb` full-detail files were not used and are removed. `src/pedestrians/pedestrians.js`: a model for each walker by their number (men in shirts and kurtas, women in kurtis and tops, a few elders; vendors and tourists by archetype) and, from the same number, their own skin tone, hair colour, top, trousers and accent colour (each actor owns copies of the materials; elders, vendors and tourists keep the clothes they were made in; in the city the clothes the area suggests are used for tops).
