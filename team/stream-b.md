@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-25 02:00  B-2026-11-25-03  NPC hair improved
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: `dev/build_npc_stylised.py`: hair is now a cap plus many thin overlapping locks that follow the head (short cropped, side-swept with a part, long with two locks in front of the shoulders, a bun pulled back to a hair tie, sideburns), instead of a smooth helmet; the elder's cap sits on the head, his glasses are thin metal rims (the lenses used to hide the eyes) and his beard is a goatee on the chin. All seven `assets/npc/*.glb` rebuilt (about 8,400 faces each, up from 8,000). Preview: `dev/previews/npc7_heads.png`.
+Evidence: implemented; seen in Blender renders; NOT seen in the game; self-test not re-run for this change (assets and the generator only). Limits: locks are chunky up close and the side-part sweep has a blob; at street distance the effect is mostly texture and a rougher outline.
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-25 01:00  B-2026-11-25-02  NPC overall design and clothes
 Branch: vehicle/npc-animation  Commit: see `git log`
 What changed: `dev/build_npc_stylised.py`: shirts are tucked in under a belt with a buckle (the tourist's tee hangs out), buttons, a turned-down collar, a chest pocket with flap, rolled cuffs, trouser hems; tees (woman in top, tourist) have a ribbed neck and the tourist a chest stripe; kurta and kurti have button studs, an embroidered neckline and hem border in the accent colour, kurti sleeve trims; gentle fabric folds on tops and trousers; short hair has a small quiff; slimmer upper arms. All seven `assets/npc/*.glb` rebuilt. `src/pedestrians/pedestrians.js` `tint()`: each person gets their own height (94 to 107 %) and build (93 to 108 %) from their number. Previews: `dev/previews/npc6_*.png`.
