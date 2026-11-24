@@ -20,10 +20,10 @@ TYPES = {
     'commuter':    dict(sex='m', top='shirt', sleeve='short', bottom='jeans',   hair='short', stache=True,  shoe='sneaker', skin=0x9a6a4e, hairc=0x15110e, topc=0x3f7fb5, botc=0x2b3a52, shoec=0xf0f0ee, accent=0x16181d),
     'man_kurta':   dict(sex='m', top='kurta', sleeve='long',  bottom='salwar',  hair='side',  stache=True,  shoe='sandal',  skin=0xa4745a, hairc=0x15110e, topc=0xe8e0c8, botc=0xf1efe8, shoec=0x5a4636, accent=0xc8a24a),
     'woman_kurti': dict(sex='f', top='kurti', sleeve='short', bottom='salwar',  hair='long',  dupatta=True, shoe='sandal',  skin=0xb0805f, hairc=0x1a1210, topc=0xb23a6a, botc=0x2c4a6e, shoec=0x5a4636, accent=0xe3b21a),
-    'woman_top':   dict(sex='f', top='shirt', sleeve='short', bottom='jeans',   hair='bun',   bag='shoulder', shoe='sneaker', skin=0xc89070, hairc=0x201510, topc=0xe9e2d2, botc=0x35507a, shoec=0xf0f0ee, accent=0x8a4a2a),
+    'woman_top':   dict(sex='f', tee=True, top='shirt', sleeve='short', bottom='jeans',   hair='bun',   bag='shoulder', shoe='sneaker', skin=0xc89070, hairc=0x201510, topc=0xe9e2d2, botc=0x35507a, shoec=0xf0f0ee, accent=0x8a4a2a),
     'elder':       dict(sex='m', top='kurta', sleeve='long',  bottom='salwar',  hair='topi',  beard=True,   glasses=True, shoe='sandal', skin=0x9a6a4e, hairc=0xcfcfcf, topc=0xf0eee6, botc=0xf0eee6, shoec=0x4a3a2a, accent=0xf4f1e8),
     'vendor':      dict(sex='m', top='shirt', sleeve='long',  bottom='trousers', hair='short', stache=True,  scarf=True,  shoe='sandal', skin=0x8a5a44, hairc=0x15110e, topc=0xe9a23b, botc=0x3d4a5c, shoec=0x5a4636, accent=0xc8321f),
-    'tourist':     dict(sex='m', top='shirt', sleeve='short', bottom='shorts',  hair='cap',   backpack=True, sunglasses=True, shoe='sneaker', skin=0xe0b295, hairc=0x6a4a2a, topc=0x3fa7a0, botc=0xd9c9a3, shoec=0xf0f0ee, accent=0x2c5c8f),
+    'tourist':     dict(sex='m', tee=True, stripe=True, top='shirt', sleeve='short', bottom='shorts',  hair='cap',   backpack=True, sunglasses=True, shoe='sneaker', skin=0xe0b295, hairc=0x6a4a2a, topc=0x3fa7a0, botc=0xd9c9a3, shoec=0xf0f0ee, accent=0x2c5c8f),
 }
 T = TYPES[TYPE]
 FEM = T['sex'] == 'f'
@@ -59,13 +59,13 @@ def finish(name, bm, material, kind, side='', subsurf=1, shade=True):
         md = o.modifiers.new('s', 'SUBSURF'); md.levels = subsurf; md.render_levels = subsurf; bpy.ops.object.modifier_apply(modifier=md.name)
     o.select_set(False); parts.append(o); return o
 
-def loft(secs, seg=14, cap_bot=True, cap_top=True, taper_front=None):
+def loft(secs, seg=14, cap_bot=True, cap_top=True, taper_front=None, fold=0.0, nf=4):
     """secs: [(z, cx, cy, rx, ry)] bottom to top; rings of `seg` points; returns a bmesh"""
     bm = bmesh.new(); rings = []
     for z, cx, cy, rx, ry in secs:
         ring = []
         for i in range(seg):
-            a = 2 * math.pi * i / seg; ring.append(bm.verts.new((cx + rx * math.cos(a), cy + ry * math.sin(a), z)))
+            a = 2 * math.pi * i / seg; f = 1 + fold * math.sin(nf * a + z * 9.0) * (1.0 if z < 1.2 else 0.4); ring.append(bm.verts.new((cx + rx * f * math.cos(a), cy + ry * f * math.sin(a), z)))
         rings.append(ring)
     for r in range(len(rings) - 1):
         for i in range(seg): bm.faces.new((rings[r][i], rings[r][(i + 1) % seg], rings[r + 1][(i + 1) % seg], rings[r + 1][i]))
@@ -139,7 +139,7 @@ def add_body():
         leg = [(0.075, s * .085, 0, .036, .040), (0.10, s * .085, 0, .037, .040), (0.16, s * .085, 0, .040, .043), (0.28, s * .085, .006, .052, .054), (0.40, s * .085, .008, .061, .060), (0.50, s * .085, 0, .060, .062), (0.56, s * .085, -.002, .066, .068),
                (0.68, s * .085, -.003, .082, .084), (0.80, s * .085, -.002, .092, .094), (0.90, s * .085, 0, .097, .098)]
         finish('Leg', loft(leg, 12, True, True), 'Skin', 'leg', sd)
-        arm = [(0.78, s * .268, 0, .029, .030), (0.84, s * .268, 0, .031, .032), (0.95, s * .267, 0, .039, .040), (1.06, s * .265, 0, .040, .041), (1.20, s * .240, 0, .043, .045), (1.30, s * .214, 0, .045, .047), (1.36, s * .196, 0, .044, .047), (1.395, s * .176, 0, .033, .037), (1.418, s * .158, 0, .015, .019)]
+        arm = [(0.78, s * .268, 0, .029, .030), (0.84, s * .268, 0, .031, .032), (0.95, s * .267, 0, .039, .040), (1.06, s * .265, 0, .040, .041), (1.20, s * .238, 0, .041, .043), (1.30, s * .210, 0, .041, .043), (1.36, s * .192, 0, .040, .043), (1.385, s * .17, 0, .032, .036), (1.405, s * .153, 0, .014, .018)]
         finish('Arm', loft(arm, 12, True, True), 'Skin', 'arm', sd)
         finish('Hand', ellip((s * .268, -.002, .722), (.027, .019, .052), 14, 10), 'Skin', 'hand', sd)
         finish('Thumb', ellip((s * .249, -.022, .75), (.010, .010, .026), 8, 6, Matrix.Rotation(s * 0.3, 3, 'Y')), 'Skin', 'hand', sd)
@@ -182,7 +182,7 @@ def hair_cap(scale=1.0, back=0.014, lift=0.012, low=0.0):
 
 def add_hair():
     h = T['hair']
-    if h == 'short': finish('HairCap', hair_cap(), 'Hair', 'head', '', 0)
+    if h == 'short': finish('HairCap', hair_cap(), 'Hair', 'head', '', 0); finish('Quiff', ellip((0, -.045, 1.685), (.06, .048, .021), 14, 10), 'Hair', 'head', '', 0)
     elif h == 'side':
         finish('HairCap', hair_cap(1.01, 0.012, 0.014), 'Hair', 'head', '', 0); finish('HairPart', ellip((-.03, -.03, 1.675), (.05, .075, .03), 12, 8, Matrix.Rotation(0.3, 3, 'Y')), 'Hair', 'head', '', 0)
     elif h == 'long':
@@ -207,23 +207,51 @@ def add_hair():
 def add_clothes():
     top, sl, bot = T['top'], T['sleeve'], T['bottom']
     secs = torso_secs(0.011)
-    if top == 'shirt': secs = [(0.78, 0, 0, .206, .126), (0.86, 0, 0, .2, .124)] + core(secs)
+    TUCK = top == 'shirt' and bot != 'shorts'
+    if top == 'shirt': secs = ([] if TUCK else [(0.78, 0, 0, .206, .126), (0.86, 0, 0, .2, .124)]) + core(secs)
     elif top == 'kurta': secs = [(0.56, 0, 0, .19, .122), (0.66, 0, 0, .192, .122), (0.76, 0, 0, .2, .124), (0.86, 0, 0, .205, .126)] + core(secs)
     elif top == 'kurti': secs = [(0.60, 0, 0, .215, .135), (0.72, 0, 0, .205, .128), (0.86, 0, 0, .2, .122)] + core(secs)
     secs = [(z, cx, cy, rx, ry) for z, cx, cy, rx, ry in secs]
-    shirt = loft(secs + [(1.395, 0, 0, .122, .09), (1.425, 0, 0, .088, .074)], 16, False, False)
+    shirt = loft(secs + [(1.395, 0, 0, .122, .09), (1.425, 0, 0, .088, .074)], 24, False, False, None, .006 if top == 'shirt' else .008, 5)
     finish('Top', shirt, 'Top', 'torso')
+    def front_y(z):
+        for (z0, _, c0, _, r0), (z1, _, c1, _, r1) in zip(secs, secs[1:]):
+            if z0 <= z <= z1: t = (z - z0) / (z1 - z0); return (c0 - r0) * (1 - t) + (c1 - r1) * t
+        return -.11
+    def prof(z):
+        for (z0, _, c0, r0x, r0), (z1, _, c1, r1x, r1) in zip(secs, secs[1:]):
+            if z0 <= z <= z1: t = (z - z0) / (z1 - z0); return c0 * (1 - t) + c1 * t, r0x * (1 - t) + r1x * t, r0 * (1 - t) + r1 * t
+        return 0.0, .17, .11
+    tee = T.get('tee')
+    if top in ('shirt', 'kurta', 'kurti') and not tee:                                                                                          # buttons down the front, and a turned-down collar on a shirt
+        for z in ((1.30, 1.22, 1.14, 1.06, .98) if top == 'shirt' else (1.30, 1.23, 1.16)):
+            if z > secs[0][0] + .02: finish('Button', ellip((0, front_y(z) - .002, z), (.0065, .0035, .0065), 8, 6), 'Sole' if top == 'shirt' else 'Accent', 'chest', '', 0)
+    if top == 'shirt' and not tee:
+        for s2 in (1, -1): finish('CollarFlap', ellip((s2 * .038, -.064, 1.41), (.024, .009, .015), 10, 8, Matrix.Rotation(-s2 * 0.7, 3, 'Y')), 'Top', 'neck', '', 0)
+        cy, rx, ry = prof(1.19); finish('Pocket', box((.07, cy - ry - .002, 1.19), (.05, .006, .056), 0), 'Top', 'chest', '', 0)                  # a chest pocket
+        finish('PocketFlap', box((.07, cy - ry - .0045, 1.222), (.054, .007, .014), 0), 'Top', 'chest', '', 0)
+    if tee:                                                                                                                                     # a ribbed round neck, and on some a chest stripe
+        finish('NeckRib', loft([(1.40, 0, .004, .074, .07), (1.428, 0, .003, .066, .064)], 16, False, False), 'Accent', 'neck', '', 0)
+        if T.get('stripe'):
+            for z0 in (1.12, 1.19):
+                cy, rx, ry = prof(z0 + .02); finish('Stripe', loft([(z0, 0, cy, rx + .004, ry + .004), (z0 + .04, 0, cy, rx + .004, ry + .004)], 24, False, False), 'Accent', 'chest', '', 0)
+    if top in ('kurta', 'kurti'):                                                                                                               # embroidered neckline and hem borders
+        finish('NeckTrim', loft([(1.388, 0, .004, .071, .067), (1.402, 0, .004, .069, .065)], 16, False, False), 'Accent', 'neck', '', 0)
+        z0 = secs[0][0]; cy, rx, ry = prof(z0 + .035)
+        finish('HemTrim', loft([(z0 - .002, 0, secs[0][2], secs[0][3] + .006, secs[0][4] + .006), (z0 + .05, 0, cy, rx + .006, ry + .006)], 24, False, False), 'Accent', 'torso', '', 0)
     finish('Collar', loft([(1.395, 0, 0.004, .066, .062), (1.435, 0, 0.002, .058, .056)], 14, False, False), 'Top', 'neck')
     if T.get('scarf'): finish('Scarf', loft([(1.37, 0, -.01, .105, .1), (1.42, 0, -.012, .08, .085), (1.46, 0, -.006, .068, .07)], 14, False, False), 'Accent', 'neck')
     if T.get('dupatta'):                                                                                                                       # a narrow scarf over the left shoulder, hanging down the front
         finish('Dupatta', loft([(0.78, 0.115, -.122, .034, .012), (0.95, 0.12, -.121, .040, .013), (1.12, 0.115, -.118, .046, .014), (1.28, 0.09, -.112, .05, .016), (1.39, 0.045, -.1, .05, .02)], 12, True, True), 'Accent', 'chest')
     for s, sd in ((1, 'L'), (-1, 'R')):
         zend = 1.12 if sl == 'short' else 0.80
-        base = [(0.80, s * .268, 0, .029, .03), (0.84, s * .268, 0, .031, .032), (0.95, s * .267, 0, .039, .04), (1.06, s * .265, 0, .040, .041), (1.20, s * .240, 0, .043, .045), (1.30, s * .214, 0, .045, .047), (1.36, s * .196, 0, .044, .047), (1.395, s * .176, 0, .033, .037), (1.418, s * .158, 0, .015, .019)]
+        base = [(0.80, s * .268, 0, .029, .03), (0.84, s * .268, 0, .031, .032), (0.95, s * .267, 0, .039, .04), (1.06, s * .265, 0, .040, .041), (1.20, s * .238, 0, .041, .043), (1.30, s * .210, 0, .041, .043), (1.36, s * .192, 0, .040, .043), (1.385, s * .17, 0, .032, .036), (1.405, s * .153, 0, .014, .018)]
         sec = [(z, cx, cy, rx + 0.005, ry + 0.005) for z, cx, cy, rx, ry in base if z >= zend - 0.001]
         if sl == 'long': sec = [(0.80, s * .268, 0, .042, .043)] + sec[1:]
         else: sec = [(zend, s * (.265 - (zend - 1.06) * 0.3), 0, .046, .047)] + [x for x in sec if x[0] > zend + 0.01]
         finish('Sleeve', loft(sec, 12, False, True), 'Top', 'arm', sd)
+        ze = sec[0][0]; cx0 = sec[0][1]; r0 = sec[0][3]
+        finish('Cuff', loft([(ze - .004, cx0, 0, r0 + .008, r0 + .009), (ze + .026, cx0, 0, r0 + .007, r0 + .008)], 12, False, False), 'Accent' if top == 'kurti' else 'Top', 'arm', sd, 0)
     # trousers
     for s, sd in ((1, 'L'), (-1, 'R')):
         if bot in ('jeans', 'trousers'):
@@ -233,9 +261,13 @@ def add_clothes():
             leg = [(0.075, .045, .048), (0.14, .052, .055), (0.30, .085, .09), (0.46, .098, .102), (0.62, .108, .112), (0.76, .112, .116), (0.90, .108, .108)]
         else:                                                                                                                                      # shorts
             leg = [(0.50, .083, .086), (0.56, .08, .084), (0.68, .092, .096), (0.80, .099, .103), (0.90, .103, .104)]
-        finish('Pants', loft([(z, s * .085, 0, rx * (0.93 if z >= 0.78 else 1.0), ry * (0.93 if z >= 0.78 else 1.0)) for z, rx, ry in leg], 12, False, True), 'Bottom', 'leg', sd)
-    finish('Hip', loft([(0.84, 0, 0, .146, .09), (0.92, 0, 0, .162, .102), (0.96, 0, 0, .152, .098)], 16, True, True), 'Bottom', 'hips')
-    if bot in ('jeans', 'trousers'): finish('Belt', loft([(0.945, 0, 0, .18, .114), (0.975, 0, 0, .18, .114)], 16, False, False), 'Accent', 'hips', '', 0)
+        finish('Pants', loft([(z, s * .085, 0, rx * (0.93 if z >= 0.78 else 1.0), ry * (0.93 if z >= 0.78 else 1.0)) for z, rx, ry in leg], 12, False, True, None, .005 if bot == 'salwar' else .003, 3), 'Bottom', 'leg', sd)
+    finish('Hip', loft([(0.84, 0, 0, .156, .098), (0.90, 0, 0, .178, .114), (0.97, 0, 0, .172, .108)], 16, True, True), 'Bottom', 'hips')
+    if bot in ('jeans', 'trousers') and top == 'shirt' and TUCK:
+        finish('Belt', loft([(0.898, 0, 0, .189, .123), (0.935, 0, 0, .189, .123)], 16, False, False), 'Accent', 'hips', '', 0)
+        finish('Buckle', box((0, -.1255, .9165), (.03, .007, .028), 0), 'Metal', 'hips', '', 0)
+    if bot in ('jeans', 'trousers'):
+        for s2 in (1, -1): finish('Hem', loft([(.074, s2 * .085, 0, .052, .055), (.112, s2 * .085, 0, .05, .053)], 12, False, False), 'Bottom', 'leg', 'L' if s2 == 1 else 'R', 0)
 
 def loftY(secs, dx, seg=14):
     """a loft along the foot's length: secs = [(y, centre z, half width, half height)], heel (+y) to toe (-y)"""

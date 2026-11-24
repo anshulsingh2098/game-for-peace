@@ -2,6 +2,13 @@
 
 Newest entries first. Format is in `CLAUDE.md`.
 
+## 2026-11-25 01:00  B-2026-11-25-02  NPC overall design and clothes
+Branch: vehicle/npc-animation  Commit: see `git log`
+What changed: `dev/build_npc_stylised.py`: shirts are tucked in under a belt with a buckle (the tourist's tee hangs out), buttons, a turned-down collar, a chest pocket with flap, rolled cuffs, trouser hems; tees (woman in top, tourist) have a ribbed neck and the tourist a chest stripe; kurta and kurti have button studs, an embroidered neckline and hem border in the accent colour, kurti sleeve trims; gentle fabric folds on tops and trousers; short hair has a small quiff; slimmer upper arms. All seven `assets/npc/*.glb` rebuilt. `src/pedestrians/pedestrians.js` `tint()`: each person gets their own height (94 to 107 %) and build (93 to 108 %) from their number. Previews: `dev/previews/npc6_*.png`.
+Evidence: implemented; seen in Blender renders of all seven; game loads without new console errors (the usual script-fetch errors were there before). NOT seen: the varied heights or the new clothes in the game at street distance; ragdoll with scaled people; cost of the extra faces.
+For the other stream: nothing needed.
+Status: info
+
 ## 2026-11-25 00:10  B-2026-11-25-01  NPC feet reshaped
 Branch: vehicle/npc-animation  Commit: see `git log`
 What changed: `dev/build_npc_stylised.py` `add_shoes`: shoes and feet are now lofted along their length (heel counter, ankle collar, low instep, rounded toe box, a separate thicker sole in a darker shade) instead of stacked ellipsoids; sandals show a bare foot (heel, arch, instep, five toes) on a thin sole with an instep strap and a heel strap. Same bones and weights. All seven `assets/npc/*.glb` rebuilt. Previews: `dev/previews/npc5_feet_*.png`.
