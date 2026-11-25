@@ -16,30 +16,43 @@ export class CityPeds {
     this.view = new Pedestrians(scene, { graph: { edges: new Map() } }, 'city', origin, { density: 1, level: 'high' }); this.view.sim = this.sim; this.hitSpots = []; this.view.onRemove = p => this.hitSpots.push({ x: p.x, z: p.z, t: this.t });
   }
   setMode(m) { this.cap = Math.min(44, MODES[m] === undefined ? 10 : MODES[m]); }
-  pos(p, s, out) { const pc = p.pc, c = pc.cum, pts = pc.s.pts; let i = 0; while (i + 2 < c.length && c[i + 1] < s) i++; const f = Math.max(0, Math.min(1, (s - c[i]) / Math.max(0.01, c[i + 1] - c[i]))), dx = pts[i * 2 + 2] - pts[i * 2], dz = pts[i * 2 + 3] - pts[i * 2 + 1], L = Math.hypot(dx, dz) || 1; out.x = pts[i * 2] + dx * f; out.z = pts[i * 2 + 1] + dz * f; out.tx = dx / L; out.tz = dz / L; return out; }
+  pos(p, s, out) { const pc = p.pc, c = pc.cum, pts = pc.pts || pc.s.pts; let i = 0;  while (i + 2 < c.length && c[i + 1] < s) i++; const f = Math.max(0, Math.min(1, (s - c[i]) / Math.max(0.01, c[i + 1] - c[i]))), dx = pts[i * 2 + 2] - pts[i * 2], dz = pts[i * 2 + 3] - pts[i * 2 + 1], L = Math.hypot(dx, dz) || 1; out.x = pts[i * 2] + dx * f; out.z = pts[i * 2 + 1] + dz * f; out.tx = dx / L; out.tz = dz / L; return out; }      // pc.pts: the rounded points the lengths `cum` were measured on (pc.s.pts has fewer points: positions were NaN)
   spawn(px, pz) {
     const tr = this.traffic; if (!tr.pieces.size) return null; const list = [...tr.pieces.keys()];
-    for (let t = 0; t < 30; t++) { const pc = list[Math.floor(this.rnd() * list.length)]; if (!WALKABLE.has(pc.cls) || pc.len < 20) continue; const s = this.rnd() * pc.len, o = this.pos({ pc }, s, {}), d = Math.hypot(o.x - px, o.z - pz); if (d < SPAWN_MIN || d > SPAWN_MAX) continue;
+    for (let t = 0; t < 30; t++) { const pc = list[Math.floor(this.rnd() * list.length)]; if (!WALKABLE.has(pc.cls) || pc.len < 20) continue; const s = this.rnd() * pc.len, o = this.pos({ pc }, s, {}), d = Math.hypot(o.x - px, o.z - pz); if (d < SPAWN_MIN || d > SPAWN_MAX) continue; if (this.list.some(q => Math.hypot(q.x - o.x, q.z - o.z) < 1.4) || this.extra.some(q => Math.hypot(q.x - o.x, q.z - o.z) < 1.4)) continue;
       const ID = this.city && this.city.identity; if (ID && this.rnd() > ID.areaAt(o.x, o.z).people.density) continue;
-      return { cloth: ID ? this.clothes(ID) : undefined, pc, s, dir: this.rnd() < 0.5 ? 1 : -1, side: this.rnd() < 0.5 ? 1 : -1, lat: 0, v: 1.0 + this.rnd() * 0.5, colour: Math.floor(this.rnd() * 24), skin: Math.floor(this.rnd() * 8), phase: this.rnd() * 6, state: 'walk', x: o.x, z: o.z, y: this.gy, yaw: 0, cross: 0, wait: 0 }; }
+      return { cloth: ID ? this.clothes(ID) : undefined, pc, s, dir: this.rnd() < 0.5 ? 1 : -1, side: this.rnd() < 0.5 ? 1 : -1, lane: (this.rnd() - 0.5) * 1.1, lat: 0, v: 1.0 + this.rnd() * 0.5, colour: Math.floor(this.rnd() * 24), skin: Math.floor(this.rnd() * 8), phase: this.rnd() * 6, state: 'walk', x: o.x, z: o.z, y: this.gy, yaw: 0, cross: 0, wait: 0 }; }
     return null;
   }
   update(dt, px, pz, gy) {
     this.gy = gy; this.t += dt; const tr = this.traffic, L = this.list, ID = this.city && this.city.identity, capNow = ID && ID.areaNameAt && this.cap > 0 && ID.areaNameAt(px, pz) === 'cp' ? Math.min(60, Math.round(this.cap * 1.5)) : this.cap;      /* F4: Connaught Place is crowded: half as many people again (up to 60) */
     while (L.length > capNow) L.pop();
     if (L.length < capNow && tr.pieces.size && dt > 0) { const p = this.spawn(px, pz); if (p) L.push(p); }
-    const o = {};
+    /* a fast car bearing down on a walker: they notice (alarm, 2.5 s), the ones on the pavement step away from the kerb and break into a run, the ones crossing hurry across */
+    let pvx = 0, pvz = 0, psp = 0; if (this.pp && dt > 0) { pvx = (px - this.pp.x) / dt; pvz = (pz - this.pp.z) / dt; psp = Math.hypot(pvx, pvz); if (psp > 60) psp = pvx = pvz = 0; } this.pp = { x: px, z: pz };
+    const o = {}, GR = new Map(), CS = 1.5, put = q => { const k = Math.floor(q.x / CS) * 100003 + Math.floor(q.z / CS); let l = GR.get(k); if (!l) GR.set(k, l = []); l.push(q); };
+    for (const q of L) put(q); for (const q of this.extra) put(q);
     for (let n = 0; n < L.length; n++) { const p = L[n];
       if (p.gone || !p.pc.alive || Math.hypot(p.x - px, p.z - pz) > DESPAWN) { const r = this.spawn(px, pz); if (r) L[n] = r; else L.splice(n--, 1); continue; }
-      if (p.state === 'cross') { p.cross += dt * 1.4 / Math.max(4, p.pc.w + 1.8); p.phase += dt * 7; if (p.cross >= 1) { p.cross = 0; p.side = -p.side; p.state = 'walk'; } }
-      else if (p.state === 'wait') { p.wait -= dt; p.phase = 0; if (p.wait <= 0 && !this.carNear(p.x, p.z, 22)) { p.state = 'cross'; p.cross = 0; } }
-      else { p.s += p.dir * p.v * dt; p.phase += dt * 6;
+      if (p.alarm > 0) p.alarm -= dt;
+      if (psp > 7 && !(p.alarm > 0)) { const dx = p.x - px, dz = p.z - pz, along = (dx * pvx + dz * pvz) / psp, lat = Math.abs(dx * pvz - dz * pvx) / psp; if (along > 0 && along < psp * 2.6 && along < 32 && lat < 3.4) p.alarm = 2.5; }
+      if (p.state === 'cross') { p.cross += dt * (p.alarm > 0 ? 3.4 : 1.4) / Math.max(4, p.pc.w + 1.8); p.phase += dt * 7; if (p.cross >= 1) { p.cross = 0; p.side = -p.side; p.state = 'walk'; } }
+      else if (p.state === 'wait') { p.wait -= dt; p.phase = 0; if (p.wait <= 0 && !(p.alarm > 0) && !this.carNear(p.x, p.z, 22)) { p.state = 'cross'; p.cross = 0; } }
+      else {
+        let slow = 1; const ds = p.dir > 0 ? 1 : -1;                                                                                    // keep left: a walker's own side of the pavement depends on which way they walk
+        if (p.lane === undefined) p.lane = 0; const base = p.lane + 0.3 * ds, fx = Math.cos(p.yaw), fz = Math.sin(p.yaw), cx = Math.floor(p.x / CS), cz = Math.floor(p.z / CS); let push = 0;
+        if (!this.noAvoid) for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = GR.get((cx + a) * 100003 + (cz + b)); if (!l) continue;
+          for (const q of l) { if (q === p) continue; const dx = q.x - p.x, dz = q.z - p.z, d = Math.hypot(dx, dz); if (d > 1.3 || d < 1e-3) continue; const ahead = dx * fx + dz * fz, side = -dx * fz + dz * fx;       // side > 0: they are on my left
+            if (d < 0.85) push += (side >= 0 ? -1 : 1) * (0.85 - d);                                                                        // step away from someone too close
+            if (ahead > 0.05 && Math.abs(side) < 0.6 && ahead < 1.25 && (q.state !== 'walk' || q.dir === p.dir)) slow = Math.min(slow, Math.max(q.state === 'walk' ? 0 : 0.35, (ahead - 0.5) / 0.75)); } }       // someone just ahead, going the same way or standing: slow behind them
+        p.lat = (p.lat === undefined ? base : p.lat); const alarmed = p.alarm > 0, tgt = alarmed ? base + p.side * 1.1 : base; p.lat += push * ds * dt * 3.2 + (tgt - p.lat) * Math.min(1, dt * (alarmed ? 3 : 0.7)); p.lat = Math.max(base - 1.1, Math.min(base + 1.1, p.lat));
+        p.s += p.dir * p.v * (alarmed ? 2.4 : 1) * slow * dt; p.phase += dt * 6;
         if (p.s > p.pc.len || p.s < 0) {
           const end = p.dir > 0 ? p.pc.len : 0; this.pos(p, end, o); const ex = o.x, ez = o.z;
           if (tr.crossingAt(ex, ez) && this.rnd() < 0.5) { p.s = end; p.state = 'wait'; p.wait = 1 + this.rnd() * 3; }                     // cross at a zebra (a flagged node), once the street is clear
           else { const opts = []; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = tr.ends.get(tr.key(ex + a * 8, ez + b * 8)); if (l) for (const e of l) if (e.pc !== p.pc && e.pc.alive && WALKABLE.has(e.pc.cls) && Math.hypot(e.x - ex, e.z - ez) < 4) opts.push(e); }
             if (opts.length) { const e = opts[Math.floor(this.rnd() * opts.length)]; p.pc = e.pc; p.dir = e.end === 0 ? 1 : -1; p.s = e.end === 0 ? 0.1 : e.pc.len - 0.1; } else { p.dir = -p.dir; p.s = Math.max(0.1, Math.min(p.pc.len - 0.1, p.s)); } } } }
-      this.pos(p, Math.max(0, Math.min(p.pc.len, p.s)), o); const off = (p.pc.w / 2 + 0.9) * (p.side * (1 - 2 * Math.min(1, p.state === 'cross' ? p.cross : 0)));       // lateral: the pavement, or somewhere across the street
+      this.pos(p, Math.max(0, Math.min(p.pc.len, p.s)), o); const off = (p.pc.w / 2 + 0.9) * (p.side * (1 - 2 * Math.min(1, p.state === 'cross' ? p.cross : 0))) + (p.state === 'walk' && p.lat ? p.lat : 0);       // lateral: the pavement, or somewhere across the street
       const nx = -o.tz, nz = o.tx; p.x = o.x + nx * off; p.z = o.z + nz * off; p.y = gy; p.yaw = Math.atan2(o.tz * p.dir, o.tx * p.dir) + (p.state === 'cross' ? p.side * -Math.PI / 2 * 0 : 0);
       if (p.state === 'cross') p.yaw = Math.atan2(nz * -p.side, nx * -p.side); p.frozen = p.state === 'wait'; }
     this.extraT -= dt; if (this.extraT <= 0 && this.cap > 0) { this.extraT = 2; this.refreshExtras(px, pz); } this.sim.list = this.cap > 0 ? L.concat(this.extra) : L; this.view.draw({ x: px, z: pz });
@@ -55,6 +68,8 @@ export class CityPeds {
     if (c.buses && c.buses.ok) for (const s of c.buses.stopsNear(px, pz, 130)) { const q = this.snap('b' + s.id, s.x, s.z), n = Math.floor(hash(s.id) * 4); for (let i = 0; i < n; i++) { const k = hash(s.id * 13 + i); mk(q.x + Math.cos(q.yaw + 1.57) * (i - n / 2) * 0.6, q.z + Math.sin(q.yaw + 1.57) * (i - n / 2) * 0.6, q.yaw, k, parseInt(cl[Math.floor(k * cl.length)].slice(1), 16)); } }
     const st = c.transit && c.transit.data && c.transit.data.metro && c.transit.data.metro.stations; if (st) for (const s of st) { if (!s.entrances) continue; for (const [ex, ez] of s.entrances) { if (Math.abs(ex - px) > 130 || Math.abs(ez - pz) > 130) continue; const n = 2 + Math.floor(hash(ex * 3 + ez) * 3); for (let i = 0; i < n; i++) { const k = hash(ex * 7 + ez * 5 + i); mk(ex + (k - 0.5) * 5, ez + (hash(k * 91) - 0.5) * 5, k * 6.28, k, parseInt(cl[Math.floor(k * cl.length)].slice(1), 16)); } } }
     for (const t of c.tiles.values()) { const sp = t.stalls; if (!sp) continue; for (let i = 0; i < sp.length; i += 2) { if (Math.abs(sp[i] - px) > 110 || Math.abs(sp[i + 1] - pz) > 110) continue; const k = hash(sp[i] * 5 + sp[i + 1]); mk(sp[i] + 1.3, sp[i + 1] + 0.4, k * 6.28, k, vend[Math.floor(k * vend.length) % vend.length]); } }
+    /* people who stand should not stand inside each other (bus-stop queues were 0.6 m apart: the shoulders and arms of the new models overlap): push neighbours apart until each is at least 0.9 m from the next */
+    for (let it = 0; it < 4; it++) for (let i = 0; i < E.length; i++) for (let j = i + 1; j < E.length; j++) { const a = E[i], b = E[j], dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz); if (d >= 0.9) continue; const ux = d > 1e-3 ? dx / d : Math.cos(i * 2.4), uz = d > 1e-3 ? dz / d : Math.sin(i * 2.4), m = (0.9 - d) / 2; a.x -= ux * m; a.z -= uz * m; b.x += ux * m; b.z += uz * m; }
     const hs = this.hitSpots; this.hitSpots = hs.filter(h => this.t - h.t < 120);         // a standing person who was knocked down does not reappear at the next refresh
     this.extra = E.filter(e => !this.hitSpots.some(h => Math.hypot(h.x - e.x, h.z - e.z) < 1.6)).slice(0, 120);
   }

@@ -31,22 +31,34 @@ const BONES = { Hips: 'pelvis', Spine: 'torso', Chest: 'torso', Neck: 'torso', H
   UpperLeg_L: 'ulL', LowerLeg_L: 'llL', Foot_L: 'llL', UpperLeg_R: 'ulR', LowerLeg_R: 'llR', Foot_R: 'llR' };
 const SPEEDK = { pelvis: 1.0, torso: 0.8, head: 0.65, uaL: 0.7, uaR: 0.7, laL: 0.7, laR: 0.7, ulL: 1.05, ulR: 1.05, llL: 1.05, llR: 1.05 };      // how much of the car's speed each part starts with: the legs go first, the head lags
 
+/* a rider on a bike, in character space: the pose of the model's 'Ride' clip worked out joint by joint (every turn is about the x axis, so the hinge and ball joints stay consistent): hips on the seat 0.3 m behind the middle of the bike,
+   the back leaning forward, arms out to the bars, thighs level, shins down to the pegs. Returns { segment: { c: [x, y, z], a: pitch } } */
+function seatedLayout() {
+  const R = (a, y, z) => [y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a)], L = {};
+  const at = (j, rel, a) => { const r = R(a, rel[0], rel[1]); return [j[0] + r[0], j[1] + r[1]]; };               // [y, z] of a segment centre from its joint
+  const P = [1.02, -0.36]; L.pelvis = { c: P, a: 0 };
+  const jt = [P[0] + 0.10, P[1]], tt = 0.68, T = at(jt, [0.19, 0], tt); L.torso = { c: T, a: tt };
+  const jn = at(T, [0.23, 0], tt); L.head = { c: at(jn, [0.12, 0], 0.10), a: 0.10 };
+  const js = at(T, [0.14, 0], tt), ua = -1.27, UA = at(js, [-0.13, 0], ua), je = at(UA, [-0.13, 0], ua), la = -1.57; L.uaL = L.uaR = { c: UA, a: ua }; L.laL = L.laR = { c: at(je, [-0.13, 0], la), a: la };
+  const jh = at(P, [-0.02, 0], 0), ul = -1.30, UL = at(jh, [-0.17, 0], ul), jk = at(UL, [-0.19, 0], ul), ll = 0.15; L.ulL = L.ulR = { c: UL, a: ul }; L.llL = L.llR = { c: at(jk, [-0.19, 0], ll), a: ll };
+  return L;
+}
 const Q = new THREE.Quaternion(), Q2 = new THREE.Quaternion(), V = new THREE.Vector3();
 
 /* the physics of one fallen walker plus its skinned figure */
 class Fallen {
-  constructor(sys, slot, { x, z, y, yaw, gltf, cloth }, car, fatal, rnd) {
+  constructor(sys, slot, { x, z, y, yaw, gltf, cloth, seat, vel }, car, fatal, rnd) {
     this.sys = sys; this.slot = slot; this.fatal = fatal; this.age = 0; this.state = 'fall'; this.t = 0; this.rest = 0; this.groundY = y; this.bodies = {}; this.joints = [];
     const W = sys.world, bit = 1 << slot, groundBit = 1 << (5 + slot);
     this.bit = bit; this.ground = W.createCollider(RAPIER.ColliderDesc.cuboid(200, 0.5, 200).setTranslation(0, y - 0.5, 0).setFriction(0.6).setRestitution(0.12).setCollisionGroups((groundBit << 16) | bit));
     const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2 - yaw), ox = x - sys.ox, oz = z - sys.oz;       // the figure faces +z at yaw 0 of the model; the walker faces (cos yaw, sin yaw) in the game
-    const cv = car ? [car.u * Math.cos(car.yaw) - car.v * Math.sin(car.yaw), car.u * Math.sin(car.yaw) + car.v * Math.cos(car.yaw)] : [0, 0], sp = Math.hypot(cv[0], cv[1]);
+    const cv0 = car ? [car.u * Math.cos(car.yaw) - car.v * Math.sin(car.yaw), car.u * Math.sin(car.yaw) + car.v * Math.cos(car.yaw)] : [0, 0], cv = vel ? [cv0[0] + vel[0], cv0[1] + vel[1]] : cv0, sp = Math.hypot(cv[0], cv[1]), SL = seat ? seatedLayout() : null;       // vel: the speed the person already had (a rider moves with the bike)
     const side = car ? ((x - car.x) * -Math.sin(car.yaw) + (z - car.z) * Math.cos(car.yaw)) : 0;                                                 // which side of the car's axis they were hit on: sets the spin
     const gm = (bit << 16) | (groundBit | CAR);
     for (const [name, s] of Object.entries(SEG)) {
-      V.set(s.c[0], s.c[1], s.c[2]).applyQuaternion(qy);
+      const sc = SL ? SL[name] : null; V.set(s.c[0], sc ? sc.c[0] : s.c[1], sc ? sc.c[1] : s.c[2]).applyQuaternion(qy); const qb = sc ? qy.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), sc.a)) : qy;
       const k = SPEEDK[name], lift = (1.5 + 0.17 * sp) * (name === 'pelvis' || name.startsWith('ul') ? 1.0 : 0.6);
-      const d = RAPIER.RigidBodyDesc.dynamic().setTranslation(ox + V.x, y + V.y, oz + V.z).setRotation({ x: qy.x, y: qy.y, z: qy.z, w: qy.w })
+      const d = RAPIER.RigidBodyDesc.dynamic().setTranslation(ox + V.x, y + V.y, oz + V.z).setRotation({ x: qb.x, y: qb.y, z: qb.z, w: qb.w })
         .setLinvel(cv[0] * k * (0.9 + rnd() * 0.2), lift * (0.8 + rnd() * 0.4), cv[1] * k * (0.9 + rnd() * 0.2)).setAngvel({ x: (rnd() - 0.5) * 2 * Math.min(6, sp * 0.35), y: side * Math.min(8, sp * 0.3), z: (rnd() - 0.5) * 2 * Math.min(6, sp * 0.35) })
         .setLinearDamping(0.05).setAngularDamping(0.8).setCcdEnabled(true);
       const b = W.createRigidBody(d); const cd = s.shape[0] === 'box' ? RAPIER.ColliderDesc.cuboid(s.shape[1], s.shape[2], s.shape[3]) : s.shape[0] === 'ball' ? RAPIER.ColliderDesc.ball(s.shape[1]) : RAPIER.ColliderDesc.capsule(s.shape[1], s.shape[2]);
@@ -125,7 +137,7 @@ export class RagdollSystem {
       fg.obj.position.set(f.fromPos.x, f.fromPos.y + (f.groundY - f.fromPos.y - 0.0) * s, f.fromPos.z); fg.obj.rotation.y = f.faceYaw * s;
       if (u >= 1) { f.state = 'run'; f.t = 0; f.runPos = fg.obj.position.clone(); f.phase = 0; }
     } else if (f.state === 'run') {
-      const fg = f.fig, sp = 2.3; f.phase += sp * dt * 2.2; const fx = Math.sin(f.faceYaw), fz = Math.cos(f.faceYaw); fg.obj.position.set(f.runPos.x + fx * sp * f.t, f.groundY, f.runPos.z + fz * sp * f.t); fg.update(dt, true, f.phase);
+      const fg = f.fig, sp = 4.0; f.phase += sp * dt * 2.2; const fx = Math.sin(f.faceYaw), fz = Math.cos(f.faceYaw); fg.obj.position.set(f.runPos.x + fx * sp * f.t, f.groundY, f.runPos.z + fz * sp * f.t); fg.update(dt, true, f.phase, true);
       if (f.t > R.runAway) { f.state = 'fade'; f.t = 0; f.after = 'gone'; }
     } else if (f.state === 'fade') { const u = Math.min(1, f.t / R.fade); f.fig.obj.scale.setScalar(Math.max(0.001, 1 - u)); if (u >= 1) f.state = 'gone'; }
   }

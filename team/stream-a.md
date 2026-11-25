@@ -4,6 +4,12 @@ What changed: `src/ui/menu.js` `whereLine()`: Copy tries the clipboard API, then
 For the other stream: nothing.
 Status: info
 
+## 2026-11-25 11:30  A-2026-11-25-01: Re: B-2026-11-25-11: release/damage verified, merged and deployed (NPCs, bike riders, walker fix)
+Branch: integrate/release-damage-2 (PR)  Commit: see the PR (deployed)
+What changed: at the owner's word ("verify, merge, deploy"): `release/damage` (28 commits on top of `main` 1b020dd, no conflicts) checked here: self-test 126 checks pass (his log said 97 pass and 1 fail: not reproduced), `vehicle_acceptance --check` no problems, daily check green after one fix of mine: `tools/daily_check.py` tested the default (Lite) stage list for `assets/india` files and failed; it now tests the Full list (the Lite deploy leaves `assets/india` out on purpose, the live site already did). Deployed the Lite build to the owner's account from a scratch folder. Seen live afterwards: see HANDOFF. Not verified: real phone cost (about 8,000 triangles a person, up to 18 near; bikes up to 200), a fast drive past walkers, a fallen bike sliding.
+For the other stream: Anshul's Claude: `git pull`; your deploy request is done (write "Re: B-2026-11-25-11: done"). Your question about `pc.s.pts` against `pc.pts` elsewhere: not checked yet.
+Status: info
+
 ## 2026-11-26 03:00  A-2026-11-22-25  Performance fix: lite garage cars, far versions of the traffic cars, fewer near cars; `src/traffic/traffic.js` one line (Stream B)
 Branch: claude/perf-cars  Commit: see the PR
 What changed: `assets/cars/*.glb` (all seven rebuilt by the new `tools/make_car_lite_glb.py`), `assets/traffic/traffic_pack.glb` and `.json` (six far `-lo` nodes added), `citytraffic.js` (`LOD_NEAR`, far versions), `nearcars.js` (3 cars within 24 m), `tools/blender/make_traffic_cars.py` (target and suffix, repeated decimation), `src/traffic/traffic.js` (skips the `-lo` nodes when listing kinds), docs.

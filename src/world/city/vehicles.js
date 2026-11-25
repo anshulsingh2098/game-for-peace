@@ -16,7 +16,7 @@ const KINDS = {
   auto: { len: 2.7, wid: 1.4, speed: 0.8, parts: [[0, 0.55, -0.4, 1.35, 0.55, 1.6, 0x2f8f5b], [0, 0.86, -0.6, 1.1, 0.16, 1.05, 0x25262a], [0, 1.28, -1.17, 1.3, 0.9, 0.06, 0x2f8f5b], [-0.64, 1.3, -1.12, 0.07, 0.95, 0.07, 0x2f8f5b], [0.64, 1.3, -1.12, 0.07, 0.95, 0.07, 0x2f8f5b], [-0.64, 1.3, 0.28, 0.07, 0.95, 0.07, 0x2f8f5b], [0.64, 1.3, 0.28, 0.07, 0.95, 0.07, 0x2f8f5b], [0, 1.8, -0.4, 1.42, 0.08, 1.95, 0xe3b21a], [0, 1.78, 0.62, 1.2, 0.07, 0.4, 0xe3b21a], [0, 0.78, 0.98, 1.0, 0.7, 0.85, 0x2f8f5b, TC], [0, 1.4, 0.62, 1.1, 0.5, 0.4, GL, { kx: 1, kz: 0.2, dz: -0.2 }], [0, 0.84, 0.4, 0.5, 0.26, 0.4, 0x25262a], [0, 1.12, 0.78, 0.72, 0.05, 0.05, GREY], [0, 0.62, 1.2, 0.4, 0.06, 0.55, 0x2f8f5b], wheel(0, 1.2, 0.52, 0.14), wheel(-0.62, -0.75, 0.52, 0.14), wheel(0.62, -0.75, 0.52, 0.14), [0, 0.84, 1.42, 0.3, 0.2, 0.06, 0xfff2c8]] },
   erick: { len: 2.8, wid: 1.25, speed: 0.55, parts: [[0, 0.5, 0, 1.2, 0.12, 2.6, GREY], [0, 1.95, -0.1, 1.4, 0.06, 2.5, P], [-0.58, 1.2, 0.9, 0.05, 1.5, 0.05, GREY], [0.58, 1.2, 0.9, 0.05, 1.5, 0.05, GREY], [-0.58, 1.2, -1.15, 0.05, 1.5, 0.05, GREY], [0.58, 1.2, -1.15, 0.05, 1.5, 0.05, GREY], [0, 0.8, -0.3, 1.1, 0.4, 0.5, 0x3a3a3c], [0, 1.0, -0.62, 1.1, 0.5, 0.1, 0x3a3a3c], [0, 0.68, 0.82, 0.55, 0.14, 0.4, 0x25262a], [0, 0.95, 0.66, 0.5, 0.45, 0.08, 0x25262a], [0, 0.85, 1.22, 1.15, 0.75, 0.32, P, TC], [0, 1.5, 1.1, 1.0, 0.5, 0.25, GL, { kx: 1, kz: 0.15, dz: -0.1 }], [0, 1.18, 1.0, 0.7, 0.05, 0.05, GREY], [0, 0.95, 1.4, 0.3, 0.18, 0.06, 0xfff2c8], wheel(-0.52, 0.9, 0.5, 0.12), wheel(0.52, 0.9, 0.5, 0.12), wheel(-0.52, -0.95, 0.5, 0.12), wheel(0.52, -0.95, 0.5, 0.12)] },
   cyclerick: { len: 2.3, wid: 1.0, speed: 0.22, parts: [[0, 0.55, -0.45, 0.95, 0.12, 1.1, DARK], [0, 0.85, -0.7, 0.95, 0.4, 0.5, 0x3a3a3c], [0, 1.35, -0.6, 1.0, 0.07, 1.1, P], [0, 1.15, -0.1, 0.95, 0.5, 0.06, P], [0, 0.55, 0.65, 0.06, 0.06, 1.0, GREY], [0, 1.0, 0.95, 0.4, 0.6, 0.3, 0x8a8f9a], [0, 1.45, 0.95, 0.2, 0.22, 0.2, 0xb98058], wheel(-0.45, -0.9, 0.62, 0.05), wheel(0.45, -0.9, 0.62, 0.05), wheel(0, 1.15, 0.62, 0.05)] },
-  two: { len: 1.9, wid: 0.7, speed: 1.05, parts: [[0, 0.55, 0, 0.3, 0.3, 1.1, P], [0, 0.45, 0.1, 0.22, 0.2, 0.6, DARK], [0, 0.82, -0.3, 0.3, 0.1, 0.55, DARK], wheel(0, 0.72, 0.62, 0.12), wheel(0, -0.72, 0.62, 0.12), [0, 1.2, -0.35, 0.4, 0.6, 0.3, 0xd9d2c0], [0, 1.65, -0.3, 0.24, 0.26, 0.24, 0xb98058], [0, 1.05, 0.55, 0.5, 0.05, 0.05, GREY]] },
+  two: { len: 1.9, wid: 0.7, speed: 1.05, parts: [[0, 0.55, 0, 0.3, 0.3, 1.1, P], [0, 0.45, 0.1, 0.22, 0.2, 0.6, DARK], [0, 0.82, -0.3, 0.3, 0.1, 0.55, DARK], wheel(0, 0.72, 0.62, 0.12), wheel(0, -0.72, 0.62, 0.12), [0, 1.05, 0.55, 0.5, 0.05, 0.05, GREY]] },        // the rider is a separate instanced mesh (Fleet.setRider), not boxes
   tempo: { len: 4.2, wid: 1.7, speed: 0.8, parts: [[0, 0.75, 0, 1.7, 0.18, 4.2, DARK], [0, 1.3, 1.2, 1.65, 1.2, 1.5, P, TC], [0, 1.55, 1.9, 1.5, 0.5, 0.06, GL], [0, 1.45, -0.9, 1.6, 1.0, 2.5, P], [0, 0.45, 2.05, 1.5, 0.25, 0.1, DARK], wheel(-0.82, 1.3, 0.7), wheel(0.82, 1.3, 0.7), wheel(-0.82, -1.2, 0.7), wheel(0.82, -1.2, 0.7)] },
   truck: { len: 7.2, wid: 2.4, speed: 0.8, parts: [[0, 0.9, 0, 2.3, 0.25, 7.2, DARK], [0, 1.9, 2.5, 2.3, 1.8, 1.8, P, TC], [0, 2.3, 3.42, 2.0, 0.7, 0.06, GL], [0, 2.1, -0.9, 2.4, 2.0, 4.8, P], [-1.21, 2.1, -0.9, 0.04, 1.4, 4.4, 0xe3b21a], [1.21, 2.1, -0.9, 0.04, 1.4, 4.4, 0xe3b21a], [-1.23, 2.3, -0.9, 0.04, 0.5, 3.6, 0xb11f1f], [1.23, 2.3, -0.9, 0.04, 0.5, 3.6, 0xb11f1f], [-1.23, 1.6, -0.9, 0.04, 0.3, 4.0, 0x2a64c9], [1.23, 1.6, -0.9, 0.04, 0.3, 4.0, 0x2a64c9], [0, 3.26, 3.0, 2.2, 0.35, 0.8, 0xe3b21a], wheel(-1.1, 2.4, 0.95, 0.3), wheel(1.1, 2.4, 0.95, 0.3), wheel(-1.1, -2.3, 0.95, 0.3), wheel(1.1, -2.3, 0.95, 0.3), wheel(-1.1, -0.9, 0.95, 0.3), wheel(1.1, -0.9, 0.95, 0.3)] },
 };
@@ -40,8 +40,11 @@ export const MODEL_SETS = {
   'pk-delivery': { pack: 'delivery', base: 'tempo', share: 1, speed: 0.8 },
   'pk-truck': { pack: 'truck', base: 'truck', share: 1, speed: 0.8 },
 };
+/* the owner's motorbike (assets/bike_01.glb, the Volt Bike the player rides) as the traffic motorbike: baked to one vertex-coloured geometry (the Paint_Panel fairing is white and takes the paint), loaded by citytraffic.js; it stands in for every `two` */
+MODEL_SETS['bike-01'] = { base: 'two', share: 1, speed: 1.05 };
+export const BIKE_DIM = { len: 2.25, wid: 0.7 };
 /* which garage car a taken NPC car becomes (null: it cannot be driven by the player: auto rickshaws, e-rickshaws, cycle rickshaws) */
-export const GARAGE_OF = { hatch: 'sx4', 'sx4-hatch': 'sx4', 'maruti-800': 'maruti', 'figo-hatch': 'figo', 'aspire-hatch': 'aspire', 'aspire-taxi': 'aspire', 'pk-hatchback-sports': 'sx4', suv: 'everest', 'endeavour-suv': 'everest', 'pk-suv': 'everest', 'pk-suv-luxury': 'everest', 'gtr-sports': 'r35', taxi: 'sx4', 'pk-sedan': 'sx4', two: 'bike', tempo: 'truck', 'pk-van': 'truck', 'pk-delivery': 'truck', truck: 'truck', 'pk-truck': 'truck', auto: null, erick: null, cyclerick: null };
+export const GARAGE_OF = { hatch: 'sx4', 'sx4-hatch': 'sx4', 'maruti-800': 'maruti', 'figo-hatch': 'figo', 'aspire-hatch': 'aspire', 'aspire-taxi': 'aspire', 'pk-hatchback-sports': 'sx4', suv: 'everest', 'endeavour-suv': 'everest', 'pk-suv': 'everest', 'pk-suv-luxury': 'everest', 'gtr-sports': 'r35', taxi: 'sx4', 'pk-sedan': 'sx4', two: 'bike', tempo: 'truck', 'pk-van': 'truck', 'pk-delivery': 'truck', truck: 'truck', 'pk-truck': 'truck', 'bike-01': 'bike', auto: null, erick: null, cyclerick: null };
 export const baseKind = k => (MODEL_SETS[k] ? MODEL_SETS[k].base : k);
 
 function merge(parts) {
@@ -75,14 +78,47 @@ export class Fleet {
     for (const k in KINDS) { const g = merge(KINDS[k].parts), m = new THREE.InstancedMesh(g, this.mat, CAP[k]); m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(CAP[k] * 3), 3); m.instanceColor.setUsage(THREE.DynamicDrawUsage); this.group.add(m); this.f[k] = { mesh: m, n: 0, cap: CAP[k] }; }
     this.m4 = new THREE.Matrix4(); this.q = new THREE.Quaternion(); this.up = new THREE.Vector3(0, 1, 0); this.sc = new THREE.Vector3(1, 1, 1); this.pos = new THREE.Vector3(); this.col = new THREE.Color();
   }
+  /* the rider of a two-wheeler: a seated person (the 'Ride' pose of assets/npc/npc_rider_lod1.glb, baked to a static mesh) drawn as one more instanced mesh that follows each moving bike; white vertices (the jacket) take the instance colour */
+  setRider(geo) {
+    if (this.f.rider) return; const cap = CAP.two, m = new THREE.InstancedMesh(geo, this.mat, cap); m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); m.instanceColor.setUsage(THREE.DynamicDrawUsage); this.group.add(m); this.f.rider = { mesh: m, n: 0, cap };
+  }
+  addRider(x, y, z, yaw, hex) { return this.f.rider ? this.add('rider', x, y, z, yaw, hex) : false; }
   begin() { for (const k in this.f) this.f[k].n = 0; }
   /* one vehicle: kind, position relative to the scene (origin already subtracted), yaw (travel direction in the game's x, z plane), paint hex */
   add(kind, x, y, z, yaw, hex) { const f = this.f[kind]; if (!f || f.n >= f.cap) return false; this.q.setFromAxisAngle(this.up, -yaw + Math.PI / 2); this.pos.set(x, y, z); this.m4.compose(this.pos, this.q, this.sc); f.mesh.setMatrixAt(f.n, this.m4); f.mesh.setColorAt(f.n, this.col.setHex(hex)); f.n++; return true; }
   /* a model kind from the traffic pack: geo carries position, normal and a 'color' attribute (white where the body paint goes); len and wid from the pack's size list */
-  addModel(kind, geo, len, wid, speed) {
-    if (this.f[kind]) return; const cap = 80, m = new THREE.InstancedMesh(geo, this.mat, cap); m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); m.instanceColor.setUsage(THREE.DynamicDrawUsage); m.visible = false;
+  addModel(kind, geo, len, wid, speed, cap = 80) {
+    if (this.f[kind]) return; const m = new THREE.InstancedMesh(geo, this.mat, cap); m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); m.instanceColor.setUsage(THREE.DynamicDrawUsage); m.visible = false;
     this.group.add(m); this.f[kind] = { mesh: m, n: 0, cap }; DIM[kind] = { len, wid, speed };
   }
   end() { for (const k in this.f) { const f = this.f[k]; f.mesh.count = f.n; f.mesh.visible = f.n > 0; f.mesh.instanceMatrix.needsUpdate = true; f.mesh.instanceColor.needsUpdate = true; } }
   counts() { const o = {}; for (const k in this.f) o[k] = this.f[k].n; return o; }
+}
+
+/* the bike model as one static geometry: every mesh in its place, a colour per vertex from its material (Paint_Panel white: it takes the paint) */
+export function bikeGeometry(gltf, mergeGeometries) {
+  const gs = [], v = new THREE.Vector3(), nm = new THREE.Vector3(), c = new THREE.Color(); gltf.scene.updateMatrixWorld(true);
+  gltf.scene.traverse(o => {
+    if (!o.isMesh || o.isSkinnedMesh) return;
+    const src = o.geometry, n = src.attributes.position.count, mats = [].concat(o.material), groups = src.groups.length ? src.groups : [{ start: 0, count: src.index ? src.index.count : n, materialIndex: 0 }];
+    const g = src.index ? src.toNonIndexed() : src.clone(), pos = new Float32Array(g.attributes.position.count * 3), nor = new Float32Array(g.attributes.position.count * 3), col = new Float32Array(g.attributes.position.count * 3), nmat = new THREE.Matrix3().getNormalMatrix(o.matrixWorld);
+    for (let i = 0; i < g.attributes.position.count; i++) { v.fromBufferAttribute(g.attributes.position, i).applyMatrix4(o.matrixWorld); pos.set([v.x, v.y, v.z], i * 3); nm.fromBufferAttribute(g.attributes.normal, i).applyMatrix3(nmat).normalize(); nor.set([nm.x, nm.y, nm.z], i * 3); }
+    for (const gr of groups) { const m = mats[gr.materialIndex || 0] || mats[0]; if (m.name === 'Paint_Panel') c.setRGB(1, 1, 1); else c.copy(m.color); const a = src.index ? gr.start : gr.start, e = a + gr.count; for (let i = a; i < e; i++) col.set([c.r, c.g, c.b], i * 3); }
+    const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(col, 3)); gs.push(out);
+  });
+  return gs.length ? mergeGeometries(gs) : null;
+}
+/* a static, seated rider for the instanced fleet: play the 'Ride' clip of the rider model at its first frame, read every skinned vertex in that pose and merge the parts into one geometry (position, normal, colour:
+   the Top material, the jacket, becomes white so the instance colour paints it; the others keep their colours) */
+export function riderGeometry(gltf, mergeGeometries) {
+  const root = gltf.scene, mixer = new THREE.AnimationMixer(root), clip = gltf.animations.find(a => a.name === 'Ride'); if (!clip) return null;
+  const act = mixer.clipAction(clip); act.play(); mixer.update(0); root.updateMatrixWorld(true); const gs = [], v = new THREE.Vector3(), c = new THREE.Color();
+  root.traverse(o => {
+    if (!o.isSkinnedMesh) return; o.skeleton.update(); const src = o.geometry, n = src.attributes.position.count, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), m = [].concat(o.material)[0];
+    if (m.name === 'Top') c.setRGB(1, 1, 1); else c.copy(m.color);
+    for (let i = 0; i < n; i++) { o.getVertexPosition(i, v); v.applyMatrix4(o.matrixWorld); pos.set([v.x, v.y, v.z], i * 3); col.set([c.r, c.g, c.b], i * 3); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); if (src.index) g.setIndex(src.index.clone()); g.computeVertexNormals(); gs.push(g);
+  });
+  mixer.stopAllAction(); const out = gs.length ? mergeGeometries(gs) : null; if (out) out.translate(0, 0.17, -0.06);                       // up onto the seat of the Volt Bike (seat top 1.0 m)
+  return out;
 }

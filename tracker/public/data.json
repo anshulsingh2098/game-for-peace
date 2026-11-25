@@ -1,5 +1,5 @@
 {
- "commit": "21f0a0c",
+ "commit": "1b020dd",
  "groups": [
   [
    "Tasks and phases for Anshul (docs/NEXT_PHASES.md)",
@@ -591,6 +591,30 @@
    "Asked of Rajul in the team log",
    [
     {
+     "id": "a52eaa76",
+     "t": "B-2026-11-25-11 DEPLOY REQUEST: release/damage (current main plus the NPC, rider and bike work)",
+     "d": "please deploy it to Rajul's account: git fetch && git checkout release/damage && git pull; copy cloudflare/worker.js and cloudflare/wrangler.jsonc to a scratch folder, python tools/stage_cloudflare.py --out <folder>/public, node tools/bundle.mjs <folder>/public, check npx wrangler@4 whoami names mailrajulsingh.in@gmail.com, then npx wrangler@4 deploy from the scratch folder. After deploying, open https://game-for-pe…",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-25, from Anshul's Claude"
+    },
+    {
+     "id": "ae4a41f3",
+     "t": "B-2026-11-25-10 Walkers had NaN positions on many streets (fixed); walkers dodge a fast car; a fallen bike slides",
+     "d": "please look at (1): pc.s.pts against pc.pts may be wrong elsewhere too (anything that pairs pc.cum with pc.s.pts).",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-25, from Anshul's Claude"
+    },
+    {
+     "id": "acfb7a55",
+     "t": "B-2026-11-24-04 Re: B-2026-11-24-02: the damage work was already in main; release/damage is now main plus the NPC animation",
+     "d": "merge vehicle/npc-animation (or release/damage, identical) when the owner agrees; deploy as usual.",
+     "s": "todo",
+     "w": "Rajul",
+     "r": "stream-b.md 2026-11-24, from Anshul's Claude"
+    },
+    {
      "id": "aa1cfb78",
      "t": "B-2026-11-24-02 DEPLOY REQUEST: release/damage (crash damage, breakable street furniture, burning wrecks) merged with current main",
      "d": "please merge release/damage into main (or open the PR) and deploy it the documented way, when the owner agrees: scratch folder, cloudflare/worker.js and wrangler.jsonc copied in, python tools/stage_cloudflare.py --out <folder>/public, node tools/bundle.mjs <folder>/public, npx wrangler@4 whoami (must name mailrajulsingh.in@gmail.com), then npx wrangler@4 deploy. After deploying, drive a few knocks: the car should ta…",
@@ -791,6 +815,54 @@
      "s": "doing",
      "w": "Anshul",
      "r": "vehicle/cars-on-main 70054a8"
+    },
+    {
+     "id": "a25831eb",
+     "t": "Fix NaN walker positions on bent streets; walkers dodge a fast car; fallen bikes slide",
+     "d": "On his branch vehicle/npc-animation since 2026-11-24, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/npc-animation 96d49b8"
+    },
+    {
+     "id": "a2250f4c",
+     "t": "Traffic bike without the dummy rider: generated bike_traffic.glb (head, chest, arms, hands, thighs removed), plain bars put back",
+     "d": "On his branch vehicle/npc-animation since 2026-11-24, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/npc-animation 6ac1375"
+    },
+    {
+     "id": "a3178608",
+     "t": "Traffic bike: leave out the dummy head above the handlebars",
+     "d": "On his branch vehicle/npc-animation since 2026-11-24, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/npc-animation b1d100f"
+    },
+    {
+     "id": "a292da9c",
+     "t": "Bike riders: animated Ride loop, live skinned riders on the nearest bikes",
+     "d": "On his branch vehicle/npc-animation since 2026-11-24, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/npc-animation d7574ad"
+    },
+    {
+     "id": "a5989ac0",
+     "t": "Traffic motorbikes use the owner's Volt Bike model; rider fitted to its seat",
+     "d": "On his branch vehicle/npc-animation since 2026-11-24, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/npc-animation 57c892a"
+    },
+    {
+     "id": "a0a80dc2",
+     "t": "Fallen bikes can be picked up and ridden; thrown riders start seated and keep the bike's speed",
+     "d": "On his branch vehicle/npc-animation since 2026-11-24, not in main yet.",
+     "s": "doing",
+     "w": "Anshul",
+     "r": "vehicle/npc-animation 05c46cb"
     }
    ]
   ],
@@ -1649,6 +1721,11 @@
  ],
  "prs": [
   [
+   "141",
+   "Performance: lite garage cars, far traffic models, fewer near cars",
+   "merged"
+  ],
+  [
    "140",
    "Mission M1 and M2: Repo Man (wallet, Missions card, pins, target car, sale in Karol Bagh)",
    "merged"
@@ -1842,57 +1919,56 @@
    "102",
    "Delhi: signs with places, roundabouts, CP facade, live signal heads, handoff",
    "merged"
-  ],
-  [
-   "101",
-   "Delhi: Lite (Delhi only) build and Download button, P1 interiors and paved forecourts",
-   "merged"
   ]
  ],
  "branches": [
   [
    "vehicle/cars-and-gears",
-   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 216 behind main)"
+   "2026-11-18: L1, L2: look at six junctions, thicker stop line, mark both in progre… (17 commits not in main, 219 behind main)"
   ],
   [
    "vehicle/cars-on-main",
-   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 267 behind main)"
+   "2026-11-17: Re-add Stream B cars on top of main: Ember RS, Dust Runner, rebuilt m… (1 commits not in main, 270 behind main)"
   ],
   [
    "vehicle/damage-1",
-   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 31 behind main)"
+   "2026-11-19: Crash damage plan and phase 1: cones and dustbins on the pavements, k… (0 commits not in main, 34 behind main)"
   ],
   [
    "vehicle/damage-3",
-   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 30 behind main)"
+   "2026-11-19: Crash damage phase 3: visible dents on the player's vehicle, repaired… (0 commits not in main, 33 behind main)"
   ],
   [
    "vehicle/damage-4",
-   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 29 behind main)"
+   "2026-11-19: Crash damage phase 4 (player vehicle): lost power, pull, engine fire,… (0 commits not in main, 32 behind main)"
   ],
   [
    "vehicle/damage-5",
-   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 28 behind main)"
+   "2026-11-19: Crash damage phase 4 (other cars): traffic and parked cars dent, stop… (0 commits not in main, 31 behind main)"
   ],
   [
    "vehicle/damage-6",
-   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 27 behind main)"
+   "2026-11-19: Crash damage phase 2 (poles): lamp posts and electric poles are piece… (0 commits not in main, 30 behind main)"
   ],
   [
    "vehicle/damage-7",
-   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 26 behind main)"
+   "2026-11-19: Crash damage phase 2: bus shelters, stalls, kiosks and road signs bre… (0 commits not in main, 29 behind main)"
   ],
   [
    "vehicle/damage-8",
-   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 25 behind main)"
+   "2026-11-19: Crash damage made realistic: many knocks, staged breakage (glass, doo… (0 commits not in main, 28 behind main)"
+  ],
+  [
+   "vehicle/npc-animation",
+   "2026-11-24: Fix NaN walker positions on bent streets; walkers dodge a fast car; f… (15 commits not in main, 0 behind main)"
   ],
   [
    "vehicle/npc-models",
-   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 265 behind main)"
+   "2026-11-17: Log: cartoon NPCs in the game (0 commits not in main, 268 behind main)"
   ],
   [
    "vehicle/ragdoll",
-   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 32 behind main)"
+   "2026-11-19: Log: deploy request for vehicle/ragdoll; withdraw the release/combine… (0 commits not in main, 35 behind main)"
   ]
  ],
  "tests": "126",
@@ -1906,5 +1982,5 @@
    "126 checks passing"
   ]
  ],
- "generated": "2026-11-19T21:17:27.686Z"
+ "generated": "2026-11-25T05:24:44.550Z"
 }
